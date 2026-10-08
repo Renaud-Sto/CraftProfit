@@ -2,6 +2,9 @@
 
 Run on the blacksmith (level 30, skill 140+) with `/console scriptErrors 1`. Mark each line ✅ / ❌ and note the build number from `/cpp locale`-style output or the login screen. Retest on the launch build (4 November 2026).
 
+## Capturing results to a file
+The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (including `/cp selftest`) and Lua errors into the `CraftProfitProbeLog` saved variable. Run the commands, then `/reload` (or log out) to flush it to `WTF/Account/<ACCOUNT>/SavedVariables/CraftProfitProbe.lua`. `/cpp log` shows how many lines are pending, `/cpp clear` empties the log. Only the probe needs to be enabled for this.
+
 ## Load and self-test
 - [ ] Client starts with no Lua error popup. `/cp` prints the command list.
 - [ ] `/cp selftest` prints `Self-test passed (11 checks)`.

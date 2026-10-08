@@ -1,6 +1,6 @@
 -- CraftProfitProbe: THROWAWAY addon measuring what the Forever client exposes.
 -- Every output line starts with the version so a stale install is obvious.
-local VERSION = "0.1.0"
+local VERSION = "0.2.0"
 local TAG = "|cff66ccff[CPP " .. VERSION .. "]|r "
 
 local function isSecret(v)
@@ -17,11 +17,40 @@ local function show(v)
     return tostring(v)
 end
 
+-- Persistent log: SavedVariables are written to disk on /reload or logout only.
+-- File: WTF/Account/<ACCOUNT>/SavedVariables/CraftProfitProbe.lua
+local MAX_LOG = 3000
+local function logLine(text)
+    if type(CraftProfitProbeLog) ~= "table" then CraftProfitProbeLog = {} end
+    local log = CraftProfitProbeLog
+    log[#log + 1] = date("%H:%M:%S") .. " " .. text
+    if #log > MAX_LOG then table.remove(log, 1) end
+end
+
+local function plain(text)
+    return (text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+end
+
 local function out(...)
     local parts = {}
     for i = 1, select("#", ...) do parts[#parts + 1] = show((select(i, ...))) end
     DEFAULT_CHAT_FRAME:AddMessage(TAG .. table.concat(parts, " "))
 end
+
+-- Mirror every chat line printed by CraftProfit or this probe (selftest results included).
+hooksecurefunc(DEFAULT_CHAT_FRAME, "AddMessage", function(_, text)
+    if type(text) ~= "string" or isSecret(text) then return end
+    if text:find("CraftProfit", 1, true) or text:find("[CPP", 1, true) then
+        logLine(plain(text))
+    end
+end)
+
+-- Mirror Lua errors, then hand them to the normal handler.
+local previousHandler = geterrorhandler()
+seterrorhandler(function(err)
+    logLine("LUA ERROR: " .. show(err))
+    return previousHandler(err)
+end)
 
 local function pack(...) return { n = select("#", ...), ... } end
 
@@ -218,11 +247,17 @@ SLASH_CPP1 = "/cpp"
 SlashCmdList.CPP = function(msg)
     local cmd, arg = (msg or ""):match("^(%S*)%s*(.-)$")
     local fn = cmds[cmd]
-    if fn then
+    if cmd == "log" then
+        out("logged lines:", CraftProfitProbeLog and #CraftProfitProbeLog or 0,
+            "- type /reload to write them to disk")
+    elseif cmd == "clear" then
+        CraftProfitProbeLog = {}
+        out("log cleared")
+    elseif fn then
         out("== " .. cmd .. " " .. arg)
         fn(arg)
     else
-        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade")
+        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | log | clear")
     end
 end
 out("loaded. /cpp for commands. Enable Lua errors: /console scriptErrors 1")

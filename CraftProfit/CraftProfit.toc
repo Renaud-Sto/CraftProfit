@@ -5,6 +5,7 @@
 ## Version: 0.1.0
 ## SavedVariables: CraftProfitDB
 ## SavedVariablesPerCharacter: CraftProfitCharDB
+## X-Website: https://github.com/Renaud-Sto/CraftProfit
 
 Util.lua
 Format.lua

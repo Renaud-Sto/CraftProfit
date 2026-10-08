@@ -1,0 +1,37 @@
+name: Bug report
+description: Something is wrong, missing or crashing
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you saw. A screenshot of the window helps a lot.
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Game build and addon version
+      description: In game, run `/dump select(4, GetBuildInfo())`. The addon version is in the AddOns list.
+      placeholder: "16001, CraftProfit 0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Game language
+      options: [English, Français, Español (EU), Español (LatAm), Other]
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Lua error text
+      description: Turn error messages on with `/console scriptErrors 1`, then paste the full text if one appears.
+      render: text
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Which recipe, profession, window open (profession, auction house), and any option ticked.

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: User guide and FAQ
+    url: https://github.com/Renaud-Sto/CraftProfit/blob/main/docs/user-guide.md#faq-and-troubleshooting
+    about: Check the troubleshooting section first.

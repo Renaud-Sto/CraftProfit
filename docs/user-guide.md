@@ -1,0 +1,127 @@
+# CraftProfit user guide
+
+*[Version française](user-guide.fr.md)* · [Back to the README](../README.md)
+
+CraftProfit tells you what a profession recipe really costs at the auction house and what to do with the result. This guide explains every part of the window, how each number is computed, and what the addon cannot know.
+
+Contents: [The window](#the-window) · [At the auction house](#at-the-auction-house) · [How the numbers are computed](#how-the-numbers-are-computed) · [Options and commands](#options-and-commands) · [Languages](#languages) · [Known limitations](#known-limitations) · [FAQ and troubleshooting](#faq-and-troubleshooting)
+
+## The window
+
+Open a profession window and select a recipe you know. A small window appears to the right of the profession window and follows your selection. You can drag it anywhere; the position is remembered (`/cp reset` puts it back). It closes with the profession window, and with the auction house window when you opened it from there, so it never clutters the screen.
+
+| Line | Meaning |
+| --- | --- |
+| **Materials** | The cost of all reagents at auction house prices. Click the line to fold or unfold the detail (`-` unfolded, `+` folded); the choice is saved. |
+| **Auction house (net)** | The price the crafted item would fetch at the auction house, after the 5 % commission. `n/a` if the item cannot be sold there (bound when picked up). |
+| **Vendor** | What a vendor pays for the item. `n/a` if it cannot be vendored. |
+| **Disenchant (beta)** | The *expected* value of disenchanting the item, net of the auction house commission on the materials. See [Disenchanting](#disenchanting). |
+| *grey line* | Under the disenchant value: the most probable outcome, for example `75%: 1-2x Soul Dust = 7s 30c`. Only shown when the disenchant has several possible results. |
+| **Cost per point** / **Gain per point** | Only when the option is ticked. See [Cost per skill point](#cost-per-skill-point). |
+| **Best: …** | The best option and the net result of the craft (best resale minus materials), green for a profit and red for a loss. |
+| **Prices: 5m ago** | How old the oldest price used is. It turns orange when prices are more than an hour old. |
+
+The best option is marked with a gold `>` in front of its line (green and red are kept for gains and losses).
+
+A price that is not known is shown as `?`, never as zero. If a reagent has no price, the total and the verdict say *Incomplete: prices missing* instead of showing a flattering number.
+
+### Crafts
+
+The **Crafts** box multiplies the selected recipe by a number of crafts (1 to 9999): reagent quantities, the materials total, every resale value and the verdict. The cost or gain **per point** and the grey disenchant line stay per point and per disenchant. The pinned list always shows one craft, and selecting another recipe puts the box back to 1.
+
+For large quantities the total is an estimate: the price of a reagent is the median of the cheapest listings, but buying 100 units goes through more expensive listings. The real price appears in the auction house when you search.
+
+### Pin button
+
+**Pin** keeps the recipe in your pinned list (up to 12 per character), usable even with the profession window closed. **Unpin** removes it.
+
+## At the auction house
+
+When the auction house opens, the window shows the **Pinned recipes** list under the recipe, with two buttons.
+
+- **Search prices** prices every reagent and every output of the pinned recipes, one item at a time, with a progress count. Prices are saved with their date. If you close the auction house meanwhile, the search is cancelled and the prices already received are kept.
+- **Scan AH** reads the entire auction house in one go (the game allows one full scan per 15 minutes per account). It prices thousands of items, so every recipe can be evaluated afterwards. If another addon starts a scan, CraftProfit uses its result without a second request. If the server does not answer, the status says so: the 15 minute cooldown is probably running.
+
+### Sorting the pinned list
+
+The button at the top right of the list switches between:
+
+- **Sort: profit**: the most profitable craft first (the least lossy first when all lose money); recipes without a price last.
+- **Sort: cost/point**: the cheapest skill point first. A recipe whose crafts pay for themselves comes first (green `+…/pt`), then costs in red (`…/pt`), then grey recipes (`n/a`, no point possible), then unpriced ones (`?`). This mode switches the cost per point option on, and unticking that option brings the sort back to profit.
+
+Click a recipe in the list to show it in the window above.
+
+### Searching a reagent
+
+With the material detail unfolded, click a reagent line, for example `20x Bronze Bar`. CraftProfit opens the auction house *Buy* view, types the item name in the search box and starts the search. When you open the item's buy view, the quantity is already set to 20 (multiplied by the number of crafts). You still choose the listing and press **Buy** yourself: CraftProfit never buys anything.
+
+## How the numbers are computed
+
+### Prices
+
+A price comes from auction house listings. The price kept for an item is the **median unit price of the five cheapest units**. One absurdly cheap listing cannot drag the price down the way a plain minimum would, and quantities are handled properly (a listing of 20 units counts 20 times).
+
+Two sources feed it: the targeted search of **Search prices** and the full **Scan AH**. The most recent write wins; each price keeps its date. Prices older than two weeks are discarded.
+
+### Auction house net
+
+`price × (1 − 0.05)`. The 5 % commission was measured in the beta from a sale mail (20 Wool Cloth at 1 silver each: 1 silver commission, deposit refunded). The deposit is refunded when the item sells and is not counted.
+
+### Disenchanting
+
+Expected value = the sum over the possible results of *chance × average quantity × price*, net of the 5 % commission. It is shown for any item that can be disenchanted, **whether or not you have Enchanting**: an item that is bound when equipped can be disenchanted by another player or another character of yours.
+
+The exception is an item that is **bound when picked up**: it cannot change hands, so the line is only shown (`n/a` otherwise) if your character knows Enchanting.
+
+The tables come from Classic and are not yet checked in Forever, hence the *beta* tag. Epic items above item level 60 have no table yet and show `?`. Disenchanting is a gamble: over many items the average is reached, for one item the grey line tells you the most likely result.
+
+### Cost per skill point
+
+`(materials − value of the best exit) ÷ chance of gaining a point`
+
+A craft that loses 16s 50c with a 25 % chance of a point costs 66s per point on average. If the crafts pay for themselves, the line reads **Gain per point** in green.
+
+The chance of a point depends on the colour of the recipe and is an **estimate**, not a measured value: orange 100 %, yellow 75 %, green 25 %, grey 0 % (shown `n/a`). The percentage used is displayed on the line. The colour of pinned recipes is refreshed whenever the profession window updates, so it follows your skill.
+
+## Options and commands
+
+| Setting | Where | Default |
+| --- | --- | --- |
+| Cost per skill point | Checkbox in the window | Off |
+| Material detail folded or unfolded | Click the Materials line | Unfolded |
+| Window position | Drag it; `/cp reset` to undo | Beside the profession or auction house window |
+| Sort of the pinned list | Button above the list | Profit |
+
+Commands: `/cp` (or `/craftprofit`) with `show`, `hide`, `reset`, `scan`, `locale <code>` and `selftest`. See the [README](../README.md#commands).
+
+## Languages
+
+The window follows the game language: English, French and Spanish (Latin American Spanish uses the Spanish texts). Any other language falls back to English. `/cp locale frFR` forces a language for testing and `/cp locale` returns to the game language. Item and recipe names always come from the game, in your client language.
+
+## Known limitations
+
+- **Known recipes only.** Recipes you have not learned are not shown.
+- **Prices are snapshots.** They are as fresh as your last search or scan; the window shows their age.
+- **Large quantities are estimated.** See [Crafts](#crafts).
+- **Disenchant data is Classic data**, tagged *beta*, with no table for epic items above item level 60.
+- **Skill-up chances are estimates** based on recipe colour.
+- **No sales history or frequency.** The game gives no such data, so CraftProfit cannot say how fast an item sells.
+- **Auction house only for prices.** Vendor prices come from the game.
+
+## FAQ and troubleshooting
+
+**The window does not appear.** Select a recipe in the profession window (a recipe you know). Try `/cp show`. Check the addon is enabled and run `/cp selftest`.
+
+**Every price shows `?`.** No price has been fetched yet. At the auction house, press **Search prices** for the pinned recipes or **Scan AH** for everything.
+
+**The scan never finishes ("No reply from the server").** The game limits full scans to one per 15 minutes per account, and any addon's scan counts. Wait and try once.
+
+**"Item not loaded yet, try again".** The game has not cached the item name yet; click again after a moment.
+
+**The quantity is not filled in after clicking a reagent.** The preset is best-effort. The search itself still works; type the quantity by hand.
+
+**The disenchant line shows `n/a` for an item I just crafted.** The item is bound when picked up and your character does not know Enchanting, or the item cannot be disenchanted (not armor or a weapon, or poor quality).
+
+**Text is in the wrong language.** Run `/cp locale` to return to the game language. Missing translations fall back to English; please report them.
+
+**I found a bug.** Open an issue with the *Bug report* template and include the build number (`/dump select(4, GetBuildInfo())`) and any Lua error text. Enable error messages with `/console scriptErrors 1`.

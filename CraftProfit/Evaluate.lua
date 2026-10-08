@@ -30,6 +30,15 @@ local function withID(info, itemID)
     }
 end
 
+Evaluate.MAX_CRAFTS = 9999
+
+-- How many crafts to compute: a whole number from 1 to MAX_CRAFTS, 1 for anything else.
+function Evaluate.craftCount(value)
+    local n = tonumber(value)
+    if not Util.isFinite(n) or n < 1 then return 1 end
+    return math.min(math.floor(n), Evaluate.MAX_CRAFTS)
+end
+
 function Evaluate.run(ctx)
     local recipe, cut = ctx.recipe, ctx.cut
     local oldest
@@ -100,8 +109,25 @@ function Evaluate.run(ctx)
         end
     end
 
+    -- Several crafts: every amount scales, the per point figures above do not (they
+    -- describe one point) and neither does the likely disenchant (one disenchant).
+    local crafts = Evaluate.craftCount(ctx.crafts)
+    if crafts > 1 then
+        for _, line in ipairs(lines) do
+            line.qty = line.qty * crafts
+            if line.subtotal then line.subtotal = line.subtotal * crafts end
+        end
+        if total then total = total * crafts end
+        for _, option in pairs(options) do
+            if option.status == "ok" then option.value = option.value * crafts end
+        end
+        if bestValue then bestValue = bestValue * crafts end
+        if net then net = net * crafts end
+    end
+
     return {
         recipe = recipe,
+        crafts = crafts,
         cost = { total = total, missing = missing or {}, lines = lines },
         options = options,
         best = best,

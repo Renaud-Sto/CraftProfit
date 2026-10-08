@@ -8,7 +8,7 @@ local L = ns.L
 local Controller = {}
 ns.Controller = Controller
 
-local state = { recipe = nil, source = nil }
+local state = { recipe = nil, source = nil, crafts = 1 }
 local requestedItems = {}
 local refreshQueued = false
 
@@ -66,10 +66,13 @@ function Controller.onReagentClick(itemID, qty)
     if not ok then say(L.BROWSE_UNAVAILABLE) end
 end
 
-function Controller.evaluate(recipe)
+-- crafts is only given for the recipe shown in the window; the pinned list is always
+-- one craft.
+function Controller.evaluate(recipe, crafts)
     local settings = CraftProfitDB.settings
     return Evaluate.run({
         recipe = recipe,
+        crafts = crafts,
         priceOf = Prices.priceOf(CraftProfitDB, time()),
         itemInfo = Controller.itemInfo,
         cut = settings.cut,
@@ -77,6 +80,17 @@ function Controller.evaluate(recipe)
         lookupDisenchant = Disenchant.lookup,
         knowsEnchanting = Controller.knowsEnchanting(),
     })
+end
+
+-- The multiplier belongs to one recipe: selecting another one starts again at 1.
+local function choose(recipe, source)
+    if not (state.recipe and recipe and state.recipe.recipeID == recipe.recipeID) then state.crafts = 1 end
+    state.recipe, state.source = recipe, source
+end
+
+function Controller.setCrafts(value)
+    state.crafts = Evaluate.craftCount(value)
+    Controller.refresh()
 end
 
 function Controller.currentRecipeID()
@@ -87,7 +101,7 @@ function Controller.refresh()
     local settings = CraftProfitDB.settings
     local recipe = state.recipe
     if recipe then
-        local model = Present.build(Controller.evaluate(recipe), L, Controller.fmt,
+        local model = Present.build(Controller.evaluate(recipe, state.crafts), L, Controller.fmt,
             { staleAfter = settings.staleAfter, itemName = Controller.itemName })
         if type(recipe.name) == "string" and recipe.name ~= "" then
             model.title = recipe.name
@@ -116,7 +130,7 @@ function Controller.requestRefresh()
 end
 
 function Controller.setRecipe(recipe, source)
-    state.recipe, state.source = recipe, source
+    choose(recipe, source)
     local window = ns.Window
     if not window.isShown() then
         local target = ns.Trade.frame()
@@ -130,7 +144,7 @@ end
 function Controller.selectPin(recipeID)
     local index = DB.pinIndex(CraftProfitCharDB, recipeID)
     if not index then return end
-    state.recipe, state.source = CraftProfitCharDB.pins[index], "pin"
+    choose(CraftProfitCharDB.pins[index], "pin")
     Controller.refresh()
 end
 
@@ -194,7 +208,7 @@ function Controller.onAHOpen(open)
     if open then
         if not state.recipe then
             local first = CraftProfitCharDB.pins[1]
-            if first then state.recipe, state.source = first, "pin" end
+            if first then choose(first, "pin") end
         end
         if not window.isShown() then
             window.attach(AuctionHouseFrame or AuctionFrame, CraftProfitDB.settings.window)
@@ -204,7 +218,7 @@ function Controller.onAHOpen(open)
     elseif state.source == "profession" then
         Controller.refresh()
     else
-        state.recipe, state.source = nil, nil
+        choose(nil, nil)
         window.hide()
         -- The profession window may still be open: let the watcher report it again.
         ns.Trade.invalidate()
@@ -225,9 +239,9 @@ local function onSelection(recipeID)
         local recipe = state.recipe
         local index = recipe and DB.pinIndex(CraftProfitCharDB, recipe.recipeID)
         if index then
-            state.recipe, state.source = CraftProfitCharDB.pins[index], "pin"
+            choose(CraftProfitCharDB.pins[index], "pin")
         else
-            state.recipe, state.source = nil, nil
+            choose(nil, nil)
         end
         if ns.AH.isOpen then
             -- The window was anchored to the profession window that just closed.
@@ -284,6 +298,7 @@ function Controller.init()
     ns.Window.create({
         onPinClick = Controller.togglePin,
         onReagentClick = Controller.onReagentClick,
+        onCraftsChange = Controller.setCrafts,
         onPerPointToggle = function(checked)
             CraftProfitDB.settings.showPerPoint = checked and true or false
             -- The point-cost sort cannot outlive the point-cost option.

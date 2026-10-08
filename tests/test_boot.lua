@@ -470,3 +470,48 @@ H.test("a reagent row click in the window reaches the controller", function()
     T.ns.Window.lastHandlers.onReagentClick(1, 2)
     H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Open the auction house first")
 end)
+
+-- Several crafts
+H.test("setCrafts scales the window only, clamps bad input and starts again on another recipe", function()
+    local T = boot()
+    stock(T)
+    local C = T.ns.Controller
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    H.eq(T.ns.Window.lastModel.crafts, 1)
+    local single = T.ns.Window.lastModel.lines[1].value
+    C.setCrafts("5")
+    H.eq(T.ns.Window.lastModel.crafts, 5)
+    H.eq(T.ns.Window.lastModel.costLines[1].qty, 10)
+    H.truthy(T.ns.Window.lastModel.lines[1].value ~= single)
+    C.setCrafts("0")
+    H.eq(T.ns.Window.lastModel.crafts, 1)
+    C.setCrafts("")
+    H.eq(T.ns.Window.lastModel.crafts, 1)
+    C.setCrafts(50000)
+    H.eq(T.ns.Window.lastModel.crafts, 9999)
+    -- the pinned list is one craft whatever the multiplier
+    H.eq(C.evaluate(T.ns.Recipes.normalize(RAW)).crafts, 1)
+    -- same recipe keeps the multiplier, another one resets it
+    C.setCrafts(4)
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    H.eq(T.ns.Window.lastModel.crafts, 4)
+    local other = T.ns.Recipes.normalize(RAW)
+    other.recipeID = 6
+    C.setRecipe(other, "profession")
+    H.eq(T.ns.Window.lastModel.crafts, 1)
+end)
+
+H.test("a reagent click searches the multiplied quantity", function()
+    local T = boot()
+    stock(T)
+    local C = T.ns.Controller
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    C.setCrafts(3)
+    T.ns.AH.isOpen = true
+    T.env.C_Item.GetItemInfo = function() return "Bronze Bar" end
+    local searched
+    T.ns.AH.browse = function(name, id, qty) searched = { name, id, qty }; return true end
+    local row = T.ns.Window.lastModel.costLines[1]
+    T.ns.Window.lastHandlers.onReagentClick(row.itemID, row.qty)
+    H.eq(searched, { "Bronze Bar", 1, 6 })
+end)

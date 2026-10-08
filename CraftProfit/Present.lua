@@ -88,7 +88,9 @@ end
 function Present.build(result, L, fmt, opts)
     local staleAfter = opts and opts.staleAfter or DEFAULT_STALE
     local lines = {}
-    lines[1] = { label = L.MATERIALS, value = fmt(result.cost.total), key = "cost", best = false }
+    local crafts = result.crafts or 1
+    local materials = crafts > 1 and string.format(L.MATERIALS_MULTI, crafts) or L.MATERIALS
+    lines[1] = { label = materials, value = fmt(result.cost.total), key = "cost", best = false }
     for _, key in ipairs(Core.OPTION_ORDER) do
         local option = result.options[key]
         local text
@@ -114,6 +116,7 @@ function Present.build(result, L, fmt, opts)
     end
     return {
         lines = lines,
+        crafts = crafts,
         costLines = costLines,
         verdict = verdictFor(result, L, fmt),
         ageText = Present.ageText(L, result.oldestAge),

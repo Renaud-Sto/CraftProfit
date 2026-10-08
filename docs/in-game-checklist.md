@@ -34,6 +34,11 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] A scan started by another addon (if installed) is picked up (prices refresh) without pressing Scan.
 - [ ] After a scan, a recipe unpriced by the targeted search gets its price from the scan.
 
+## Several crafts
+- [ ] The "Crafts : [ 1 ]" box under the age line takes a number from 1 to 9999. Type 5 and press Enter (or click elsewhere): reagent quantities, the Materials total, the AH / vendor / disenchant values and the verdict all become five times larger, and the Materials line reads "Composants x5 (estimation)". Cost or gain per point is unchanged.
+- [ ] 0, an empty box or text goes back to 1. Selecting another recipe resets the box to 1; the pinned list always shows one craft.
+- [ ] With 5 crafts, clicking "Barre de bronze" searches the AH and presets the multiplied quantity (for example 100 instead of 20), and the buy view shows the matching total.
+
 ## Click a reagent to search it (quality of life, never buys)
 - [ ] With the materials detail unfolded at the AH, hovering a reagent row highlights it. Clicking "20x Barre de bronze" opens the AH's Buy view, types the item name in the AH search box and starts the search.
 - [ ] Clicking the matching result opens its buy view with the quantity already set to 20. (Best effort: if the quantity stays at 1, note the AH view; the search itself is the part that must work.)

@@ -1,0 +1,99 @@
+-- Turns an Evaluate result into text for the window. Pure Lua, no WoW API:
+-- L is the locale table and fmt formats copper (both injected).
+local _, ns = ...
+local Util, Core, Format = ns.Util, ns.Core, ns.Format
+
+local Present = {}
+ns.Present = Present
+
+local LINE_KEYS = { ah = "LINE_AH", vendor = "LINE_VENDOR", disenchant = "LINE_DISENCHANT" }
+local NAME_KEYS = { ah = "NAME_AH", vendor = "NAME_VENDOR", disenchant = "NAME_DISENCHANT" }
+local UNIT_KEYS = { sec = "AGE_SEC", min = "AGE_MIN", hour = "AGE_HOUR", day = "AGE_DAY" }
+
+local DEFAULT_STALE = 3600
+
+-- "5m", "3h"... in the client language; nil for an invalid duration.
+function Present.durationText(L, seconds)
+    local n, unit = Format.age(seconds)
+    if not n then return nil end
+    return string.format(L[UNIT_KEYS[unit]], n)
+end
+
+function Present.ageText(L, age)
+    local text = Present.durationText(L, age)
+    if not text then return L.AGE_NEVER end
+    return string.format(L.AGE, text)
+end
+
+local function signed(fmt, n)
+    local text = fmt(n)
+    if n > 0 then return "+" .. text end
+    return text
+end
+
+local function perPointValue(L, fmt, perPoint)
+    if perPoint.chance == nil then return L.UNKNOWN end
+    if perPoint.chance == 0 then return L.NA end
+    if perPoint.cost == nil then return L.UNKNOWN end
+    return fmt(perPoint.cost) .. " (" .. L.ESTIMATE .. ")"
+end
+
+local function verdictFor(result, L, fmt)
+    if result.net == nil and result.best == nil and not result.incomplete then
+        return { kind = "none", text = L.VERDICT_NONE, value = "" }
+    end
+    if result.net == nil then
+        return { kind = "incomplete", text = L.VERDICT_INCOMPLETE, value = "" }
+    end
+    local name = L[NAME_KEYS[result.best]]
+    if result.incomplete then
+        return {
+            kind = "incomplete",
+            text = string.format(L.VERDICT_PARTIAL, name),
+            value = signed(fmt, result.net),
+        }
+    end
+    return {
+        kind = result.net >= 0 and "profit" or "loss",
+        text = string.format(L.VERDICT_BEST, name),
+        value = signed(fmt, result.net),
+    }
+end
+
+function Present.build(result, L, fmt, opts)
+    local staleAfter = opts and opts.staleAfter or DEFAULT_STALE
+    local lines = {}
+    lines[1] = { label = L.MATERIALS, value = fmt(result.cost.total), key = "cost", best = false }
+    for _, key in ipairs(Core.OPTION_ORDER) do
+        local option = result.options[key]
+        local text
+        if option.status == "ok" then
+            text = fmt(option.value)
+        elseif option.status == "na" then
+            text = L.NA
+        else
+            text = L.UNKNOWN
+        end
+        lines[#lines + 1] = { label = L[LINE_KEYS[key]], value = text, key = key, best = result.best == key }
+    end
+    if result.perPoint then
+        lines[#lines + 1] = {
+            label = L.PER_POINT, value = perPointValue(L, fmt, result.perPoint),
+            key = "perpoint", best = false,
+        }
+    end
+    local costLines = {}
+    for i, line in ipairs(result.cost.lines) do
+        costLines[i] = {
+            itemID = line.itemID, qty = line.qty,
+            unitText = fmt(line.unit), subtotalText = fmt(line.subtotal),
+        }
+    end
+    return {
+        lines = lines,
+        costLines = costLines,
+        verdict = verdictFor(result, L, fmt),
+        ageText = Present.ageText(L, result.oldestAge),
+        stale = not Util.isFinite(result.oldestAge) or result.oldestAge > staleAfter,
+    }
+end

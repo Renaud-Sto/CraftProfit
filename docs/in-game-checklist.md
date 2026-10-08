@@ -39,6 +39,14 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] 0, an empty box or text goes back to 1. Selecting another recipe resets the box to 1; the pinned list always shows one craft.
 - [ ] With 5 crafts, clicking "Barre de bronze" searches the AH and presets the multiplied quantity (for example 100 instead of 20), and the buy view shows the matching total.
 
+## Price history
+- [ ] The "Suivre l'historique" box sits to the right of the Crafts box. Ticking it on a recipe, then pressing **Scan AH** (or **Search prices** with that recipe or one sharing its reagents pinned) and `/reload`, leaves `series` entries for its items in `CraftProfit.lua` under `markets`.
+- [ ] A recipe whose output is bind-on-pickup still records (its output is never priced).
+- [ ] Unticking pauses recording; `/cp history` lists it as paused; `/cp history remove 1` deletes it and its series.
+- [ ] A 16th tracked recipe is refused with "Trop de recettes suivies (15 maximum)".
+- [ ] After an update from an earlier build, prices are still shown (adopted by the current realm and faction) and a character on another realm or faction starts with no prices.
+- [ ] The saved file stays small: note the size of `CraftProfit.lua` after a few scans with 15 tracked recipes.
+
 ## Click a reagent to search it (quality of life, never buys)
 - [ ] With the materials detail unfolded at the AH, hovering a reagent row highlights it. Clicking "20x Barre de bronze" opens the AH's Buy view, types the item name in the AH search box and starts the search.
 - [ ] Clicking the matching result opens its buy view with the quantity already set to 20. (Best effort: if the quantity stays at 1, note the AH view; the search itself is the part that must work.)

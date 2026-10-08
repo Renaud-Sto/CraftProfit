@@ -23,6 +23,7 @@ CraftProfit est un addon pour **World of Warcraft: Forever**. Sélectionnez une 
 - **Plusieurs crafts d'un coup** : multipliez une recette de 1 à 9999 crafts.
 - **Recettes épinglées** (12 par personnage au maximum), triées par gain ou par coût par point, pour comparer quoi fabriquer ensuite.
 - **Outils d'hôtel des ventes** : un bouton chiffre toutes les recettes épinglées, un autre scanne tout l'hôtel des ventes. Cliquez sur un composant pour le rechercher à l'hôtel des ventes, quantité déjà remplie. CraftProfit n'achète jamais rien à votre place.
+- **Historique des prix** (enregistrement) : cochez *Suivre l'historique* sur 15 recettes au plus et CraftProfit garde leurs prix scan après scan, par royaume et par faction. Les graphiques viendront ensuite.
 - **Autonome** : ni Auctionator ni aucun autre addon n'est nécessaire. Il récupère aussi les scans lancés par d'autres addons.
 - **Anglais, français et espagnol** (selon la langue du jeu).
 
@@ -52,6 +53,7 @@ Le pas-à-pas complet, toutes les options et l'explication de chaque chiffre son
 | `/cp show` / `hide` | Affiche ou masque la fenêtre |
 | `/cp reset` | Remet la fenêtre à côté de la fenêtre de métier ou de l'hôtel des ventes |
 | `/cp scan` | Lance un scan complet de l'hôtel des ventes (hôtel des ventes ouvert) |
+| `/cp history` | Liste les recettes suivies ; `/cp history remove <n>` en supprime une |
 | `/cp locale <code>` | Force une langue (`enUS`, `frFR`, `esES`, `esMX`) ; sans code, retour à la langue du jeu |
 | `/cp selftest` | Lance l'auto-test intégré |
 

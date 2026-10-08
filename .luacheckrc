@@ -50,6 +50,7 @@ read_globals = {
     "ProfessionsFrame", "TradeSkillFrame", "AuctionHouseFrame", "AuctionFrame",
     "AuctionHouseFrameDisplayMode",
     "GetProfessions", "GetProfessionInfo", "IsPlayerSpell",
+    "GetNormalizedRealmName", "GetRealmName", "UnitFactionGroup",
     "GetTradeSkillSelectionIndex", "GetTradeSkillRecipeLink",
     "GetTradeSkillInfo", "GetTradeSkillItemLink", "GetTradeSkillNumReagents",
     "GetTradeSkillReagentInfo", "GetTradeSkillReagentItemLink",

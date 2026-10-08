@@ -21,6 +21,7 @@ Locales/esMX.lua
 Recipes.lua
 DB.lua
 Prices.lua
+History.lua
 PriceQueue.lua
 Evaluate.lua
 Present.lua

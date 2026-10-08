@@ -149,6 +149,7 @@ local function finishSearch(summary)
             setStatus(L.SEARCH_DONE)
         end
     end
+    ctl.commitSearch()
     ctl.requestRefresh()
 end
 

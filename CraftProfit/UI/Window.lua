@@ -26,7 +26,7 @@ local COLORS = {
 }
 
 local frame, titleText, emptyText, verdictText, verdictValue, ageText
-local perPointCheck, perPointLabel, pinButton, pinsHost, costHit, craftsLabel, craftsBox
+local perPointCheck, perPointLabel, pinButton, pinsHost, costHit, craftsLabel, craftsBox, trackCheck, trackLabel
 local detailRows = {}
 local costLines = {}
 local expanded = true
@@ -170,6 +170,13 @@ function Window.create(h)
         if handlers.onCraftsChange then handlers.onCraftsChange(self:GetText()) end
     end)
 
+    trackCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+    trackCheck:SetSize(22, 22)
+    trackCheck:SetScript("OnClick", function(self)
+        if handlers.onTrackToggle then handlers.onTrackToggle(self:GetChecked() and true or false) end
+    end)
+    trackLabel = newText(frame, "GameFontHighlightSmall")
+
     perPointCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
     perPointCheck:SetSize(22, 22)
     perPointCheck:SetScript("OnClick", function(self)
@@ -214,6 +221,8 @@ local function hideLines()
     end
     craftsLabel:Hide()
     craftsBox:Hide()
+    trackCheck:Hide()
+    trackLabel:Hide()
     verdictText:Hide()
     verdictValue:Hide()
     ageText:Hide()
@@ -330,6 +339,14 @@ function Window.render(model)
     -- Never rewrite the box while the player is typing in it.
     if not craftsBox:HasFocus() then craftsBox:SetText(tostring(model.crafts or 1)) end
     craftsBox:Show()
+    trackCheck:ClearAllPoints()
+    trackCheck:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD + 62 + 52 + 14, -y + 1)
+    trackCheck:SetChecked(model.tracked)
+    trackLabel:SetText(L.TRACK_LABEL)
+    trackLabel:ClearAllPoints()
+    trackLabel:SetPoint("LEFT", trackCheck, "RIGHT", 2, 0)
+    trackCheck:Show()
+    trackLabel:Show()
     y = y + 24
 
     perPointCheck:SetChecked(model.showPerPoint)

@@ -31,6 +31,10 @@ La case **Crafts** multiplie la recette sélectionnée par un nombre de crafts (
 
 Pour de grandes quantités, le total est une estimation : le prix d'un composant est la médiane des offres les moins chères, mais en acheter 100 oblige à passer par des offres plus chères. Le vrai prix apparaît à l'hôtel des ventes quand vous lancez la recherche.
 
+### Suivre l'historique
+
+La case **Suivre l'historique** (à côté de Crafts) fait garder à CraftProfit les prix des composants et du résultat de cette recette au fil du temps. Jusqu'à 15 recettes peuvent être suivies, indépendamment de la liste des épingles. Un point est enregistré après chaque scan et chaque recherche de prix qui touche un objet de la recette, tant que tous les prix nécessaires sont connus. Décocher la case met l'enregistrement en pause et garde ce qui a été enregistré. `/cp history` liste les recettes suivies et `/cp history remove <n>` en supprime une avec son historique. Les prix sont gardés par royaume et par faction : l'historique d'un marché ne se mélange jamais avec un autre. Une vue de l'historique (graphiques, « moins cher que d'habitude ») est prévue ; pour l'instant, les données sont seulement collectées.
+
 ### Bouton Épingler
 
 **Épingler** garde la recette dans votre liste d'épingles (12 par personnage au maximum), utilisable même fenêtre de métier fermée. **Désépingler** la retire.
@@ -92,7 +96,7 @@ La probabilité de point dépend de la couleur de la recette et c'est une **esti
 | Position de la fenêtre | La déplacer ; `/cp reset` pour annuler | À côté de la fenêtre de métier ou de l'hôtel des ventes |
 | Tri de la liste des épingles | Bouton au-dessus de la liste | Gain |
 
-Commandes : `/cp` (ou `/craftprofit`) avec `show`, `hide`, `reset`, `scan`, `locale <code>` et `selftest`. Voir le [README](../README.fr.md#commandes).
+Commandes : `/cp` (ou `/craftprofit`) avec `show`, `hide`, `reset`, `scan`, `history`, `locale <code>` et `selftest`. Voir le [README](../README.fr.md#commandes).
 
 ## Langues
 

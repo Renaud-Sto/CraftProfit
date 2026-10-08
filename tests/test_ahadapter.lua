@@ -285,7 +285,7 @@ local function fakeAHFrame(T)
     f.quantity = {}
     f.CommoditiesBuyFrame = {
         BuyDisplay = { QuantityInput = { SetQuantity = function(_, n) f.quantity[#f.quantity + 1] = n end } },
-        HookScript = function(self, name, fn) f.onShow = name == "OnShow" and fn or f.onShow end,
+        HookScript = function(_, name, fn) f.onShow = name == "OnShow" and fn or f.onShow end,
     }
     T.env.AuctionHouseFrame = f
     T.env.AuctionHouseFrameDisplayMode = { Buy = 7 }

@@ -2,6 +2,7 @@
 local ADDON, ns = ...
 local Util, Format, Core, Prices = ns.Util, ns.Format, ns.Core, ns.Prices
 local DB, Evaluate, Present, Recipes = ns.DB, ns.Evaluate, ns.Present, ns.Recipes
+local History = ns.History
 local Disenchant = ns.Data.Disenchant
 local L = ns.L
 
@@ -23,6 +24,23 @@ end
 
 -- Item facts, or nil while the game has not loaded the item yet. The request is
 -- made once per item; ITEM_DATA_LOAD_RESULT triggers the refresh.
+-- Prices differ between realms and between auction house factions, so each market
+-- (realm + player faction) has its own price table and history. The neutral auction
+-- house is not told apart from the faction one yet.
+function Controller.marketKey()
+    local realm = type(GetNormalizedRealmName) == "function" and GetNormalizedRealmName() or nil
+    if type(realm) ~= "string" or realm == "" then
+        realm = type(GetRealmName) == "function" and GetRealmName() or nil
+    end
+    local faction = type(UnitFactionGroup) == "function" and UnitFactionGroup("player") or nil
+    return (type(realm) == "string" and realm ~= "" and realm or "unknown") ..
+        "-" .. (type(faction) == "string" and faction ~= "" and faction or "Neutral")
+end
+
+function Controller.market()
+    return DB.market(CraftProfitDB, Controller.marketKey())
+end
+
 function Controller.itemInfo(itemID)
     local _, _, quality, ilvl, _, _, _, _, _, _, sellPrice, classID, _, bindType = C_Item.GetItemInfo(itemID)
     if quality == nil then
@@ -73,7 +91,7 @@ function Controller.evaluate(recipe, crafts)
     return Evaluate.run({
         recipe = recipe,
         crafts = crafts,
-        priceOf = Prices.priceOf(CraftProfitDB, time()),
+        priceOf = Prices.priceOf(Controller.market(), time()),
         itemInfo = Controller.itemInfo,
         cut = settings.cut,
         showPerPoint = settings.showPerPoint,
@@ -110,6 +128,7 @@ function Controller.refresh()
         end
         for _, reagent in ipairs(recipe.reagents or {}) do Controller.itemInfo(reagent.itemID) end
         model.pinned = DB.pinIndex(CraftProfitCharDB, recipe.recipeID) ~= nil
+        model.tracked = History.isActive(CraftProfitDB, recipe.recipeID)
         model.showPerPoint = settings.showPerPoint
         model.costExpanded = settings.costExpanded
         ns.Window.render(model)
@@ -177,6 +196,20 @@ function Controller.toggleSort()
     Controller.setSortMode(CraftProfitCharDB.sortMode == DB.SORT_POINT and DB.SORT_NET or DB.SORT_POINT)
 end
 
+-- The "Track history" box: starts recording this recipe (or pauses it, keeping
+-- what was recorded).
+function Controller.setTracking(checked)
+    local recipe = state.recipe
+    if not recipe then return end
+    if checked then
+        local ok, reason = History.track(CraftProfitDB, recipe)
+        if not ok and reason == "full" then say(string.format(L.TRACK_FULL, History.MAX_TRACKED)) end
+    else
+        History.pause(CraftProfitDB, recipe.recipeID)
+    end
+    Controller.refresh()
+end
+
 function Controller.togglePin()
     local recipe = state.recipe
     if not recipe then return end
@@ -189,15 +222,47 @@ function Controller.togglePin()
     Controller.refresh()
 end
 
+-- The items worth a history point for a tracked recipe, and the ones that must be
+-- priced for the point to count. The output of a bind-on-pickup recipe cannot be
+-- sold at the auction house, so it is recorded when priced but never required.
+function Controller.historyItems(recipe)
+    local all = Evaluate.wantedItems(recipe, Controller.itemInfo, Disenchant.lookup, Controller.knowsEnchanting())
+    local info = Controller.itemInfo(recipe.outputItemID)
+    local optional = { [recipe.outputItemID] = info ~= nil and info.bindType == 1 or nil }
+    local isReagent = {}
+    for _, r in ipairs(recipe.reagents) do isReagent[r.itemID] = true end
+    local required = {}
+    for _, id in ipairs(all) do
+        if isReagent[id] or (id == recipe.outputItemID and not optional[id]) then required[#required + 1] = id end
+    end
+    return all, required
+end
+
+local searched = {}
+
+-- Writes one history point per tracked recipe the update touched.
+function Controller.recordHistory(updated)
+    History.record(CraftProfitDB, Controller.market(), time(), updated, Controller.historyItems)
+end
+
+-- A price search is over (finished or cancelled): its results make one batch.
+function Controller.commitSearch()
+    local updated = searched
+    searched = {}
+    Controller.recordHistory(updated)
+end
+
 -- Stores the median price of an AH search result. False when nothing was listed.
 function Controller.recordListings(itemID, listings)
     local unit, volume = Prices.summarize(listings, CraftProfitDB.settings.medianN)
-    if unit then Prices.store(CraftProfitDB, itemID, unit, volume, time()) end
+    if unit and Prices.store(Controller.market(), itemID, unit, volume, time()) then searched[itemID] = true end
     return unit ~= nil
 end
 
 function Controller.onSnapshot(agg)
-    local count = Prices.merge(CraftProfitDB, agg.result(CraftProfitDB.settings.medianN), time())
+    local prices = agg.result(CraftProfitDB.settings.medianN)
+    local count = Prices.merge(Controller.market(), prices, time())
+    Controller.recordHistory(prices)
     if ns.PinsUI then ns.PinsUI.setStatus(string.format(L.SCAN_DONE, count)) end
     Controller.requestRefresh()
 end
@@ -291,6 +356,7 @@ function Controller.init()
     CraftProfitDB = CraftProfitDB or {}
     CraftProfitCharDB = CraftProfitCharDB or {}
     DB.initAccount(CraftProfitDB)
+    History.sanitize(CraftProfitDB, time())
     DB.prune(CraftProfitDB, time())
     DB.initChar(CraftProfitCharDB)
     ns.Locale.select(GetLocale())
@@ -299,6 +365,7 @@ function Controller.init()
         onPinClick = Controller.togglePin,
         onReagentClick = Controller.onReagentClick,
         onCraftsChange = Controller.setCrafts,
+        onTrackToggle = Controller.setTracking,
         onPerPointToggle = function(checked)
             CraftProfitDB.settings.showPerPoint = checked and true or false
             -- The point-cost sort cannot outlive the point-cost option.
@@ -354,6 +421,32 @@ function Controller.onEvent(event, arg1, arg2)
     end
 end
 
+-- /cp history: list the tracked recipes; /cp history remove <n>: delete one.
+function Controller.historyCommand(arg)
+    local tracked = CraftProfitDB.tracked
+    local index = tonumber(arg:match("^remove%s+(%d+)$"))
+    if index then
+        local entry = tracked[index]
+        if History.remove(CraftProfitDB, index) then
+            History.prune(CraftProfitDB, Controller.market(), Controller.historyItems)
+            say(string.format(L.HISTORY_REMOVED, entry.recipe.name ~= "" and entry.recipe.name or entry.recipe.recipeID))
+            Controller.refresh()
+        else
+            say(L.HISTORY_NO_SUCH)
+        end
+        return
+    end
+    if #tracked == 0 then
+        say(L.HISTORY_EMPTY)
+        return
+    end
+    say(string.format(L.HISTORY_HEADER, #tracked, History.MAX_TRACKED))
+    for i, entry in ipairs(tracked) do
+        local name = entry.recipe.name ~= "" and entry.recipe.name or ("#" .. entry.recipe.recipeID)
+        say(string.format("%d. %s (%s)", i, name, entry.active and L.TRACK_ACTIVE or L.TRACK_PAUSED))
+    end
+end
+
 local function slash(msg)
     if not Controller.ready then return end
     local cmd, arg = (msg or ""):match("^(%S*)%s*(.-)$")
@@ -378,6 +471,8 @@ local function slash(msg)
         Controller.refresh()
     elseif cmd == "selftest" then
         Controller.selftest()
+    elseif cmd == "history" then
+        Controller.historyCommand(arg)
     else
         say(L.SLASH_HELP)
     end

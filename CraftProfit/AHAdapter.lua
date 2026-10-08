@@ -72,12 +72,18 @@ local function applyPendingQuantity(buyFrame)
     end
     local ok, shownID = pcall(function() return buyFrame.GetItemID and buyFrame:GetItemID() end)
     if ok and type(shownID) == "number" and shownID ~= pending.itemID then return end
-    C_Timer.After(0, function()
+    -- Let the buy view receive its search results first, then set the quantity the way
+    -- typing it would: setting the number alone leaves the quote on one unit (measured
+    -- in the beta: quantity 20, price of 1, "item no longer available" on Buy).
+    C_Timer.After(0.3, function()
         local display = buyFrame.BuyDisplay
         local input = display and display.QuantityInput
-        if input and type(input.SetQuantity) == "function" then
-            pcall(input.SetQuantity, input, pending.qty)
-        end
+        if not (input and type(input.SetQuantity) == "function") then return end
+        pcall(input.SetQuantity, input, pending.qty)
+        local box = input.InputBox
+        local typed = type(box) == "table" and type(box.GetScript) == "function"
+            and select(2, pcall(box.GetScript, box, "OnTextChanged"))
+        if type(typed) == "function" then pcall(typed, box, true) end
     end)
     pendingQuantity = nil
 end

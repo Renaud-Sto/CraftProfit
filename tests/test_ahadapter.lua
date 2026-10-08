@@ -347,3 +347,20 @@ H.test("a failing Blizzard frame never raises", function()
     T.AH.onEvent("AUCTION_HOUSE_SHOW")
     H.eq({ T.AH.browse("Bronze Bar", 2841, 20) }, { false, "unavailable" })
 end)
+
+H.test("the preset quantity is announced to the buy view like typed input", function()
+    local T = setup()
+    local f = fakeAHFrame(T)
+    local typed = {}
+    f.CommoditiesBuyFrame.BuyDisplay.QuantityInput.InputBox = {
+        GetScript = function(_, name)
+            if name == "OnTextChanged" then return function(_, userInput) typed[#typed + 1] = userInput end end
+        end,
+    }
+    T.AH.onEvent("AUCTION_HOUSE_SHOW")
+    T.AH.browse("Bronze Bar", 2841, 20)
+    f.onShow()
+    T.run()
+    H.eq(f.quantity, { 20 })
+    H.eq(typed, { true })
+end)

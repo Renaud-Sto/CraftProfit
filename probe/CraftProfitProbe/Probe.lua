@@ -1,6 +1,6 @@
 -- CraftProfitProbe: THROWAWAY addon measuring what the Forever client exposes.
 -- Every output line starts with the version so a stale install is obvious.
-local VERSION = "0.3.0"
+local VERSION = "0.3.1"
 local TAG = "|cff66ccff[CPP " .. VERSION .. "]|r "
 
 local function isSecret(v)
@@ -236,6 +236,28 @@ cmds.ahui = function(arg)
     end
 end
 
+-- Open an item's buy view in the AH first. Lists what the quantity input is made of.
+cmds.qty = function()
+    local buy = AuctionHouseFrame and AuctionHouseFrame.CommoditiesBuyFrame
+    local display = buy and buy.BuyDisplay
+    local input = display and display.QuantityInput
+    local function keys(name, t)
+        if type(t) ~= "table" then out(name, "=", type(t)); return end
+        local list = {}
+        for k, v in pairs(t) do list[#list + 1] = tostring(k) .. ":" .. type(v) end
+        table.sort(list)
+        out(name, #list, "keys:", table.concat(list, " ", 1, math.min(#list, 70)))
+    end
+    out("buy shown:", buy and buy:IsShown(), "GetItemID:", try(buy and buy.GetItemID, buy))
+    keys("CommoditiesBuyFrame", buy)
+    keys("BuyDisplay", display)
+    keys("QuantityInput", input)
+    keys("InputBox", input and input.InputBox)
+    local box = input and input.InputBox
+    out("InputBox OnTextChanged script:", type(box and box.GetScript and box:GetScript("OnTextChanged")))
+    out("input GetQuantity:", try(input and input.GetQuantity, input))
+end
+
 cmds.trade = function()
     out("ProfessionsFrame:", type(ProfessionsFrame), "shown:", ProfessionsFrame and ProfessionsFrame:IsShown())
     out("TradeSkillFrame:", type(TradeSkillFrame), "shown:", TradeSkillFrame and TradeSkillFrame:IsShown())
@@ -341,7 +363,7 @@ SlashCmdList.CPP = function(msg)
         out("== " .. cmd .. " " .. arg)
         fn(arg)
     else
-        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | log | clear")
+        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | qty | log | clear")
     end
 end
 out("loaded. /cpp for commands. Enable Lua errors: /console scriptErrors 1")

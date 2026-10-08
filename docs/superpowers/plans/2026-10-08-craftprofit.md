@@ -41,7 +41,7 @@ The spec is silent or ambiguous on these; the plan fixes them (flag any you disa
 2. **A bind-on-pickup crafted item cannot be listed on the AH**: its AH option is `n/a`.
 3. **Scanning is user-triggered** (a "Scan AH" button) plus passive listening to other addons' scans. The spec's "scan only if old" is implemented as an age indicator that turns to a warning colour past `staleAfter` (default 1 h), not as an automatic scan, because a full scan freezes the client for a moment.
 4. **esMX reuses the esES strings** (alias). Translations were written without a native review; ask guild members to check them.
-5. **The material cost detail is a hover tooltip, not a fold-out.** The spec says "détail repliable"; a tooltip on the Materials line (quantity × item, unit price, subtotal) keeps the window small and needs no extra layout. A click-to-expand section can replace it later if you prefer.
+5. **The material cost detail is a fold-out under the Materials line** (quantity × item and subtotal per reagent), toggled by clicking that line, shown by default, and remembered in the saved settings (`costExpanded`).
 6. **The pin button reads "Pin" / "Unpin"** (localized text) instead of a ★ glyph, because the game's default font may not contain that glyph.
 
 ## Review Focus
@@ -131,7 +131,7 @@ globals = {
 read_globals = {
     "CreateFrame", "GetLocale", "GetTime", "time", "GetCoinTextureString",
     "issecretvalue", "C_Timer", "C_AuctionHouse", "C_TradeSkillUI", "C_Item",
-    "Enum", "UIParent", "DEFAULT_CHAT_FRAME", "GameTooltip",
+    "Enum", "UIParent", "DEFAULT_CHAT_FRAME",
     "ProfessionsFrame", "TradeSkillFrame", "AuctionHouseFrame", "AuctionFrame",
     "GetTradeSkillSelectionIndex", "GetTradeSkillRecipeLink",
     "GetTradeSkillInfo", "GetTradeSkillItemLink", "GetTradeSkillNumReagents",
@@ -1910,7 +1910,7 @@ git commit -m "feat: add Recipes validation and normalization"
 **Interfaces:**
 - Consumes: `Util.*`, `Recipes.normalize`
 - Produces:
-  - `DB.VERSION = 1`, `DB.MAX_PINS = 12`, `DB.PRICE_MAX_AGE = 14*86400`, `DB.DEFAULTS = {cut=0.05, medianN=5, showPerPoint=false, staleAfter=3600}`, `DB.migrations` (table, public so tests can inject a failing step)
+  - `DB.VERSION = 1`, `DB.MAX_PINS = 12`, `DB.PRICE_MAX_AGE = 14*86400`, `DB.DEFAULTS = {cut=0.05, medianN=5, showPerPoint=false, costExpanded=true, staleAfter=3600}`, `DB.migrations` (table, public so tests can inject a failing step)
   - `DB.initAccount(db) -> db` — repairs **in place** `{dbVersion, settings = {cut, medianN, showPerPoint, staleAfter, window = {point,x,y}|nil}, prices = {[itemID] = {unit, volume, time}}, snapshotTime}`
   - `DB.prune(db, now) -> removedCount`
   - `DB.initChar(db) -> db` — repairs in place `{pins = { recipe, ... }}`
@@ -1936,7 +1936,7 @@ H.test("initAccount fills defaults and returns the same table", function()
     local db = {}
     H.truthy(DB.initAccount(db) == db)
     H.eq(db.dbVersion, 1)
-    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, staleAfter = 3600 })
+    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600 })
     H.eq(db.prices, {})
 end)
 
@@ -1952,20 +1952,20 @@ end)
 H.test("initAccount replaces invalid settings with defaults", function()
     local DB = load()
     local db = DB.initAccount({ settings = {
-        cut = 0 / 0, medianN = 99, staleAfter = -5, showPerPoint = "yes",
+        cut = 0 / 0, medianN = 99, staleAfter = -5, showPerPoint = "yes", costExpanded = "no",
         window = { point = "NOPE", x = 1, y = 2 },
     } })
-    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, staleAfter = 3600 })
+    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600 })
 end)
 
 H.test("initAccount keeps valid settings and floors medianN", function()
     local DB = load()
     local db = DB.initAccount({ settings = {
-        cut = 0.5, medianN = 7.9, staleAfter = 120, showPerPoint = true,
+        cut = 0.5, medianN = 7.9, staleAfter = 120, showPerPoint = true, costExpanded = false,
         window = { point = "TOPLEFT", x = 100, y = -50, junk = 1 },
     } })
     H.eq(db.settings, {
-        cut = 0.5, medianN = 7, staleAfter = 120, showPerPoint = true,
+        cut = 0.5, medianN = 7, staleAfter = 120, showPerPoint = true, costExpanded = false,
         window = { point = "TOPLEFT", x = 100, y = -50 },
     })
     H.eq(DB.initAccount({ settings = { cut = 0.51 } }).settings.cut, 0.05)
@@ -2109,6 +2109,7 @@ DB.DEFAULTS = {
     cut = 0.05,         -- AH commission; set from docs/probe-findings.md F5
     medianN = 5,        -- cheapest units used for the median price
     showPerPoint = false,
+    costExpanded = true, -- material detail shown under the Materials line
     staleAfter = 3600,  -- seconds before prices are shown as old
 }
 
@@ -2136,6 +2137,7 @@ local function sanitizeSettings(s)
     number(s, "medianN", 1, 20, DB.DEFAULTS.medianN, true)
     number(s, "staleAfter", 60, 30 * 86400, DB.DEFAULTS.staleAfter)
     if type(s.showPerPoint) ~= "boolean" then s.showPerPoint = DB.DEFAULTS.showPerPoint end
+    if type(s.costExpanded) ~= "boolean" then s.costExpanded = DB.DEFAULTS.costExpanded end
     local w = s.window
     if type(w) == "table" and ANCHORS[w.point] and Util.isFinite(w.x) and Util.isFinite(w.y) then
         s.window = { point = w.point, x = w.x, y = w.y }
@@ -3257,7 +3259,7 @@ H.test("lines show cost and every option, marking the best", function()
     H.eq(#m.lines, 4)
 end)
 
-H.test("costLines detail each reagent for the materials tooltip", function()
+H.test("costLines detail each reagent for the fold-out under Materials", function()
     local ns = load()
     H.eq(model(ns).costLines, {
         { itemID = 1, qty = 2, unitText = "1s", subtotalText = "2s" },
@@ -4301,9 +4303,9 @@ First user-visible milestone: select a known recipe in the profession window and
 - Test: `tests/test_boot.lua`
 
 **Interfaces:**
-- Consumes: everything built so far; globals `CreateFrame`, `UIParent`, `GameTooltip`, `GetLocale`, `GetTime`, `time`, `C_Item`, `C_Timer`, `GetCoinTextureString`, `DEFAULT_CHAT_FRAME`, `SlashCmdList`, `AuctionHouseFrame`, `AuctionFrame`
+- Consumes: everything built so far; globals `CreateFrame`, `UIParent`, `GetLocale`, `GetTime`, `time`, `C_Item`, `C_Timer`, `GetCoinTextureString`, `DEFAULT_CHAT_FRAME`, `SlashCmdList`, `AuctionHouseFrame`, `AuctionFrame`
 - Produces:
-  - `ns.Window`: `create(handlers)`, `render(model)`, `showEmpty(text)`, `attach(targetFrame|nil, saved|nil)`, `show()`, `hide()`, `isShown()`, `pinsHost() -> frame`, `relayout()`, `lastModel` (the last model rendered; used by tests). `handlers = { onPinClick(), onPerPointToggle(checked), onMoved(point, x, y) }`. `model` is `Present.build`'s result plus `pinned` and `showPerPoint`.
+  - `ns.Window`: `create(handlers)`, `render(model)`, `showEmpty(text)`, `attach(targetFrame|nil, saved|nil)`, `show()`, `hide()`, `isShown()`, `pinsHost() -> frame`, `relayout()`, `lastModel` (the last model rendered; used by tests). `handlers = { onPinClick(), onPerPointToggle(checked), onCostToggle(expanded), onMoved(point, x, y) }`. `model` is `Present.build`'s result plus `pinned`, `showPerPoint` and `costExpanded`.
   - `ns.Controller`: `onEvent(event, arg1, arg2)`, `init()`, `ready`, `setRecipe(recipe, source)` (source `"profession"` or `"pin"`), `selectPin(recipeID)`, `currentRecipeID()`, `refresh()`, `requestRefresh()`, `evaluate(recipe) -> result`, `itemInfo(itemID)`, `fmt(copper)`, `recordListings(itemID, listings) -> boolean`, `onSnapshot(aggregator)`, `onAHOpen(open)`, `togglePin()`, `selftest() -> boolean`, `say(text)`
   - Slash commands `/cp` and `/craftprofit`: `show | hide | reset | scan | locale <code> | selftest`
   - `Boot` calls `ns.PinsUI.init(Controller)`, `.refresh()`, `.onAHOpen(open)`, `.setStatus(text)`, `.scan()` only when `ns.PinsUI` exists (Task 16).
@@ -4590,6 +4592,18 @@ H.test("toggling the per-point option is saved and re-renders", function()
     H.eq(T.ns.Window.lastModel.lines[5].key, "perpoint")
 end)
 
+H.test("folding the materials detail is saved and re-renders", function()
+    local T = boot()
+    stock(T)
+    T.ns.Controller.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    H.eq(T.ns.Window.lastModel.costExpanded, true)
+    T.ns.Window.lastHandlers.onCostToggle(false)
+    H.eq(T.env.CraftProfitDB.settings.costExpanded, false)
+    H.eq(T.ns.Window.lastModel.costExpanded, false)
+    T.ns.Window.lastHandlers.onCostToggle(true)
+    H.eq(T.ns.Window.lastModel.costExpanded, true)
+end)
+
 H.test("ADDON_ACTION_BLOCKED for this addon is reported", function()
     local T = boot()
     T.ns.Controller.onEvent("ADDON_ACTION_BLOCKED", "CraftProfit", "SomeProtectedFunction")
@@ -4622,6 +4636,7 @@ local PAD = 10
 local ROW_H = 16
 local HEADER_H = 26
 local MAX_LINES = 6
+local MAX_DETAIL = 12 -- Recipes.MAX_REAGENTS
 
 local COLORS = {
     profit = { 0.35, 0.90, 0.45 },
@@ -4636,7 +4651,9 @@ local COLORS = {
 
 local frame, titleText, emptyText, verdictText, verdictValue, ageText
 local perPointCheck, perPointLabel, pinButton, pinsHost, costHit
+local detailRows = {}
 local costLines = {}
+local expanded = true
 local lineRows = {}
 local handlers = {}
 local contentHeight = 80
@@ -4659,7 +4676,7 @@ local function place(region, point, x, y)
     region:SetPoint(point, frame, point, x, y)
 end
 
--- Item name for the tooltip; "#id" while the game has not loaded it (or when
+-- Item name for the fold-out; "#id" while the game has not loaded it (or when
 -- the name is a secret value, which raises when concatenated).
 local function reagentName(itemID)
     local ok, name = pcall(C_Item.GetItemInfo, itemID)
@@ -4668,16 +4685,6 @@ local function reagentName(itemID)
         if fine then return text end
     end
     return "#" .. itemID
-end
-
-local function showCostTooltip(owner)
-    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
-    GameTooltip:SetText(L.MATERIALS)
-    for _, line in ipairs(costLines) do
-        GameTooltip:AddDoubleLine(line.qty .. "x " .. reagentName(line.itemID),
-            line.subtotalText .. " (" .. line.unitText .. ")", 1, 1, 1, 1, 1, 1)
-    end
-    GameTooltip:Show()
 end
 
 function Window.create(h)
@@ -4730,13 +4737,19 @@ function Window.create(h)
         lineRows[i] = { label = label, value = value }
     end
 
-    -- Transparent hover area over the Materials line: the cost detail tooltip.
-    costHit = CreateFrame("Frame", nil, frame)
-    costHit:EnableMouse(true)
-    costHit:SetSize(WIDTH - PAD * 2, ROW_H)
-    costHit:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD, -HEADER_H)
-    costHit:SetScript("OnEnter", showCostTooltip)
-    costHit:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    -- Click area over the Materials line: folds the reagent detail in and out.
+    costHit = CreateFrame("Button", nil, frame)
+    costHit:SetScript("OnClick", function()
+        if handlers.onCostToggle then handlers.onCostToggle(not expanded) end
+    end)
+    for i = 1, MAX_DETAIL do
+        local label = newText(frame, "GameFontDisableSmall")
+        label:SetWidth(170)
+        label:SetJustifyH("LEFT")
+        local value = newText(frame, "GameFontDisableSmall")
+        value:SetJustifyH("RIGHT")
+        detailRows[i] = { label = label, value = value }
+    end
 
     verdictText = newText(frame, "GameFontNormal")
     verdictText:SetWidth(170)
@@ -4783,6 +4796,10 @@ local function hideLines()
         lineRows[i].value:Hide()
     end
     costHit:Hide()
+    for i = 1, MAX_DETAIL do
+        detailRows[i].label:Hide()
+        detailRows[i].value:Hide()
+    end
     verdictText:Hide()
     verdictValue:Hide()
     ageText:Hide()
@@ -4802,13 +4819,35 @@ function Window.showEmpty(text)
     Window.relayout()
 end
 
+-- Reagent rows under the Materials line; returns the y below them.
+local function placeDetails(y)
+    for i = 1, MAX_DETAIL do
+        local row, cost = detailRows[i], expanded and costLines[i] or nil
+        if cost then
+            row.label:SetText(cost.qty .. "x " .. reagentName(cost.itemID))
+            row.value:SetText(cost.subtotalText)
+            row.label:ClearAllPoints()
+            row.label:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD + 12, -y)
+            row.value:ClearAllPoints()
+            row.value:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD, -y)
+            row.label:Show()
+            row.value:Show()
+            y = y + ROW_H - 2
+        else
+            row.label:Hide()
+            row.value:Hide()
+        end
+    end
+    return y
+end
+
 function Window.render(model)
     if not frame then return end
     Window.lastModel = model
     costLines = model.costLines or {}
+    expanded = model.costExpanded ~= false
     titleText:SetText(L.TITLE)
     emptyText:Hide()
-    costHit:Show()
 
     local y = HEADER_H
     for i = 1, MAX_LINES do
@@ -4822,7 +4861,16 @@ function Window.render(model)
             place(row.value, "TOPRIGHT", -PAD, -y)
             row.label:Show()
             row.value:Show()
+            if line.key == "cost" then
+                -- "-" folded in, "+" folded out: plain characters every font has.
+                row.label:SetText((expanded and "- " or "+ ") .. line.label)
+                costHit:ClearAllPoints()
+                costHit:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD, -y)
+                costHit:SetSize(WIDTH - PAD * 2, ROW_H)
+                costHit:Show()
+            end
             y = y + ROW_H
+            if line.key == "cost" then y = placeDetails(y) end
         else
             row.label:Hide()
             row.value:Hide()
@@ -4955,6 +5003,7 @@ function Controller.refresh()
             { staleAfter = settings.staleAfter })
         model.pinned = DB.pinIndex(CraftProfitCharDB, recipe.recipeID) ~= nil
         model.showPerPoint = settings.showPerPoint
+        model.costExpanded = settings.costExpanded
         ns.Window.render(model)
     else
         ns.Window.showEmpty(L.NO_RECIPE)
@@ -5095,6 +5144,10 @@ function Controller.init()
         onPinClick = Controller.togglePin,
         onPerPointToggle = function(checked)
             CraftProfitDB.settings.showPerPoint = checked and true or false
+            Controller.refresh()
+        end,
+        onCostToggle = function(isExpanded)
+            CraftProfitDB.settings.costExpanded = isExpanded and true or false
             Controller.refresh()
         end,
         onMoved = function(point, x, y)
@@ -5759,6 +5812,7 @@ Run on the blacksmith (level 30, skill 140+) with `/console scriptErrors 1`. Mar
 - [ ] Closing the profession window hides the window (outside the AH).
 - [ ] Ticking "Show cost per skill point" adds a line marked `(estimate)`; a grey recipe shows `n/a`.
 - [ ] The Pin button toggles to Unpin and back.
+- [ ] Clicking the Materials line folds the reagent detail in (`+`) and out (`-`); the choice survives `/reload`. With 5+ reagents the window grows and nothing overlaps.
 
 ## Auction house
 - [ ] Opening the AH shows the window with the Pinned recipes section (first pin selected).

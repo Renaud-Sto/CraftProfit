@@ -26,7 +26,7 @@ local COLORS = {
 }
 
 local frame, titleText, emptyText, verdictText, verdictValue, ageText
-local perPointCheck, perPointLabel, pinButton, pinsHost, costHit
+local perPointCheck, perPointLabel, pinButton, pinsHost, costHit, craftsLabel, craftsBox
 local detailRows = {}
 local costLines = {}
 local expanded = true
@@ -156,6 +156,20 @@ function Window.create(h)
     ageText = newText(frame, "GameFontDisableSmall")
     ageText:SetJustifyH("LEFT")
 
+    craftsLabel = newText(frame, "GameFontHighlightSmall")
+    craftsBox = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
+    craftsBox:SetSize(52, 20)
+    craftsBox:SetAutoFocus(false)
+    craftsBox:SetNumeric(true)
+    craftsBox:SetMaxLetters(4)
+    craftsBox:SetJustifyH("CENTER")
+    craftsBox:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+    craftsBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    -- Applied when the box loses focus (Enter, Escape or a click elsewhere).
+    craftsBox:SetScript("OnEditFocusLost", function(self)
+        if handlers.onCraftsChange then handlers.onCraftsChange(self:GetText()) end
+    end)
+
     perPointCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
     perPointCheck:SetSize(22, 22)
     perPointCheck:SetScript("OnClick", function(self)
@@ -196,7 +210,10 @@ local function hideLines()
     for i = 1, MAX_DETAIL do
         detailRows[i].label:Hide()
         detailRows[i].value:Hide()
+        detailRows[i].hit:Hide()
     end
+    craftsLabel:Hide()
+    craftsBox:Hide()
     verdictText:Hide()
     verdictValue:Hide()
     ageText:Hide()
@@ -304,6 +321,16 @@ function Window.render(model)
     place(ageText, "TOPLEFT", PAD, -y)
     ageText:Show()
     y = y + ROW_H + 2
+
+    craftsLabel:SetText(L.CRAFTS_LABEL)
+    place(craftsLabel, "TOPLEFT", PAD, -y - 3)
+    craftsLabel:Show()
+    craftsBox:ClearAllPoints()
+    craftsBox:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD + 62, -y)
+    -- Never rewrite the box while the player is typing in it.
+    if not craftsBox:HasFocus() then craftsBox:SetText(tostring(model.crafts or 1)) end
+    craftsBox:Show()
+    y = y + 24
 
     perPointCheck:SetChecked(model.showPerPoint)
     perPointLabel:SetText(L.OPT_PER_POINT)

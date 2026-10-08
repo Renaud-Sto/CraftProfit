@@ -201,3 +201,56 @@ H.test("the disenchant option carries its most probable outcome", function()
     -- 0.75 * 1.5 * 400 + 0.25 * 2000 = 950, minus the 5% cut
     H.eq(r.options.disenchant.value, 903)
 end)
+
+H.test("craftCount accepts whole numbers from 1 to 9999 and falls back to 1", function()
+    local E = load().Evaluate
+    H.eq(E.craftCount(5), 5)
+    H.eq(E.craftCount("12"), 12)
+    H.eq(E.craftCount(2.9), 2)
+    H.eq(E.craftCount(0), 1)
+    H.eq(E.craftCount(-3), 1)
+    H.eq(E.craftCount(nil), 1)
+    H.eq(E.craftCount("abc"), 1)
+    H.eq(E.craftCount(math.huge - math.huge), 1)
+    H.eq(E.craftCount(100000), 9999)
+end)
+
+H.test("several crafts scale quantities, cost, resale values and the net, not the per point figures", function()
+    local E = load().Evaluate
+    local one = E.run(ctx({ showPerPoint = true }))
+    local five = E.run(ctx({ showPerPoint = true, crafts = 5 }))
+    H.eq(five.crafts, 5)
+    H.eq(five.cost.total, one.cost.total * 5)
+    H.eq(five.cost.lines[1], { itemID = 1, qty = 10, unit = 100, subtotal = 1000 })
+    H.eq(five.options.ah.value, one.options.ah.value * 5)
+    H.eq(five.options.vendor.value, one.options.vendor.value * 5)
+    H.eq(five.options.disenchant.value, one.options.disenchant.value * 5)
+    H.eq(five.bestValue, one.bestValue * 5)
+    H.eq(five.net, one.net * 5)
+    H.eq(five.best, one.best)
+    H.eq(five.perPoint, one.perPoint)
+    H.eq(five.oldestAge, one.oldestAge)
+end)
+
+H.test("several crafts leave unknown prices unknown and never invent a total", function()
+    local E = load().Evaluate
+    local r = E.run(ctx({ crafts = 3, priceOf = prices({ [2] = false, [100] = false }) }))
+    H.eq(r.cost.total, nil)
+    H.eq(r.cost.lines[2].subtotal, nil)
+    H.eq(r.cost.lines[2].qty, 3)
+    H.eq(r.options.ah.status, "unknown")
+    H.eq(r.net, nil)
+    H.eq(r.incomplete, true)
+end)
+
+H.test("the likely disenchant outcome is per disenchant whatever the number of crafts", function()
+    local E = load().Evaluate
+    local entries = {
+        { itemID = 200, chance = 0.75, min = 1, max = 2 },
+        { itemID = 201, chance = 0.25, min = 1, max = 1 },
+    }
+    local c = { lookupDisenchant = function() return entries end, priceOf = prices({ [201] = 2000 }) }
+    local one = E.run(ctx(c))
+    c.crafts = 4
+    H.eq(E.run(ctx(c)).options.disenchant.likely, one.options.disenchant.likely)
+end)

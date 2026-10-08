@@ -3,6 +3,8 @@ local _, ns = ...
 ns.Locale.register("enUS", {
     TITLE = "CraftProfit",
     MATERIALS = "Materials",
+    MATERIALS_MULTI = "Materials x%d (estimate)",
+    CRAFTS_LABEL = "Crafts:",
     LINE_AH = "Auction house (net)",
     LINE_VENDOR = "Vendor",
     LINE_DISENCHANT = "Disenchant (beta)",

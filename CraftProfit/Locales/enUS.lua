@@ -5,7 +5,7 @@ ns.Locale.register("enUS", {
     MATERIALS = "Materials",
     LINE_AH = "Auction house (net)",
     LINE_VENDOR = "Vendor",
-    LINE_DISENCHANT = "Disenchant (expected, beta)",
+    LINE_DISENCHANT = "Disenchant (beta)",
     NAME_AH = "Auction house",
     NAME_VENDOR = "Vendor",
     NAME_DISENCHANT = "Disenchant",

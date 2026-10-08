@@ -51,19 +51,20 @@ function PinsUI.wantedFor(pins, itemInfo, lookup, knowsEnchanting)
     return ids
 end
 
--- Pinned recipes with their evaluation, in display order: pin order, or cheapest
--- cost per point first.
+-- Pinned recipes with their evaluation, in display order: most profitable first, or
+-- cheapest cost per point first.
 function PinsUI.orderedPins(pins, sortMode, evaluate)
-    local items = {}
-    for i, recipe in ipairs(pins) do items[i] = { recipe = recipe, result = evaluate(recipe) } end
-    if sortMode ~= ns.DB.SORT_POINT then return items end
-    local entries = {}
-    for i, item in ipairs(items) do
-        local pp = item.result.perPoint
-        entries[i] = { cost = pp and pp.cost, chance = pp and pp.chance }
+    local items, entries = {}, {}
+    local byPoint = sortMode == ns.DB.SORT_POINT
+    for i, recipe in ipairs(pins) do
+        local result = evaluate(recipe)
+        items[i] = { recipe = recipe, result = result }
+        local pp = result.perPoint
+        entries[i] = byPoint and { cost = pp and pp.cost, chance = pp and pp.chance } or { net = result.net }
     end
+    local order = byPoint and ns.Core.rankByPointCost(entries) or ns.Core.rankByNet(entries)
     local sorted = {}
-    for i, index in ipairs(ns.Core.rankByPointCost(entries)) do sorted[i] = items[index] end
+    for i, index in ipairs(order) do sorted[i] = items[index] end
     return sorted
 end
 

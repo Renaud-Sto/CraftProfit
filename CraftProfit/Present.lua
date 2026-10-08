@@ -33,12 +33,22 @@ local function signed(fmt, n)
     return text
 end
 
-local function perPointValue(L, fmt, perPoint)
-    if perPoint.chance == nil then return L.UNKNOWN end
-    if perPoint.chance == 0 then return L.NA end
-    if perPoint.cost == nil then return L.UNKNOWN end
+-- Label, value and tone of the cost per point line. A negative cost means each
+-- point pays for itself, which reads better as a gain than as a negative cost.
+local function perPointLine(L, fmt, perPoint)
+    local line = { label = L.PER_POINT, key = "perpoint", best = false }
+    if perPoint.chance == nil then line.value = L.UNKNOWN; return line end
+    if perPoint.chance == 0 then line.value = L.NA; return line end
+    if perPoint.cost == nil then line.value = L.UNKNOWN; return line end
     local percent = math.floor(perPoint.chance * 100 + 0.5)
-    return fmt(perPoint.cost) .. " (" .. percent .. "%, " .. L.ESTIMATE .. ")"
+    local suffix = " (" .. percent .. "%, " .. L.ESTIMATE .. ")"
+    if perPoint.cost < 0 then
+        line.label, line.value, line.tone = L.PER_POINT_GAIN, fmt(-perPoint.cost) .. suffix, "profit"
+    else
+        line.value = fmt(perPoint.cost) .. suffix
+        if perPoint.cost > 0 then line.tone = "loss" end
+    end
+    return line
 end
 
 local function verdictFor(result, L, fmt)
@@ -94,12 +104,7 @@ function Present.build(result, L, fmt, opts)
             lines[#lines + 1] = likelyLine(option.likely, fmt, opts and opts.itemName)
         end
     end
-    if result.perPoint then
-        lines[#lines + 1] = {
-            label = L.PER_POINT, value = perPointValue(L, fmt, result.perPoint),
-            key = "perpoint", best = false,
-        }
-    end
+    if result.perPoint then lines[#lines + 1] = perPointLine(L, fmt, result.perPoint) end
     local costLines = {}
     for i, line in ipairs(result.cost.lines) do
         costLines[i] = {

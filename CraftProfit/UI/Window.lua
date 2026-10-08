@@ -20,7 +20,7 @@ local COLORS = {
     incomplete = { 1.00, 0.82, 0.25 },
     none = { 0.70, 0.70, 0.70 },
     normal = { 0.90, 0.90, 0.90 },
-    best = { 0.35, 0.90, 0.45 },
+    best = { 1.00, 0.82, 0.00 }, -- gold: green and red are kept for gain and loss
     muted = { 0.65, 0.65, 0.70 },
     stale = { 1.00, 0.60, 0.25 },
 }
@@ -245,8 +245,10 @@ function Window.render(model)
         if line then
             row.label:SetText(line.label)
             row.value:SetText(line.value)
-            color(row.label, line.best and COLORS.best or line.muted and COLORS.muted or COLORS.normal)
-            color(row.value, line.best and COLORS.best or COLORS.normal)
+            local tone = line.best and COLORS.best or line.tone and COLORS[line.tone]
+            color(row.label, tone or line.muted and COLORS.muted or COLORS.normal)
+            color(row.value, tone or COLORS.normal)
+            if line.best then row.label:SetText("> " .. line.label) end
             place(row.label, "TOPLEFT", line.muted and PAD + 12 or PAD, -y)
             place(row.value, "TOPRIGHT", -PAD, -y)
             row.label:Show()

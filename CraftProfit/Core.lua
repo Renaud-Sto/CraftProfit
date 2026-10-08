@@ -140,6 +140,24 @@ function Core.rankByPointCost(entries)
     return result
 end
 
+-- Display order by net result: entries = { { net = copper|nil } }. Most profitable
+-- (or least lossy) first, unknown results last, ties keep their original order.
+function Core.rankByNet(entries)
+    local order = {}
+    for i, e in ipairs(entries) do
+        local known = Util.isFinite(e.net)
+        order[#order + 1] = { index = i, known = known, net = known and e.net or 0 }
+    end
+    table.sort(order, function(a, b)
+        if a.known ~= b.known then return a.known end
+        if a.net ~= b.net then return a.net > b.net end
+        return a.index < b.index
+    end)
+    local result = {}
+    for i, o in ipairs(order) do result[i] = o.index end
+    return result
+end
+
 -- Net cost of one skill point: (cost - what the result recovers) / chance.
 -- Negative means the crafts pay for themselves. Nil when no point can be earned.
 function Core.costPerPoint(cost, recovered, chance)

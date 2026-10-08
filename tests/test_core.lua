@@ -176,3 +176,10 @@ H.test("rankByPointCost orders cheapest first, then no-point recipes, then unkno
     H.eq(order, { 3, 7, 1, 5, 4, 2, 6 })
     H.eq(Core.rankByPointCost({}), {})
 end)
+
+H.test("rankByNet puts the most profitable first, unknown results last, ties in original order", function()
+    local Core = H.newNS("Util", "Core").Core
+    H.eq(Core.rankByNet({ { net = -500 }, {}, { net = 40 }, { net = -20 }, { net = 40 }, { net = math.huge - math.huge } }),
+        { 3, 5, 4, 1, 2, 6 })
+    H.eq(Core.rankByNet({}), {})
+end)

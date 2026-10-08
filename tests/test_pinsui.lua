@@ -195,17 +195,16 @@ H.test("a scan the server never answers reports it, a scan it answers does not",
     H.eq(P.status, "Scanning the auction house...")
 end)
 
-H.test("orderedPins keeps pin order by default and sorts by cost per point on request", function()
+H.test("orderedPins sorts by net (most profitable first) or by cost per point (cheapest first)", function()
     local T = boot()
     local P = T.ns.PinsUI
-    local pins = {
-        { recipeID = 1 }, { recipeID = 2 }, { recipeID = 3 }, { recipeID = 4 },
-    }
+    local pins = { { recipeID = 1 }, { recipeID = 2 }, { recipeID = 3 }, { recipeID = 4 }, { recipeID = 5 } }
     local results = {
-        [1] = { perPoint = { cost = 900, chance = 0.25 } },
-        [2] = { perPoint = { cost = nil, chance = 0 } },
-        [3] = { perPoint = { cost = 100, chance = 1 } },
-        [4] = {},
+        [1] = { net = -500, perPoint = { cost = 900, chance = 0.25 } },
+        [2] = { net = 40, perPoint = { cost = nil, chance = 0 } },
+        [3] = { net = -20, perPoint = { cost = 100, chance = 1 } },
+        [4] = { perPoint = {} },
+        [5] = { net = 40, perPoint = { cost = -50, chance = 1 } },
     }
     local function evaluate(recipe) return results[recipe.recipeID] end
     local function ids(list)
@@ -213,9 +212,9 @@ H.test("orderedPins keeps pin order by default and sorts by cost per point on re
         for i, item in ipairs(list) do out[i] = item.recipe.recipeID end
         return out
     end
-    H.eq(ids(P.orderedPins(pins, "net", evaluate)), { 1, 2, 3, 4 })
-    H.eq(ids(P.orderedPins(pins, "point", evaluate)), { 3, 1, 2, 4 })
-    H.eq(P.orderedPins(pins, "point", evaluate)[1].result, results[3])
+    H.eq(ids(P.orderedPins(pins, "net", evaluate)), { 2, 5, 3, 1, 4 })
+    H.eq(ids(P.orderedPins(pins, "point", evaluate)), { 5, 3, 1, 2, 4 })
+    H.eq(P.orderedPins(pins, "point", evaluate)[1].result, results[5])
 end)
 
 H.test("the pins list refreshes in both sort modes without errors", function()

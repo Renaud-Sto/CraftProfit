@@ -1,6 +1,6 @@
 -- CraftProfitProbe: THROWAWAY addon measuring what the Forever client exposes.
 -- Every output line starts with the version so a stale install is obvious.
-local VERSION = "0.2.2"
+local VERSION = "0.3.0"
 local TAG = "|cff66ccff[CPP " .. VERSION .. "]|r "
 
 local function isSecret(v)
@@ -199,6 +199,43 @@ cmds.prof = function()
     end
 end
 
+-- What the Blizzard auction house UI offers for "click a reagent, search it" (needs the
+-- AH open). Prints only types and plain values, never changes anything.
+cmds.ahui = function(arg)
+    local f = AuctionHouseFrame
+    out("AuctionHouseFrame:", type(f), "shown:", f and f:IsShown())
+    if type(f) ~= "table" then return end
+    for _, name in ipairs({ "SearchBar", "BrowseResultsFrame", "CommoditiesBuyFrame", "ItemBuyFrame",
+        "SetDisplayMode", "GetDisplayMode", "SelectBrowseResult", "QueryAll", "ItemSellFrame" }) do
+        out(" f." .. name, type(f[name]))
+    end
+    local bar = f.SearchBar
+    if type(bar) == "table" then
+        for _, name in ipairs({ "SearchBox", "SearchButton", "StartSearch", "FilterButton", "QueryBrowse" }) do
+            out(" SearchBar." .. name, type(bar[name]))
+        end
+        out(" SearchBox text:", bar.SearchBox and bar.SearchBox.GetText and bar.SearchBox:GetText())
+    end
+    local buy = f.CommoditiesBuyFrame
+    if type(buy) == "table" then
+        out(" CommoditiesBuyFrame.BuyDisplay:", type(buy.BuyDisplay),
+            "QuantityInput:", type(buy.BuyDisplay and buy.BuyDisplay.QuantityInput))
+    end
+    out("display modes:", type(AuctionHouseFrameDisplayMode), try(function()
+        local keys = {}
+        for k in pairs(AuctionHouseFrameDisplayMode or {}) do keys[#keys + 1] = tostring(k) end
+        table.sort(keys)
+        return table.concat(keys, "/")
+    end))
+    out("GetDisplayMode:", try(f.GetDisplayMode, f))
+    local id = tonumber(arg) or 2841
+    out("C_AuctionHouse.GetItemCommodityStatus(" .. id .. "):", try(C_AuctionHouse.GetItemCommodityStatus, id))
+    for _, name in ipairs({ "SendBrowseQuery", "SendSearchQuery", "StartCommoditiesPurchase",
+        "GetBrowseResults", "RequestMoreBrowseResults", "MakeItemKey", "GetItemKeyInfo" }) do
+        out(" C_AuctionHouse." .. name, type(C_AuctionHouse[name]))
+    end
+end
+
 cmds.trade = function()
     out("ProfessionsFrame:", type(ProfessionsFrame), "shown:", ProfessionsFrame and ProfessionsFrame:IsShown())
     out("TradeSkillFrame:", type(TradeSkillFrame), "shown:", TradeSkillFrame and TradeSkillFrame:IsShown())
@@ -304,7 +341,7 @@ SlashCmdList.CPP = function(msg)
         out("== " .. cmd .. " " .. arg)
         fn(arg)
     else
-        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | log | clear")
+        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | log | clear")
     end
 end
 out("loaded. /cpp for commands. Enable Lua errors: /console scriptErrors 1")

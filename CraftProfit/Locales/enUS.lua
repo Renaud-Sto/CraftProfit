@@ -10,6 +10,7 @@ ns.Locale.register("enUS", {
     NAME_VENDOR = "Vendor",
     NAME_DISENCHANT = "Disenchant",
     PER_POINT = "Cost per point",
+    PER_POINT_GAIN = "Gain per point",
     ESTIMATE = "estimate",
     VERDICT_BEST = "Best: %s",
     VERDICT_PARTIAL = "Best known: %s (prices missing)",

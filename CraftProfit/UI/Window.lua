@@ -97,6 +97,8 @@ function Window.create(h)
 
     titleText = newText(frame, "GameFontNormal")
     place(titleText, "TOPLEFT", PAD, -8)
+    titleText:SetWidth(230)
+    titleText:SetJustifyH("LEFT")
 
     local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 2, 2)
@@ -128,7 +130,8 @@ function Window.create(h)
     end
 
     verdictText = newText(frame, "GameFontNormal")
-    verdictText:SetWidth(170)
+    verdictText:SetWidth(WIDTH - PAD * 2)
+    verdictText:SetWordWrap(true)
     verdictText:SetJustifyH("LEFT")
     verdictValue = newText(frame, "GameFontNormal")
     verdictValue:SetJustifyH("RIGHT")
@@ -222,7 +225,7 @@ function Window.render(model)
     Window.lastModel = model
     costLines = model.costLines or {}
     expanded = model.costExpanded ~= false
-    titleText:SetText(L.TITLE)
+    titleText:SetText(model.title or L.TITLE)
     emptyText:Hide()
 
     local y = HEADER_H
@@ -262,8 +265,10 @@ function Window.render(model)
     color(verdictText, verdictColor)
     color(verdictValue, verdictColor)
     place(verdictText, "TOPLEFT", PAD, -y)
-    place(verdictValue, "TOPRIGHT", -PAD, -y)
     verdictText:Show()
+    -- The qualifier can wrap onto several lines; the value sits on its own row below.
+    y = y + math.max(ROW_H, verdictText:GetStringHeight() or ROW_H)
+    place(verdictValue, "TOPRIGHT", -PAD, -y)
     verdictValue:Show()
     y = y + ROW_H + 4
 

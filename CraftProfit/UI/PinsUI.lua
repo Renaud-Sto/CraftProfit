@@ -25,6 +25,7 @@ local host, header, emptyText, statusText, searchButton, scanButton
 local rows = {}
 local offset = 0
 local queue, ticker
+local notFound = 0
 
 PinsUI.state = "idle"
 PinsUI.status = ""
@@ -105,8 +106,9 @@ local function finishSearch(summary)
         setStatus(L.SEARCH_CANCELLED)
     else
         PinsUI.state = "done"
-        if #summary.failed > 0 then
-            setStatus(string.format(L.SEARCH_PARTIAL, #summary.failed))
+        local missing = #summary.failed + notFound
+        if missing > 0 then
+            setStatus(string.format(L.SEARCH_PARTIAL, missing))
         else
             setStatus(L.SEARCH_DONE)
         end
@@ -123,12 +125,13 @@ function PinsUI.startSearch()
     if queue and queue.state == "running" then return end
     local ids = PinsUI.wantedFor(CraftProfitCharDB.pins, ctl.itemInfo, ns.Data.Disenchant.lookup)
     if #ids == 0 then return end
+    notFound = 0
     queue = ns.PriceQueue.new({
         itemIDs = ids,
         timeout = SEARCH_TIMEOUT,
         send = ns.AH.search,
         onItem = function(itemID, listings, err)
-            if not err then ctl.recordListings(itemID, listings) end
+            if not err and not ctl.recordListings(itemID, listings) then notFound = notFound + 1 end
         end,
         onProgress = function(done, total)
             setStatus(string.format(L.SEARCHING, done, total))

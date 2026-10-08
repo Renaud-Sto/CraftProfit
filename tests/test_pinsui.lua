@@ -165,3 +165,18 @@ H.test("the pins list refreshes without errors when empty or large", function()
     end
     T.ns.PinsUI.refresh()
 end)
+
+-- Fix wave item 5
+H.test("an empty AH listing counts as not found", function()
+    local T = boot()
+    local P = T.ns.PinsUI
+    T.ns.AH.isOpen = true
+    P.startSearch()
+    P.onSearchResults(1, {})
+    for _, id in ipairs({ 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
+    H.eq(P.state, "done")
+    H.eq(P.status, "Prices updated, 1 not found")
+    P.startSearch()
+    for _, id in ipairs({ 1, 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
+    H.eq(P.status, "Prices updated")
+end)

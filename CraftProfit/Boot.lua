@@ -35,6 +35,17 @@ function Controller.itemInfo(itemID)
     return { quality = quality, ilvl = ilvl, sellPrice = sellPrice, classID = classID, bindType = bindType }
 end
 
+-- Item name read secret-safely (a secret value raises when concatenated), or
+-- nil while the game has not loaded the item.
+function Controller.itemName(itemID)
+    local ok, name = pcall(C_Item.GetItemInfo, itemID)
+    if ok and type(name) == "string" then
+        local fine, text = pcall(function() return name .. "" end)
+        if fine and text ~= "" then return text end
+    end
+    return nil
+end
+
 function Controller.evaluate(recipe)
     local settings = CraftProfitDB.settings
     return Evaluate.run({
@@ -57,6 +68,12 @@ function Controller.refresh()
     if recipe then
         local model = Present.build(Controller.evaluate(recipe), L, Controller.fmt,
             { staleAfter = settings.staleAfter })
+        if type(recipe.name) == "string" and recipe.name ~= "" then
+            model.title = recipe.name
+        else
+            model.title = Controller.itemName(recipe.outputItemID)
+        end
+        for _, reagent in ipairs(recipe.reagents or {}) do Controller.itemInfo(reagent.itemID) end
         model.pinned = DB.pinIndex(CraftProfitCharDB, recipe.recipeID) ~= nil
         model.showPerPoint = settings.showPerPoint
         model.costExpanded = settings.costExpanded
@@ -139,6 +156,8 @@ function Controller.onAHOpen(open)
     else
         state.recipe, state.source = nil, nil
         window.hide()
+        -- The profession window may still be open: let the watcher report it again.
+        ns.Trade.invalidate()
     end
 end
 
@@ -218,6 +237,10 @@ function Controller.init()
         end,
         onSnapshot = Controller.onSnapshot,
     })
+    local ahFrame = AuctionHouseFrame or AuctionFrame
+    if type(ahFrame) == "table" and type(ahFrame.IsShown) == "function" and ahFrame:IsShown() then
+        ns.AH.onEvent("AUCTION_HOUSE_SHOW")
+    end
     ns.Trade.watch(onSelection)
     Controller.ready = true
 end
@@ -233,7 +256,9 @@ function Controller.onEvent(event, arg1, arg2)
     end
     if not Controller.ready then return end
     if event == "ITEM_DATA_LOAD_RESULT" then
-        if requestedItems[arg1] then
+        -- On failure the id stays marked: clearing it would re-request the item
+        -- at every refresh, forever.
+        if arg2 ~= false and requestedItems[arg1] then
             requestedItems[arg1] = nil
             Controller.requestRefresh()
         end

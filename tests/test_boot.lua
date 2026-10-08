@@ -209,3 +209,127 @@ H.test("ADDON_ACTION_BLOCKED for this addon is reported", function()
     T.ns.Controller.onEvent("ADDON_ACTION_BLOCKED", "OtherAddon", "X")
     H.eq(#T.chat, before)
 end)
+
+local function mockProfession(T)
+    T.env.ProfessionsFrame = {
+        IsShown = function() return true end,
+        CraftingPage = { SchematicForm = { GetRecipeInfo = function() return { recipeID = 5 } end } },
+    }
+    T.env.Enum = { CraftingReagentType = { Basic = 1 } }
+    T.env.C_TradeSkillUI = {
+        GetRecipeInfo = function(id) return { recipeID = id, name = "Sword", learned = true, relativeDifficulty = 1 } end,
+        GetRecipeSchematic = function()
+            return { outputItemID = 100, quantityMin = 1, quantityMax = 1, reagentSlotSchematics = {
+                { reagentType = 1, quantityRequired = 2, reagents = { { itemID = 1 } } },
+                { reagentType = 1, quantityRequired = 1, reagents = { { itemID = 2 } } },
+            } }
+        end,
+    }
+end
+
+-- Fix wave item 1
+H.test("the window model carries the recipe name, or the output item name, or nil", function()
+    local T = boot()
+    T.ns.Controller.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    H.eq(T.ns.Window.lastModel.title, "Sword")
+    local unnamed = {}
+    for k, v in pairs(RAW) do unnamed[k] = v end
+    unnamed.name = ""
+    T.ns.Controller.setRecipe(T.ns.Recipes.normalize(unnamed), "profession")
+    H.eq(T.ns.Window.lastModel.title, "Item100")
+    local T2 = boot({ items = {} })
+    T2.ns.Controller.setRecipe(T2.ns.Recipes.normalize(unnamed), "profession")
+    H.eq(T2.ns.Window.lastModel.title, nil)
+    H.eq(T2.ns.Controller.itemName(100), nil)
+end)
+
+-- Fix wave item 2
+H.test("every verdict kind renders without errors", function()
+    local T = boot()
+    local C = T.ns.Controller
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    H.eq(T.ns.Window.lastModel.verdict.kind, "incomplete")
+    stock(T)
+    H.eq(T.ns.Window.lastModel.verdict.kind, "incomplete")
+    C.refresh()
+    H.eq(T.ns.Window.lastModel.verdict.kind, "profit")
+    T.env.CraftProfitDB.prices[100][1] = 1
+    C.refresh()
+    H.eq(T.ns.Window.lastModel.verdict.kind, "loss")
+    T.ns.Window.render({
+        lines = {}, verdict = { kind = "none", text = "x", value = "?" }, ageText = "",
+    })
+    H.eq(T.ns.Window.lastModel.verdict.kind, "none")
+end)
+
+-- Fix wave item 3
+H.test("a failed item load is not retried forever", function()
+    local T = boot({ items = {} })
+    local C = T.ns.Controller
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    local n = #T.loadRequests
+    H.truthy(n > 0)
+    C.onEvent("ITEM_DATA_LOAD_RESULT", 100, false)
+    T.run()
+    C.onEvent("ITEM_DATA_LOAD_RESULT", 1, false)
+    T.run()
+    H.eq(#T.loadRequests, n)
+    H.eq(#T.timers, 0)
+    C.onEvent("ITEM_DATA_LOAD_RESULT", 2, true)
+    H.eq(#T.timers, 1)
+    T.run()
+end)
+
+H.test("a successful item load clears the mark so a missing item can be requested again", function()
+    local T = boot({ items = {} })
+    local C = T.ns.Controller
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    local n = #T.loadRequests
+    C.onEvent("ITEM_DATA_LOAD_RESULT", 100, true)
+    T.run()
+    H.truthy(#T.loadRequests > n)
+end)
+
+-- Fix wave item 4
+H.test("an AH that is already open when the addon loads is detected", function()
+    local T = W.boot(H, { items = ITEMS })
+    T.env.AuctionHouseFrame = { IsShown = function() return true end }
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(T.ns.AH.isOpen, true)
+    local T2 = boot()
+    H.falsy(T2.ns.AH.isOpen)
+    local T3 = W.boot(H, { items = ITEMS })
+    T3.env.AuctionHouseFrame = {}
+    T3.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.falsy(T3.ns.AH.isOpen)
+end)
+
+-- Fix wave item 6
+H.test("reagent item data is requested for the displayed recipe", function()
+    local T = boot({ items = {} })
+    T.ns.Controller.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    local seen = {}
+    for _, id in ipairs(T.loadRequests) do seen[id] = true end
+    H.truthy(seen[1])
+    H.truthy(seen[2])
+    H.truthy(seen[100])
+end)
+
+-- Fix wave item 7
+H.test("the profession recipe comes back after the AH closes", function()
+    local T = boot()
+    stock(T)
+    mockProfession(T)
+    T.tickers[#T.tickers].fn()
+    H.eq(T.ns.Controller.currentRecipeID(), 5)
+    T.ns.Controller.selectPin(999)
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, RAW)
+    T.ns.Controller.selectPin(5)
+    T.ns.Controller.onAHOpen(true)
+    T.ns.Controller.onAHOpen(false)
+    H.falsy(T.ns.Window.isShown())
+    T.ns.Window.lastModel = nil
+    T.tickers[#T.tickers].fn()
+    H.truthy(T.ns.Window.isShown())
+    H.truthy(T.ns.Window.lastModel)
+end)

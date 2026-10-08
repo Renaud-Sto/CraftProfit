@@ -35,7 +35,8 @@ local function perPointValue(L, fmt, perPoint)
     if perPoint.chance == nil then return L.UNKNOWN end
     if perPoint.chance == 0 then return L.NA end
     if perPoint.cost == nil then return L.UNKNOWN end
-    return fmt(perPoint.cost) .. " (" .. L.ESTIMATE .. ")"
+    local percent = math.floor(perPoint.chance * 100 + 0.5)
+    return fmt(perPoint.cost) .. " (" .. percent .. "%, " .. L.ESTIMATE .. ")"
 end
 
 local function verdictFor(result, L, fmt)

@@ -9,7 +9,7 @@ ns.Locale.register("frFR", {
     NAME_AH = "Hôtel des ventes",
     NAME_VENDOR = "Marchand",
     NAME_DISENCHANT = "Désenchantement",
-    PER_POINT = "Coût par point de compétence",
+    PER_POINT = "Coût par point",
     ESTIMATE = "estimation",
     VERDICT_BEST = "Meilleur : %s",
     VERDICT_PARTIAL = "Meilleur connu : %s (prix manquants)",

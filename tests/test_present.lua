@@ -92,7 +92,7 @@ end)
 H.test("the per-point line is labelled as an estimate", function()
     local ns = load()
     local m = model(ns, { showPerPoint = true })
-    H.eq(m.lines[5], { label = "Cost per skill point", value = "-9s 33c (estimate)", key = "perpoint", best = false })
+    H.eq(m.lines[5], { label = "Cost per point", value = "-9s 33c (75%, estimate)", key = "perpoint", best = false })
 end)
 
 H.test("the per-point line shows n/a for trivial recipes and ? for unknown difficulty", function()

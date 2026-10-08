@@ -9,7 +9,7 @@ ns.Locale.register("esES", {
     NAME_AH = "Casa de subastas",
     NAME_VENDOR = "Vendedor",
     NAME_DISENCHANT = "Desencantar",
-    PER_POINT = "Coste por punto de habilidad",
+    PER_POINT = "Coste por punto",
     ESTIMATE = "estimación",
     VERDICT_BEST = "Mejor: %s",
     VERDICT_PARTIAL = "Mejor conocido: %s (faltan precios)",

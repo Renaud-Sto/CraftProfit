@@ -9,7 +9,7 @@ ns.Locale.register("enUS", {
     NAME_AH = "Auction house",
     NAME_VENDOR = "Vendor",
     NAME_DISENCHANT = "Disenchant",
-    PER_POINT = "Cost per skill point",
+    PER_POINT = "Cost per point",
     ESTIMATE = "estimate",
     VERDICT_BEST = "Best: %s",
     VERDICT_PARTIAL = "Best known: %s (prices missing)",

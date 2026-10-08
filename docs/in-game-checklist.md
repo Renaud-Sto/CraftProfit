@@ -1,0 +1,39 @@
+# CraftProfit in-game checklist (WoW: Forever beta)
+
+Run on the blacksmith (level 30, skill 140+) with `/console scriptErrors 1`. Mark each line ✅ / ❌ and note the build number from `/cpp locale`-style output or the login screen. Retest on the launch build (4 November 2026).
+
+## Load and self-test
+- [ ] Client starts with no Lua error popup. `/cp` prints the command list.
+- [ ] `/cp selftest` prints `Self-test passed (11 checks)`.
+
+## Profession window
+- [ ] Selecting an orange recipe shows Materials, AH, Vendor, Disenchant (when the product is armor or a weapon of uncommon quality or better) and a verdict.
+- [ ] Selecting a recipe whose product cannot be sold on the AH (bind on pickup) shows `n/a` on the AH line.
+- [ ] A recipe you have not learned shows nothing (window hides or keeps the empty text).
+- [ ] The window opens on the right of the profession window; dragging it and `/reload` keeps the position; `/cp reset` puts it back.
+- [ ] Closing the profession window hides the window (outside the AH).
+- [ ] Ticking "Show cost per skill point" adds a line marked `(estimate)`; a grey recipe shows `n/a`.
+- [ ] The Pin button toggles to Unpin and back.
+- [ ] Clicking the Materials line folds the reagent detail in (`+`) and out (`-`); the choice survives `/reload`. With 5+ reagents the window grows and nothing overlaps.
+
+## Auction house
+- [ ] Opening the AH shows the window with the Pinned recipes section (first pin selected).
+- [ ] **Search prices** counts `1/N … N/N` and ends with `Prices updated`; prices and the verdict fill in; the age reads a few seconds.
+- [ ] Closing the AH during a search shows `Search cancelled` with no error.
+- [ ] **Scan AH** starts a scan, the client does not freeze, the status ends `Scan complete: N items priced`. A second press inside 15 minutes shows the cooldown message.
+- [ ] A scan started by another addon (if installed) is picked up (prices refresh) without pressing Scan.
+- [ ] After a scan, a recipe unpriced by the targeted search gets its price from the scan.
+
+## Numbers
+- [ ] For one recipe, compare each reagent price with the AH listing prices: the stored price is the median of the 5 cheapest units (not the minimum).
+- [ ] Sell one crafted item (or use `docs/probe-findings.md` F5): the mailed amount matches `price × (1 − cut)`. If not, change `DB.DEFAULTS.cut` and the test expectations.
+- [ ] Disenchant data: disenchant three items of the same bracket several times each; the materials received are plausible against the table (`UNVERIFIED IN FOREVER` comment in `Data/Disenchant.lua` removed only when this passes).
+
+## Languages
+- [ ] `/cp locale frFR`, `/cp locale esES`, `/cp locale esMX`, `/cp locale deDE`: every label is translated or falls back to English; no raw key (`LINE_AH`…) appears; `/cp locale` returns to the client language.
+- [ ] A French-client and a Spanish-client friend each run the checklist's Profession window and Auction house sections and report any untranslated or truncated text.
+
+## Robustness
+- [ ] Pin 13 recipes: the 13th is refused with `Too many pinned recipes`.
+- [ ] Select a recipe while item data is not cached (first login): the Vendor and Disenchant lines show `?` and fill in on their own within a second.
+- [ ] `/reload` with the AH open does not raise an error.

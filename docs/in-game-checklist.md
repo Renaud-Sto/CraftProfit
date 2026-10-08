@@ -15,7 +15,7 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] A recipe you have not learned shows nothing (window hides or keeps the empty text).
 - [ ] The window opens on the right of the profession window; dragging it and `/reload` keeps the position; `/cp reset` puts it back.
 - [ ] Closing the profession window hides the window (outside the AH).
-- [ ] Ticking "Show cost per skill point" adds a line marked `(estimate)`; a grey recipe shows `n/a`.
+- [ ] Ticking "Cost per skill point" adds a line marked `(estimate)`; a grey recipe shows `n/a`.
 - [ ] The Pin button toggles to Unpin and back.
 - [ ] Clicking the Materials line folds the reagent detail in (`+`) and out (`-`); the choice survives `/reload`. With 5+ reagents the window grows and nothing overlaps.
 

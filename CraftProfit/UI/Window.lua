@@ -7,7 +7,7 @@ local L = ns.L
 local Window = {}
 ns.Window = Window
 
-local WIDTH = 270
+local WIDTH = 320
 local PAD = 10
 local ROW_H = 16
 local HEADER_H = 26
@@ -34,6 +34,7 @@ local lineRows = {}
 local handlers = {}
 local contentHeight = 80
 
+Window.WIDTH = WIDTH
 Window.lastModel = nil
 Window.lastHandlers = nil
 
@@ -61,6 +62,16 @@ local function reagentName(itemID)
         if fine then return text end
     end
     return "#" .. itemID
+end
+
+-- Long recipe names drop to the small font before they would be cut off.
+function Window.setTitle(text)
+    titleText:SetFontObject("GameFontNormal")
+    titleText:SetText(text)
+    local textWidth, boxWidth = titleText:GetStringWidth(), titleText:GetWidth()
+    if type(textWidth) == "number" and type(boxWidth) == "number" and textWidth > boxWidth then
+        titleText:SetFontObject("GameFontNormalSmall")
+    end
 end
 
 function Window.create(h)
@@ -97,7 +108,7 @@ function Window.create(h)
 
     titleText = newText(frame, "GameFontNormal")
     place(titleText, "TOPLEFT", PAD, -8)
-    titleText:SetWidth(230)
+    titleText:SetWidth(WIDTH - 40)
     titleText:SetJustifyH("LEFT")
 
     local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
@@ -225,7 +236,7 @@ function Window.render(model)
     Window.lastModel = model
     costLines = model.costLines or {}
     expanded = model.costExpanded ~= false
-    titleText:SetText(model.title or L.TITLE)
+    Window.setTitle(model.title or L.TITLE)
     emptyText:Hide()
 
     local y = HEADER_H

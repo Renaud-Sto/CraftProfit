@@ -1,6 +1,6 @@
 -- CraftProfitProbe: THROWAWAY addon measuring what the Forever client exposes.
 -- Every output line starts with the version so a stale install is obvious.
-local VERSION = "0.2.1"
+local VERSION = "0.2.2"
 local TAG = "|cff66ccff[CPP " .. VERSION .. "]|r "
 
 local function isSecret(v)
@@ -173,6 +173,32 @@ local function dumpRecipe(recipeID)
     end
 end
 
+-- How to tell which professions the character has (needed: is Enchanting known?).
+-- Enchanting skill line 333, apprentice spell 7411.
+cmds.prof = function()
+    local ids = { try(GetProfessions) }
+    out("GetProfessions:", ids[1])
+    for i = 1, 6 do
+        local r = try(GetProfessionInfo, i)
+        if r ~= "MISSING" and r ~= "(no return)" and not r:find("^ERR") then out(" GetProfessionInfo", i, r) end
+    end
+    out("C_TradeSkillUI.GetAllProfessionTradeSkillLines:",
+        try(C_TradeSkillUI and C_TradeSkillUI.GetAllProfessionTradeSkillLines))
+    out("C_TradeSkillUI.GetProfessionInfoBySkillLineID(333):",
+        try(C_TradeSkillUI and C_TradeSkillUI.GetProfessionInfoBySkillLineID, 333))
+    out("IsSpellKnown(7411):", try(IsSpellKnown, 7411))
+    out("IsPlayerSpell(7411):", try(IsPlayerSpell, 7411))
+    out("C_SpellBook.IsSpellKnown(7411):", try(C_SpellBook and C_SpellBook.IsSpellKnown, 7411))
+    out("GetNumSkillLines:", try(GetNumSkillLines))
+    local lines = tonumber(try(GetNumSkillLines)) or 0
+    for i = 1, math.min(lines, 40) do
+        local r = try(GetSkillLineInfo, i)
+        if r:find("Enchant") or r:find("Forge") or r:find("Blacksmith") or r:find("Enchantement") then
+            out(" GetSkillLineInfo", i, r)
+        end
+    end
+end
+
 cmds.trade = function()
     out("ProfessionsFrame:", type(ProfessionsFrame), "shown:", ProfessionsFrame and ProfessionsFrame:IsShown())
     out("TradeSkillFrame:", type(TradeSkillFrame), "shown:", TradeSkillFrame and TradeSkillFrame:IsShown())
@@ -278,7 +304,7 @@ SlashCmdList.CPP = function(msg)
         out("== " .. cmd .. " " .. arg)
         fn(arg)
     else
-        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | log | clear")
+        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | log | clear")
     end
 end
 out("loaded. /cpp for commands. Enable Lua errors: /console scriptErrors 1")

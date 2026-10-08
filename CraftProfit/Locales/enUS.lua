@@ -39,7 +39,7 @@ ns.Locale.register("enUS", {
     SCAN_DONE = "Scan complete: %d items priced",
     SCAN_COOLDOWN = "Full scan available in %s",
     SCAN_NO_REPLY = "No reply from the server. A scan may be on its 15 minute cooldown",
-    OPT_PER_POINT = "Show cost per skill point",
+    OPT_PER_POINT = "Cost per skill point",
     NO_RECIPE = "Select a recipe",
     SLASH_HELP = "Commands: /cp show | hide | reset | scan | locale <code> | selftest",
     SELFTEST_OK = "Self-test passed (%d checks)",

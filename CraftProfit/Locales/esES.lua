@@ -39,7 +39,7 @@ ns.Locale.register("esES", {
     SCAN_DONE = "Escaneo completo: %d objetos con precio",
     SCAN_COOLDOWN = "Escaneo completo disponible en %s",
     SCAN_NO_REPLY = "Sin respuesta del servidor. Puede que un escaneo esté en espera de 15 minutos",
-    OPT_PER_POINT = "Mostrar coste por punto de habilidad",
+    OPT_PER_POINT = "Coste por punto de habilidad",
     NO_RECIPE = "Selecciona una receta",
     SLASH_HELP = "Comandos: /cp show | hide | reset | scan | locale <código> | selftest",
     SELFTEST_OK = "Autoprueba superada (%d comprobaciones)",

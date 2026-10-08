@@ -28,8 +28,9 @@ Status marks: ✅ measured in game · ⚠️ not measured · ❌ unusable.
 - Does the profession window global exist before first opening (lazy-loaded)? ____
 
 ## F5. AH commission and deposit
-- Deposit reported by `/cpp deposit <id>` for a 2 (24 h) listing: ____
-- Real commission: list an item for a known buyout (for example 100g), buy it with another character or wait for the sale, compare the mailed amount: ____ % → sets `DB.DEFAULTS.cut`.
+- Measured 2026-10-08 from a sale mail (French client): 20 Wool Cloth at 1s each = 20s 00c "Prix de vente"; deposit returned +1s 32c; "Commission de l'HV" -1s 00c; received 20s 32c (2000 + 132 - 100 = 2032).
+- Commission = 100 / 2000 = **5 %** of the total sale price, on top of which the deposit is refunded when the item sells. ✅ → `DB.DEFAULTS.cut = 0.05` stands.
+- One data point, at a round amount: the rounding of the commission on other prices (floor / ceil / nearest) is not measured. The 8 hour deposit for 20 Wool Cloth was 1s 32c (not used by the addon: it is refunded on a sale).
 
 ## F6. Secret values
 - `/cpp api` prints `issecretvalue` as `function`: yes / no

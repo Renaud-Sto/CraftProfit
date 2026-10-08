@@ -34,6 +34,11 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] A scan started by another addon (if installed) is picked up (prices refresh) without pressing Scan.
 - [ ] After a scan, a recipe unpriced by the targeted search gets its price from the scan.
 
+## Click a reagent to search it (quality of life, never buys)
+- [ ] With the materials detail unfolded at the AH, hovering a reagent row highlights it. Clicking "20x Barre de bronze" opens the AH's Buy view, types the item name in the AH search box and starts the search.
+- [ ] Clicking the matching result opens its buy view with the quantity already set to 20. (Best effort: if the quantity stays at 1, note the AH view; the search itself is the part that must work.)
+- [ ] With the AH closed, clicking a reagent prints "Open the auction house first". No Lua error and no `ADDON_ACTION_BLOCKED` in any case. CraftProfit never presses Buy.
+
 ## Numbers
 - [ ] For one recipe, compare each reagent price with the AH listing prices: the stored price is the median of the 5 cheapest units (not the minimum).
 - [ ] Sell one crafted item (or use `docs/probe-findings.md` F5): the mailed amount matches `price × (1 − cut)`. If not, change `DB.DEFAULTS.cut` and the test expectations.

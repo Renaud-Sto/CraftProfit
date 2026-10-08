@@ -51,6 +51,21 @@ function Controller.knowsEnchanting()
     return ns.Trade.hasProfession(ns.Trade.ENCHANTING_SKILL_LINE)
 end
 
+-- A reagent was clicked in the window: search it at the AH, quantity preset.
+function Controller.onReagentClick(itemID, qty)
+    if not ns.AH.isOpen then
+        say(L.SEARCH_NEED_AH)
+        return
+    end
+    local name = Controller.itemName(itemID)
+    if not name then
+        say(L.ITEM_NOT_LOADED)
+        return
+    end
+    local ok = ns.AH.browse(name, itemID, qty)
+    if not ok then say(L.BROWSE_UNAVAILABLE) end
+end
+
 function Controller.evaluate(recipe)
     local settings = CraftProfitDB.settings
     return Evaluate.run({
@@ -268,6 +283,7 @@ function Controller.init()
 
     ns.Window.create({
         onPinClick = Controller.togglePin,
+        onReagentClick = Controller.onReagentClick,
         onPerPointToggle = function(checked)
             CraftProfitDB.settings.showPerPoint = checked and true or false
             -- The point-cost sort cannot outlive the point-cost option.

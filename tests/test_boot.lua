@@ -444,3 +444,29 @@ H.test("the sort mode is saved with the character and repaired when corrupt", fu
     T2.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
     H.eq(T2.env.CraftProfitCharDB.sortMode, "net")
 end)
+
+H.test("clicking a reagent searches it at the AH, or says why it cannot", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local searched
+    T.ns.AH.browse = function(name, id, qty) searched = { name, id, qty }; return true end
+    C.onReagentClick(1, 20)
+    H.eq(searched, nil)
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Open the auction house first")
+    T.ns.AH.isOpen = true
+    C.onReagentClick(1, 20)
+    H.eq(searched, nil)
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Item not loaded yet, try again in a moment")
+    T.env.C_Item.GetItemInfo = function() return "Bronze Bar" end
+    C.onReagentClick(1, 20)
+    H.eq(searched, { "Bronze Bar", 1, 20 })
+    T.ns.AH.browse = function() return false, "unavailable" end
+    C.onReagentClick(1, 20)
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r The auction house search is not available")
+end)
+
+H.test("a reagent row click in the window reaches the controller", function()
+    local T = boot()
+    T.ns.Window.lastHandlers.onReagentClick(1, 2)
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Open the auction house first")
+end)

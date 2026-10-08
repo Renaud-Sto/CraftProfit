@@ -58,6 +58,59 @@ function AH.requestSnapshot(now)
     return true
 end
 
+-- Quality of life, never a purchase: types the item's name in the AH's own search box
+-- and starts the search, then presets the quantity when the item's buy view opens.
+-- Every Blizzard frame is reached defensively: a missing piece skips that step.
+local pendingQuantity
+local quantityHooked = false
+
+local function applyPendingQuantity(buyFrame)
+    local pending = pendingQuantity
+    if not pending or GetTime() > pending.expires then
+        pendingQuantity = nil
+        return
+    end
+    local ok, shownID = pcall(function() return buyFrame.GetItemID and buyFrame:GetItemID() end)
+    if ok and type(shownID) == "number" and shownID ~= pending.itemID then return end
+    C_Timer.After(0, function()
+        local display = buyFrame.BuyDisplay
+        local input = display and display.QuantityInput
+        if input and type(input.SetQuantity) == "function" then
+            pcall(input.SetQuantity, input, pending.qty)
+        end
+    end)
+    pendingQuantity = nil
+end
+
+local function hookBuyFrame(frame)
+    local buy = frame.CommoditiesBuyFrame
+    if quantityHooked or type(buy) ~= "table" or type(buy.HookScript) ~= "function" then return end
+    if pcall(buy.HookScript, buy, "OnShow", function() applyPendingQuantity(buy) end) then
+        quantityHooked = true
+    end
+end
+
+-- Returns true when the search was started, else false and a reason.
+function AH.browse(name, itemID, quantity)
+    if not AH.isOpen then return false, "closed" end
+    local frame = AuctionHouseFrame
+    local bar = type(frame) == "table" and frame.SearchBar
+    local box = type(bar) == "table" and bar.SearchBox
+    if type(box) ~= "table" or type(box.SetText) ~= "function" or type(bar.StartSearch) ~= "function" then
+        return false, "unavailable"
+    end
+    local modes = AuctionHouseFrameDisplayMode
+    if type(frame.SetDisplayMode) == "function" and type(modes) == "table" and modes.Buy ~= nil then
+        pcall(frame.SetDisplayMode, frame, modes.Buy)
+    end
+    if not pcall(box.SetText, box, name) then return false, "unavailable" end
+    if not pcall(bar.StartSearch, bar) then return false, "unavailable" end
+    pendingQuantity = Util.count(quantity)
+        and { itemID = itemID, qty = quantity, expires = GetTime() + 60 } or nil
+    hookBuyFrame(frame)
+    return true
+end
+
 -- Sends a price-sorted search. The answer arrives through handlers.onSearch.
 function AH.search(itemID)
     local api = C_AuctionHouse

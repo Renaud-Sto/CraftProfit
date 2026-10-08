@@ -48,6 +48,7 @@ read_globals = {
     "issecretvalue", "C_Timer", "C_AuctionHouse", "C_TradeSkillUI", "C_Item",
     "Enum", "UIParent", "DEFAULT_CHAT_FRAME",
     "ProfessionsFrame", "TradeSkillFrame", "AuctionHouseFrame", "AuctionFrame",
+    "AuctionHouseFrameDisplayMode",
     "GetProfessions", "GetProfessionInfo", "IsPlayerSpell",
     "GetTradeSkillSelectionIndex", "GetTradeSkillRecipeLink",
     "GetTradeSkillInfo", "GetTradeSkillItemLink", "GetTradeSkillNumReagents",

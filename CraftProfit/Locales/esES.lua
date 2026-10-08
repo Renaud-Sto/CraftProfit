@@ -37,6 +37,8 @@ ns.Locale.register("esES", {
     SEARCH_DONE = "Precios actualizados",
     SEARCH_PARTIAL = "Precios actualizados, %d sin resultado",
     SEARCH_NEED_AH = "Abre primero la casa de subastas",
+    ITEM_NOT_LOADED = "Objeto aún no cargado, inténtalo de nuevo en un momento",
+    BROWSE_UNAVAILABLE = "La búsqueda de la casa de subastas no está disponible",
     SEARCH_CANCELLED = "Búsqueda cancelada",
     SCAN = "Escanear CS",
     SCAN_STARTED = "Escaneando la casa de subastas...",

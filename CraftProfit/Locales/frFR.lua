@@ -38,6 +38,7 @@ ns.Locale.register("frFR", {
     SCAN_STARTED = "Scan de l'hôtel des ventes...",
     SCAN_DONE = "Scan terminé : %d objets chiffrés",
     SCAN_COOLDOWN = "Scan complet disponible dans %s",
+    SCAN_NO_REPLY = "Pas de réponse du serveur. Un scan est peut-être en délai de 15 minutes",
     OPT_PER_POINT = "Afficher le coût par point de compétence",
     NO_RECIPE = "Sélectionnez une recette",
     SLASH_HELP = "Commandes : /cp show | hide | reset | scan | locale <code> | selftest",

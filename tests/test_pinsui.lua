@@ -180,3 +180,17 @@ H.test("an empty AH listing counts as not found", function()
     for _, id in ipairs({ 1, 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
     H.eq(P.status, "Prices updated")
 end)
+
+H.test("a scan the server never answers reports it, a scan it answers does not", function()
+    local T = boot()
+    local P = T.ns.PinsUI
+    T.ns.AH.isOpen = true
+    T.ns.AH.requestSnapshot = function() return true end
+    P.scan()
+    T.run()
+    H.eq(P.status, "No reply from the server. A scan may be on its 15 minute cooldown")
+    P.scan()
+    T.ns.AH.onEvent("REPLICATE_ITEM_LIST_UPDATE")
+    T.run()
+    H.eq(P.status, "Scanning the auction house...")
+end)

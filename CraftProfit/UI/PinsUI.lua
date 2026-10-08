@@ -26,6 +26,7 @@ local rows = {}
 local offset = 0
 local queue, ticker
 local notFound = 0
+local SCAN_REPLY_TIMEOUT = 15
 
 PinsUI.state = "idle"
 PinsUI.status = ""
@@ -151,6 +152,12 @@ function PinsUI.scan()
     local ok, reason, left = ns.AH.requestSnapshot(GetTime())
     if ok then
         setStatus(L.SCAN_STARTED)
+        -- The server ignores a scan inside its 15 minute window and sends nothing.
+        local startedAt = GetTime()
+        C_Timer.After(SCAN_REPLY_TIMEOUT, function()
+            local replied = ns.AH.lastEventTime and ns.AH.lastEventTime >= startedAt
+            if PinsUI.status == L.SCAN_STARTED and not replied then setStatus(L.SCAN_NO_REPLY) end
+        end)
     elseif reason == "cooldown" then
         setStatus(string.format(L.SCAN_COOLDOWN, ns.Present.durationText(L, left) or "?"))
     else

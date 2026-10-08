@@ -157,6 +157,7 @@ function AH.onEvent(event, arg1)
         -- Also fires for scans other addons started; they use the same cooldown.
         local now = GetTime()
         lastReplicate = now
+        AH.lastEventTime = now
         if replicatePending or reading then return end
         if lastRead and now - lastRead < AH.REREAD_QUIET then return end
         replicatePending = true

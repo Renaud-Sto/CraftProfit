@@ -1,0 +1,7 @@
+## Interface: 16001
+## Title: CraftProfit Probe
+## Notes: THROWAWAY. Prints what the Forever API really returns. Never ship.
+## Author: juliani
+## Version: 0.1.0
+
+Probe.lua

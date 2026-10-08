@@ -1,0 +1,28 @@
+## Interface: 16001
+## Title: CraftProfit
+## Notes: Prices profession recipes with auction house data and shows the most profitable way to sell the result.
+## Author: juliani
+## Version: 0.1.0
+## SavedVariables: CraftProfitDB
+## SavedVariablesPerCharacter: CraftProfitCharDB
+
+Util.lua
+Format.lua
+Core.lua
+Data/Skillup.lua
+Data/Disenchant.lua
+Locale.lua
+Locales/enUS.lua
+Locales/frFR.lua
+Locales/esES.lua
+Locales/esMX.lua
+Recipes.lua
+DB.lua
+Prices.lua
+PriceQueue.lua
+Evaluate.lua
+Present.lua
+AHAdapter.lua
+TradeAdapter.lua
+UI/Window.lua
+Boot.lua

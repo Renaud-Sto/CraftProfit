@@ -78,7 +78,7 @@ Bug reports, translation fixes and pull requests are welcome. Read [CONTRIBUTING
 
 ## License
 
-The license will be added before the first release.
+[MIT](LICENSE). The disenchant data is derived from a CC BY-SA 4.0 source, see [Credits and data sources](#credits-and-data-sources).
 
 ## Credits and data sources
 

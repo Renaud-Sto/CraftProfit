@@ -41,6 +41,10 @@ ln -s "$PWD/probe/CraftProfitProbe" "/Applications/World of Warcraft/_classic_be
 
 Run `/cpp` for the commands, then `/reload`: the output is written to `WTF/Account/<id>/SavedVariables/CraftProfitProbe.lua`. Record what you learn in [docs/probe-findings.md](docs/probe-findings.md). Do not ship the probe.
 
+## Licensing of contributions
+
+CraftProfit is under the [MIT license](LICENSE). By opening a pull request you agree that your contribution is published under it. Do not add code, text or data whose license is incompatible, and never copy Blizzard art or game files into the repository.
+
 ## Workflow
 
 1. Create a branch from `main`: `feat/...`, `fix/...` or `docs/...`.

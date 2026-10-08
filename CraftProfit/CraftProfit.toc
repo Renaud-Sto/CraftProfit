@@ -6,6 +6,7 @@
 ## SavedVariables: CraftProfitDB
 ## SavedVariablesPerCharacter: CraftProfitCharDB
 ## X-Website: https://github.com/Renaud-Sto/CraftProfit
+## X-License: MIT
 
 Util.lua
 Format.lua

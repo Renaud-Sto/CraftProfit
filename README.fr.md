@@ -78,7 +78,7 @@ Les rapports de bugs, corrections de traduction et pull requests sont les bienve
 
 ## Licence
 
-La licence sera ajoutée avant la première publication.
+[MIT](LICENSE). Les données de désenchantement sont dérivées d'une source CC BY-SA 4.0, voir [Crédits et sources de données](#crédits-et-sources-de-données).
 
 ## Crédits et sources de données
 

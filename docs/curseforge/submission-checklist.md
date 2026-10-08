@@ -15,7 +15,7 @@ Their pages share a structure: a one-sentence summary, **Features**, **Usage** (
 | Description | English first, says what it does and how; promotional links at the bottom only | Drafted |
 | Icon | 400 × 400 px minimum, square PNG, original, not a solid colour, not a Blizzard asset | **To do** |
 | Screenshots | Real in-game images, titled | **To do** (after the UI rework) |
-| License | You own the content or may redistribute it; chosen on the project form | **Decision needed** |
+| License | You own the content or may redistribute it; chosen on the project form | **MIT** (`LICENSE` added); select "MIT License" on the CurseForge form |
 | Categories | Professions; Auction & Economy | Chosen |
 | Game version | Forever, 1.60.1 | To confirm in the upload form; the TOC says Interface 16001 |
 | Changelog | Required with every file | [CHANGELOG.md](../../CHANGELOG.md) |
@@ -23,9 +23,9 @@ Their pages share a structure: a one-sentence summary, **Features**, **Usage** (
 | Source / issues links | Recommended | GitHub, in the description |
 | Author name | Shown on the page | `Sto` (TOC `## Author` updated); use the same name on the CurseForge account |
 
-## License decision
+## License
 
-CraftProfit has no license file yet, which means *all rights reserved* by default: nobody may legally reuse or redistribute it, and CurseForge will ask which license applies. Common choices for addons: **MIT** (permissive, used by the comparable addons above), **GPL-3.0** (forks must stay open), **All Rights Reserved**. This is the owner's decision. Once chosen: add `LICENSE`, state it in the README (both languages), and select the same one on the CurseForge form.
+CraftProfit is released under the **MIT license** (`LICENSE`, copyright holder `Sto`): anyone may use, modify and redistribute it, including commercially, as long as the copyright notice and license text are kept; there is no warranty. It covers CraftProfit's own code and text only, not Blizzard's names, icons or textures (never copy those into the repository) and not third-party data (see below). On the CurseForge form choose **MIT License**; the TOC carries `## X-License: MIT`.
 
 ### Data source of the disenchant tables
 
@@ -33,11 +33,10 @@ CraftProfit has no license file yet, which means *all rights reserved* by defaul
 
 ## Before the first upload
 
-1. Choose and add the license.
-2. Create the icon and the screenshots (after the interface rework).
-3. Run the [in-game checklist](../in-game-checklist.md) on the current beta build; retest on the launch build (4 November 2026), the `Interface` number may change. Verify it with `/dump select(4, GetBuildInfo())` and list several values in the TOC if you support more than one build.
-4. Update the version in `CraftProfit/CraftProfit.toc`, [CHANGELOG.md](../../CHANGELOG.md) and the README status line.
-5. Have a French and a Spanish speaker read the translations.
+1. Create the icon and the screenshots (after the interface rework).
+2. Run the [in-game checklist](../in-game-checklist.md) on the current beta build; retest on the launch build (4 November 2026), the `Interface` number may change. Verify it with `/dump select(4, GetBuildInfo())` and list several values in the TOC if you support more than one build.
+3. Update the version in `CraftProfit/CraftProfit.toc`, [CHANGELOG.md](../../CHANGELOG.md) and the README status line.
+4. Have a French and a Spanish speaker read the translations.
 
 ## Releasing
 

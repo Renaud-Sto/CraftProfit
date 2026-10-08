@@ -29,7 +29,14 @@ CraftProfit is released under the **MIT license** (`LICENSE`, copyright holder `
 
 ### Data source of the disenchant tables
 
-`Data/Disenchant.lua` was built from the Classic tables of Warcraft Wiki, whose text and data are licensed **CC BY-SA 4.0** (attribution required, derivative works under the same license). Drop rates and quantities are game facts, which copyright generally does not protect, and the file is restructured and attributed in its header, but this is not legal advice. The safest course, and the plan anyway because the tables are unverified in Forever, is to **replace them with your own in-game measurements before the first release**. Until then keep the attribution in the README (done) and in the file header.
+`Data/Disenchant.lua` was built from the Classic tables of Warcraft Wiki, whose text and data are licensed **CC BY-SA 4.0** (attribution required, derivative works under the same license). Drop rates and quantities are game facts, which copyright generally does not protect, and the file is restructured and attributed in its header, but this is not legal advice.
+
+Measuring every bracket in game is not realistic, so an external source stays necessary. The plan is therefore:
+
+1. **Keep the attribution** (README, file header) for as long as the data derives from the wiki.
+2. **Spot-check, do not exhaustively measure.** Disenchant a few items in two or three brackets (for example item levels 16-20, 26-30, 36-40) and check that the materials fall in the table's ranges and roughly at its frequencies. A table that survives that is good enough to drop the *beta* tag.
+3. **Resolve the key.** Classic keys the table on *item level*; the Forever disenchanting guide at wow-professions.com lists brackets by *required level* (1-10 up to 56-60). Both may be the same data seen through different keys, or Forever may have changed it. Compare two items with the same required level and different item levels to find out which one decides the result; `C_Item.GetItemInfo` returns both.
+4. **Prefer a source whose terms allow reuse** when one is found (the wow-professions page states no license, so it is a cross-check, not something to copy).
 
 ## Before the first upload
 

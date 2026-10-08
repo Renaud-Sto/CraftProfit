@@ -7,11 +7,11 @@ local L = ns.L
 local Window = {}
 ns.Window = Window
 
-local WIDTH = 270
+local WIDTH = 320
 local PAD = 10
 local ROW_H = 16
 local HEADER_H = 26
-local MAX_LINES = 6
+local MAX_LINES = 7
 local MAX_DETAIL = 12 -- Recipes.MAX_REAGENTS
 
 local COLORS = {
@@ -34,6 +34,7 @@ local lineRows = {}
 local handlers = {}
 local contentHeight = 80
 
+Window.WIDTH = WIDTH
 Window.lastModel = nil
 Window.lastHandlers = nil
 
@@ -61,6 +62,16 @@ local function reagentName(itemID)
         if fine then return text end
     end
     return "#" .. itemID
+end
+
+-- Long recipe names drop to the small font before they would be cut off.
+function Window.setTitle(text)
+    titleText:SetFontObject("GameFontNormal")
+    titleText:SetText(text)
+    local textWidth, boxWidth = titleText:GetStringWidth(), titleText:GetWidth()
+    if type(textWidth) == "number" and type(boxWidth) == "number" and textWidth > boxWidth then
+        titleText:SetFontObject("GameFontNormalSmall")
+    end
 end
 
 function Window.create(h)
@@ -97,7 +108,7 @@ function Window.create(h)
 
     titleText = newText(frame, "GameFontNormal")
     place(titleText, "TOPLEFT", PAD, -8)
-    titleText:SetWidth(230)
+    titleText:SetWidth(WIDTH - 40)
     titleText:SetJustifyH("LEFT")
 
     local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
@@ -225,7 +236,7 @@ function Window.render(model)
     Window.lastModel = model
     costLines = model.costLines or {}
     expanded = model.costExpanded ~= false
-    titleText:SetText(model.title or L.TITLE)
+    Window.setTitle(model.title or L.TITLE)
     emptyText:Hide()
 
     local y = HEADER_H
@@ -234,9 +245,9 @@ function Window.render(model)
         if line then
             row.label:SetText(line.label)
             row.value:SetText(line.value)
-            color(row.label, line.best and COLORS.best or COLORS.normal)
+            color(row.label, line.best and COLORS.best or line.muted and COLORS.muted or COLORS.normal)
             color(row.value, line.best and COLORS.best or COLORS.normal)
-            place(row.label, "TOPLEFT", PAD, -y)
+            place(row.label, "TOPLEFT", line.muted and PAD + 12 or PAD, -y)
             place(row.value, "TOPRIGHT", -PAD, -y)
             row.label:Show()
             row.value:Show()
@@ -248,7 +259,7 @@ function Window.render(model)
                 costHit:SetSize(WIDTH - PAD * 2, ROW_H)
                 costHit:Show()
             end
-            y = y + ROW_H
+            y = y + (line.muted and ROW_H - 2 or ROW_H)
             if line.key == "cost" then y = placeDetails(y) end
         else
             row.label:Hide()

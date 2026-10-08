@@ -26,6 +26,7 @@ local rows = {}
 local offset = 0
 local queue, ticker
 local notFound = 0
+local SCAN_REPLY_TIMEOUT = 15
 
 PinsUI.state = "idle"
 PinsUI.status = ""
@@ -37,10 +38,10 @@ end
 local setStatus = PinsUI.setStatus
 
 -- Item ids whose prices all the pinned recipes need, each listed once.
-function PinsUI.wantedFor(pins, itemInfo, lookup)
+function PinsUI.wantedFor(pins, itemInfo, lookup, knowsEnchanting)
     local ids, seen = {}, {}
     for _, recipe in ipairs(pins) do
-        for _, id in ipairs(ns.Evaluate.wantedItems(recipe, itemInfo, lookup)) do
+        for _, id in ipairs(ns.Evaluate.wantedItems(recipe, itemInfo, lookup, knowsEnchanting)) do
             if not seen[id] then
                 seen[id] = true
                 ids[#ids + 1] = id
@@ -123,7 +124,8 @@ function PinsUI.startSearch()
         return
     end
     if queue and queue.state == "running" then return end
-    local ids = PinsUI.wantedFor(CraftProfitCharDB.pins, ctl.itemInfo, ns.Data.Disenchant.lookup)
+    local ids = PinsUI.wantedFor(CraftProfitCharDB.pins, ctl.itemInfo, ns.Data.Disenchant.lookup,
+        ctl.knowsEnchanting())
     if #ids == 0 then return end
     notFound = 0
     queue = ns.PriceQueue.new({
@@ -151,6 +153,12 @@ function PinsUI.scan()
     local ok, reason, left = ns.AH.requestSnapshot(GetTime())
     if ok then
         setStatus(L.SCAN_STARTED)
+        -- The server ignores a scan inside its 15 minute window and sends nothing.
+        local startedAt = GetTime()
+        C_Timer.After(SCAN_REPLY_TIMEOUT, function()
+            local replied = ns.AH.lastEventTime and ns.AH.lastEventTime >= startedAt
+            if PinsUI.status == L.SCAN_STARTED and not replied then setStatus(L.SCAN_NO_REPLY) end
+        end)
     elseif reason == "cooldown" then
         setStatus(string.format(L.SCAN_COOLDOWN, ns.Present.durationText(L, left) or "?"))
     else
@@ -180,7 +188,7 @@ function PinsUI.init(controller)
 
     for i = 1, VISIBLE do
         local row = CreateFrame("Button", nil, host)
-        row:SetSize(270 - PAD * 2, ROW_H)
+        row:SetSize(ns.Window.WIDTH - PAD * 2, ROW_H)
         row:SetPoint("TOPLEFT", host, "TOPLEFT", PAD, -(TOP + (i - 1) * ROW_H))
         row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
         row.selected = row:CreateTexture(nil, "BACKGROUND")
@@ -188,7 +196,7 @@ function PinsUI.init(controller)
         row.selected:SetColorTexture(1, 1, 1, 0.08)
         row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         row.name:SetPoint("LEFT", row, "LEFT", 2, 0)
-        row.name:SetWidth(150)
+        row.name:SetWidth(ns.Window.WIDTH - PAD * 2 - 90)
         row.name:SetJustifyH("LEFT")
         row.name:SetWordWrap(false)
         row.value = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -207,7 +215,7 @@ function PinsUI.init(controller)
     scanButton:SetSize(90, 22)
     scanButton:SetScript("OnClick", PinsUI.scan)
     statusText = host:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    statusText:SetWidth(270 - PAD * 2)
+    statusText:SetWidth(ns.Window.WIDTH - PAD * 2)
     statusText:SetJustifyH("LEFT")
 
     host:EnableMouseWheel(true)

@@ -35,7 +35,7 @@ H.test("lines show cost and every option, marking the best", function()
     H.eq(m.lines[1], { label = "Materials", value = "2s 50c", key = "cost", best = false })
     H.eq(m.lines[2], { label = "Auction house (net)", value = "9s 50c", key = "ah", best = true })
     H.eq(m.lines[3], { label = "Vendor", value = "2s", key = "vendor", best = false })
-    H.eq(m.lines[4], { label = "Disenchant (expected)", value = "3s 80c", key = "disenchant", best = false })
+    H.eq(m.lines[4], { label = "Disenchant (beta)", value = "3s 80c", key = "disenchant", best = false })
     H.eq(#m.lines, 4)
 end)
 
@@ -92,7 +92,7 @@ end)
 H.test("the per-point line is labelled as an estimate", function()
     local ns = load()
     local m = model(ns, { showPerPoint = true })
-    H.eq(m.lines[5], { label = "Cost per skill point", value = "-9s 33c (estimate)", key = "perpoint", best = false })
+    H.eq(m.lines[5], { label = "Cost per point", value = "-9s 33c (75%, estimate)", key = "perpoint", best = false })
 end)
 
 H.test("the per-point line shows n/a for trivial recipes and ? for unknown difficulty", function()
@@ -126,4 +126,23 @@ H.test("prices older than staleAfter, or unknown, are flagged stale", function()
     H.eq(model(ns, nil, { staleAfter = 3600 }).stale, false)
     H.eq(model(ns, nil, { staleAfter = 100 }).stale, true)
     H.eq(model(ns, { priceOf = function() return nil end }, { staleAfter = 3600 }).stale, true)
+end)
+
+local SPLIT = { { itemID = 200, chance = 0.75, min = 1, max = 2 }, { itemID = 201, chance = 0.25, min = 1, max = 1 } }
+
+H.test("a gambling disenchant gets a grey sub-line with its likeliest outcome", function()
+    local ns = load()
+    local m = model(ns, {
+        lookupDisenchant = function() return SPLIT end,
+        priceOf = function(id) return ({ [1] = 100, [2] = 50, [100] = 1000, [200] = 400, [201] = 2000 })[id] end,
+    }, { itemName = function(id) return "Dust" .. id end })
+    local de = m.lines[4]
+    H.eq(de.key, "disenchant")
+    H.eq(m.lines[5], { label = "75%: 1-2x Dust200 = 5s 70c", value = "", key = "likely", best = false, muted = true })
+end)
+
+H.test("a certain disenchant result has no sub-line", function()
+    local ns = load()
+    local m = model(ns, {})
+    for _, line in ipairs(m.lines) do H.falsy(line.key == "likely") end
 end)

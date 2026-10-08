@@ -43,7 +43,12 @@ function Controller.itemName(itemID)
         local fine, text = pcall(function() return name .. "" end)
         if fine and text ~= "" then return text end
     end
+    Controller.itemInfo(itemID) -- not loaded yet: ask the game, the refresh follows
     return nil
+end
+
+function Controller.knowsEnchanting()
+    return ns.Trade.hasProfession(ns.Trade.ENCHANTING_SKILL_LINE)
 end
 
 function Controller.evaluate(recipe)
@@ -55,6 +60,7 @@ function Controller.evaluate(recipe)
         cut = settings.cut,
         showPerPoint = settings.showPerPoint,
         lookupDisenchant = Disenchant.lookup,
+        knowsEnchanting = Controller.knowsEnchanting(),
     })
 end
 
@@ -67,7 +73,7 @@ function Controller.refresh()
     local recipe = state.recipe
     if recipe then
         local model = Present.build(Controller.evaluate(recipe), L, Controller.fmt,
-            { staleAfter = settings.staleAfter })
+            { staleAfter = settings.staleAfter, itemName = Controller.itemName })
         if type(recipe.name) == "string" and recipe.name ~= "" then
             model.title = recipe.name
         else
@@ -171,13 +177,29 @@ local function onSelection(recipeID)
         end
     end
     if state.source == "profession" then
-        state.recipe, state.source = nil, nil
-        if ns.AH.isOpen then Controller.refresh() else ns.Window.hide() end
+        -- A pinned recipe stays selected as a pin, so it is still there at the AH.
+        local recipe = state.recipe
+        local index = recipe and DB.pinIndex(CraftProfitCharDB, recipe.recipeID)
+        if index then
+            state.recipe, state.source = CraftProfitCharDB.pins[index], "pin"
+        else
+            state.recipe, state.source = nil, nil
+        end
+        if ns.AH.isOpen then
+            -- The window was anchored to the profession window that just closed.
+            local ahFrame = AuctionHouseFrame or AuctionFrame
+            if ahFrame then ns.Window.attach(ahFrame, CraftProfitDB.settings.window) end
+            Controller.refresh()
+        else
+            ns.Window.hide()
+        end
     end
 end
 
 -- Runs a few checks inside the game's own Lua 5.1, the only place that can
--- reveal a difference with the LuaJIT used by the offline tests.
+-- reveal a difference with the LuaJIT used by the offline tests. The game raises
+-- "Division by zero", so NaN and infinity are built from math.huge, never by
+-- dividing by zero.
 function Controller.selftest()
     local checks = 0
     local function check(condition, name)
@@ -189,10 +211,10 @@ function Controller.selftest()
         check(Core.netSale(1000, 1, 0.05) == 950, "Core.netSale")
         check(Prices.summarize({ { unit = 10, qty = 1 }, { unit = 20, qty = 1 }, { unit = 1000, qty = 1 } }, 5) == 20,
             "Prices.summarize")
-        check(Util.isFinite(0 / 0) == false, "NaN is not finite")
-        check(Util.isFinite(1 / 0) == false, "infinity is not finite")
+        check(Util.isFinite(math.huge - math.huge) == false, "NaN is not finite")
+        check(Util.isFinite(math.huge) == false, "infinity is not finite")
         check(Format.money(nil) == "?", "Format.money(nil)")
-        check(Format.money(0 / 0) == "?", "Format.money(NaN)")
+        check(Format.money(math.huge - math.huge) == "?", "Format.money(NaN)")
         check(Format.money(12345, GetCoinTextureString) ~= "?", "coin string")
         check(string.format("%d", 5) == "5", "string.format")
         check(L.MATERIALS ~= "MATERIALS", "locale strings")

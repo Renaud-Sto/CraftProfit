@@ -2,17 +2,21 @@
 
 Run on the blacksmith (level 30, skill 140+) with `/console scriptErrors 1`. Mark each line ✅ / ❌ and note the build number from `/cpp locale`-style output or the login screen. Retest on the launch build (4 November 2026).
 
+## Capturing results to a file
+The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (including `/cp selftest`) and Lua errors into the `CraftProfitProbeLog` saved variable. Run the commands, then `/reload` (or log out) to flush it to `WTF/Account/<ACCOUNT>/SavedVariables/CraftProfitProbe.lua`. `/cpp log` shows how many lines are pending, `/cpp clear` empties the log. Only the probe needs to be enabled for this.
+
 ## Load and self-test
 - [ ] Client starts with no Lua error popup. `/cp` prints the command list.
 - [ ] `/cp selftest` prints `Self-test passed (11 checks)`.
 
 ## Profession window
 - [ ] Selecting an orange recipe shows Materials, AH, Vendor, Disenchant (when the product is armor or a weapon of uncommon quality or better) and a verdict.
+- [ ] When the disenchant has several possible results, a grey line below it shows the most probable one (`75%: 1-2x Soul Dust = 7s 30c`); a certain result shows no such line.
 - [ ] Selecting a recipe whose product cannot be sold on the AH (bind on pickup) shows `n/a` on the AH line.
 - [ ] A recipe you have not learned shows nothing (window hides or keeps the empty text).
 - [ ] The window opens on the right of the profession window; dragging it and `/reload` keeps the position; `/cp reset` puts it back.
 - [ ] Closing the profession window hides the window (outside the AH).
-- [ ] Ticking "Show cost per skill point" adds a line marked `(estimate)`; a grey recipe shows `n/a`.
+- [ ] Ticking "Cost per skill point" adds a "Cost per point" line showing the chance used, marked `(75%, estimate)`; a grey recipe shows `n/a`.
 - [ ] The Pin button toggles to Unpin and back.
 - [ ] Clicking the Materials line folds the reagent detail in (`+`) and out (`-`); the choice survives `/reload`. With 5+ reagents the window grows and nothing overlaps.
 

@@ -7,12 +7,18 @@ local AH = {}
 ns.AH = AH
 
 AH.isOpen = false
--- docs/probe-findings.md F2: does GetReplicateItemInfo's buyoutPrice already
--- hold the price of ONE unit? false = it is the price of the whole stack.
+-- docs/probe-findings.md F2 (measured 2026-10-08): GetReplicateItemInfo's buyout
+-- is the price of the whole stack, not of one unit.
 AH.PER_UNIT_REPLICATE = false
 AH.CHUNK = 1500             -- scan rows read per frame
 AH.REPLICATE_COOLDOWN = 15 * 60
 AH.MAX_SEARCH_RESULTS = 100 -- results come sorted by price; the cheapest are enough
+-- The client fires REPLICATE_ITEM_LIST_UPDATE hundreds of times for one scan
+-- (measured in the beta). One read is scheduled after DEBOUNCE seconds; events
+-- during that wait, during the read, or within REREAD_QUIET seconds of its end
+-- are the same scan and are ignored.
+AH.DEBOUNCE = 1
+AH.REREAD_QUIET = 10
 
 local EVENTS = {
     "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED",
@@ -23,6 +29,7 @@ local EVENTS = {
 local handlers = {}
 local snapshotToken = 0
 local lastReplicate
+local replicatePending, reading, lastRead = false, false, nil
 
 function AH.setHandlers(h)
     handlers = h or {}
@@ -104,6 +111,7 @@ local function readSnapshot()
     if isSecret(total) or not Util.count(total) then return end
     snapshotToken = snapshotToken + 1
     local token = snapshotToken
+    reading = true
     local agg = Prices.newAggregator()
     local index = 0
     local function step()
@@ -121,8 +129,10 @@ local function readSnapshot()
         index = last
         if index < total then
             C_Timer.After(0, step)
-        elseif handlers.onSnapshot then
-            handlers.onSnapshot(agg, total)
+        else
+            reading = false
+            lastRead = GetTime()
+            if handlers.onSnapshot then handlers.onSnapshot(agg, total) end
         end
     end
     step()
@@ -135,6 +145,7 @@ function AH.onEvent(event, arg1)
     elseif event == "AUCTION_HOUSE_CLOSED" then
         AH.isOpen = false
         snapshotToken = snapshotToken + 1
+        replicatePending, reading = false, false
         if handlers.onOpen then handlers.onOpen(false) end
     elseif event == "COMMODITY_SEARCH_RESULTS_UPDATED" then
         local itemID = Util.id(arg1)
@@ -144,8 +155,18 @@ function AH.onEvent(event, arg1)
         if itemID and handlers.onSearch then handlers.onSearch(itemID, readItem(arg1)) end
     elseif event == "REPLICATE_ITEM_LIST_UPDATE" then
         -- Also fires for scans other addons started; they use the same cooldown.
-        lastReplicate = GetTime()
-        readSnapshot()
+        local now = GetTime()
+        lastReplicate = now
+        AH.lastEventTime = now
+        if replicatePending or reading then return end
+        if lastRead and now - lastRead < AH.REREAD_QUIET then return end
+        replicatePending = true
+        local token = snapshotToken
+        C_Timer.After(AH.DEBOUNCE, function()
+            if token ~= snapshotToken then return end
+            replicatePending = false
+            readSnapshot()
+        end)
     end
 end
 

@@ -12,7 +12,7 @@ DB.MAX_PINS = 12
 DB.PRICE_MAX_AGE = 14 * 86400
 
 DB.DEFAULTS = {
-    cut = 0.05,         -- AH commission; set from docs/probe-findings.md F5
+    cut = 0.05,         -- AH commission: 5% measured in the beta (docs/probe-findings.md F5)
     medianN = 5,        -- cheapest units used for the median price
     showPerPoint = false,
     costExpanded = true, -- material detail shown under the Materials line

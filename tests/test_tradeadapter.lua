@@ -177,3 +177,26 @@ H.test("watch reports each selection change once, and again after invalidate", f
     tick()
     H.eq(seen, { 5, 6, 6, "none" })
 end)
+
+H.test("hasProfession reads the skill line of each profession, in any language", function()
+    local T = setup()
+    T.env.GetProfessions = function() return 6, 8, nil, nil, 7 end
+    local lines = { [6] = 164, [8] = 186, [7] = 185 }
+    T.env.GetProfessionInfo = function(i) return "Forge", 1, 144, 150, 1, 48, lines[i] end
+    H.truthy(T.Trade.hasProfession(164))
+    H.truthy(T.Trade.hasProfession(185))
+    H.falsy(T.Trade.hasProfession(T.Trade.ENCHANTING_SKILL_LINE))
+    lines[8] = 333
+    H.truthy(T.Trade.hasProfession(T.Trade.ENCHANTING_SKILL_LINE))
+end)
+
+H.test("hasProfession falls back to the Enchanting spell and never raises", function()
+    local T = setup()
+    H.falsy(T.Trade.hasProfession(T.Trade.ENCHANTING_SKILL_LINE))
+    T.env.IsPlayerSpell = function(id) return id == 7411 end
+    H.truthy(T.Trade.hasProfession(T.Trade.ENCHANTING_SKILL_LINE))
+    H.falsy(T.Trade.hasProfession(164))
+    T.env.GetProfessions = function() error("boom") end
+    T.env.GetProfessionInfo = function() error("boom") end
+    H.falsy(T.Trade.hasProfession(164))
+end)

@@ -333,3 +333,53 @@ H.test("the profession recipe comes back after the AH closes", function()
     H.truthy(T.ns.Window.isShown())
     H.truthy(T.ns.Window.lastModel)
 end)
+
+-- Pinned recipe survives closing the profession window (field report: it vanished at the AH)
+H.test("a pinned recipe stays available after the profession window closes, outside the AH", function()
+    local T = boot()
+    stock(T)
+    mockProfession(T)
+    T.tickers[#T.tickers].fn()
+    T.ns.Controller.togglePin()
+    T.env.ProfessionsFrame.IsShown = function() return false end
+    T.tickers[#T.tickers].fn()
+    H.falsy(T.ns.Window.isShown())
+    T.env.AuctionHouseFrame = {}
+    T.ns.Controller.onAHOpen(true)
+    H.truthy(T.ns.Window.isShown())
+    H.eq(T.ns.Controller.currentRecipeID(), 5)
+end)
+
+H.test("a pinned recipe stays shown when the profession window closes while the AH is open", function()
+    local T = boot()
+    stock(T)
+    mockProfession(T)
+    T.env.AuctionHouseFrame = {}
+    T.tickers[#T.tickers].fn()
+    T.ns.Controller.togglePin()
+    T.ns.AH.onEvent("AUCTION_HOUSE_SHOW")
+    T.env.ProfessionsFrame.IsShown = function() return false end
+    T.tickers[#T.tickers].fn()
+    H.truthy(T.ns.Window.isShown())
+    H.eq(T.ns.Controller.currentRecipeID(), 5)
+end)
+
+H.test("an unpinned recipe is dropped when the profession window closes", function()
+    local T = boot()
+    stock(T)
+    mockProfession(T)
+    T.tickers[#T.tickers].fn()
+    T.env.ProfessionsFrame.IsShown = function() return false end
+    T.tickers[#T.tickers].fn()
+    H.eq(T.ns.Controller.currentRecipeID(), nil)
+    H.falsy(T.ns.Window.isShown())
+end)
+
+H.test("asking for the name of an unloaded item requests it once", function()
+    local T = boot({ items = {} })
+    T.ns.Controller.itemName(555)
+    T.ns.Controller.itemName(555)
+    local n = 0
+    for _, id in ipairs(T.loadRequests) do if id == 555 then n = n + 1 end end
+    H.eq(n, 1)
+end)

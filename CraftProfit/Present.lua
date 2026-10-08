@@ -6,6 +6,8 @@ local Util, Core, Format = ns.Util, ns.Core, ns.Format
 local Present = {}
 ns.Present = Present
 
+-- A certain outcome (100%) would only repeat the average above it.
+local LIKELY_MIN = 0.999
 local LINE_KEYS = { ah = "LINE_AH", vendor = "LINE_VENDOR", disenchant = "LINE_DISENCHANT" }
 local NAME_KEYS = { ah = "NAME_AH", vendor = "NAME_VENDOR", disenchant = "NAME_DISENCHANT" }
 local UNIT_KEYS = { sec = "AGE_SEC", min = "AGE_MIN", hour = "AGE_HOUR", day = "AGE_DAY" }
@@ -35,7 +37,8 @@ local function perPointValue(L, fmt, perPoint)
     if perPoint.chance == nil then return L.UNKNOWN end
     if perPoint.chance == 0 then return L.NA end
     if perPoint.cost == nil then return L.UNKNOWN end
-    return fmt(perPoint.cost) .. " (" .. L.ESTIMATE .. ")"
+    local percent = math.floor(perPoint.chance * 100 + 0.5)
+    return fmt(perPoint.cost) .. " (" .. percent .. "%, " .. L.ESTIMATE .. ")"
 end
 
 local function verdictFor(result, L, fmt)
@@ -60,6 +63,18 @@ local function verdictFor(result, L, fmt)
     }
 end
 
+-- Grey sub-line under the disenchant value: the most probable outcome, so the
+-- player sees the gamble behind the average ("75%: 1-2x Soul Dust = 7s 30c").
+local function likelyLine(likely, fmt, itemName)
+    local name = itemName and itemName(likely.itemID) or ("#" .. likely.itemID)
+    local qty = likely.min == likely.max and tostring(likely.min) or (likely.min .. "-" .. likely.max)
+    local percent = math.floor(likely.chance * 100 + 0.5)
+    return {
+        label = string.format("%d%%: %sx %s = %s", percent, qty, name, fmt(likely.value)),
+        value = "", key = "likely", best = false, muted = true,
+    }
+end
+
 function Present.build(result, L, fmt, opts)
     local staleAfter = opts and opts.staleAfter or DEFAULT_STALE
     local lines = {}
@@ -75,6 +90,9 @@ function Present.build(result, L, fmt, opts)
             text = L.UNKNOWN
         end
         lines[#lines + 1] = { label = L[LINE_KEYS[key]], value = text, key = key, best = result.best == key }
+        if key == "disenchant" and option.status == "ok" and option.likely and option.likely.chance < LIKELY_MIN then
+            lines[#lines + 1] = likelyLine(option.likely, fmt, opts and opts.itemName)
+        end
     end
     if result.perPoint then
         lines[#lines + 1] = {

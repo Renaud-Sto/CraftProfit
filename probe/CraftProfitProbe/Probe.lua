@@ -1,6 +1,6 @@
 -- CraftProfitProbe: THROWAWAY addon measuring what the Forever client exposes.
 -- Every output line starts with the version so a stale install is obvious.
-local VERSION = "0.1.0"
+local VERSION = "0.2.2"
 local TAG = "|cff66ccff[CPP " .. VERSION .. "]|r "
 
 local function isSecret(v)
@@ -17,11 +17,47 @@ local function show(v)
     return tostring(v)
 end
 
+-- Persistent log: SavedVariables are written to disk on /reload or logout only.
+-- File: WTF/Account/<ACCOUNT>/SavedVariables/CraftProfitProbe.lua
+local MAX_LOG = 3000
+local lastText, lastRepeat, lastStamp
+local function logLine(text)
+    if type(CraftProfitProbeLog) ~= "table" then CraftProfitProbeLog = {} end
+    local log = CraftProfitProbeLog
+    if text == lastText then
+        lastRepeat = lastRepeat + 1
+        log[#log] = lastStamp .. " " .. text .. " (x" .. lastRepeat .. ")"
+        return
+    end
+    lastText, lastRepeat, lastStamp = text, 1, date("%H:%M:%S")
+    log[#log + 1] = lastStamp .. " " .. text
+    if #log > MAX_LOG then table.remove(log, 1) end
+end
+
+local function plain(text)
+    return (text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+end
+
 local function out(...)
     local parts = {}
     for i = 1, select("#", ...) do parts[#parts + 1] = show((select(i, ...))) end
     DEFAULT_CHAT_FRAME:AddMessage(TAG .. table.concat(parts, " "))
 end
+
+-- Mirror every chat line printed by CraftProfit or this probe (selftest results included).
+hooksecurefunc(DEFAULT_CHAT_FRAME, "AddMessage", function(_, text)
+    if type(text) ~= "string" or isSecret(text) then return end
+    if text:find("CraftProfit", 1, true) or text:find("[CPP", 1, true) then
+        logLine(plain(text))
+    end
+end)
+
+-- Mirror Lua errors, then hand them to the normal handler.
+local previousHandler = geterrorhandler()
+seterrorhandler(function(err)
+    logLine("LUA ERROR: " .. show(err))
+    return previousHandler(err)
+end)
 
 local function pack(...) return { n = select("#", ...), ... } end
 
@@ -137,6 +173,32 @@ local function dumpRecipe(recipeID)
     end
 end
 
+-- How to tell which professions the character has (needed: is Enchanting known?).
+-- Enchanting skill line 333, apprentice spell 7411.
+cmds.prof = function()
+    local ids = { try(GetProfessions) }
+    out("GetProfessions:", ids[1])
+    for i = 1, 6 do
+        local r = try(GetProfessionInfo, i)
+        if r ~= "MISSING" and r ~= "(no return)" and not r:find("^ERR") then out(" GetProfessionInfo", i, r) end
+    end
+    out("C_TradeSkillUI.GetAllProfessionTradeSkillLines:",
+        try(C_TradeSkillUI and C_TradeSkillUI.GetAllProfessionTradeSkillLines))
+    out("C_TradeSkillUI.GetProfessionInfoBySkillLineID(333):",
+        try(C_TradeSkillUI and C_TradeSkillUI.GetProfessionInfoBySkillLineID, 333))
+    out("IsSpellKnown(7411):", try(IsSpellKnown, 7411))
+    out("IsPlayerSpell(7411):", try(IsPlayerSpell, 7411))
+    out("C_SpellBook.IsSpellKnown(7411):", try(C_SpellBook and C_SpellBook.IsSpellKnown, 7411))
+    out("GetNumSkillLines:", try(GetNumSkillLines))
+    local lines = tonumber(try(GetNumSkillLines)) or 0
+    for i = 1, math.min(lines, 40) do
+        local r = try(GetSkillLineInfo, i)
+        if r:find("Enchant") or r:find("Forge") or r:find("Blacksmith") or r:find("Enchantement") then
+            out(" GetSkillLineInfo", i, r)
+        end
+    end
+end
+
 cmds.trade = function()
     out("ProfessionsFrame:", type(ProfessionsFrame), "shown:", ProfessionsFrame and ProfessionsFrame:IsShown())
     out("TradeSkillFrame:", type(TradeSkillFrame), "shown:", TradeSkillFrame and TradeSkillFrame:IsShown())
@@ -176,8 +238,21 @@ local function latency()
     return searchStart and string.format("+%.2fs", GetTime() - searchStart) or ""
 end
 
+-- The client fires REPLICATE_ITEM_LIST_UPDATE hundreds of times per scan: count them,
+-- but read the rows only once per DETAIL_EVERY seconds (reading 78k rows per event
+-- tripped "insecure scripts exceeded execution limit").
+local DETAIL_EVERY = 5
+local replicateEvents, lastDetail = 0, nil
+
 frame:SetScript("OnEvent", function(_, event, a1)
     if event == "ITEM_DATA_LOAD_RESULT" then return end
+    if event == "REPLICATE_ITEM_LIST_UPDATE" then
+        replicateEvents = replicateEvents + 1
+        local now = GetTime()
+        if lastDetail and now - lastDetail < DETAIL_EVERY then return end
+        lastDetail = now
+        out("replicate events so far:", replicateEvents)
+    end
     out("EVENT", event, latency(), "arg1:", a1)
     local ah = C_AuctionHouse
     if event == "COMMODITY_SEARCH_RESULTS_UPDATED" then
@@ -203,7 +278,7 @@ frame:SetScript("OnEvent", function(_, event, a1)
             out(try(ah.GetReplicateItemInfo, 1))
         end
         local shown = 0
-        for i = 1, math.min(n, 5000) do
+        for i = 1, math.min(n, 2000) do
             local _, _, count, _, _, _, _, minBid, _, buyout, _, _, _, _, _, _, itemID = ah.GetReplicateItemInfo(i)
             if not isSecret(count) and count and count > 1 then
                 out(" stack row", i, "itemID", itemID, "count", count, "minBid", minBid, "buyout", buyout)
@@ -218,11 +293,18 @@ SLASH_CPP1 = "/cpp"
 SlashCmdList.CPP = function(msg)
     local cmd, arg = (msg or ""):match("^(%S*)%s*(.-)$")
     local fn = cmds[cmd]
-    if fn then
+    if cmd == "log" then
+        out("replicate events:", replicateEvents)
+        out("logged lines:", CraftProfitProbeLog and #CraftProfitProbeLog or 0,
+            "- type /reload to write them to disk")
+    elseif cmd == "clear" then
+        CraftProfitProbeLog = {}
+        out("log cleared")
+    elseif fn then
         out("== " .. cmd .. " " .. arg)
         fn(arg)
     else
-        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade")
+        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | log | clear")
     end
 end
 out("loaded. /cpp for commands. Enable Lua errors: /console scriptErrors 1")

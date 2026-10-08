@@ -139,3 +139,25 @@ H.test("costPerPoint is nil when no skill point can be earned", function()
     H.eq(ns.Core.costPerPoint(100, 0, nil), nil)
     H.eq(ns.Core.costPerPoint(0 / 0, 0, 1), nil)
 end)
+
+H.test("likelyDisenchant picks the most probable result, valued at its mean quantity net of the cut", function()
+    local Core = H.newNS("Util", "Core").Core
+    local entries = {
+        { itemID = 1, chance = 0.2, min = 1, max = 2 },
+        { itemID = 2, chance = 0.75, min = 2, max = 3 },
+        { itemID = 3, chance = 0.05, min = 1, max = 1 },
+    }
+    local price = function(id) return ({ [1] = 1000, [2] = 400, [3] = 6000 })[id] end
+    H.eq(Core.likelyDisenchant(entries, price, 0.05), { chance = 0.75, itemID = 2, min = 2, max = 3, value = 950 })
+end)
+
+H.test("likelyDisenchant breaks ties by value, and is nil for unpriced or corrupt data", function()
+    local Core = H.newNS("Util", "Core").Core
+    local tie = { { itemID = 1, chance = 0.5, min = 1, max = 1 }, { itemID = 2, chance = 0.5, min = 1, max = 1 } }
+    local price = function(id) return id == 1 and 100 or 300 end
+    H.eq(Core.likelyDisenchant(tie, price, 0).itemID, 2)
+    H.eq(Core.likelyDisenchant(tie, function() return nil end, 0), nil)
+    H.eq(Core.likelyDisenchant({}, price, 0), nil)
+    H.eq(Core.likelyDisenchant({ { itemID = 1, chance = 2, min = 1, max = 1 } }, price, 0), nil)
+    H.eq(Core.likelyDisenchant(tie, price, 5), nil)
+end)

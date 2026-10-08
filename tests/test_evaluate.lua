@@ -46,7 +46,8 @@ H.test("a fully priced recipe gives cost, every option, the best one and the net
     H.eq(r.cost.lines[1], { itemID = 1, qty = 2, unit = 100, subtotal = 200 })
     H.eq(r.options.ah, { status = "ok", value = 950 })
     H.eq(r.options.vendor, { status = "ok", value = 200 })
-    H.eq(r.options.disenchant, { status = "ok", value = 380 })
+    H.eq(r.options.disenchant.status, "ok")
+    H.eq(r.options.disenchant.value, 380)
     H.eq(r.best, "ah")
     H.eq(r.bestValue, 950)
     H.eq(r.net, 700)
@@ -92,9 +93,29 @@ end)
 
 H.test("a bind-on-pickup result cannot be sold on the AH", function()
     local E = load().Evaluate
-    local r = E.run(ctx({ itemInfo = info({ bindType = 1 }) }))
+    local r = E.run(ctx({ itemInfo = info({ bindType = 1 }), knowsEnchanting = true }))
     H.eq(r.options.ah.status, "na")
     H.eq(r.best, "disenchant")
+end)
+
+H.test("a bind-on-pickup result is disenchantable only by a character who knows Enchanting", function()
+    local E = load().Evaluate
+    local bop = info({ bindType = 1 })
+    local without = E.run(ctx({ itemInfo = bop }))
+    H.eq(without.options.disenchant.status, "na")
+    H.eq(without.best, "vendor")
+    local with = E.run(ctx({ itemInfo = bop, knowsEnchanting = true }))
+    H.eq(with.options.disenchant.status, "ok")
+    H.eq(with.best, "disenchant")
+    -- a tradable item is disenchantable by anyone
+    H.eq(E.run(ctx({ itemInfo = info({ bindType = 2 }) })).options.disenchant.status, "ok")
+end)
+
+H.test("wantedItems skips disenchant results nobody can use", function()
+    local E = load().Evaluate
+    local bop = info({ bindType = 1 })
+    H.eq(E.wantedItems(RECIPE, bop, function() return DE_ENTRIES end, false), { 1, 2, 100 })
+    H.eq(E.wantedItems(RECIPE, bop, function() return DE_ENTRIES end, true), { 1, 2, 100, 200 })
 end)
 
 H.test("a vendor price of 0 means the vendor will not buy it", function()
@@ -164,4 +185,19 @@ H.test("wantedItems lists reagents, the output and disenchant results once", fun
     H.eq(E.wantedItems(RECIPE, info(), function() return DE_ENTRIES end), { 1, 2, 100, 200 })
     H.eq(E.wantedItems(RECIPE, function() return nil end, function() return DE_ENTRIES end), { 1, 2, 100 })
     H.eq(E.wantedItems(RECIPE, info({ classID = 0 }), function() return DE_ENTRIES end), { 1, 2, 100 })
+end)
+
+H.test("the disenchant option carries its most probable outcome", function()
+    local E = load().Evaluate
+    local entries = {
+        { itemID = 200, chance = 0.75, min = 1, max = 2 },
+        { itemID = 201, chance = 0.25, min = 1, max = 1 },
+    }
+    local r = E.run(ctx({
+        lookupDisenchant = function() return entries end,
+        priceOf = prices({ [201] = 2000 }),
+    }))
+    H.eq(r.options.disenchant.likely, { chance = 0.75, itemID = 200, min = 1, max = 2, value = 570 })
+    -- 0.75 * 1.5 * 400 + 0.25 * 2000 = 950, minus the 5% cut
+    H.eq(r.options.disenchant.value, 903)
 end)

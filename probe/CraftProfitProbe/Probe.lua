@@ -1,6 +1,6 @@
 -- CraftProfitProbe: THROWAWAY addon measuring what the Forever client exposes.
 -- Every output line starts with the version so a stale install is obvious.
-local VERSION = "0.3.1"
+local VERSION = "0.4.0"
 local TAG = "|cff66ccff[CPP " .. VERSION .. "]|r "
 
 local function isSecret(v)
@@ -258,6 +258,38 @@ cmds.qty = function()
     out("input GetQuantity:", try(input and input.GetQuantity, input))
 end
 
+-- Forever has no realms but rulesets (Normal, PvP, RP, Hardcore). Looks for how the
+-- client tells them apart: realm and faction calls, then every global whose name
+-- mentions a ruleset, a game mode, hardcore, a season or a realm.
+cmds.ruleset = function()
+    for _, name in ipairs({ "GetRealmName", "GetNormalizedRealmName", "GetServerName", "GetCurrentRegion",
+        "GetCurrentRegionName", "GetClassicExpansionLevel", "GetServerExpansionLevel", "GetAccountExpansionLevel" }) do
+        out(name .. ":", try(_G[name]))
+    end
+    out("UnitFactionGroup(player):", try(UnitFactionGroup, "player"))
+    out("GetBuildInfo:", try(GetBuildInfo))
+    out("WOW_PROJECT_ID:", show(WOW_PROJECT_ID))
+    local patterns = { "[Rr]uleset", "[Gg]ameMode", "[Gg]ameRule", "[Hh]ardcore", "[Ss]eason", "[Rr]ealm", "[Ww]orldType" }
+    local function matches(name)
+        for _, pat in ipairs(patterns) do if name:find(pat) then return true end end
+        return false
+    end
+    local found = {}
+    for k, v in pairs(_G) do
+        if type(k) == "string" and matches(k) then found[#found + 1] = k .. ":" .. type(v) end
+        if type(k) == "string" and (k:find("^C_") or k == "Enum") and type(v) == "table" then
+            for k2, v2 in pairs(v) do
+                if type(k2) == "string" and matches(k2) then found[#found + 1] = k .. "." .. k2 .. ":" .. type(v2) end
+            end
+        end
+    end
+    table.sort(found)
+    out("matching globals:", #found)
+    for i = 1, #found, 6 do
+        out(" ", table.concat(found, " ", i, math.min(i + 5, #found)))
+    end
+end
+
 cmds.trade = function()
     out("ProfessionsFrame:", type(ProfessionsFrame), "shown:", ProfessionsFrame and ProfessionsFrame:IsShown())
     out("TradeSkillFrame:", type(TradeSkillFrame), "shown:", TradeSkillFrame and TradeSkillFrame:IsShown())
@@ -363,7 +395,7 @@ SlashCmdList.CPP = function(msg)
         out("== " .. cmd .. " " .. arg)
         fn(arg)
     else
-        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | qty | log | clear")
+        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | qty | ruleset | log | clear")
     end
 end
 out("loaded. /cpp for commands. Enable Lua errors: /console scriptErrors 1")

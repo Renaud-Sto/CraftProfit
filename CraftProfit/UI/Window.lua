@@ -11,7 +11,7 @@ local WIDTH = 320
 local PAD = 10
 local ROW_H = 16
 local HEADER_H = 26
-local MAX_LINES = 6
+local MAX_LINES = 7
 local MAX_DETAIL = 12 -- Recipes.MAX_REAGENTS
 
 local COLORS = {
@@ -245,9 +245,9 @@ function Window.render(model)
         if line then
             row.label:SetText(line.label)
             row.value:SetText(line.value)
-            color(row.label, line.best and COLORS.best or COLORS.normal)
+            color(row.label, line.best and COLORS.best or line.muted and COLORS.muted or COLORS.normal)
             color(row.value, line.best and COLORS.best or COLORS.normal)
-            place(row.label, "TOPLEFT", PAD, -y)
+            place(row.label, "TOPLEFT", line.muted and PAD + 12 or PAD, -y)
             place(row.value, "TOPRIGHT", -PAD, -y)
             row.label:Show()
             row.value:Show()
@@ -259,7 +259,7 @@ function Window.render(model)
                 costHit:SetSize(WIDTH - PAD * 2, ROW_H)
                 costHit:Show()
             end
-            y = y + ROW_H
+            y = y + (line.muted and ROW_H - 2 or ROW_H)
             if line.key == "cost" then y = placeDetails(y) end
         else
             row.label:Hide()

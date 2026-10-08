@@ -43,6 +43,7 @@ function Controller.itemName(itemID)
         local fine, text = pcall(function() return name .. "" end)
         if fine and text ~= "" then return text end
     end
+    Controller.itemInfo(itemID) -- not loaded yet: ask the game, the refresh follows
     return nil
 end
 
@@ -72,7 +73,7 @@ function Controller.refresh()
     local recipe = state.recipe
     if recipe then
         local model = Present.build(Controller.evaluate(recipe), L, Controller.fmt,
-            { staleAfter = settings.staleAfter })
+            { staleAfter = settings.staleAfter, itemName = Controller.itemName })
         if type(recipe.name) == "string" and recipe.name ~= "" then
             model.title = recipe.name
         else

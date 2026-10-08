@@ -11,6 +11,7 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 
 ## Profession window
 - [ ] Selecting an orange recipe shows Materials, AH, Vendor, Disenchant (when the product is armor or a weapon of uncommon quality or better) and a verdict.
+- [ ] When the disenchant has several possible results, a grey line below it shows the most probable one (`75%: 1-2x Soul Dust = 7s 30c`); a certain result shows no such line.
 - [ ] Selecting a recipe whose product cannot be sold on the AH (bind on pickup) shows `n/a` on the AH line.
 - [ ] A recipe you have not learned shows nothing (window hides or keeps the empty text).
 - [ ] The window opens on the right of the profession window; dragging it and `/reload` keeps the position; `/cp reset` puts it back.

@@ -75,7 +75,11 @@ function Evaluate.run(ctx)
     if state == "ok" then
         local value = Core.disenchantValue(entries, priceOf, cut)
         if value then
-            options.disenchant = { status = "ok", value = Util.round(value * qty) }
+            options.disenchant = {
+                status = "ok", value = Util.round(value * qty),
+                -- Per item, whatever the output quantity: it describes one disenchant.
+                likely = Core.likelyDisenchant(entries, priceOf, cut),
+            }
         else
             options.disenchant = { status = "unknown" }
         end

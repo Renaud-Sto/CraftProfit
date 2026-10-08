@@ -76,6 +76,25 @@ function Core.disenchantValue(entries, priceOf, cut)
     return Util.round(total * (1 - cut))
 end
 
+-- The most probable disenchant result: the entry with the highest chance (ties go
+-- to the more valuable one), valued at the middle of its quantity range and net
+-- of the AH commission. Returns { chance, itemID, min, max, value } or nil when the
+-- data is corrupt or that result has no price.
+function Core.likelyDisenchant(entries, priceOf, cut)
+    if type(entries) ~= "table" or #entries == 0 or not validCut(cut) then return nil end
+    local best, bestValue
+    for _, e in ipairs(entries) do
+        if not validEntry(e) then return nil end
+        local unit = priceOf(e.itemID)
+        local value = Util.isCopper(unit) and (e.min + e.max) / 2 * unit * (1 - cut) or nil
+        if best == nil or e.chance > best.chance or (e.chance == best.chance and (value or 0) > (bestValue or 0)) then
+            best, bestValue = e, value
+        end
+    end
+    if bestValue == nil then return nil end
+    return { chance = best.chance, itemID = best.itemID, min = best.min, max = best.max, value = Util.round(bestValue) }
+end
+
 -- options[key] = { status = "ok"|"unknown"|"na", value = copper }.
 -- Returns the best "ok" key and value, and whether any option was "unknown"
 -- (so the best known one may not be the true best).

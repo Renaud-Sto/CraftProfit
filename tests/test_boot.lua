@@ -374,3 +374,12 @@ H.test("an unpinned recipe is dropped when the profession window closes", functi
     H.eq(T.ns.Controller.currentRecipeID(), nil)
     H.falsy(T.ns.Window.isShown())
 end)
+
+H.test("asking for the name of an unloaded item requests it once", function()
+    local T = boot({ items = {} })
+    T.ns.Controller.itemName(555)
+    T.ns.Controller.itemName(555)
+    local n = 0
+    for _, id in ipairs(T.loadRequests) do if id == 555 then n = n + 1 end end
+    H.eq(n, 1)
+end)

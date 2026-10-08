@@ -10,8 +10,11 @@ ns.Evaluate = Evaluate
 local BIND_ON_PICKUP = 1
 
 -- Returns "ok", entries | "na" | "unknown" for the disenchant results of an item.
-local function disenchantEntries(info, lookup)
+-- A bind-on-pickup item cannot change hands, so only a character who knows
+-- Enchanting can disenchant it; a tradable item can be disenchanted by anyone.
+local function disenchantEntries(info, lookup, knowsEnchanting)
     if not info then return "unknown" end
+    if info.bindType == BIND_ON_PICKUP and not knowsEnchanting then return "na" end
     if not Disenchant.canDisenchant(info.itemID, info.quality, info.classID) then return "na" end
     local entries = lookup(Disenchant.kindOf(info.classID), info.quality, info.ilvl)
     if not entries then return "unknown" end
@@ -68,7 +71,7 @@ function Evaluate.run(ctx)
         options.vendor = { status = "ok", value = Core.vendorValue(info.sellPrice, qty) }
     end
 
-    local state, entries = disenchantEntries(info, ctx.lookupDisenchant)
+    local state, entries = disenchantEntries(info, ctx.lookupDisenchant, ctx.knowsEnchanting)
     if state == "ok" then
         local value = Core.disenchantValue(entries, priceOf, cut)
         if value then
@@ -107,7 +110,7 @@ function Evaluate.run(ctx)
 end
 
 -- Item ids whose prices are needed to evaluate the recipe, each listed once.
-function Evaluate.wantedItems(recipe, itemInfo, lookupDisenchant)
+function Evaluate.wantedItems(recipe, itemInfo, lookupDisenchant, knowsEnchanting)
     local ids, seen = {}, {}
     local function add(id)
         if not seen[id] then
@@ -118,7 +121,7 @@ function Evaluate.wantedItems(recipe, itemInfo, lookupDisenchant)
     for _, r in ipairs(recipe.reagents) do add(r.itemID) end
     add(recipe.outputItemID)
     local info = withID(itemInfo(recipe.outputItemID), recipe.outputItemID)
-    local state, entries = disenchantEntries(info, lookupDisenchant)
+    local state, entries = disenchantEntries(info, lookupDisenchant, knowsEnchanting)
     if state == "ok" then
         for _, e in ipairs(entries) do add(e.itemID) end
     end

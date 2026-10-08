@@ -25,6 +25,33 @@ function Trade.idFromLink(link, ...)
     return nil
 end
 
+-- Skill line ids are language independent (measured in the beta: Blacksmithing
+-- is 164 in a French client). Enchanting is 333, its apprentice spell 7411.
+Trade.ENCHANTING_SKILL_LINE = 333
+local ENCHANTING_SPELL = 7411
+
+-- True when the character has the profession. GetProfessions lists the
+-- professions' indices; GetProfessionInfo returns the skill line as 7th value.
+function Trade.hasProfession(skillLine)
+    if type(GetProfessions) == "function" and type(GetProfessionInfo) == "function" then
+        local listed = { pcall(GetProfessions) }
+        if listed[1] then
+            for i = 2, 8 do
+                local index = listed[i]
+                if type(index) == "number" and not isSecret(index) then
+                    local ok, _, _, _, _, _, _, line = pcall(GetProfessionInfo, index)
+                    if ok and not isSecret(line) and line == skillLine then return true end
+                end
+            end
+        end
+    end
+    if skillLine == Trade.ENCHANTING_SKILL_LINE and type(IsPlayerSpell) == "function" then
+        local ok, known = pcall(IsPlayerSpell, ENCHANTING_SPELL)
+        if ok and not isSecret(known) and known == true then return true end
+    end
+    return false
+end
+
 function Trade.frame()
     return ProfessionsFrame or TradeSkillFrame
 end

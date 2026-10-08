@@ -38,10 +38,10 @@ end
 local setStatus = PinsUI.setStatus
 
 -- Item ids whose prices all the pinned recipes need, each listed once.
-function PinsUI.wantedFor(pins, itemInfo, lookup)
+function PinsUI.wantedFor(pins, itemInfo, lookup, knowsEnchanting)
     local ids, seen = {}, {}
     for _, recipe in ipairs(pins) do
-        for _, id in ipairs(ns.Evaluate.wantedItems(recipe, itemInfo, lookup)) do
+        for _, id in ipairs(ns.Evaluate.wantedItems(recipe, itemInfo, lookup, knowsEnchanting)) do
             if not seen[id] then
                 seen[id] = true
                 ids[#ids + 1] = id
@@ -124,7 +124,8 @@ function PinsUI.startSearch()
         return
     end
     if queue and queue.state == "running" then return end
-    local ids = PinsUI.wantedFor(CraftProfitCharDB.pins, ctl.itemInfo, ns.Data.Disenchant.lookup)
+    local ids = PinsUI.wantedFor(CraftProfitCharDB.pins, ctl.itemInfo, ns.Data.Disenchant.lookup,
+        ctl.knowsEnchanting())
     if #ids == 0 then return end
     notFound = 0
     queue = ns.PriceQueue.new({

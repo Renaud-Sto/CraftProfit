@@ -92,9 +92,29 @@ end)
 
 H.test("a bind-on-pickup result cannot be sold on the AH", function()
     local E = load().Evaluate
-    local r = E.run(ctx({ itemInfo = info({ bindType = 1 }) }))
+    local r = E.run(ctx({ itemInfo = info({ bindType = 1 }), knowsEnchanting = true }))
     H.eq(r.options.ah.status, "na")
     H.eq(r.best, "disenchant")
+end)
+
+H.test("a bind-on-pickup result is disenchantable only by a character who knows Enchanting", function()
+    local E = load().Evaluate
+    local bop = info({ bindType = 1 })
+    local without = E.run(ctx({ itemInfo = bop }))
+    H.eq(without.options.disenchant.status, "na")
+    H.eq(without.best, "vendor")
+    local with = E.run(ctx({ itemInfo = bop, knowsEnchanting = true }))
+    H.eq(with.options.disenchant.status, "ok")
+    H.eq(with.best, "disenchant")
+    -- a tradable item is disenchantable by anyone
+    H.eq(E.run(ctx({ itemInfo = info({ bindType = 2 }) })).options.disenchant.status, "ok")
+end)
+
+H.test("wantedItems skips disenchant results nobody can use", function()
+    local E = load().Evaluate
+    local bop = info({ bindType = 1 })
+    H.eq(E.wantedItems(RECIPE, bop, function() return DE_ENTRIES end, false), { 1, 2, 100 })
+    H.eq(E.wantedItems(RECIPE, bop, function() return DE_ENTRIES end, true), { 1, 2, 100, 200 })
 end)
 
 H.test("a vendor price of 0 means the vendor will not buy it", function()

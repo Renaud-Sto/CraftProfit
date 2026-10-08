@@ -46,6 +46,10 @@ function Controller.itemName(itemID)
     return nil
 end
 
+function Controller.knowsEnchanting()
+    return ns.Trade.hasProfession(ns.Trade.ENCHANTING_SKILL_LINE)
+end
+
 function Controller.evaluate(recipe)
     local settings = CraftProfitDB.settings
     return Evaluate.run({
@@ -55,6 +59,7 @@ function Controller.evaluate(recipe)
         cut = settings.cut,
         showPerPoint = settings.showPerPoint,
         lookupDisenchant = Disenchant.lookup,
+        knowsEnchanting = Controller.knowsEnchanting(),
     })
 end
 

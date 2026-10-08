@@ -25,4 +25,5 @@ Present.lua
 AHAdapter.lua
 TradeAdapter.lua
 UI/Window.lua
+UI/PinsUI.lua
 Boot.lua

@@ -21,7 +21,7 @@ local COLORS = {
 }
 
 local ctl
-local host, header, emptyText, statusText, searchButton, scanButton
+local host, header, emptyText, statusText, searchButton, scanButton, sortButton
 local rows = {}
 local offset = 0
 local queue, ticker
@@ -51,25 +51,59 @@ function PinsUI.wantedFor(pins, itemInfo, lookup, knowsEnchanting)
     return ids
 end
 
+-- Pinned recipes with their evaluation, in display order: pin order, or cheapest
+-- cost per point first.
+function PinsUI.orderedPins(pins, sortMode, evaluate)
+    local items = {}
+    for i, recipe in ipairs(pins) do items[i] = { recipe = recipe, result = evaluate(recipe) } end
+    if sortMode ~= ns.DB.SORT_POINT then return items end
+    local entries = {}
+    for i, item in ipairs(items) do
+        local pp = item.result.perPoint
+        entries[i] = { cost = pp and pp.cost, chance = pp and pp.chance }
+    end
+    local sorted = {}
+    for i, index in ipairs(ns.Core.rankByPointCost(entries)) do sorted[i] = items[index] end
+    return sorted
+end
+
+-- Text and color of a row's value in the cost-per-point view.
+local function pointValue(perPoint)
+    if not perPoint or perPoint.chance == nil then return "?", COLORS.muted end
+    if perPoint.chance == 0 then return L.NA, COLORS.muted end
+    local cost = perPoint.cost
+    if cost == nil then return "?", COLORS.muted end
+    if cost > 0 then return ctl.fmt(cost) .. L.PER_POINT_SHORT, COLORS.loss end
+    return "+" .. ctl.fmt(-cost) .. L.PER_POINT_SHORT, COLORS.profit
+end
+
 function PinsUI.refresh()
     if not host then return end
     local pins = CraftProfitCharDB.pins
+    local byPoint = CraftProfitCharDB.sortMode == ns.DB.SORT_POINT
+    local ordered = PinsUI.orderedPins(pins, CraftProfitCharDB.sortMode, ctl.evaluate)
     offset = math.max(0, math.min(offset, #pins - VISIBLE))
     local currentID = ctl.currentRecipeID()
 
     header:SetText(L.PINS_TITLE)
+    sortButton:SetText(byPoint and L.SORT_POINT or L.SORT_NET)
     searchButton:SetText(L.SEARCH_PRICES)
     scanButton:SetText(L.SCAN)
     emptyText:SetText(L.PINS_EMPTY)
     emptyText:SetShown(#pins == 0)
 
     for i = 1, VISIBLE do
-        local row, recipe = rows[i], pins[offset + i]
-        if recipe then
-            local result = ctl.evaluate(recipe)
+        local row, item = rows[i], ordered[offset + i]
+        if item then
+            local recipe, result = item.recipe, item.result
             row.recipeID = recipe.recipeID
+            row.name:SetWidth(ns.Window.WIDTH - PAD * 2 - (byPoint and 115 or 90))
             row.name:SetText(recipe.name ~= "" and recipe.name or ("#" .. recipe.recipeID))
-            if result.net ~= nil then
+            if byPoint then
+                local text, c = pointValue(result.perPoint)
+                row.value:SetText(text)
+                row.value:SetTextColor(c[1], c[2], c[3])
+            elseif result.net ~= nil then
                 row.value:SetText(ctl.fmt(result.net))
                 local c = result.net >= 0 and COLORS.profit or COLORS.loss
                 row.value:SetTextColor(c[1], c[2], c[3])
@@ -183,6 +217,10 @@ function PinsUI.init(controller)
 
     header = host:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     header:SetPoint("TOPLEFT", host, "TOPLEFT", PAD, -6)
+    sortButton = CreateFrame("Button", nil, host, "UIPanelButtonTemplate")
+    sortButton:SetSize(120, 18)
+    sortButton:SetPoint("TOPRIGHT", host, "TOPRIGHT", -PAD, -4)
+    sortButton:SetScript("OnClick", function() ctl.toggleSort() end)
     emptyText = host:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     emptyText:SetPoint("TOPLEFT", host, "TOPLEFT", PAD, -TOP - 2)
 

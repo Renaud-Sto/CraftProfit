@@ -1,7 +1,7 @@
 local H = ...
 
 local function setup()
-    local ns = H.newNS("Util")
+    local ns = H.newNS("Util", "Data/Skillup")
     local env = setmetatable({}, { __index = _G })
     local T = { tickers = {} }
     env.C_Timer = {
@@ -199,4 +199,18 @@ H.test("hasProfession falls back to the Enchanting spell and never raises", func
     T.env.GetProfessions = function() error("boom") end
     T.env.GetProfessionInfo = function() error("boom") end
     H.falsy(T.Trade.hasProfession(164))
+end)
+
+H.test("difficultyOf names the recipe's current difficulty, nil when unreadable", function()
+    local T = setup()
+    H.eq(T.Trade.difficultyOf(1), nil)
+    T.env.C_TradeSkillUI = { GetRecipeInfo = function(id)
+        return ({ [1] = { learned = true, relativeDifficulty = 0 }, [2] = { learned = true, relativeDifficulty = 3 },
+            [3] = { learned = false, relativeDifficulty = 1 }, [4] = { learned = true, relativeDifficulty = 9 } })[id]
+    end }
+    H.eq(T.Trade.difficultyOf(1), "optimal")
+    H.eq(T.Trade.difficultyOf(2), "trivial")
+    H.eq(T.Trade.difficultyOf(3), nil)
+    H.eq(T.Trade.difficultyOf(4), nil)
+    H.eq(T.Trade.difficultyOf(5), nil)
 end)

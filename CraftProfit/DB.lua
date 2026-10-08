@@ -95,7 +95,15 @@ function DB.prune(db, now)
     return removed
 end
 
+DB.SORT_NET, DB.SORT_POINT = "net", "point"
+
+function DB.setSortMode(db, mode)
+    db.sortMode = mode == DB.SORT_POINT and DB.SORT_POINT or DB.SORT_NET
+    return db.sortMode
+end
+
 function DB.initChar(db)
+    DB.setSortMode(db, db.sortMode)
     if type(db.pins) ~= "table" then db.pins = {} end
     local pins = db.pins
     -- Collect numeric keys in order so holes in the array do not hide entries.

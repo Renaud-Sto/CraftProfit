@@ -161,3 +161,18 @@ H.test("likelyDisenchant breaks ties by value, and is nil for unpriced or corrup
     H.eq(Core.likelyDisenchant({ { itemID = 1, chance = 2, min = 1, max = 1 } }, price, 0), nil)
     H.eq(Core.likelyDisenchant(tie, price, 5), nil)
 end)
+
+H.test("rankByPointCost orders cheapest first, then no-point recipes, then unknown costs", function()
+    local Core = H.newNS("Util", "Core").Core
+    local order = Core.rankByPointCost({
+        { cost = 5000, chance = 0.25 },   -- 1
+        { cost = nil, chance = nil },     -- 2 unknown
+        { cost = -300, chance = 1 },      -- 3 pays for itself
+        { cost = nil, chance = 0 },       -- 4 grey
+        { cost = 5000, chance = 0.75 },   -- 5 ties with 1
+        { cost = math.huge - math.huge, chance = 0.25 },  -- 6 NaN: not rankable
+        { cost = 20, chance = 1 },        -- 7
+    })
+    H.eq(order, { 3, 7, 1, 5, 4, 2, 6 })
+    H.eq(Core.rankByPointCost({}), {})
+end)

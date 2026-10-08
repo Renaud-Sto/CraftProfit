@@ -20,6 +20,11 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] The Pin button toggles to Unpin and back.
 - [ ] Clicking the Materials line folds the reagent detail in (`+`) and out (`-`); the choice survives `/reload`. With 5+ reagents the window grows and nothing overlaps.
 
+## Pinned recipes by cost per point
+- [ ] At the AH, the button at the top right of the pinned list reads "Tri : gain"; clicking it switches to "Tri : coût/point", ticks "Coût par point de compétence" and reorders the list, cheapest first. Rows show `21g 29s 84c/pt` (red), a recipe that pays for itself shows `+9s 33c/pt` (green), a grey recipe `n/d` and an unpriced one `?`, both at the bottom.
+- [ ] Unticking "Coût par point de compétence" returns the sort to "Tri : gain". The choice survives `/reload`.
+- [ ] Level the skill until a pinned recipe changes colour: after the profession window is opened again, its cost per point follows the new colour (pins no longer keep the colour they had when pinned).
+
 ## Auction house
 - [ ] Opening the AH shows the window with the Pinned recipes section (first pin selected).
 - [ ] **Search prices** counts `1/N … N/N` and ends with `Prices updated`; prices and the verdict fill in; the age reads a few seconds.

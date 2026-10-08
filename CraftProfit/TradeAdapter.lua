@@ -52,6 +52,18 @@ function Trade.hasProfession(skillLine)
     return false
 end
 
+-- The recipe's current difficulty name ("optimal", "medium", "easy", "trivial") from
+-- the open profession window, or nil when it cannot be read.
+function Trade.difficultyOf(recipeID)
+    local api = C_TradeSkillUI
+    if not (api and api.GetRecipeInfo) then return nil end
+    local ok, info = pcall(api.GetRecipeInfo, recipeID)
+    if not ok or type(info) ~= "table" or info.learned ~= true then return nil end
+    local difficulty = info.relativeDifficulty
+    if isSecret(difficulty) then return nil end
+    return ns.Data.Skillup.name(difficulty)
+end
+
 function Trade.frame()
     return ProfessionsFrame or TradeSkillFrame
 end

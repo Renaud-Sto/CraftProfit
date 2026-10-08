@@ -92,7 +92,7 @@ end)
 H.test("the per-point line is labelled as an estimate", function()
     local ns = load()
     local m = model(ns, { showPerPoint = true })
-    H.eq(m.lines[5], { label = "Cost per point", value = "-9s 33c (75%, estimate)", key = "perpoint", best = false })
+    H.eq(m.lines[5], { label = "Gain per point", value = "9s 33c (75%, estimate)", key = "perpoint", best = false, tone = "profit" })
 end)
 
 H.test("the per-point line shows n/a for trivial recipes and ? for unknown difficulty", function()
@@ -145,4 +145,21 @@ H.test("a certain disenchant result has no sub-line", function()
     local ns = load()
     local m = model(ns, {})
     for _, line in ipairs(m.lines) do H.falsy(line.key == "likely") end
+end)
+
+H.test("the cost per point line says cost in red, gain in green, and stays neutral when unknown", function()
+    local ns = load()
+    local loss = model(ns, { showPerPoint = true, priceOf = function(id)
+        local map = { [1] = 5000, [2] = 5000, [100] = 100, [200] = 10 }
+        return map[id], 10
+    end })
+    local line = loss.lines[#loss.lines]
+    H.eq(line.label, "Cost per point")
+    H.eq(line.tone, "loss")
+    local gain = model(ns, { showPerPoint = true }).lines
+    H.eq(gain[#gain].label, "Gain per point")
+    local trivial = { recipeID = 1, name = "x", difficulty = "trivial", outputItemID = 100, outputQty = 1, reagents = RECIPE.reagents }
+    local grey = model(ns, { recipe = trivial, showPerPoint = true }).lines
+    H.eq(grey[#grey].tone, nil)
+    H.eq(grey[#grey].value, "n/a")
 end)

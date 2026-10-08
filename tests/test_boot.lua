@@ -383,3 +383,90 @@ H.test("asking for the name of an unloaded item requests it once", function()
     for _, id in ipairs(T.loadRequests) do if id == 555 then n = n + 1 end end
     H.eq(n, 1)
 end)
+
+-- Pins sorted by cost per point
+H.test("pinned difficulties follow the open profession window", function()
+    local T = boot()
+    mockProfession(T)
+    local pin = T.ns.Recipes.normalize(RAW)
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, pin)
+    T.env.C_TradeSkillUI.GetRecipeInfo = function(id)
+        return { recipeID = id, learned = true, relativeDifficulty = 2 }
+    end
+    T.ns.Controller.onEvent("TRADE_SKILL_LIST_UPDATE")
+    H.eq(T.env.CraftProfitCharDB.pins[1].difficulty, "easy")
+end)
+
+H.test("pinned difficulties are left alone when the window is closed or the recipe is unreadable", function()
+    local T = boot()
+    mockProfession(T)
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, T.ns.Recipes.normalize(RAW))
+    T.env.ProfessionsFrame.IsShown = function() return false end
+    T.env.C_TradeSkillUI.GetRecipeInfo = function() return { learned = true, relativeDifficulty = 3 } end
+    T.ns.Controller.onEvent("TRADE_SKILL_LIST_UPDATE")
+    H.eq(T.env.CraftProfitCharDB.pins[1].difficulty, "medium")
+    T.env.ProfessionsFrame.IsShown = function() return true end
+    T.env.C_TradeSkillUI.GetRecipeInfo = function() return { learned = false, relativeDifficulty = 3 } end
+    T.ns.Controller.onEvent("TRADE_SKILL_LIST_UPDATE")
+    H.eq(T.env.CraftProfitCharDB.pins[1].difficulty, "medium")
+    T.env.C_TradeSkillUI.GetRecipeInfo = function() return { learned = true, relativeDifficulty = 99 } end
+    T.ns.Controller.onEvent("TRADE_SKILL_LIST_UPDATE")
+    H.eq(T.env.CraftProfitCharDB.pins[1].difficulty, "medium")
+end)
+
+H.test("sorting by cost per point switches the cost per point option on", function()
+    local T = boot()
+    H.eq(T.env.CraftProfitCharDB.sortMode, "net")
+    H.falsy(T.env.CraftProfitDB.settings.showPerPoint)
+    T.ns.Controller.toggleSort()
+    H.eq(T.env.CraftProfitCharDB.sortMode, "point")
+    H.truthy(T.env.CraftProfitDB.settings.showPerPoint)
+    T.ns.Controller.toggleSort()
+    H.eq(T.env.CraftProfitCharDB.sortMode, "net")
+    H.truthy(T.env.CraftProfitDB.settings.showPerPoint)
+end)
+
+H.test("turning the cost per point option off also leaves the point sort", function()
+    local T = boot()
+    T.ns.Controller.toggleSort()
+    T.ns.Window.lastHandlers.onPerPointToggle(false)
+    H.eq(T.env.CraftProfitCharDB.sortMode, "net")
+    H.falsy(T.env.CraftProfitDB.settings.showPerPoint)
+end)
+
+H.test("the sort mode is saved with the character and repaired when corrupt", function()
+    local T = W.boot(H, { items = ITEMS })
+    T.env.CraftProfitCharDB = { pins = {}, sortMode = "point" }
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(T.env.CraftProfitCharDB.sortMode, "point")
+    local T2 = W.boot(H, { items = ITEMS })
+    T2.env.CraftProfitCharDB = { pins = {}, sortMode = "banana" }
+    T2.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(T2.env.CraftProfitCharDB.sortMode, "net")
+end)
+
+H.test("clicking a reagent searches it at the AH, or says why it cannot", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local searched
+    T.ns.AH.browse = function(name, id, qty) searched = { name, id, qty }; return true end
+    C.onReagentClick(1, 20)
+    H.eq(searched, nil)
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Open the auction house first")
+    T.ns.AH.isOpen = true
+    C.onReagentClick(1, 20)
+    H.eq(searched, nil)
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Item not loaded yet, try again in a moment")
+    T.env.C_Item.GetItemInfo = function() return "Bronze Bar" end
+    C.onReagentClick(1, 20)
+    H.eq(searched, { "Bronze Bar", 1, 20 })
+    T.ns.AH.browse = function() return false, "unavailable" end
+    C.onReagentClick(1, 20)
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r The auction house search is not available")
+end)
+
+H.test("a reagent row click in the window reaches the controller", function()
+    local T = boot()
+    T.ns.Window.lastHandlers.onReagentClick(1, 2)
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Open the auction house first")
+end)

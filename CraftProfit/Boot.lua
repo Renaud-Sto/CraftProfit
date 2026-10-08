@@ -51,6 +51,21 @@ function Controller.knowsEnchanting()
     return ns.Trade.hasProfession(ns.Trade.ENCHANTING_SKILL_LINE)
 end
 
+-- A reagent was clicked in the window: search it at the AH, quantity preset.
+function Controller.onReagentClick(itemID, qty)
+    if not ns.AH.isOpen then
+        say(L.SEARCH_NEED_AH)
+        return
+    end
+    local name = Controller.itemName(itemID)
+    if not name then
+        say(L.ITEM_NOT_LOADED)
+        return
+    end
+    local ok = ns.AH.browse(name, itemID, qty)
+    if not ok then say(L.BROWSE_UNAVAILABLE) end
+end
+
 function Controller.evaluate(recipe)
     local settings = CraftProfitDB.settings
     return Evaluate.run({
@@ -117,6 +132,35 @@ function Controller.selectPin(recipeID)
     if not index then return end
     state.recipe, state.source = CraftProfitCharDB.pins[index], "pin"
     Controller.refresh()
+end
+
+-- Pinned recipes keep the difficulty they had when pinned; the open profession
+-- window knows the current one, which changes as the skill rises.
+function Controller.refreshPinDifficulties()
+    if not ns.Trade.isShown() then return false end
+    local changed = false
+    for _, pin in ipairs(CraftProfitCharDB.pins) do
+        local current = ns.Trade.difficultyOf(pin.recipeID)
+        if current and current ~= pin.difficulty then
+            pin.difficulty = current
+            changed = true
+        end
+    end
+    if changed then Controller.requestRefresh() end
+    return changed
+end
+
+-- Sorting by cost per point needs the cost per point: it switches the option on.
+function Controller.setSortMode(mode)
+    DB.setSortMode(CraftProfitCharDB, mode)
+    if CraftProfitCharDB.sortMode == DB.SORT_POINT then
+        CraftProfitDB.settings.showPerPoint = true
+    end
+    Controller.refresh()
+end
+
+function Controller.toggleSort()
+    Controller.setSortMode(CraftProfitCharDB.sortMode == DB.SORT_POINT and DB.SORT_NET or DB.SORT_POINT)
 end
 
 function Controller.togglePin()
@@ -239,8 +283,13 @@ function Controller.init()
 
     ns.Window.create({
         onPinClick = Controller.togglePin,
+        onReagentClick = Controller.onReagentClick,
         onPerPointToggle = function(checked)
             CraftProfitDB.settings.showPerPoint = checked and true or false
+            -- The point-cost sort cannot outlive the point-cost option.
+            if not checked and CraftProfitCharDB.sortMode == DB.SORT_POINT then
+                DB.setSortMode(CraftProfitCharDB, DB.SORT_NET)
+            end
             Controller.refresh()
         end,
         onCostToggle = function(isExpanded)
@@ -285,6 +334,7 @@ function Controller.onEvent(event, arg1, arg2)
             Controller.requestRefresh()
         end
     elseif event == "TRADE_SKILL_LIST_UPDATE" then
+        Controller.refreshPinDifficulties()
         ns.Trade.invalidate()
     end
 end

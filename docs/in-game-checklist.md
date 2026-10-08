@@ -20,6 +20,12 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] The Pin button toggles to Unpin and back.
 - [ ] Clicking the Materials line folds the reagent detail in (`+`) and out (`-`); the choice survives `/reload`. With 5+ reagents the window grows and nothing overlaps.
 
+## Pinned recipes by cost per point
+- [ ] At the AH, the button at the top right of the pinned list reads "Tri : gain"; clicking it switches to "Tri : coût/point", ticks "Coût par point de compétence" and reorders the list, cheapest first. Rows show `21g 29s 84c/pt` (red), a recipe that pays for itself shows `+9s 33c/pt` (green), a grey recipe `n/d` and an unpriced one `?`, both at the bottom.
+- [ ] The cost per point line reads "Gain par point" (green) when each point pays for itself and "Coût par point" (red) otherwise; the best option line is gold with a ">" marker; "Tri : gain" lists the most profitable pin first.
+- [ ] Unticking "Coût par point de compétence" returns the sort to "Tri : gain". The choice survives `/reload`.
+- [ ] Level the skill until a pinned recipe changes colour: after the profession window is opened again, its cost per point follows the new colour (pins no longer keep the colour they had when pinned).
+
 ## Auction house
 - [ ] Opening the AH shows the window with the Pinned recipes section (first pin selected).
 - [ ] **Search prices** counts `1/N … N/N` and ends with `Prices updated`; prices and the verdict fill in; the age reads a few seconds.
@@ -27,6 +33,11 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] **Scan AH** starts a scan, the client does not freeze, the status ends `Scan complete: N items priced`. A second press inside 15 minutes shows the cooldown message.
 - [ ] A scan started by another addon (if installed) is picked up (prices refresh) without pressing Scan.
 - [ ] After a scan, a recipe unpriced by the targeted search gets its price from the scan.
+
+## Click a reagent to search it (quality of life, never buys)
+- [ ] With the materials detail unfolded at the AH, hovering a reagent row highlights it. Clicking "20x Barre de bronze" opens the AH's Buy view, types the item name in the AH search box and starts the search.
+- [ ] Clicking the matching result opens its buy view with the quantity already set to 20. (Best effort: if the quantity stays at 1, note the AH view; the search itself is the part that must work.)
+- [ ] With the AH closed, clicking a reagent prints "Open the auction house first". No Lua error and no `ADDON_ACTION_BLOCKED` in any case. CraftProfit never presses Buy.
 
 ## Numbers
 - [ ] For one recipe, compare each reagent price with the AH listing prices: the stored price is the median of the 5 cheapest units (not the minimum).

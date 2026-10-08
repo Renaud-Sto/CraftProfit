@@ -273,3 +273,94 @@ H.test("a later scan is read once the quiet period has passed", function()
     T.run()
     H.eq(#T.snapshots, 2)
 end)
+
+-- Click a reagent: search it in the AH's own search bar, never buy
+local function fakeAHFrame(T)
+    local f = { calls = {} }
+    f.SearchBar = {
+        SearchBox = { SetText = function(_, t) f.calls[#f.calls + 1] = { "text", t } end },
+        StartSearch = function() f.calls[#f.calls + 1] = { "search" } end,
+    }
+    f.SetDisplayMode = function(_, mode) f.calls[#f.calls + 1] = { "mode", mode } end
+    f.quantity = {}
+    f.CommoditiesBuyFrame = {
+        BuyDisplay = { QuantityInput = { SetQuantity = function(_, n) f.quantity[#f.quantity + 1] = n end } },
+        HookScript = function(self, name, fn) f.onShow = name == "OnShow" and fn or f.onShow end,
+    }
+    T.env.AuctionHouseFrame = f
+    T.env.AuctionHouseFrameDisplayMode = { Buy = 7 }
+    return f
+end
+
+H.test("browse needs the AH open and the AH search bar", function()
+    local T = setup()
+    H.eq({ T.AH.browse("Bronze Bar", 2841, 20) }, { false, "closed" })
+    T.AH.onEvent("AUCTION_HOUSE_SHOW")
+    H.eq({ T.AH.browse("Bronze Bar", 2841, 20) }, { false, "unavailable" })
+    T.env.AuctionHouseFrame = {}
+    H.eq({ T.AH.browse("Bronze Bar", 2841, 20) }, { false, "unavailable" })
+end)
+
+H.test("browse switches to the buy view, fills the search box and starts the search", function()
+    local T = setup()
+    local f = fakeAHFrame(T)
+    T.AH.onEvent("AUCTION_HOUSE_SHOW")
+    H.eq({ T.AH.browse("Bronze Bar", 2841, 20) }, { true })
+    H.eq(f.calls, { { "mode", 7 }, { "text", "Bronze Bar" }, { "search" } })
+end)
+
+H.test("the wanted quantity is preset once, when the commodity buy view opens", function()
+    local T = setup()
+    local f = fakeAHFrame(T)
+    T.AH.onEvent("AUCTION_HOUSE_SHOW")
+    T.AH.browse("Bronze Bar", 2841, 20)
+    H.truthy(f.onShow)
+    f.onShow()
+    T.run()
+    H.eq(f.quantity, { 20 })
+    f.onShow()
+    T.run()
+    H.eq(f.quantity, { 20 })
+end)
+
+H.test("the quantity is not preset for another item, nor after it expired", function()
+    local T = setup()
+    local f = fakeAHFrame(T)
+    T.AH.onEvent("AUCTION_HOUSE_SHOW")
+    T.AH.browse("Bronze Bar", 2841, 20)
+    f.CommoditiesBuyFrame.GetItemID = function() return 999 end
+    f.onShow()
+    T.run()
+    H.eq(f.quantity, {})
+    T.AH.browse("Bronze Bar", 2841, 20)
+    f.CommoditiesBuyFrame.GetItemID = function() return 2841 end
+    T.clock = T.clock + 61
+    f.onShow()
+    T.run()
+    H.eq(f.quantity, {})
+end)
+
+H.test("a failing Blizzard frame never raises", function()
+    local T = setup()
+    local f = fakeAHFrame(T)
+    f.SearchBar.StartSearch = function() error("boom") end
+    T.AH.onEvent("AUCTION_HOUSE_SHOW")
+    H.eq({ T.AH.browse("Bronze Bar", 2841, 20) }, { false, "unavailable" })
+end)
+
+H.test("the preset quantity is announced to the buy view like typed input", function()
+    local T = setup()
+    local f = fakeAHFrame(T)
+    local typed = {}
+    f.CommoditiesBuyFrame.BuyDisplay.QuantityInput.InputBox = {
+        GetScript = function(_, name)
+            if name == "OnTextChanged" then return function(_, userInput) typed[#typed + 1] = userInput end end
+        end,
+    }
+    T.AH.onEvent("AUCTION_HOUSE_SHOW")
+    T.AH.browse("Bronze Bar", 2841, 20)
+    f.onShow()
+    T.run()
+    H.eq(f.quantity, { 20 })
+    H.eq(typed, { true })
+end)

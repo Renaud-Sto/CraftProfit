@@ -194,3 +194,35 @@ H.test("a scan the server never answers reports it, a scan it answers does not",
     T.run()
     H.eq(P.status, "Scanning the auction house...")
 end)
+
+H.test("orderedPins sorts by net (most profitable first) or by cost per point (cheapest first)", function()
+    local T = boot()
+    local P = T.ns.PinsUI
+    local pins = { { recipeID = 1 }, { recipeID = 2 }, { recipeID = 3 }, { recipeID = 4 }, { recipeID = 5 } }
+    local results = {
+        [1] = { net = -500, perPoint = { cost = 900, chance = 0.25 } },
+        [2] = { net = 40, perPoint = { cost = nil, chance = 0 } },
+        [3] = { net = -20, perPoint = { cost = 100, chance = 1 } },
+        [4] = { perPoint = {} },
+        [5] = { net = 40, perPoint = { cost = -50, chance = 1 } },
+    }
+    local function evaluate(recipe) return results[recipe.recipeID] end
+    local function ids(list)
+        local out = {}
+        for i, item in ipairs(list) do out[i] = item.recipe.recipeID end
+        return out
+    end
+    H.eq(ids(P.orderedPins(pins, "net", evaluate)), { 2, 5, 3, 1, 4 })
+    H.eq(ids(P.orderedPins(pins, "point", evaluate)), { 5, 3, 1, 2, 4 })
+    H.eq(P.orderedPins(pins, "point", evaluate)[1].result, results[5])
+end)
+
+H.test("the pins list refreshes in both sort modes without errors", function()
+    local T = boot()
+    T.ns.AH.isOpen = true
+    T.ns.Controller.onAHOpen(true)
+    T.ns.Controller.toggleSort()
+    T.ns.PinsUI.refresh()
+    T.ns.Controller.toggleSort()
+    T.ns.PinsUI.refresh()
+end)

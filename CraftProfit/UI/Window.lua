@@ -20,7 +20,7 @@ local COLORS = {
     incomplete = { 1.00, 0.82, 0.25 },
     none = { 0.70, 0.70, 0.70 },
     normal = { 0.90, 0.90, 0.90 },
-    best = { 0.35, 0.90, 0.45 },
+    best = { 1.00, 0.82, 0.00 }, -- gold: green and red are kept for gain and loss
     muted = { 0.65, 0.65, 0.70 },
     stale = { 1.00, 0.60, 0.25 },
 }
@@ -137,7 +137,14 @@ function Window.create(h)
         label:SetJustifyH("LEFT")
         local value = newText(frame, "GameFontDisableSmall")
         value:SetJustifyH("RIGHT")
-        detailRows[i] = { label = label, value = value }
+        -- Click area: searches this reagent at the auction house.
+        local hit = CreateFrame("Button", nil, frame)
+        hit:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+        local row = { label = label, value = value, hit = hit }
+        hit:SetScript("OnClick", function()
+            if row.itemID and handlers.onReagentClick then handlers.onReagentClick(row.itemID, row.qty) end
+        end)
+        detailRows[i] = row
     end
 
     verdictText = newText(frame, "GameFontNormal")
@@ -214,6 +221,11 @@ local function placeDetails(y)
     for i = 1, MAX_DETAIL do
         local row, cost = detailRows[i], expanded and costLines[i] or nil
         if cost then
+            row.itemID, row.qty = cost.itemID, cost.qty
+            row.hit:ClearAllPoints()
+            row.hit:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD + 12, -y)
+            row.hit:SetSize(WIDTH - PAD * 2 - 12, ROW_H - 2)
+            row.hit:Show()
             row.label:SetText(cost.qty .. "x " .. reagentName(cost.itemID))
             row.value:SetText(cost.subtotalText)
             row.label:ClearAllPoints()
@@ -224,6 +236,8 @@ local function placeDetails(y)
             row.value:Show()
             y = y + ROW_H - 2
         else
+            row.itemID = nil
+            row.hit:Hide()
             row.label:Hide()
             row.value:Hide()
         end
@@ -245,8 +259,10 @@ function Window.render(model)
         if line then
             row.label:SetText(line.label)
             row.value:SetText(line.value)
-            color(row.label, line.best and COLORS.best or line.muted and COLORS.muted or COLORS.normal)
-            color(row.value, line.best and COLORS.best or COLORS.normal)
+            local tone = line.best and COLORS.best or line.tone and COLORS[line.tone]
+            color(row.label, tone or line.muted and COLORS.muted or COLORS.normal)
+            color(row.value, tone or COLORS.normal)
+            if line.best then row.label:SetText("> " .. line.label) end
             place(row.label, "TOPLEFT", line.muted and PAD + 12 or PAD, -y)
             place(row.value, "TOPRIGHT", -PAD, -y)
             row.label:Show()

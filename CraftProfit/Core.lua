@@ -115,6 +115,49 @@ function Core.bestOption(options)
     return bestKey, bestValue, incomplete
 end
 
+-- Display order for recipes by cost per point: entries = { { cost = copper|nil, chance = 0..1|nil } }.
+-- Returns the entry indices, cheapest first (a negative cost, meaning the crafts pay
+-- for themselves, comes first). Recipes that cannot give a point (chance 0) follow,
+-- then the ones whose cost is unknown. Ties keep their original order.
+function Core.rankByPointCost(entries)
+    local order = {}
+    for i, e in ipairs(entries) do
+        local group = 3
+        if Util.isFinite(e.cost) then
+            group = 1
+        elseif e.chance == 0 then
+            group = 2
+        end
+        order[#order + 1] = { index = i, group = group, cost = group == 1 and e.cost or 0 }
+    end
+    table.sort(order, function(a, b)
+        if a.group ~= b.group then return a.group < b.group end
+        if a.cost ~= b.cost then return a.cost < b.cost end
+        return a.index < b.index
+    end)
+    local result = {}
+    for i, o in ipairs(order) do result[i] = o.index end
+    return result
+end
+
+-- Display order by net result: entries = { { net = copper|nil } }. Most profitable
+-- (or least lossy) first, unknown results last, ties keep their original order.
+function Core.rankByNet(entries)
+    local order = {}
+    for i, e in ipairs(entries) do
+        local known = Util.isFinite(e.net)
+        order[#order + 1] = { index = i, known = known, net = known and e.net or 0 }
+    end
+    table.sort(order, function(a, b)
+        if a.known ~= b.known then return a.known end
+        if a.net ~= b.net then return a.net > b.net end
+        return a.index < b.index
+    end)
+    local result = {}
+    for i, o in ipairs(order) do result[i] = o.index end
+    return result
+end
+
 -- Net cost of one skill point: (cost - what the result recovers) / chance.
 -- Negative means the crafts pay for themselves. Nil when no point can be earned.
 function Core.costPerPoint(cost, recovered, chance)

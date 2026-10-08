@@ -7,8 +7,8 @@ local AH = {}
 ns.AH = AH
 
 AH.isOpen = false
--- docs/probe-findings.md F2: does GetReplicateItemInfo's buyoutPrice already
--- hold the price of ONE unit? false = it is the price of the whole stack.
+-- docs/probe-findings.md F2 (measured 2026-10-08): GetReplicateItemInfo's buyout
+-- is the price of the whole stack, not of one unit.
 AH.PER_UNIT_REPLICATE = false
 AH.CHUNK = 1500             -- scan rows read per frame
 AH.REPLICATE_COOLDOWN = 15 * 60

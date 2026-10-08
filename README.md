@@ -80,6 +80,11 @@ Bug reports, translation fixes and pull requests are welcome. Read [CONTRIBUTING
 
 The license will be added before the first release.
 
+## Credits and data sources
+
+- Disenchant result tables are derived from the Classic tables of [Warcraft Wiki](https://warcraft.wiki.gg/wiki/Disenchanting_tables) (text and data licensed CC BY-SA 4.0) and are being replaced by measurements from Forever.
+- Item and recipe data, names and icons belong to Blizzard Entertainment and come from the game at run time; none is stored in this repository.
+
 ## Disclaimer
 
 CraftProfit is a fan-made addon. It is not affiliated with or endorsed by Blizzard Entertainment. World of Warcraft is a trademark of Blizzard Entertainment, Inc.

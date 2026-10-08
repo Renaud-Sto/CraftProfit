@@ -80,6 +80,11 @@ Les rapports de bugs, corrections de traduction et pull requests sont les bienve
 
 La licence sera ajoutée avant la première publication.
 
+## Crédits et sources de données
+
+- Les tables de résultats du désenchantement sont dérivées des tables Classic de [Warcraft Wiki](https://warcraft.wiki.gg/wiki/Disenchanting_tables) (texte et données sous licence CC BY-SA 4.0) et seront remplacées par des mesures faites dans Forever.
+- Les données, noms et icônes des objets et des recettes appartiennent à Blizzard Entertainment et viennent du jeu à l'exécution ; rien n'est stocké dans ce dépôt.
+
 ## Avertissement
 
 CraftProfit est un addon de fan. Il n'est ni affilié à Blizzard Entertainment ni approuvé par elle. World of Warcraft est une marque de Blizzard Entertainment, Inc.

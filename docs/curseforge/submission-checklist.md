@@ -21,11 +21,15 @@ Their pages share a structure: a one-sentence summary, **Features**, **Usage** (
 | Changelog | Required with every file | [CHANGELOG.md](../../CHANGELOG.md) |
 | Release type | Alpha, beta or release | Start with **beta** (early beta addon on a beta game) |
 | Source / issues links | Recommended | GitHub, in the description |
-| Author name | Shown on the page | Check `## Author` in the TOC (currently `juliani`) against the CurseForge account name |
+| Author name | Shown on the page | `Sto` (TOC `## Author` updated); use the same name on the CurseForge account |
 
 ## License decision
 
 CraftProfit has no license file yet, which means *all rights reserved* by default: nobody may legally reuse or redistribute it, and CurseForge will ask which license applies. Common choices for addons: **MIT** (permissive, used by the comparable addons above), **GPL-3.0** (forks must stay open), **All Rights Reserved**. This is the owner's decision. Once chosen: add `LICENSE`, state it in the README (both languages), and select the same one on the CurseForge form.
+
+### Data source of the disenchant tables
+
+`Data/Disenchant.lua` was built from the Classic tables of Warcraft Wiki, whose text and data are licensed **CC BY-SA 4.0** (attribution required, derivative works under the same license). Drop rates and quantities are game facts, which copyright generally does not protect, and the file is restructured and attributed in its header, but this is not legal advice. The safest course, and the plan anyway because the tables are unverified in Forever, is to **replace them with your own in-game measurements before the first release**. Until then keep the attribution in the README (done) and in the file header.
 
 ## Before the first upload
 

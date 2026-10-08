@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: CraftProfit
 ## Notes: Prices profession recipes with auction house data and shows the most profitable way to sell the result.
-## Author: juliani
+## Author: Sto
 ## Version: 0.1.0
 ## SavedVariables: CraftProfitDB
 ## SavedVariablesPerCharacter: CraftProfitCharDB

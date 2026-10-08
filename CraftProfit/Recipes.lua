@@ -31,8 +31,27 @@ end
 -- One invalid reagent invalidates the list: dropping it would hide a cost.
 local function reagents(list)
     if type(list) ~= "table" then return nil end
+    local len = #list
+    if len == 0 then return nil end
+
+    -- Verify table has exactly integer keys 1..len (no holes, no extra keys)
+    local keyCount = 0
+    for k, _ in pairs(list) do
+        keyCount = keyCount + 1
+        if type(k) ~= "number" or k ~= math.floor(k) or k < 1 or k > len then
+            return nil
+        end
+    end
+    if keyCount ~= len then return nil end
+
+    -- Verify no holes: each position 1..len exists
+    for i = 1, len do
+        if list[i] == nil then return nil end
+    end
+
     local merged, order = {}, {}
-    for _, r in ipairs(list) do
+    for i = 1, len do
+        local r = list[i]
         if type(r) ~= "table" then return nil end
         local id, qty = Util.id(r.itemID), Util.id(r.qty)
         if not id or not qty then return nil end
@@ -43,7 +62,7 @@ local function reagents(list)
             order[#order + 1] = id
         end
     end
-    if #order == 0 or #order > Recipes.MAX_REAGENTS then return nil end
+    if #order > Recipes.MAX_REAGENTS then return nil end
     local out = {}
     for i, id in ipairs(order) do out[i] = { itemID = id, qty = merged[id] } end
     return out

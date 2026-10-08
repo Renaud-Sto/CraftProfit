@@ -100,3 +100,23 @@ H.test("normalize tolerates a missing name and an unknown difficulty", function(
     H.truthy(r)
     H.eq(r.difficulty, nil)
 end)
+
+H.test("normalize rejects reagent lists with holes", function()
+    local R = load()
+    local holey = { [1] = { itemID = 1, qty = 1 }, [3] = { itemID = 2, qty = 9 } }
+    H.eq(R.normalize(raw({ reagents = holey })), nil)
+end)
+
+H.test("normalize rejects reagent lists with extra string keys", function()
+    local R = load()
+    local extraKey = { { itemID = 1, qty = 1 }, x = { itemID = 2, qty = 9 } }
+    H.eq(R.normalize(raw({ reagents = extraKey })), nil)
+end)
+
+H.test("normalize accepts ordinary contiguous reagent lists", function()
+    local R = load()
+    local contiguous = { { itemID = 1, qty = 1 }, { itemID = 2, qty = 9 } }
+    local r = R.normalize(raw({ reagents = contiguous }))
+    H.truthy(r)
+    H.eq(#r.reagents, 2)
+end)

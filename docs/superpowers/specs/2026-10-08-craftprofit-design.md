@@ -61,7 +61,7 @@ Exclus (YAGNI) :
 - Coût = Σ (quantité × prix unitaire) des composants.
 - Revente HV nette = prix × (1 − commission). Commission = constante réglable (valeur issue de la sonde).
 - Marchand = prix de vente via `C_Item.GetItemInfo`.
-- Désenchantement = Σ (probabilité × prix du composant obtenu). Affiché seulement si l'objet est désenchantable et si le joueur a Enchanting. Pas de donnée → « inconnu ».
+- Désenchantement = Σ (probabilité × prix du composant obtenu). Affiché dès que l'objet est désenchantable, **que le joueur ait Enchanting ou non** : un objet lié quand équipé (BoE) peut être désenchanté par un autre joueur ou un autre personnage du compte. Aucun filtrage sur les métiers du joueur. Pas de donnée → « inconnu ».
 - Coût par point (option cochée) = coût net ÷ probabilité de gain, la probabilité dépendant de la couleur de difficulté de la recette. Ces probabilités sont des estimations, signalées comme telles dans l'interface.
 - Verdict = option au meilleur résultat net parmi celles dont les prix sont connus.
 

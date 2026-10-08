@@ -5,7 +5,7 @@ ns.Locale.register("frFR", {
     MATERIALS = "Composants",
     LINE_AH = "Hôtel des ventes (net)",
     LINE_VENDOR = "Marchand",
-    LINE_DISENCHANT = "Désenchantement (espéré)",
+    LINE_DISENCHANT = "Désenchantement (espéré, bêta)",
     NAME_AH = "Hôtel des ventes",
     NAME_VENDOR = "Marchand",
     NAME_DISENCHANT = "Désenchantement",

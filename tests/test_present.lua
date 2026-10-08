@@ -35,7 +35,7 @@ H.test("lines show cost and every option, marking the best", function()
     H.eq(m.lines[1], { label = "Materials", value = "2s 50c", key = "cost", best = false })
     H.eq(m.lines[2], { label = "Auction house (net)", value = "9s 50c", key = "ah", best = true })
     H.eq(m.lines[3], { label = "Vendor", value = "2s", key = "vendor", best = false })
-    H.eq(m.lines[4], { label = "Disenchant (expected)", value = "3s 80c", key = "disenchant", best = false })
+    H.eq(m.lines[4], { label = "Disenchant (expected, beta)", value = "3s 80c", key = "disenchant", best = false })
     H.eq(#m.lines, 4)
 end)
 

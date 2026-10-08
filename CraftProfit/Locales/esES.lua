@@ -5,7 +5,7 @@ ns.Locale.register("esES", {
     MATERIALS = "Materiales",
     LINE_AH = "Casa de subastas (neto)",
     LINE_VENDOR = "Vendedor",
-    LINE_DISENCHANT = "Desencantar (esperado)",
+    LINE_DISENCHANT = "Desencantar (esperado, beta)",
     NAME_AH = "Casa de subastas",
     NAME_VENDOR = "Vendedor",
     NAME_DISENCHANT = "Desencantar",

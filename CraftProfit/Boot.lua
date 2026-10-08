@@ -171,8 +171,22 @@ local function onSelection(recipeID)
         end
     end
     if state.source == "profession" then
-        state.recipe, state.source = nil, nil
-        if ns.AH.isOpen then Controller.refresh() else ns.Window.hide() end
+        -- A pinned recipe stays selected as a pin, so it is still there at the AH.
+        local recipe = state.recipe
+        local index = recipe and DB.pinIndex(CraftProfitCharDB, recipe.recipeID)
+        if index then
+            state.recipe, state.source = CraftProfitCharDB.pins[index], "pin"
+        else
+            state.recipe, state.source = nil, nil
+        end
+        if ns.AH.isOpen then
+            -- The window was anchored to the profession window that just closed.
+            local ahFrame = AuctionHouseFrame or AuctionFrame
+            if ahFrame then ns.Window.attach(ahFrame, CraftProfitDB.settings.window) end
+            Controller.refresh()
+        else
+            ns.Window.hide()
+        end
     end
 end
 

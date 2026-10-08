@@ -1,6 +1,6 @@
 -- CraftProfitProbe: THROWAWAY addon measuring what the Forever client exposes.
 -- Every output line starts with the version so a stale install is obvious.
-local VERSION = "0.2.0"
+local VERSION = "0.2.1"
 local TAG = "|cff66ccff[CPP " .. VERSION .. "]|r "
 
 local function isSecret(v)
@@ -20,10 +20,17 @@ end
 -- Persistent log: SavedVariables are written to disk on /reload or logout only.
 -- File: WTF/Account/<ACCOUNT>/SavedVariables/CraftProfitProbe.lua
 local MAX_LOG = 3000
+local lastText, lastRepeat, lastStamp
 local function logLine(text)
     if type(CraftProfitProbeLog) ~= "table" then CraftProfitProbeLog = {} end
     local log = CraftProfitProbeLog
-    log[#log + 1] = date("%H:%M:%S") .. " " .. text
+    if text == lastText then
+        lastRepeat = lastRepeat + 1
+        log[#log] = lastStamp .. " " .. text .. " (x" .. lastRepeat .. ")"
+        return
+    end
+    lastText, lastRepeat, lastStamp = text, 1, date("%H:%M:%S")
+    log[#log + 1] = lastStamp .. " " .. text
     if #log > MAX_LOG then table.remove(log, 1) end
 end
 
@@ -205,8 +212,21 @@ local function latency()
     return searchStart and string.format("+%.2fs", GetTime() - searchStart) or ""
 end
 
+-- The client fires REPLICATE_ITEM_LIST_UPDATE hundreds of times per scan: count them,
+-- but read the rows only once per DETAIL_EVERY seconds (reading 78k rows per event
+-- tripped "insecure scripts exceeded execution limit").
+local DETAIL_EVERY = 5
+local replicateEvents, lastDetail = 0, nil
+
 frame:SetScript("OnEvent", function(_, event, a1)
     if event == "ITEM_DATA_LOAD_RESULT" then return end
+    if event == "REPLICATE_ITEM_LIST_UPDATE" then
+        replicateEvents = replicateEvents + 1
+        local now = GetTime()
+        if lastDetail and now - lastDetail < DETAIL_EVERY then return end
+        lastDetail = now
+        out("replicate events so far:", replicateEvents)
+    end
     out("EVENT", event, latency(), "arg1:", a1)
     local ah = C_AuctionHouse
     if event == "COMMODITY_SEARCH_RESULTS_UPDATED" then
@@ -232,7 +252,7 @@ frame:SetScript("OnEvent", function(_, event, a1)
             out(try(ah.GetReplicateItemInfo, 1))
         end
         local shown = 0
-        for i = 1, math.min(n, 5000) do
+        for i = 1, math.min(n, 2000) do
             local _, _, count, _, _, _, _, minBid, _, buyout, _, _, _, _, _, _, itemID = ah.GetReplicateItemInfo(i)
             if not isSecret(count) and count and count > 1 then
                 out(" stack row", i, "itemID", itemID, "count", count, "minBid", minBid, "buyout", buyout)
@@ -248,6 +268,7 @@ SlashCmdList.CPP = function(msg)
     local cmd, arg = (msg or ""):match("^(%S*)%s*(.-)$")
     local fn = cmds[cmd]
     if cmd == "log" then
+        out("replicate events:", replicateEvents)
         out("logged lines:", CraftProfitProbeLog and #CraftProfitProbeLog or 0,
             "- type /reload to write them to disk")
     elseif cmd == "clear" then

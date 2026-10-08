@@ -232,3 +232,44 @@ H.test("requestSnapshot reports an unavailable API", function()
     H.eq({ T.AH.requestSnapshot(100) }, { false, "unavailable" })
     H.eq(T.AH.cooldownLeft(0 / 0), 0)
 end)
+
+-- Field report: the client fires REPLICATE_ITEM_LIST_UPDATE hundreds of times per scan.
+H.test("a burst of replicate events produces one read, after the debounce delay", function()
+    local reads = 0
+    local api = replicate({ { itemID = 1, count = 1, buyout = 100 } })
+    local info = api.GetNumReplicateItems
+    api.GetNumReplicateItems = function() reads = reads + 1; return info() end
+    local T = setup(api)
+    for _ = 1, 500 do T.AH.onEvent("REPLICATE_ITEM_LIST_UPDATE") end
+    H.eq(#T.queued, 1)
+    T.run()
+    H.eq(reads, 1)
+    H.eq(#T.snapshots, 1)
+end)
+
+H.test("replicate events during a read and just after it do not restart it", function()
+    local T = setup(replicate({
+        { itemID = 1, count = 1, buyout = 100 }, { itemID = 2, count = 1, buyout = 100 },
+        { itemID = 3, count = 1, buyout = 100 },
+    }))
+    T.AH.CHUNK = 1
+    T.AH.onEvent("REPLICATE_ITEM_LIST_UPDATE")
+    table.remove(T.queued, 1)()
+    T.AH.onEvent("REPLICATE_ITEM_LIST_UPDATE")
+    T.run()
+    H.eq(#T.snapshots, 1)
+    T.clock = T.clock + 3
+    T.AH.onEvent("REPLICATE_ITEM_LIST_UPDATE")
+    T.run()
+    H.eq(#T.snapshots, 1)
+end)
+
+H.test("a later scan is read once the quiet period has passed", function()
+    local T = setup(replicate({ { itemID = 1, count = 1, buyout = 100 } }))
+    T.AH.onEvent("REPLICATE_ITEM_LIST_UPDATE")
+    T.run()
+    T.clock = T.clock + T.AH.REREAD_QUIET + 1
+    T.AH.onEvent("REPLICATE_ITEM_LIST_UPDATE")
+    T.run()
+    H.eq(#T.snapshots, 2)
+end)

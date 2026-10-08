@@ -13,7 +13,7 @@ Status marks: ✅ measured in game · ⚠️ not measured · ❌ unusable.
 ## F2. Replicate rows (`/cpp replicate`, once per 15 min)
 - Row layout matches (17 values then hasAll): yes ✅. 79,078 rows at 15:05:21, one scan.
 - The event fires hundreds of times per scan (427 seen in one tail), so reads are debounced.
-- For a stack row (count > 1): `buyout` is the **whole stack** ✅ → `AH.PER_UNIT_REPLICATE = false`. Evidence: spring water count 7 buyout 105 (15 each), linen bolt count 18 buyout 1476 (82 each); the scan median per unit matches the targeted search (bronze bar 323 vs 322, coarse grindstone 524 vs 524, solid-stone... 512 vs 512).
+- For a stack row (count > 1): `buyout` is the **whole stack** ✅ → `AH.PER_UNIT_REPLICATE = false`. Evidence: spring water count 7 buyout 105 (15 each), linen bolt count 18 buyout 1476 (82 each); the scan median per unit matches the targeted search (bronze bar 323 vs 322, coarse grindstone 524 vs 524, item 11083 512 vs 512).
 - Any `<SECRET>` fields: none ✅
 
 ## F3. Recipe API (`/cpp trade` with the blacksmithing window open and a recipe selected)

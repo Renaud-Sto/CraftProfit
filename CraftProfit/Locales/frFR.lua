@@ -12,6 +12,7 @@ ns.Locale.register("frFR", {
     PANEL_MATERIALS = "COMPOSANTS",
     PANEL_MATERIALS_MULTI = "COMPOSANTS x%d (ESTIMATION)",
     PANEL_OPTIONS = "OPTIONS",
+    PANEL_PINS = "RECETTES ÉPINGLÉES",
     CRAFTS_LABEL = "Crafts :",
     LINE_AH = "Hôtel des ventes (net)",
     LINE_VENDOR = "Marchand",

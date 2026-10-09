@@ -383,3 +383,58 @@ H.test("a theme switch repaints the pinned names and values in the new theme", f
     H.eq(name, gold.textMain)
     H.eq(value, gold.textMuted)
 end)
+
+-- A boot whose character already has a pin when the addon loads, as in the game.
+local function bootWithSavedPin()
+    local T = W.boot(H, { items = ITEMS })
+    T.env.CraftProfitCharDB = {}
+    T.ns.DB.initChar(T.env.CraftProfitCharDB)
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(1, 100, { { itemID = 1, qty = 2 } }))
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    return T
+end
+
+H.test("loading the addon with a pin does not touch the market until the AH opens", function()
+    local T = bootWithSavedPin()
+    -- Never refreshed: the row has no recipe yet (rawget, fake frames answer any field).
+    H.eq(rawget(T.ns.PinsUI.parts.rows[1], "recipeID"), nil)
+    H.eq(next(T.env.CraftProfitDB.markets), nil)
+    openList(T)
+    H.eq(T.ns.PinsUI.parts.rows[1].recipeID, 1)
+    H.truthy(next(T.env.CraftProfitDB.markets) ~= nil)
+end)
+
+H.test("a theme switch evaluates the pins only while the pinned list is shown", function()
+    local T = boot()
+    local Controller = T.ns.Controller
+    local evaluate, calls = Controller.evaluate, 0
+    Controller.evaluate = function(...) calls = calls + 1; return evaluate(...) end
+    T.ns.Kit.applyTheme("steel")
+    H.eq(calls, 0)
+    openList(T)
+    calls = 0
+    T.ns.Kit.applyTheme("copper")
+    H.truthy(calls > 0)
+end)
+
+H.test("the pinned panel title is the capitalised panel key", function()
+    local T = boot()
+    local parts = openList(T)
+    H.eq(parts.panel.title.text, "PINNED RECIPES")
+    local F = W.boot(H, { items = ITEMS, locale = "frFR" })
+    F.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(F.ns.PinsUI.parts.panel.title.text, "RECETTES ÉPINGLÉES")
+end)
+
+H.test("the sort button sits two levels above the pinned panel frame", function()
+    local T = W.boot(H, { items = ITEMS })
+    local made = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = made(...)
+        f.GetFrameLevel = function() return 5 end
+        f.SetFrameLevel = function(self, level) self.level = level end
+        return f
+    end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(T.ns.PinsUI.parts.sort.level, 7)
+end)

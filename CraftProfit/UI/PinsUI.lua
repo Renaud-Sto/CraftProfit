@@ -84,7 +84,7 @@ function PinsUI.refresh()
     offset = math.max(0, math.min(offset, #pins - VISIBLE))
     local currentID = ctl.currentRecipeID()
 
-    panel:setTitle(L.PINS_TITLE)
+    panel:setTitle(L.PANEL_PINS)
     parts.sort:setText(byPoint and L.SORT_POINT or L.SORT_NET)
     parts.search:setText(L.SEARCH_PRICES)
     parts.scan:setText(L.SCAN)
@@ -225,7 +225,7 @@ function PinsUI.init(controller)
     local inner = ns.Window.INNER_WIDTH
     local half = math.floor((inner - Kit.GAP) / 2)
 
-    panel = Kit.panel(host, L.PINS_TITLE)
+    panel = Kit.panel(host, L.PANEL_PINS)
     parts.panel = panel
     panel.frame:SetPoint("TOPLEFT", host, "TOPLEFT", 0, 0)
     panel.frame:SetPoint("TOPRIGHT", host, "TOPRIGHT", 0, 0)
@@ -235,6 +235,10 @@ function PinsUI.init(controller)
     parts.sort = Kit.button(panel.frame, "small", "")
     parts.sort:SetWidth(120)
     parts.sort:SetPoint("TOPRIGHT", panel.frame, "TOPRIGHT", -6, -3)
+    -- The header frame is a sibling at the same level, so lift the button above it (a
+    -- header hit area, if any, stays at the panel frame's level).
+    local level = panel.frame:GetFrameLevel()
+    if type(level) == "number" then parts.sort:SetFrameLevel(level + 2) end
     parts.sort:SetScript("OnClick", function() ctl.toggleSort() end)
 
     local body = panel.body
@@ -309,6 +313,11 @@ function PinsUI.init(controller)
         PinsUI.refresh()
     end)
     -- Muted values and the plain name colour come from the theme: redraw on a switch.
-    Kit.onTheme(function() PinsUI.refresh() end)
+    -- Only while shown: registering calls this at once, during ADDON_LOADED, and a
+    -- refresh evaluates every pin, which opens the market before the faction and
+    -- hardcore state can be trusted. onAHOpen shows the host and refreshes it anyway.
+    Kit.onTheme(function()
+        if host and host:IsShown() then PinsUI.refresh() end
+    end)
     host:Hide()
 end

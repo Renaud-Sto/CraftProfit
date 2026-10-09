@@ -12,6 +12,7 @@ ns.Locale.register("esES", {
     PANEL_MATERIALS = "MATERIALES",
     PANEL_MATERIALS_MULTI = "MATERIALES x%d (ESTIMADO)",
     PANEL_OPTIONS = "OPCIONES",
+    PANEL_PINS = "RECETAS FIJADAS",
     CRAFTS_LABEL = "Crafts:",
     LINE_AH = "Casa de subastas (neto)",
     LINE_VENDOR = "Vendedor",

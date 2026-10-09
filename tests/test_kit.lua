@@ -1,0 +1,276 @@
+local H = ...
+local W = dofile("tests/fakewow.lua")
+
+local function load()
+    return H.newNS("Theme", "UI/Kit").Kit
+end
+
+H.test("panelHeight adds the header, the body padding and the rows", function()
+    local Kit = load()
+    H.eq(Kit.panelHeight(3, 18), 22 + 8 + 54)
+    H.eq(Kit.panelHeight(0, 18), 30)
+    H.eq(Kit.panelHeight(nil, 18), 30)
+    H.eq(Kit.panelHeight(-4, 18), 30)
+    H.eq(Kit.panelHeight(2, 18, 10), 22 + 8 + 36 + 10)
+    H.eq(Kit.panelHeight(2.9, 10), 22 + 8 + 20)
+end)
+
+H.test("stack places panels one under the other with a gap and reports the total", function()
+    local Kit = load()
+    local offsets, total = Kit.stack({ 30, 20 }, 8, 10)
+    H.eq(offsets, { -10, -48 })
+    H.eq(total, 58)
+    offsets, total = Kit.stack({ 50 }, 8)
+    H.eq(offsets, { 0 })
+    H.eq(total, 50)
+    offsets, total = Kit.stack({}, 8)
+    H.eq(offsets, {})
+    H.eq(total, 0)
+end)
+
+H.test("fitSize picks the largest size that fits, the smallest when none does", function()
+    local Kit = load()
+    local sizes = { 19, 17, 15, 13 }
+    H.eq(Kit.fitSize(100, 19, 120, sizes), 19)
+    H.eq(Kit.fitSize(150, 19, 120, sizes), 15)
+    H.eq(Kit.fitSize(1000, 19, 120, sizes), 13)
+    H.eq(Kit.fitSize(nil, 19, 120, sizes), 19)
+    H.eq(Kit.fitSize("x", 19, 120, sizes), 19)
+    H.eq(Kit.fitSize(150, 0, 120, sizes), 19)
+end)
+
+local function withColor(fn)
+    local saved = _G.CreateColor
+    _G.CreateColor = function(r, g, b, a) return { r = r, g = g, b = b, a = a } end
+    local ok, err = pcall(fn)
+    _G.CreateColor = saved
+    if not ok then error(err, 0) end
+end
+
+local TOP, BOTTOM = { 1, 0, 0, 1 }, { 0, 0, 1, 1 }
+
+H.test("gradient uses colour objects when the client takes them, bottom colour first", function()
+    local Kit = load()
+    withColor(function()
+        local got
+        local tex = { SetGradient = function(_, orientation, a, b) got = { orientation, a, b } end }
+        H.eq(Kit.gradient(tex, TOP, BOTTOM), "color")
+        H.eq(got[1], "VERTICAL")
+        H.eq(got[2].b, 1)
+        H.eq(got[3].r, 1)
+    end)
+end)
+
+H.test("gradient falls back to the six-number signature, then to a flat colour", function()
+    local Kit = load()
+    local saved = _G.CreateColor
+    _G.CreateColor = nil
+    local got
+    local tex = { SetGradient = function(_, orientation, r1, _, b1, r2) got = { orientation, r1, b1, r2 } end }
+    H.eq(Kit.gradient(tex, TOP, BOTTOM), "rgb")
+    H.eq(got, { "VERTICAL", 0, 1, 1 })
+    local flat
+    local failing = {
+        SetGradient = function() error("bad signature") end,
+        SetColorTexture = function(_, r, g, b, a) flat = { r, g, b, a } end,
+    }
+    H.eq(Kit.gradient(failing, TOP, BOTTOM), "flat")
+    H.eq(flat, { 0.5, 0, 0.5, 1 })
+    flat = nil
+    local missing = { SetColorTexture = function(_, r, g, b, a) flat = { r, g, b, a } end }
+    H.eq(Kit.gradient(missing, TOP, BOTTOM), "flat")
+    H.eq(flat, { 0.5, 0, 0.5, 1 })
+    _G.CreateColor = saved
+end)
+
+H.test("gradient gives the texture a white base before tinting it", function()
+    local Kit = load()
+    local calls = {}
+    local tex = {
+        SetColorTexture = function(_, r, g, b, a) calls[#calls + 1] = { "base", r, g, b, a } end,
+        SetGradient = function() calls[#calls + 1] = { "gradient" } end,
+    }
+    Kit.gradient(tex, TOP, BOTTOM)
+    H.eq(calls[1], { "base", 1, 1, 1, 1 })
+    H.eq(calls[2], { "gradient" })
+end)
+
+H.test("the kit file is loaded by the fake game environment", function()
+    local T = W.boot(H)
+    H.truthy(T.ns.Kit)
+    H.truthy(T.ns.Theme)
+end)
+
+local function boot()
+    local T = W.boot(H)
+    return T, T.ns.Kit, T.env
+end
+
+H.test("applyTheme switches the current theme, twice in a row, and ignores unknown names", function()
+    local _, Kit = boot()
+    H.eq(Kit.themeName, "gold")
+    for _, name in ipairs({ "copper", "steel", "steel", "gold" }) do
+        Kit.applyTheme(name)
+        H.eq(Kit.themeName, name)
+        H.eq(Kit.current.name, name)
+    end
+    Kit.applyTheme("nope")
+    H.eq(Kit.themeName, "gold")
+end)
+
+H.test("every widget survives every theme being applied after it was built", function()
+    local _, Kit = boot()
+    local win = Kit.window("KitTestWindow", "Title", { width = 372 })
+    local panel = Kit.panel(win.content, "MATERIALS")
+    panel:setRows(3, 18)
+    local button = Kit.button(win.content, "primary", "Go")
+    local small = Kit.button(win.content, "small", "x")
+    local normal = Kit.button(win.content, "normal", "Ok")
+    local tile = Kit.tile(win.content, 110, 52)
+    tile:set({ label = "AH (NET)", value = "3g 24s", best = true })
+    for _, name in ipairs({ "copper", "steel", "gold" }) do
+        Kit.applyTheme(name)
+    end
+    H.truthy(button and small and normal)
+    H.eq(panel:height(), 84)
+end)
+
+H.test("applying a theme repaints existing widgets with that theme's colours", function()
+    local T, Kit = boot()
+    local panel = Kit.panel(nil, "MATERIALS")
+    local last
+    panel.title.SetTextColor = function(_, r, g, b, a) last = { r, g, b, a } end
+    Kit.applyTheme("steel")
+    local steel = T.ns.Theme.get("steel").headText
+    local gold = T.ns.Theme.get("gold").headText
+    H.eq(last, { steel[1], steel[2], steel[3], steel[4] })
+    H.truthy(steel[1] ~= gold[1] or steel[2] ~= gold[2] or steel[3] ~= gold[3])
+end)
+
+H.test("the window reports where it was dropped and sizes its plaque to the title", function()
+    local _, Kit = boot()
+    local moved
+    local win = Kit.window("KitTestWindow2", "A title", { onMoved = function(...) moved = { ... } end })
+    win.scripts.OnDragStop(win)
+    H.eq(moved, { "TOPLEFT", 100, 700 })
+    local plaqueWidth
+    win.plaque.SetWidth = function(_, w) plaqueWidth = w end
+    local measured = 300
+    win.titleText.GetStringWidth = function() return measured end
+    win:setTitle("Another title")
+    H.eq(plaqueWidth, 344)
+    measured = 50
+    win:setTitle("X")
+    H.eq(plaqueWidth, 210)
+end)
+
+H.test("a panel keeps its title and right-hand text", function()
+    local _, Kit = boot()
+    local panel = Kit.panel(nil, "MATERIALS")
+    H.eq(panel.title.text, "MATERIALS")
+    panel:setTitle("OPTIONS")
+    H.eq(panel.title.text, "OPTIONS")
+    panel.right:SetText("2g 33s")
+    H.eq(panel.right.text, "2g 33s")
+end)
+
+H.test("a tile shows its label, tag and value, and remembers whether it is the best one", function()
+    local _, Kit = boot()
+    local tile = Kit.tile(nil, 110, 52)
+    tile:set({ label = "DISENCH.", tag = "beta", value = "2g 2s" })
+    H.truthy(tile.label.text:find("DISENCH.", 1, true))
+    H.truthy(tile.label.text:find("beta", 1, true))
+    H.eq(tile.value.text, "2g 2s")
+    H.falsy(tile.best)
+    tile:set({ label = "AH", value = "3g 24s", best = true })
+    H.truthy(tile.best)
+    tile:set({ label = "AH", value = "n/a", muted = true })
+    H.falsy(tile.best)
+    tile:set({})
+    H.eq(tile.value.text, "")
+end)
+
+H.test("a tile steps its value font down until the text fits, and keeps the big size when it does", function()
+    local _, Kit = boot()
+    local tile = Kit.tile(nil, 110, 52)
+    local sizes = {}
+    local measured = 200
+    tile.value.SetFont = function(_, _, size) sizes[#sizes + 1] = size end
+    tile.value.GetStringWidth = function() return measured end
+    tile:set({ label = "AH", value = "123456g 12s" })
+    local expected = Kit.fitSize(200, 19, 90, Kit.TILE_SIZES)
+    H.truthy(expected < Kit.TILE_SIZES[1])
+    H.eq(sizes[#sizes], expected)
+    sizes = {}
+    measured = 60
+    tile:set({ label = "AH", value = "1g" })
+    H.eq(sizes[#sizes], 19)
+end)
+
+H.test("a button keeps the text it is given and runs its click handler", function()
+    local _, Kit = boot()
+    local clicks = 0
+    local button = Kit.button(nil, "normal", "Scan")
+    H.eq(button.label.text, "Scan")
+    button:setText("Search")
+    H.eq(button.label.text, "Search")
+    button:SetScript("OnClick", function() clicks = clicks + 1 end)
+    button.scripts.OnClick(button)
+    H.eq(clicks, 1)
+end)
+
+-- Wrap CreateFrame so frames start shown, as on the real client.
+local function realisticFrames(T)
+    local made = { count = 0 }
+    local orig = T.env.CreateFrame
+    T.env.CreateFrame = function(kind, name, ...)
+        local f = orig(kind, name, ...)
+        f.shown = true
+        made.count = made.count + 1
+        if name == "CraftProfitKitDemo" then made.demo = f end
+        return f
+    end
+    return made
+end
+
+H.test("kitdemo shows the demo window in the asked theme and toggles without one", function()
+    local T = W.boot(H)
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    local made = realisticFrames(T)
+    local slash = T.env.SlashCmdList.CRAFTPROFIT
+    slash("kitdemo")
+    H.truthy(made.demo)
+    H.eq(made.demo.shown, true)
+    slash("kitdemo")
+    H.eq(made.demo.shown, false)
+    slash("kitdemo")
+    H.eq(made.demo.shown, true)
+    slash("kitdemo copper")
+    H.eq(T.ns.Kit.themeName, "copper")
+    slash("kitdemo")
+    H.eq(made.demo.shown, false)
+    slash("kitdemo steel")
+    H.eq(made.demo.shown, true)
+    H.eq(T.ns.Kit.themeName, "steel")
+end)
+
+H.test("kitdemo with an unknown theme says so and keeps the current theme", function()
+    local T = W.boot(H)
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    local made = realisticFrames(T)
+    T.env.SlashCmdList.CRAFTPROFIT("kitdemo nope")
+    H.eq(made.count, 0)
+    H.eq(made.demo, nil)
+    H.eq(T.ns.Kit.themeName, "gold")
+    local said = table.concat(T.chat, "\n")
+    H.truthy(said:find("nope", 1, true))
+    H.truthy(said:find("gold, copper, steel", 1, true))
+end)
+
+H.test("a small button fits the usable height of a panel header with equal margins", function()
+    local Kit = load()
+    -- 1 px panel ring above, 1 px header rule below: HEAD_H - 1 pixels are usable.
+    local usable = Kit.HEAD_H - 1
+    H.eq((usable - Kit.SMALL_BUTTON_H) % 2, 0)
+    H.truthy(Kit.SMALL_BUTTON_H <= usable - 2)
+end)

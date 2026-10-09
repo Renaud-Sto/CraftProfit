@@ -34,6 +34,19 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] A scan started by another addon (if installed) is picked up (prices refresh) without pressing Scan.
 - [ ] After a scan, a recipe unpriced by the targeted search gets its price from the scan.
 
+## UI kit (PR 1)
+- [ ] `/cp kitdemo` opens a framed window with a title plaque, three tiles (the first outlined in gold, the last with a long amount that shrinks to fit), two panels with a header bar, and three buttons. Running it again toggles the window.
+- [ ] `/cp kitdemo copper` and `/cp kitdemo steel` recolour it without `/reload` (and show it); `/cp kitdemo gold` restores it. An unknown name prints the valid names and changes nothing. The theme is not saved.
+- [ ] The close button hides the window; the window can be dragged.
+- [ ] Run `/cpp skin`, then `/reload` and read the `skin` lines in the probe log: gradient form, font path, widest amount widths.
+- [ ] In all three themes the panel header bars show a visible vertical gradient (lighter at the top is expected); they are not white, invisible or flat.
+- [ ] `/cpp skin` passes if at least one SetGradient line reports success and the font path is not nil. The probe only proves the call is accepted; `/cp kitdemo` proves it renders.
+- [ ] The 1-pixel frame rings are continuous and of even thickness at the current UI scale; repeat at one other UI scale.
+- [ ] The amount `999g 99s 99c` in the third tile stays inside its border.
+- [ ] Hovering a normal button changes its background; moving off restores it.
+- [ ] Switching theme (`/cp kitdemo copper`) repaints everything, including a button that was being hovered.
+- [ ] Dragging the window by its body works. Author to report: does dragging by the upper half of the title plaque work (known gap), is the bright gold ring at the outer edge or inside it, and does the close button touch the third tile.
+
 ## Several crafts
 - [ ] The "Crafts : [ 1 ]" box under the age line takes a number from 1 to 9999. Type 5 and press Enter (or click elsewhere): reagent quantities, the Materials total, the AH / vendor / disenchant values and the verdict all become five times larger, and the Materials line reads "Composants x5 (estimation)". Cost or gain per point is unchanged.
 - [ ] 0, an empty box or text goes back to 1. Selecting another recipe resets the box to 1; the pinned list always shows one craft.

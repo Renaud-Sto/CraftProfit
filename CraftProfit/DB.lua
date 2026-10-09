@@ -17,6 +17,7 @@ DB.DEFAULTS = {
     showPerPoint = false,
     costExpanded = true, -- material detail shown under the Materials line
     staleAfter = 3600,  -- seconds before prices are shown as old
+    theme = "gold",
 }
 
 local ANCHORS = {
@@ -46,6 +47,9 @@ local function sanitizeSettings(s)
     if type(s.costExpanded) ~= "boolean" then s.costExpanded = DB.DEFAULTS.costExpanded end
     if type(s.levelShowGrey) ~= "boolean" then s.levelShowGrey = false end
     if s.levelSort ~= "speed" then s.levelSort = "cost" end
+    if type(s.theme) ~= "string" or not (ns.Theme and ns.Theme.exists(s.theme)) then
+        s.theme = DB.DEFAULTS.theme
+    end
     local lw = s.levelWindow
     if type(lw) == "table" and Util.isFinite(lw.x) and Util.isFinite(lw.y) then
         s.levelWindow = { x = lw.x, y = lw.y }

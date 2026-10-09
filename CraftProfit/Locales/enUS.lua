@@ -57,7 +57,8 @@ ns.Locale.register("enUS", {
     HISTORY_HEADER = "Tracked recipes (%d of %d):",
     HISTORY_REMOVED = "Removed from history: %s",
     HISTORY_NO_SUCH = "No such tracked recipe. Use /cp history to list them",
-    SLASH_HELP = "Commands: /cp show | hide | reset | scan | history | locale <code> | selftest",
+    SLASH_HELP = "Commands: /cp show | hide | reset | scan | history | market | locale <code> | selftest",
+    MARKET_INFO = "Market: %s (saved as %s)",
     SELFTEST_OK = "Self-test passed (%d checks)",
     SELFTEST_FAIL = "Self-test FAILED: %s",
 })

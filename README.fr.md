@@ -54,6 +54,7 @@ Le pas-à-pas complet, toutes les options et l'explication de chaque chiffre son
 | `/cp reset` | Remet la fenêtre à côté de la fenêtre de métier ou de l'hôtel des ventes |
 | `/cp scan` | Lance un scan complet de l'hôtel des ventes (hôtel des ventes ouvert) |
 | `/cp history` | Liste les recettes suivies ; `/cp history remove <n>` en supprime une |
+| `/cp market` | Indique sous quel marché (ruleset et faction) les prix sont enregistrés |
 | `/cp locale <code>` | Force une langue (`enUS`, `frFR`, `esES`, `esMX`) ; sans code, retour à la langue du jeu |
 | `/cp selftest` | Lance l'auto-test intégré |
 

@@ -669,3 +669,18 @@ H.test("/cp history lists the tracked recipes and removes one with its history",
     H.eq(#T.env.CraftProfitDB.tracked, 0)
     H.eq(C.market().series[1], nil)
 end)
+
+H.test("a hardcore character has its own market, and /cp market tells which one is in use", function()
+    local T = boot()
+    T.env.GetRealmID = function() return 4613 end
+    T.env.GetRealmName = function() return "Classic Beta PvP 2" end
+    T.env.UnitFactionGroup = function() return "Horde" end
+    T.env.C_GameRules = { IsHardcoreActive = function() return false end }
+    H.eq(T.ns.Controller.marketKey(), "4613-Horde")
+    T.env.C_GameRules = { IsHardcoreActive = function() return true end }
+    H.eq(T.ns.Controller.marketKey(), "4613-Horde-HC")
+    T.env.C_GameRules = { IsHardcoreActive = function() error("boom") end }
+    H.eq(T.ns.Controller.marketKey(), "4613-Horde")
+    T.env.SlashCmdList.CRAFTPROFIT("market")
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Market: Classic Beta PvP 2 (saved as 4613-Horde)")
+end)

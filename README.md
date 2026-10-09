@@ -54,6 +54,7 @@ The full walkthrough, every option and the explanation of each number are in the
 | `/cp reset` | Put the window back next to the profession or auction house window |
 | `/cp scan` | Start a full auction house scan (auction house open) |
 | `/cp history` | List the tracked recipes; `/cp history remove <n>` deletes one |
+| `/cp market` | Show which market (ruleset and faction) the prices are saved under |
 | `/cp locale <code>` | Force a language (`enUS`, `frFR`, `esES`, `esMX`); without code, back to the game language |
 | `/cp selftest` | Run the built-in self-test |
 

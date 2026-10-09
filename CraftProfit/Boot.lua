@@ -41,7 +41,14 @@ function Controller.marketKey()
         realm = type(name) == "string" and name ~= "" and name or "unknown"
     end
     local faction = type(UnitFactionGroup) == "function" and UnitFactionGroup("player") or nil
-    return realm .. "-" .. (type(faction) == "string" and faction ~= "" and faction or "Neutral")
+    local key = realm .. "-" .. (type(faction) == "string" and faction ~= "" and faction or "Neutral")
+    -- A hardcore character never shares a market with a normal one, whatever its realm.
+    local rules = C_GameRules
+    if type(rules) == "table" and type(rules.IsHardcoreActive) == "function" then
+        local ok, hardcore = pcall(rules.IsHardcoreActive)
+        if ok and hardcore == true then key = key .. "-HC" end
+    end
+    return key
 end
 
 function Controller.market()
@@ -480,6 +487,9 @@ local function slash(msg)
         Controller.selftest()
     elseif cmd == "history" then
         Controller.historyCommand(arg)
+    elseif cmd == "market" then
+        local name = type(GetRealmName) == "function" and GetRealmName() or "?"
+        say(string.format(L.MARKET_INFO, tostring(name), Controller.marketKey()))
     else
         say(L.SLASH_HELP)
     end

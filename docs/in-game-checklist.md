@@ -45,6 +45,7 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] Unticking pauses recording; `/cp history` lists it as paused; `/cp history remove 1` deletes it and its series.
 - [ ] A 16th tracked recipe is refused with "Trop de recettes suivies (15 maximum)".
 - [ ] After an update from an earlier build, prices are still shown (adopted by the current ruleset and faction) and a character on another ruleset or faction starts with no prices.
+- [ ] `/cp market` prints the ruleset name and the key the prices are saved under (for example `4613-Horde`). **At launch, and as soon as another ruleset can be created**, run it with `/cpp ruleset` on a character of each ruleset and faction: the keys must differ, or the key logic has to be revisited (see docs/technical.md, Price history).
 - [ ] The saved file stays small: note the size of `CraftProfit.lua` after a few scans with 15 tracked recipes.
 
 ## Click a reagent to search it (quality of life, never buys)

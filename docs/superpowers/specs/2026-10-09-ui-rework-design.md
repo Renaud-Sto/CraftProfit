@@ -53,7 +53,7 @@ Edges and fills use solid-colour textures (`SetColorTexture`) layered to draw th
 - `Present.lua`: builds new `banner`, `tiles` and `materials` fields in the model (see below). Amendment 1 (PR 2): the existing `lines` and `verdict` are kept in the model rather than removed, because the pinned list and the tests still use them; the main window reads `lines` only for the `likely` and `perpoint` entries. Existing text builders (`perPointLine`, `pointRow`, `likelyLine`) are kept.
 - `DB.lua`: one setting, `theme` (string, default `gold`), sanitised (unknown name becomes `gold`), account-wide. PR 1 adds it; nothing reads it until PR 4.
 - `Boot.lua`: `/cp theme [name]` (no name lists them); calls `Kit.applyTheme`. Arrives in PR 4. In PR 1 only the developer command `/cp kitdemo [theme]` exists (not in the user help text); it applies a theme without saving it and shows the demo window, which is how PR 1 is checked in game.
-- Locales: panel titles are separate keys written already in capitals (`PANEL_MATERIALS = "MATÉRIAUX"`): `string.upper` in Lua 5.1 does not handle UTF-8 accents (`É` would stay lower case). New keys also for `RESULT`, tile labels and theme names, in en, fr, es.
+- Locales: panel titles are separate keys written already in capitals (`PANEL_MATERIALS = "COMPOSANTS"`): `string.upper` in Lua 5.1 does not handle UTF-8 accents (`É` would stay lower case). New keys also for `RESULT`, tile labels and theme names, in en, fr, es.
 
 ### Model changes (testable)
 

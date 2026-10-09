@@ -15,13 +15,17 @@ From top to bottom:
 | Part | Meaning |
 | --- | --- |
 | **Result** banner | The best way to sell the item and the net result of the craft (best resale minus materials) in large type. Green for a gain, red for a loss, amber when the result is incomplete (a price is missing). |
-| **Three tiles** | **Auction house (net)**: the price the crafted item would fetch at the auction house, after the 5 % commission. **Vendor**: what a vendor pays for the item. **Disenchant (beta)**: the *expected* value of disenchanting the item, net of the auction house commission on the materials (see [Disenchanting](#disenchanting)). The best one is outlined in gold. A tile reads `n/a` when that way is not possible (bound when picked up, cannot be vendored or disenchanted) and `?` when it is possible but a price is unknown. |
+| **Three tiles** | **AH (NET)**: the price the crafted item would fetch at the auction house, after the 5 % commission. **VENDOR**: what a vendor pays for the item. **DISENCH.** with a *beta* tag: the *expected* value of disenchanting the item, net of the auction house commission on the materials (see [Disenchanting](#disenchanting)). The best one is outlined in gold. A tile reads `n/a` when that way is not possible (bound when picked up, cannot be vendored or disenchanted) and `?` when it is possible but a price is unknown. |
 | *grey line* | Under the tiles: the most probable disenchant outcome, for example `75%: 1-2x Soul Dust = 7s 30c`. Only shown when the disenchant has several possible results. |
 | **Materials** panel | The cost of all reagents at auction house prices. Click the header to fold or unfold the detail (`-` unfolded, `+` folded); the choice is saved. Click a reagent to search it at the auction house (see [Searching a reagent](#searching-a-reagent)). |
 | **Prices: 5m ago** | How old the oldest price used is. It turns orange when prices are more than an hour old. |
 | **Options** panel | **Crafts**, **Track history**, **Cost per skill point** with its value on the right (see [Cost per skill point](#cost-per-skill-point)), and the **Pin** / **Unpin** button. |
 
-A price that is not known is shown as `?`, never as zero. If a reagent has no price, the banner says *Incomplete: prices missing* and shows no net result instead of a flattering number.
+A price that is not known is shown as `?`, never as zero. The banner has three special cases:
+
+- *No way to sell this item*: none of the three tiles can be used (all `n/a`).
+- *Incomplete: prices missing* (amber, no value): a price needed for the result is missing, so no net result can be given rather than a flattering number.
+- *Best known: Auction house (prices missing)* (amber, with the net result): some prices are known, so a best way to sell and its net result are shown, with a warning that the figure may change once the missing prices are known.
 
 ### Crafts
 
@@ -97,7 +101,7 @@ The tables come from Classic and are not yet checked in Forever, hence the *beta
 
 A craft that loses 16s 50c with a 25 % chance of a point costs 66s per point on average. If the crafts pay for themselves, the value beside the box turns green and starts with `+` (a gain per point); a cost is shown in red, with the percentage used and *estimate*.
 
-The chance of a point depends on the colour of the recipe and is an **estimate**, not a measured value: orange 100 %, yellow 75 %, green 25 %, grey 0 % (shown `n/a`). The percentage used is displayed on the line. The colour of pinned recipes is refreshed whenever the profession window updates, so it follows your skill.
+The chance of a point depends on the colour of the recipe and is an **estimate**, not a measured value: orange 100 %, yellow 75 %, green 25 %, grey 0 % (shown `n/a`). The percentage used is displayed beside the check box, next to the value. The colour of pinned recipes is refreshed whenever the profession window updates, so it follows your skill.
 
 ## Options and commands
 
@@ -136,7 +140,7 @@ The window follows the game language: English, French and Spanish (Latin America
 
 **The quantity is not filled in after clicking a reagent.** The preset is best-effort. The search itself still works; type the quantity by hand.
 
-**The disenchant tile shows `n/a` for an item I just crafted.** The item is bound when picked up and your character does not know Enchanting, or the item cannot be disenchanted (not armor or a weapon, or poor quality).
+**The DISENCH. tile shows `n/a` for an item I just crafted.** The item is bound when picked up and your character does not know Enchanting, or the item cannot be disenchanted (not armor or a weapon, or poor quality).
 
 **Text is in the wrong language.** Run `/cp locale` to return to the game language. Missing translations fall back to English; please report them.
 

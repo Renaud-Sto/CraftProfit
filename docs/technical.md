@@ -34,7 +34,7 @@ Files load in the order of `CraftProfit/CraftProfit.toc`. Each file receives the
 | `PriceQueue.lua` | `ns.PriceQueue` | Sequential search queue with timeouts | no (a `send` function is injected) |
 | `Evaluate.lua` | `ns.Evaluate` | Combines recipe, prices and item facts into one result | no (lookups injected) |
 | `Leveling.lua` | `ns.Leveling` | Ranks the known recipes of a profession by cost per point | no |
-| `Present.lua` | `ns.Present` | Turns a result into display lines (text only) | no |
+| `Present.lua` | `ns.Present` | Turns a result into display text only: the `banner`, the three `tiles`, the `materials` panel, the cost lines and the older `lines`/`verdict` | no |
 | `AHAdapter.lua` | `ns.AH` | Auction house: scan, targeted search, search box helper | `C_AuctionHouse`, auction house frame |
 | `TradeAdapter.lua` | `ns.Trade` | Profession window: selected recipe, raw recipe data, difficulty, known professions | `C_TradeSkillUI`, professions API |
 | `UI/Window.lua` | `ns.Window` | The main window, on the UI kit | frames |

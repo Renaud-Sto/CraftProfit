@@ -15,13 +15,17 @@ De haut en bas :
 | Élément | Signification |
 | --- | --- |
 | Bandeau **Résultat** | La meilleure façon de vendre l'objet et le résultat net du craft (meilleure revente moins les composants), en grand. Vert pour un gain, rouge pour une perte, ambre quand le résultat est incomplet (il manque un prix). |
-| **Trois tuiles** | **Hôtel des ventes (net)** : le prix que l'objet obtenu rapporterait à l'hôtel des ventes, après la commission de 5 %. **Marchand** : ce que paie un marchand pour l'objet. **Désenchantement (bêta)** : la valeur *espérée* du désenchantement, nette de la commission de l'hôtel des ventes sur les composants obtenus (voir [Désenchantement](#désenchantement)). La meilleure est entourée d'or. Une tuile affiche `n/d` quand cette voie est impossible (lié quand ramassé, ne peut pas être vendu au marchand ni désenchanté) et `?` quand elle est possible mais qu'un prix est inconnu. |
+| **Trois tuiles** | **HV (NET)** : le prix que l'objet obtenu rapporterait à l'hôtel des ventes, après la commission de 5 %. **MARCHAND** : ce que paie un marchand pour l'objet. **DÉSENCH.** avec la mention *bêta* : la valeur *espérée* du désenchantement, nette de la commission de l'hôtel des ventes sur les composants obtenus (voir [Désenchantement](#désenchantement)). La meilleure est entourée d'or. Une tuile affiche `n/d` quand cette voie est impossible (lié quand ramassé, ne peut pas être vendu au marchand ni désenchanté) et `?` quand elle est possible mais qu'un prix est inconnu. |
 | *ligne grise* | Sous les tuiles : le résultat de désenchantement le plus probable, par exemple `75%: 1-2x Poussière d'âme = 7s 30c`. Affichée seulement quand le désenchantement a plusieurs résultats possibles. |
 | Panneau **Composants** | Le coût de tous les composants aux prix de l'hôtel des ventes. Cliquez sur l'en-tête pour replier ou déplier le détail (`-` déplié, `+` replié) ; le choix est mémorisé. Cliquez sur un composant pour le chercher à l'hôtel des ventes (voir [Rechercher un composant](#rechercher-un-composant)). |
 | **Prix : il y a 5min** | L'âge du prix le plus ancien utilisé. Passe en orange au-delà d'une heure. |
 | Panneau **Options** | **Crafts**, **Suivre l'historique**, **Coût par point de compétence** avec sa valeur à droite (voir [Coût par point de compétence](#coût-par-point-de-compétence)), et le bouton **Épingler** / **Désépingler**. |
 
-Un prix inconnu s'affiche `?`, jamais zéro. S'il manque le prix d'un composant, le bandeau indique *Incomplet : prix manquants* et n'affiche aucun résultat net plutôt qu'un chiffre flatteur.
+Un prix inconnu s'affiche `?`, jamais zéro. Le bandeau a trois cas particuliers :
+
+- *Aucun moyen de revendre cet objet* : aucune des trois tuiles n'est utilisable (toutes `n/d`).
+- *Incomplet : prix manquants* (ambre, sans valeur) : il manque un prix nécessaire au résultat, donc aucun résultat net n'est donné plutôt qu'un chiffre flatteur.
+- *Meilleur connu : Hôtel des ventes (prix manquants)* (ambre, avec le résultat net) : certains prix sont connus, donc une meilleure voie de vente et son résultat net sont affichés, avec l'avertissement que le chiffre peut changer quand les prix manquants seront connus.
 
 ### Crafts
 
@@ -97,7 +101,7 @@ Les tables viennent du Classic et ne sont pas encore vérifiées dans Forever, d
 
 Un craft qui fait perdre 16s 50c avec 25 % de chances de point coûte 66s par point en moyenne. Si les crafts se paient d'eux-mêmes, la valeur à côté de la case devient verte et commence par `+` (un gain par point) ; un coût s'affiche en rouge, avec le pourcentage utilisé et *estimation*.
 
-La probabilité de point dépend de la couleur de la recette et c'est une **estimation**, pas une valeur mesurée : orange 100 %, jaune 75 %, vert 25 %, gris 0 % (affiché `n/d`). Le pourcentage utilisé est affiché sur la ligne. La couleur des recettes épinglées est rafraîchie à chaque mise à jour de la fenêtre de métier, elle suit donc votre niveau.
+La probabilité de point dépend de la couleur de la recette et c'est une **estimation**, pas une valeur mesurée : orange 100 %, jaune 75 %, vert 25 %, gris 0 % (affiché `n/d`). Le pourcentage utilisé est affiché à côté de la case, après la valeur. La couleur des recettes épinglées est rafraîchie à chaque mise à jour de la fenêtre de métier, elle suit donc votre niveau.
 
 ## Options et commandes
 
@@ -136,7 +140,7 @@ La fenêtre suit la langue du jeu : anglais, français et espagnol (l'espagnol d
 
 **La quantité n'est pas remplie après un clic sur un composant.** Le préremplissage est au mieux. La recherche fonctionne quand même ; saisissez la quantité à la main.
 
-**La tuile de désenchantement affiche `n/d` pour un objet que je viens de fabriquer.** L'objet est lié quand ramassé et votre personnage ne connaît pas l'enchantement, ou l'objet n'est pas désenchantable (ni armure ni arme, ou qualité médiocre).
+**La tuile DÉSENCH. affiche `n/d` pour un objet que je viens de fabriquer.** L'objet est lié quand ramassé et votre personnage ne connaît pas l'enchantement, ou l'objet n'est pas désenchantable (ni armure ni arme, ou qualité médiocre).
 
 **Le texte n'est pas dans la bonne langue.** Lancez `/cp locale` pour revenir à la langue du jeu. Les traductions manquantes retombent sur l'anglais ; merci de les signaler.
 

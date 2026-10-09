@@ -14,7 +14,7 @@ H.test("initAccount fills defaults and returns the same table", function()
     local db = {}
     H.truthy(DB.initAccount(db) == db)
     H.eq(db.dbVersion, 1)
-    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost" })
+    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost", theme = "gold" })
     H.eq(db.prices, {})
 end)
 
@@ -33,7 +33,7 @@ H.test("initAccount replaces invalid settings with defaults", function()
         cut = 0 / 0, medianN = 99, staleAfter = -5, showPerPoint = "yes", costExpanded = "no",
         window = { point = "NOPE", x = 1, y = 2 },
     } })
-    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost" })
+    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost", theme = "gold" })
 end)
 
 H.test("initAccount keeps valid settings and floors medianN", function()
@@ -43,7 +43,7 @@ H.test("initAccount keeps valid settings and floors medianN", function()
         window = { point = "TOPLEFT", x = 100, y = -50, junk = 1 },
     } })
     H.eq(db.settings, {
-        cut = 0.5, medianN = 7, staleAfter = 120, showPerPoint = true, costExpanded = false, levelShowGrey = false, levelSort = "cost",
+        cut = 0.5, medianN = 7, staleAfter = 120, showPerPoint = true, costExpanded = false, levelShowGrey = false, levelSort = "cost", theme = "gold",
         window = { point = "TOPLEFT", x = 100, y = -50 },
     })
     H.eq(DB.initAccount({ settings = { cut = 0.51 } }).settings.cut, 0.05)
@@ -195,4 +195,26 @@ H.test("known recipes are stored per profession, repaired, and cycled", function
     H.eq(bad.known[1].updated, 0)
     H.eq(#bad.known[1].recipes, 1)
     H.eq(bad.knownCurrent, nil)
+end)
+
+H.test("the theme setting keeps a known theme and falls back to gold otherwise", function()
+    local ns = H.newNS("Util", "Theme", "Data/Skillup", "Recipes", "DB")
+    local DB = ns.DB
+    H.eq(DB.DEFAULTS.theme, "gold")
+    local function theme(value)
+        local db = DB.initAccount({ settings = { theme = value } })
+        return db.settings.theme
+    end
+    H.eq(theme("copper"), "copper")
+    H.eq(theme("steel"), "steel")
+    H.eq(theme("nope"), "gold")
+    H.eq(theme(5), "gold")
+    H.eq(theme(nil), "gold")
+    H.eq(theme({}), "gold")
+end)
+
+H.test("the theme setting becomes gold when the theme module is not loaded", function()
+    local ns = H.newNS("Util", "Data/Skillup", "Recipes", "DB")
+    local db = ns.DB.initAccount({ settings = { theme = "copper" } })
+    H.eq(db.settings.theme, "gold")
 end)

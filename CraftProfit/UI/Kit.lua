@@ -311,6 +311,9 @@ function Kit.panel(parent, title)
     function p:onHeaderClick(fn)
         local hit = CreateFrame("Button", nil, head)
         hit:SetAllPoints(head)
+        -- A child of the header would sit above buttons parented to the panel frame
+        -- (a sort button, say) and swallow their clicks, so stay at the panel's level.
+        hit:SetFrameLevel(f:GetFrameLevel())
         hit:SetScript("OnClick", fn)
         self.headerHit = hit
         return hit

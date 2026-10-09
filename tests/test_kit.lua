@@ -480,19 +480,40 @@ H.test("an input box gives up its focus on Enter and Escape", function()
 end)
 
 H.test("a panel header can be made clickable", function()
-    local _, Kit = boot()
+    local _, Kit, env = boot()
+    local made = env.CreateFrame
+    env.CreateFrame = function(...)
+        local f = made(...)
+        f.GetFrameLevel = function() return 5 end
+        f.SetFrameLevel = function(self, level) self.level = level end
+        return f
+    end
     local panel = Kit.panel(nil, "MATERIALS")
     local clicks = 0
     local hit = panel:onHeaderClick(function() clicks = clicks + 1 end)
     H.eq(panel.headerHit, hit)
+    H.eq(hit.level, 5)
     hit.scripts.OnClick(hit)
     H.eq(clicks, 1)
 end)
 
-H.test("the new widgets survive every theme switch", function()
-    local _, Kit = boot()
+H.test("the new widgets survive every theme switch and repaint with the new colours", function()
+    local T, Kit = boot()
+    local Theme = T.ns.Theme
     local check = Kit.check(nil, "x")
     local box = Kit.input(nil, 52, 4)
+    local got = {}
+    box.SetTextColor = function(_, r, g, b, a) got.input = { r, g, b, a } end
+    check.label.SetTextColor = function(_, r, g, b, a) got.label = { r, g, b, a } end
+    check.mark.SetColorTexture = function(_, r, g, b, a) got.mark = { r, g, b, a } end
     for _, name in ipairs({ "copper", "steel", "gold" }) do Kit.applyTheme(name) end
-    H.truthy(check and box)
+    local steel, gold = Theme.get("steel"), Theme.get("gold")
+    Kit.applyTheme("steel")
+    H.eq(got.input, steel.textMain)
+    H.eq(got.label, steel.textMain)
+    H.eq(got.mark, steel.checkMark)
+    H.falsy(gold.textMain[1] == steel.textMain[1] and gold.textMain[2] == steel.textMain[2]
+        and gold.textMain[3] == steel.textMain[3])
+    H.falsy(gold.checkMark[1] == steel.checkMark[1] and gold.checkMark[2] == steel.checkMark[2]
+        and gold.checkMark[3] == steel.checkMark[3])
 end)

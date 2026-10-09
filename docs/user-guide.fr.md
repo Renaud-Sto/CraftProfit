@@ -29,7 +29,7 @@ Un prix inconnu s'affiche `?`, jamais zéro. Le bandeau a trois cas particuliers
 
 ### Crafts
 
-La case **Crafts** multiplie la recette sélectionnée par un nombre de crafts (de 1 à 9999) : quantités de composants, total des composants, toutes les valeurs de revente et le verdict. Le coût ou gain **par point** et la ligne grise du désenchantement restent par point et par désenchantement. La liste des épingles montre toujours un seul craft, et sélectionner une autre recette remet la case à 1.
+La case **Crafts** multiplie la recette sélectionnée par un nombre de crafts (de 1 à 9999) : quantités de composants, total des composants, toutes les valeurs de revente et le résultat net du bandeau. Le coût ou gain **par point** et la ligne grise du désenchantement restent par point et par désenchantement. La liste des épingles montre toujours un seul craft, et sélectionner une autre recette remet la case à 1.
 
 Pour de grandes quantités, le total est une estimation : le prix d'un composant est la médiane des offres les moins chères, mais en acheter 100 oblige à passer par des offres plus chères. Le vrai prix apparaît à l'hôtel des ventes quand vous lancez la recherche.
 

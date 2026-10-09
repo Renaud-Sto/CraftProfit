@@ -29,7 +29,7 @@ A price that is not known is shown as `?`, never as zero. The banner has three s
 
 ### Crafts
 
-The **Crafts** box multiplies the selected recipe by a number of crafts (1 to 9999): reagent quantities, the materials total, every resale value and the verdict. The cost or gain **per point** and the grey disenchant line stay per point and per disenchant. The pinned list always shows one craft, and selecting another recipe puts the box back to 1.
+The **Crafts** box multiplies the selected recipe by a number of crafts (1 to 9999): reagent quantities, the materials total, every resale value and the net result in the result banner. The cost or gain **per point** and the grey disenchant line stay per point and per disenchant. The pinned list always shows one craft, and selecting another recipe puts the box back to 1.
 
 For large quantities the total is an estimate: the price of a reagent is the median of the cheapest listings, but buying 100 units goes through more expensive listings. The real price appears in the auction house when you search.
 

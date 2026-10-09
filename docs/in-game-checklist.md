@@ -53,7 +53,7 @@ Use a recipe with at least 5 reagents; `/console scriptErrors 1` on.
 - [ ] A recipe that makes money tints the banner green; one that loses money tints it red (value shown with a minus sign); a recipe with an unpriced reagent shows the amber *Incomplete* banner. The tint stays the same through `/cp kitdemo copper`, `steel` and `gold` (it follows the result, not the theme).
 - [ ] The best tile is outlined in gold; an impossible way shows `n/a` muted, an unknown price `?`.
 - [ ] Amounts: `999g 99s 99c` (use a stack of expensive reagents, or a pin with huge prices) shrinks in the banner and the tiles without running into the verdict text or leaving its box; the "RÉSULTAT" label does not touch the value.
-- [ ] French client: a long verdict ("Meilleur : Hôtel des ventes") is cut off cleanly and is not drawn over the value. Known: it is cut at 196 px rather than wrapped.
+- [ ] French client: a partial result ("Meilleur connu : Hôtel des ventes (prix manquants)") shrinks to the small font when it does not fit beside the value, and is never drawn over the value. Known: with a very large value it can still be cut off rather than wrapped.
 - [ ] French client, "Coût par point de compétence" ticked and a gold-range cost: the label is truncated before the value and the two do not overlap.
 - [ ] Accents render in the French titles: RÉSULTAT, DÉSENCH., COMPOSANTS, OPTIONS.
 - [ ] Materials: clicking the header folds and unfolds the panel and flips the marker (`-` / `+`); the choice survives `/reload`. Unfolded with 12 reagents, the 12th row is not clipped.

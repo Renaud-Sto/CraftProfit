@@ -58,12 +58,13 @@ Edges and fills use solid-colour textures (`SetColorTexture`) layered to draw th
 ### Model changes (testable)
 
 ```
-model.banner = { label = L.RESULT, best = "Auction house (net)", value = "+91s", kind = "profit" }
-model.tiles  = {
-  { key = "ah",      label = ..., value = "3g 24s", best = true },
-  { key = "vendor",  label = ..., value = "1g 12s" },
-  { key = "disench", label = ..., value = "2g 2s",  tag = L.BETA },
+model.banner    = { label = L.RESULT, text = verdict.text, value = verdict.value, kind = verdict.kind }
+model.tiles     = {
+  { key = "ah",         label = L.TILE_AH,         value = "3g 24s", best = true,  muted = false },
+  { key = "vendor",     label = L.TILE_VENDOR,     value = "1g 12s", best = false, muted = false },
+  { key = "disenchant", label = L.TILE_DISENCHANT, value = "2g 2s",  best = false, muted = false, tag = L.BETA_TAG },
 }
+model.materials = { title = L.PANEL_MATERIALS, total = "1g 50s" } -- PANEL_MATERIALS_MULTI for several crafts
 ```
 
 Rules: always three tiles (stable layout). `n/a` shows muted, an unknown price shows `?`, the best tile gets the gold outline, the banner is amber with `Incomplete: prices missing` when a price is missing, as today. The disenchant detail (`75%: 1-2x Soul Dust = 7s 30c`) stays a small grey line under the tiles.

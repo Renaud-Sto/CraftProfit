@@ -366,7 +366,7 @@ end
 
 -- A small card with a label and a large value that shrinks to fit its width.
 function Kit.tile(parent, width, height)
-    local tile = { best = false, muted = false }
+    local tile = { best = false, muted = false, width = width }
     local f = CreateFrame("Frame", nil, parent)
     f:SetSize(width or 110, height or 52)
     tile.frame = f

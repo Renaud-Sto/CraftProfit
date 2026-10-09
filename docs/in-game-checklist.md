@@ -39,6 +39,15 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] 0, an empty box or text goes back to 1. Selecting another recipe resets the box to 1; the pinned list always shows one craft.
 - [ ] With 5 crafts, clicking "Barre de bronze" searches the AH and presets the multiplied quantity (for example 100 instead of 20), and the buy view shows the matching total.
 
+## Leveling window
+- [ ] Opening a profession window and then `/cp level` lists the learned recipes of that profession, coloured by difficulty, cheapest skill point first (use **Scan AH** beforehand; the top line shows the age of the prices). Run `/cpp known` in the profession window: the count of learned recipes must match the list plus the hidden grey ones.
+- [ ] Grey recipes are hidden ("N grises masquées") and appear when *Afficher les recettes grises* is ticked; the tick survives `/reload`.
+- [ ] Unpriced recipes show `?` at the bottom. A recipe whose crafts pay for themselves shows `+…/pt` in green and comes first.
+- [ ] Clicking a row shows the recipe in the main window; the row is highlighted.
+- [ ] The list is still there at the auction house with the profession window closed, and the button under the pinned list opens it. With two professions read, the top button cycles between them.
+- [ ] Opening the profession window does not hitch the client (the read is spread over a few frames).
+- [ ] Leveling up until a recipe changes colour: after the profession window updates, the ranking and the colour follow.
+
 ## Price history
 - [ ] The "Suivre l'historique" box sits to the right of the Crafts box. Ticking it on a recipe, then pressing **Scan AH** (or **Search prices** with that recipe or one sharing its reagents pinned) and `/reload`, leaves `series` entries for its items in `CraftProfit.lua` under `markets`.
 - [ ] A recipe whose output is bind-on-pickup still records (its output is never priced).

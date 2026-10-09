@@ -175,3 +175,14 @@ H.test("several crafts are announced on the materials line and flow into the rea
     H.eq(three.lines[1].value, "7s 50c")
     H.eq(three.costLines[1].qty, 6)
 end)
+
+H.test("pointRow gives a short text and a tone for list rows", function()
+    local ns = load()
+    local P, L, fmt = ns.Present, ns.L, ns.Format.money
+    H.eq({ P.pointRow(L, fmt, { chance = 0.25, cost = 6600 }) }, { "66s/pt", "loss" })
+    H.eq({ P.pointRow(L, fmt, { chance = 1, cost = -933 }) }, { "+9s 33c/pt", "profit" })
+    H.eq({ P.pointRow(L, fmt, { chance = 0 }) }, { "n/a", "muted" })
+    H.eq({ P.pointRow(L, fmt, { chance = 0.75 }) }, { "?", "muted" })
+    H.eq({ P.pointRow(L, fmt, nil) }, { "?", "muted" })
+    H.eq({ P.pointRow(L, fmt, {}) }, { "?", "muted" })
+end)

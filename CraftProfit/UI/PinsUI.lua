@@ -10,7 +10,7 @@ local PAD = 10
 local ROW_H = 18
 local VISIBLE = 6
 local TOP = 26
-local FOOTER_H = 50
+local FOOTER_H = 76
 local SEARCH_TIMEOUT = 6
 local TICK_SECONDS = 0.2
 
@@ -21,7 +21,7 @@ local COLORS = {
 }
 
 local ctl
-local host, header, emptyText, statusText, searchButton, scanButton, sortButton
+local host, header, emptyText, statusText, searchButton, scanButton, sortButton, levelButton
 local rows = {}
 local offset = 0
 local queue, ticker
@@ -70,12 +70,8 @@ end
 
 -- Text and color of a row's value in the cost-per-point view.
 local function pointValue(perPoint)
-    if not perPoint or perPoint.chance == nil then return "?", COLORS.muted end
-    if perPoint.chance == 0 then return L.NA, COLORS.muted end
-    local cost = perPoint.cost
-    if cost == nil then return "?", COLORS.muted end
-    if cost > 0 then return ctl.fmt(cost) .. L.PER_POINT_SHORT, COLORS.loss end
-    return "+" .. ctl.fmt(-cost) .. L.PER_POINT_SHORT, COLORS.profit
+    local text, tone = ns.Present.pointRow(L, ctl.fmt, perPoint)
+    return text, COLORS[tone]
 end
 
 function PinsUI.refresh()
@@ -90,6 +86,7 @@ function PinsUI.refresh()
     sortButton:SetText(byPoint and L.SORT_POINT or L.SORT_NET)
     searchButton:SetText(L.SEARCH_PRICES)
     scanButton:SetText(L.SCAN)
+    levelButton:SetText(L.LEVEL_BUTTON)
     emptyText:SetText(L.PINS_EMPTY)
     emptyText:SetShown(#pins == 0)
 
@@ -126,8 +123,10 @@ function PinsUI.refresh()
     searchButton:SetPoint("TOPLEFT", host, "TOPLEFT", PAD, -top)
     scanButton:ClearAllPoints()
     scanButton:SetPoint("TOPRIGHT", host, "TOPRIGHT", -PAD, -top)
+    levelButton:ClearAllPoints()
+    levelButton:SetPoint("TOPLEFT", host, "TOPLEFT", PAD, -top - 26)
     statusText:ClearAllPoints()
-    statusText:SetPoint("TOPLEFT", host, "TOPLEFT", PAD, -top - 26)
+    statusText:SetPoint("TOPLEFT", host, "TOPLEFT", PAD, -top - 52)
     host:SetHeight(top + FOOTER_H)
     ns.Window.relayout()
 end
@@ -251,6 +250,9 @@ function PinsUI.init(controller)
     searchButton = CreateFrame("Button", nil, host, "UIPanelButtonTemplate")
     searchButton:SetSize(120, 22)
     searchButton:SetScript("OnClick", PinsUI.startSearch)
+    levelButton = CreateFrame("Button", nil, host, "UIPanelButtonTemplate")
+    levelButton:SetSize(120, 22)
+    levelButton:SetScript("OnClick", function() if ns.LevelingUI then ns.LevelingUI.toggle() end end)
     scanButton = CreateFrame("Button", nil, host, "UIPanelButtonTemplate")
     scanButton:SetSize(90, 22)
     scanButton:SetScript("OnClick", PinsUI.scan)

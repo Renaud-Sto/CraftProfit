@@ -44,6 +44,13 @@ local function sanitizeSettings(s)
     number(s, "staleAfter", 60, 30 * 86400, DB.DEFAULTS.staleAfter)
     if type(s.showPerPoint) ~= "boolean" then s.showPerPoint = DB.DEFAULTS.showPerPoint end
     if type(s.costExpanded) ~= "boolean" then s.costExpanded = DB.DEFAULTS.costExpanded end
+    if type(s.levelShowGrey) ~= "boolean" then s.levelShowGrey = false end
+    local lw = s.levelWindow
+    if type(lw) == "table" and Util.isFinite(lw.x) and Util.isFinite(lw.y) then
+        s.levelWindow = { x = lw.x, y = lw.y }
+    else
+        s.levelWindow = nil
+    end
     local w = s.window
     if type(w) == "table" and ANCHORS[w.point] and Util.isFinite(w.x) and Util.isFinite(w.y) then
         s.window = { point = w.point, x = w.x, y = w.y }
@@ -134,8 +141,92 @@ function DB.setSortMode(db, mode)
     return db.sortMode
 end
 
+DB.MAX_PROFESSIONS = 8
+DB.MAX_KNOWN = 400
+
+-- Known recipes of each profession, kept per character so the leveling list works
+-- at the auction house with the profession window closed:
+-- db.known = { { key, name, updated, recipes = { normalised recipes } } }.
+local function sanitizeKnown(db)
+    local keep, seen = {}, {}
+    if type(db.known) == "table" then
+        for _, prof in ipairs(db.known) do
+            if type(prof) == "table" and type(prof.key) == "string" and prof.key ~= "" and not seen[prof.key]
+                and #keep < DB.MAX_PROFESSIONS then
+                seen[prof.key] = true
+                local recipes, ids = {}, {}
+                for _, raw in ipairs(type(prof.recipes) == "table" and prof.recipes or {}) do
+                    local recipe = Recipes.normalize(raw)
+                    if recipe and not ids[recipe.recipeID] and #recipes < DB.MAX_KNOWN then
+                        ids[recipe.recipeID] = true
+                        recipes[#recipes + 1] = recipe
+                    end
+                end
+                keep[#keep + 1] = {
+                    key = prof.key,
+                    name = type(prof.name) == "string" and #prof.name <= 64 and prof.name or prof.key,
+                    updated = Util.isCopper(prof.updated) and prof.updated or 0,
+                    recipes = recipes,
+                }
+            end
+        end
+    end
+    db.known = keep
+    if type(db.knownCurrent) ~= "string" then db.knownCurrent = nil end
+end
+
+-- Stores the recipes read from a profession window (replacing the previous list of
+-- that profession). The profession becomes the current one. Returns true or false.
+function DB.setKnown(db, key, name, recipes, now)
+    if type(key) ~= "string" or key == "" or type(recipes) ~= "table" then return false end
+    local clean, ids = {}, {}
+    for _, raw in ipairs(recipes) do
+        local recipe = Recipes.normalize(raw)
+        if recipe and not ids[recipe.recipeID] and #clean < DB.MAX_KNOWN then
+            ids[recipe.recipeID] = true
+            clean[#clean + 1] = recipe
+        end
+    end
+    local entry
+    for _, prof in ipairs(db.known) do
+        if prof.key == key then entry = prof end
+    end
+    if not entry then
+        if #db.known >= DB.MAX_PROFESSIONS then table.remove(db.known, 1) end
+        entry = { key = key }
+        db.known[#db.known + 1] = entry
+    end
+    entry.name = type(name) == "string" and #name <= 64 and name or key
+    entry.updated = Util.isCopper(now) and now or 0
+    entry.recipes = clean
+    db.knownCurrent = key
+    return true
+end
+
+-- The profession shown by the leveling list: the current one, else the first.
+function DB.currentKnown(db)
+    for _, prof in ipairs(db.known) do
+        if prof.key == db.knownCurrent then return prof end
+    end
+    return db.known[1]
+end
+
+-- Switches to the next stored profession. Returns it, or nil when there is none.
+function DB.nextKnown(db)
+    if #db.known == 0 then return nil end
+    local current = DB.currentKnown(db)
+    local index = 1
+    for i, prof in ipairs(db.known) do
+        if prof == current then index = i end
+    end
+    local nextProf = db.known[index % #db.known + 1]
+    db.knownCurrent = nextProf.key
+    return nextProf
+end
+
 function DB.initChar(db)
     DB.setSortMode(db, db.sortMode)
+    sanitizeKnown(db)
     if type(db.pins) ~= "table" then db.pins = {} end
     local pins = db.pins
     -- Collect numeric keys in order so holes in the array do not hide entries.

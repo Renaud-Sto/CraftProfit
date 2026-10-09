@@ -214,3 +214,78 @@ H.test("difficultyOf names the recipe's current difficulty, nil when unreadable"
     H.eq(T.Trade.difficultyOf(4), nil)
     H.eq(T.Trade.difficultyOf(5), nil)
 end)
+
+-- Known recipes of the open profession
+local function openProfession(T, api)
+    T.env.ProfessionsFrame = professions(1)
+    T.env.Enum = { CraftingReagentType = { Basic = BASIC } }
+    T.env.C_TradeSkillUI = api
+    T.env.C_Timer.After = function(_, fn) T.later[#T.later + 1] = fn end
+    T.later = {}
+    T.drain = function()
+        while #T.later > 0 do table.remove(T.later, 1)() end
+    end
+end
+
+H.test("scanKnown reads the learned, not grey recipes in chunks and reports them", function()
+    local T = setup()
+    local api = mainlineApi({
+        GetAllRecipeIDs = function() return { 10, 11, 12, 13, 14 } end,
+        GetRecipeInfo = function(id)
+            local learned = id ~= 11
+            local difficulty = id == 12 and 3 or 1       -- 12 is grey
+            return { recipeID = id, name = "R" .. id, learned = learned, relativeDifficulty = difficulty }
+        end,
+    })
+    openProfession(T, api)
+    T.Trade.KNOWN_CHUNK = 2
+    local got
+    H.truthy(T.Trade.scanKnown(function(list) got = list end))
+    H.eq(got, nil)
+    T.drain()
+    local ids = {}
+    for i, raw in ipairs(got) do ids[i] = raw.recipeID end
+    H.eq(ids, { 10, 13, 14 })
+    H.eq(got[1].reagents[1], { itemID = 2840, qty = 6 })
+end)
+
+H.test("scanKnown needs the open window and the API, and a newer scan replaces the older one", function()
+    local T = setup()
+    H.eq(T.Trade.scanKnown(function() end), false)
+    local api = mainlineApi({ GetAllRecipeIDs = function() return { 10, 11 } end })
+    openProfession(T, api)
+    T.Trade.KNOWN_CHUNK = 1
+    local first, second = 0, 0
+    T.Trade.scanKnown(function() first = first + 1 end)
+    T.Trade.scanKnown(function() second = second + 1 end)
+    T.drain()
+    H.eq({ first, second }, { 0, 1 })
+    api.GetAllRecipeIDs = nil
+    H.eq(T.Trade.scanKnown(function() end), false)
+end)
+
+H.test("scanKnown gives up quietly when the window closes, and never reports a partial list", function()
+    local T = setup()
+    local api = mainlineApi({ GetAllRecipeIDs = function() return { 10, 11, 12 } end })
+    openProfession(T, api)
+    T.Trade.KNOWN_CHUNK = 1
+    local done, aborted = false, false
+    T.Trade.scanKnown(function() done = true end, function() aborted = true end)
+    T.env.ProfessionsFrame = professions(1, false)
+    T.drain()
+    H.eq({ done, aborted }, { false, true })
+end)
+
+H.test("professionInfo names the open profession from the info table or the classic line", function()
+    local T = setup()
+    H.eq({ T.Trade.professionInfo() }, {})
+    T.env.C_TradeSkillUI = { GetBaseProfessionInfo = function() return { professionID = 164, professionName = "Forge" } end }
+    H.eq({ T.Trade.professionInfo() }, { "164", "Forge" })
+    T.env.C_TradeSkillUI = { GetBaseProfessionInfo = function() return { professionName = "Forge" } end }
+    H.eq({ T.Trade.professionInfo() }, { "Forge", "Forge" })
+    T.env.C_TradeSkillUI = nil
+    T.env.GetTradeSkillLine = function() return "Blacksmithing", 140, 150 end
+    H.eq({ T.Trade.professionInfo() }, { "Blacksmithing", "Blacksmithing" })
+    T.env.GetTradeSkillLine = function() error("boom") end
+    H.eq({ T.Trade.professionInfo() }, {})
+end)

@@ -33,6 +33,17 @@ local function signed(fmt, n)
     return text
 end
 
+-- Short text and tone for a list row: "21g 29s/pt" (loss), "+9s 33c/pt" (profit),
+-- n/a for a recipe that cannot give a point, ? when the cost is unknown.
+function Present.pointRow(L, fmt, perPoint)
+    if not perPoint or perPoint.chance == nil then return L.UNKNOWN, "muted" end
+    if perPoint.chance == 0 then return L.NA, "muted" end
+    local cost = perPoint.cost
+    if cost == nil then return L.UNKNOWN, "muted" end
+    if cost > 0 then return fmt(cost) .. L.PER_POINT_SHORT, "loss" end
+    return "+" .. fmt(-cost) .. L.PER_POINT_SHORT, "profit"
+end
+
 -- Label, value and tone of the cost per point line. A negative cost means each
 -- point pays for itself, which reads better as a gain than as a negative cost.
 local function perPointLine(L, fmt, perPoint)

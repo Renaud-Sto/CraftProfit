@@ -52,7 +52,7 @@ read_globals = {
     "GetProfessions", "GetProfessionInfo", "IsPlayerSpell",
     "GetNormalizedRealmName", "GetRealmName", "GetRealmID", "UnitFactionGroup", "C_GameRules",
     "GetTradeSkillSelectionIndex", "GetTradeSkillRecipeLink",
-    "GetTradeSkillInfo", "GetTradeSkillItemLink", "GetTradeSkillNumReagents",
+    "GetTradeSkillInfo", "GetTradeSkillItemLink", "GetTradeSkillNumReagents", "GetTradeSkillLine",
     "GetTradeSkillReagentInfo", "GetTradeSkillReagentItemLink",
     "GetTradeSkillNumMade",
     SlashCmdList = {

@@ -164,6 +164,81 @@ function Trade.readSelected()
     return nil
 end
 
+-- Raw data of any recipe of the open profession (strategy A only), or nil.
+function Trade.readRecipe(recipeID)
+    if not Trade.isShown() then return nil end
+    return readA(recipeID)
+end
+
+-- Which profession the open window is about: key (a stable id when the client gives
+-- one, else the name) and display name, or nil. Tries the usual info table fields
+-- and the classic trade skill line.
+function Trade.professionInfo()
+    local api = C_TradeSkillUI
+    local name, id
+    if api and api.GetBaseProfessionInfo then
+        local ok, info = pcall(api.GetBaseProfessionInfo)
+        if ok and type(info) == "table" then
+            for _, field in ipairs({ "professionID", "skillLineID", "parentProfessionID" }) do
+                if not isSecret(info[field]) and Util.id(info[field]) then id = info[field]; break end
+            end
+            local n = info.professionName or info.name
+            if type(n) == "string" and not isSecret(n) and n ~= "" then name = n end
+        end
+    end
+    if not name and type(GetTradeSkillLine) == "function" then
+        local ok, n = pcall(GetTradeSkillLine)
+        if ok and type(n) == "string" and not isSecret(n) and n ~= "" then name = n end
+    end
+    if not id and not name then return nil end
+    return id and tostring(id) or name, name or tostring(id)
+end
+
+-- Reads every learned recipe that can still give a skill point (not grey) of the open
+-- profession, a chunk per frame so the client never hitches. Calls onDone(list) with
+-- raw recipes for Recipes.normalize. A newer scan abandons the one in progress.
+local knownToken = 0
+Trade.KNOWN_CHUNK = 40
+
+function Trade.scanKnown(onDone, onAbort)
+    local api = C_TradeSkillUI
+    if not Trade.isShown() or not (api and api.GetAllRecipeIDs and api.GetRecipeInfo) then return false end
+    local ok, ids = pcall(api.GetAllRecipeIDs)
+    if not ok or type(ids) ~= "table" then return false end
+    knownToken = knownToken + 1
+    local token = knownToken
+    local found, index = {}, 0
+    local function step()
+        if token ~= knownToken then return end
+        if not Trade.isShown() then
+            -- The window closed: a partial list must never replace a good one.
+            knownToken = knownToken + 1
+            if onAbort then onAbort() end
+            return
+        end
+        local last = math.min(index + Trade.KNOWN_CHUNK, #ids)
+        for i = index + 1, last do
+            local id = Util.id(ids[i])
+            local okInfo, info = pcall(api.GetRecipeInfo, id)
+            if id and okInfo and type(info) == "table" and info.learned == true then
+                local difficulty = info.relativeDifficulty
+                if not isSecret(difficulty) and ns.Data.Skillup.name(difficulty) ~= "trivial" then
+                    local raw = readA(id)
+                    if raw then found[#found + 1] = raw end
+                end
+            end
+        end
+        index = last
+        if index < #ids then
+            C_Timer.After(0, step)
+        elseif onDone then
+            onDone(found)
+        end
+    end
+    step()
+    return true
+end
+
 -- Calls onChange(recipeID|nil) whenever the selection changes.
 function Trade.watch(onChange)
     C_Timer.NewTicker(POLL_SECONDS, function()

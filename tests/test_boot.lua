@@ -684,3 +684,90 @@ H.test("a hardcore character has its own market, and /cp market tells which one 
     T.env.SlashCmdList.CRAFTPROFIT("market")
     H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Market: Classic Beta PvP 2 (saved as 4613-Horde)")
 end)
+
+-- Leveling list
+local function raw(id, difficulty, reagentID)
+    return { recipeID = id, name = "R" .. id, difficulty = difficulty, outputItemID = 100, qtyMin = 1, qtyMax = 1,
+        reagents = { { itemID = reagentID or 1, qty = 2 } } }
+end
+
+H.test("opening a profession stores its learned recipes, once per burst, and abandons nothing on a closed window", function()
+    local T = boot()
+    local C = T.ns.Controller
+    mockProfession(T)
+    T.env.C_TradeSkillUI.GetBaseProfessionInfo = function() return { professionID = 164, professionName = "Forge" } end
+    T.env.C_TradeSkillUI.GetAllRecipeIDs = function() return { 5, 6 } end
+    T.env.C_TradeSkillUI.GetRecipeInfo = function(id)
+        return { recipeID = id, name = "R" .. id, learned = true, relativeDifficulty = id == 5 and 0 or 1 }
+    end
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    T.run()
+    local known = T.env.CraftProfitCharDB.known
+    H.eq(#known, 1)
+    H.eq(known[1].key, "164")
+    H.eq(known[1].name, "Forge")
+    H.eq(#known[1].recipes, 2)
+    -- a second update right after does not read again
+    T.env.C_TradeSkillUI.GetAllRecipeIDs = function() return { 5 } end
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    T.run()
+    H.eq(#T.env.CraftProfitCharDB.known[1].recipes, 2)
+    -- later it does
+    T.clock = T.clock + 10
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    T.run()
+    H.eq(#T.env.CraftProfitCharDB.known[1].recipes, 1)
+    -- a closed window reads nothing
+    T.clock = T.clock + 10
+    T.env.ProfessionsFrame.IsShown = function() return false end
+    H.eq(C.refreshKnown(), false)
+end)
+
+H.test("the leveling data ranks the known recipes by cost per point, hides grey ones by default", function()
+    local T = boot()
+    local C = T.ns.Controller
+    stock(T)
+    -- the reagents cost more than the output is worth: every craft loses money
+    T.ns.Prices.store(C.market(), 1, 500, 10, 1699999940)
+    T.ns.DB.setKnown(T.env.CraftProfitCharDB, "164", "Forge", {
+        raw(1, 1), raw(2, 0), raw(3, 3), raw(4, 2),
+    }, 1700000000)
+    local data = C.levelData()
+    H.eq(data.profession.name, "Forge")
+    H.eq(data.hiddenGrey, 1)
+    local ids = {}
+    for i, item in ipairs(data.items) do ids[i] = item.recipe.recipeID end
+    -- the same loss per craft, so the likeliest point (orange, then yellow, then green) is the cheapest
+    H.eq(ids, { 2, 1, 4 })
+    C.setLevelShowGrey(true)
+    data = C.levelData()
+    H.eq(#data.items, 4)
+    H.eq(data.hiddenGrey, 0)
+    H.eq(data.items[#data.items].recipe.recipeID, 3)
+end)
+
+H.test("the leveling window lists the recipes, opens with /cp level and selecting one shows it", function()
+    local T = boot()
+    local C = T.ns.Controller
+    stock(T)
+    T.ns.DB.setKnown(T.env.CraftProfitCharDB, "164", "Forge", { raw(1, 1), raw(2, 0) }, 1700000000)
+    H.falsy(T.ns.LevelingUI.isShown())
+    T.env.SlashCmdList.CRAFTPROFIT("level")
+    H.truthy(T.ns.LevelingUI.isShown())
+    T.env.SlashCmdList.CRAFTPROFIT("level")
+    H.falsy(T.ns.LevelingUI.isShown())
+    T.ns.LevelingUI.show()
+    C.selectKnown(T.env.CraftProfitCharDB.known[1].recipes[2])
+    H.eq(C.currentRecipeID(), 2)
+    H.truthy(T.ns.Window.isShown())
+    C.nextLevelProfession()
+    T.ns.LevelingUI.refresh()
+end)
+
+H.test("with nothing known the leveling window says so and cycling professions is harmless", function()
+    local T = boot()
+    T.ns.LevelingUI.show()
+    T.ns.Controller.nextLevelProfession()
+    H.eq(T.ns.Controller.levelData().profession, nil)
+    H.eq(#T.ns.Controller.levelData().items, 0)
+end)

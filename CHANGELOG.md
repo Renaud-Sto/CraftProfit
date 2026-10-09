@@ -5,6 +5,8 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 ## [Unreleased]
 
 ### Added
+- Leveling window (`/cp level`, or the Leveling button under the pinned list): every learned, not grey recipe of a profession ranked by the cost of a skill point from the last scan, stored per character so it works at the auction house. Grey recipes are hidden unless asked.
+- `/cp market` shows the market the prices are saved under.
 - Prices are kept per ruleset (the game "realm" in the beta) and faction. Prices saved by earlier builds are adopted by the first market used.
 - Price history: the *Track history* box records the prices of up to 15 recipes after every scan and price search (retention: all points for 14 days, then daily, then weekly averages up to a year); `/cp history` lists and removes tracked recipes. Recording only, the graphs are planned.
 - Project documentation: README (English and French), user guide (English and French), technical documentation, contributing guide, CurseForge page text and submission checklist, issue and pull request templates, continuous integration.

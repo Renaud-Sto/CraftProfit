@@ -20,6 +20,7 @@ CraftProfit est un addon pour **World of Warcraft: Forever**. Sélectionnez une 
 - **Trois débouchés comparés** : hôtel des ventes (après la commission de 5 %), prix marchand et valeur espérée du désenchantement.
 - **Meilleure option mise en évidence**, avec le résultat net du craft.
 - **Coût par point de compétence** (optionnel) : ce que coûte vraiment chaque point, d'après la couleur de la recette, affiché comme un gain quand les crafts se paient d'eux-mêmes.
+- **Fenêtre de montée de métier** : toutes les recettes que vous connaissez dans un métier, classées par coût du point de compétence, pour voir quoi fabriquer ensuite.
 - **Plusieurs crafts d'un coup** : multipliez une recette de 1 à 9999 crafts.
 - **Recettes épinglées** (12 par personnage au maximum), triées par gain ou par coût par point, pour comparer quoi fabriquer ensuite.
 - **Outils d'hôtel des ventes** : un bouton chiffre toutes les recettes épinglées, un autre scanne tout l'hôtel des ventes. Cliquez sur un composant pour le rechercher à l'hôtel des ventes, quantité déjà remplie. CraftProfit n'achète jamais rien à votre place.
@@ -54,6 +55,7 @@ Le pas-à-pas complet, toutes les options et l'explication de chaque chiffre son
 | `/cp reset` | Remet la fenêtre à côté de la fenêtre de métier ou de l'hôtel des ventes |
 | `/cp scan` | Lance un scan complet de l'hôtel des ventes (hôtel des ventes ouvert) |
 | `/cp history` | Liste les recettes suivies ; `/cp history remove <n>` en supprime une |
+| `/cp level` | Ouvre ou ferme la fenêtre de montée de métier |
 | `/cp market` | Indique sous quel marché (ruleset et faction) les prix sont enregistrés |
 | `/cp locale <code>` | Force une langue (`enUS`, `frFR`, `esES`, `esMX`) ; sans code, retour à la langue du jeu |
 | `/cp selftest` | Lance l'auto-test intégré |

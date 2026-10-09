@@ -14,7 +14,7 @@ H.test("initAccount fills defaults and returns the same table", function()
     local db = {}
     H.truthy(DB.initAccount(db) == db)
     H.eq(db.dbVersion, 1)
-    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600 })
+    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false })
     H.eq(db.prices, {})
 end)
 
@@ -33,7 +33,7 @@ H.test("initAccount replaces invalid settings with defaults", function()
         cut = 0 / 0, medianN = 99, staleAfter = -5, showPerPoint = "yes", costExpanded = "no",
         window = { point = "NOPE", x = 1, y = 2 },
     } })
-    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600 })
+    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false })
 end)
 
 H.test("initAccount keeps valid settings and floors medianN", function()
@@ -43,7 +43,7 @@ H.test("initAccount keeps valid settings and floors medianN", function()
         window = { point = "TOPLEFT", x = 100, y = -50, junk = 1 },
     } })
     H.eq(db.settings, {
-        cut = 0.5, medianN = 7, staleAfter = 120, showPerPoint = true, costExpanded = false,
+        cut = 0.5, medianN = 7, staleAfter = 120, showPerPoint = true, costExpanded = false, levelShowGrey = false,
         window = { point = "TOPLEFT", x = 100, y = -50 },
     })
     H.eq(DB.initAccount({ settings = { cut = 0.51 } }).settings.cut, 0.05)
@@ -159,4 +159,40 @@ H.test("pinAdd refuses duplicates, invalid recipes and a full list", function()
     H.eq({ DB.pinAdd(db, { recipeID = 2 }) }, { false, "invalid" })
     for i = 2, DB.MAX_PINS do DB.pinAdd(db, raw(i)) end
     H.eq({ DB.pinAdd(db, raw(100)) }, { false, "full" })
+end)
+
+H.test("known recipes are stored per profession, repaired, and cycled", function()
+    local ns = H.newNS("Util", "Data/Skillup", "Recipes", "DB")
+    local DB = ns.DB
+    local function raw(id) return { recipeID = id, name = "R" .. id, difficulty = 1, outputItemID = 100, qtyMin = 1, qtyMax = 1,
+        reagents = { { itemID = 1, qty = 2 } } } end
+    local db = DB.initChar({})
+    H.eq(db.known, {})
+    H.eq(DB.currentKnown(db), nil)
+    H.eq(DB.nextKnown(db), nil)
+    H.truthy(DB.setKnown(db, "164", "Forge", { raw(1), raw(2), raw(1), "junk", { recipeID = 0 } }, 1700000000))
+    H.eq(#db.known[1].recipes, 2)
+    H.eq(db.known[1].name, "Forge")
+    H.eq(db.knownCurrent, "164")
+    H.truthy(DB.setKnown(db, "185", "Cuisine", { raw(7) }, 1700000100))
+    H.eq(DB.currentKnown(db).key, "185")
+    H.eq(DB.nextKnown(db).key, "164")
+    H.eq(DB.nextKnown(db).key, "185")
+    -- replaced, not duplicated
+    H.truthy(DB.setKnown(db, "164", "Forge", { raw(3) }, 1700000200))
+    H.eq(#db.known, 2)
+    H.eq(db.known[1].recipes[1].recipeID, 3)
+    H.eq(DB.setKnown(db, "", "x", {}, 1), false)
+    H.eq(DB.setKnown(db, "x", "x", "junk", 1), false)
+    for i = 1, DB.MAX_PROFESSIONS + 2 do DB.setKnown(db, "k" .. i, "P", { raw(i) }, 1700000300) end
+    H.eq(#db.known, DB.MAX_PROFESSIONS)
+    -- saved data is repaired on load
+    local bad = { known = { { key = "a", name = 5, updated = -1, recipes = { raw(1), "junk" } }, "junk",
+        { key = "a", recipes = {} }, { key = "", recipes = {} } }, knownCurrent = 7 }
+    DB.initChar(bad)
+    H.eq(#bad.known, 1)
+    H.eq(bad.known[1].name, "a")
+    H.eq(bad.known[1].updated, 0)
+    H.eq(#bad.known[1].recipes, 1)
+    H.eq(bad.knownCurrent, nil)
 end)

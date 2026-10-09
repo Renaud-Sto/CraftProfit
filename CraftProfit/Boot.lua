@@ -2,7 +2,7 @@
 local ADDON, ns = ...
 local Util, Format, Core, Prices = ns.Util, ns.Format, ns.Core, ns.Prices
 local DB, Evaluate, Present, Recipes = ns.DB, ns.Evaluate, ns.Present, ns.Recipes
-local History = ns.History
+local History, Leveling = ns.History, ns.Leveling
 local Disenchant = ns.Data.Disenchant
 local L = ns.L
 
@@ -100,7 +100,7 @@ end
 
 -- crafts is only given for the recipe shown in the window; the pinned list is always
 -- one craft.
-function Controller.evaluate(recipe, crafts)
+function Controller.evaluate(recipe, crafts, forcePerPoint)
     local settings = CraftProfitDB.settings
     return Evaluate.run({
         recipe = recipe,
@@ -108,7 +108,7 @@ function Controller.evaluate(recipe, crafts)
         priceOf = Prices.priceOf(Controller.market(), time()),
         itemInfo = Controller.itemInfo,
         cut = settings.cut,
-        showPerPoint = settings.showPerPoint,
+        showPerPoint = settings.showPerPoint or forcePerPoint == true,
         lookupDisenchant = Disenchant.lookup,
         knowsEnchanting = Controller.knowsEnchanting(),
     })
@@ -150,6 +150,7 @@ function Controller.refresh()
         ns.Window.showEmpty(L.NO_RECIPE)
     end
     if ns.PinsUI then ns.PinsUI.refresh() end
+    if ns.LevelingUI then ns.LevelingUI.refresh() end
 end
 
 -- Coalesces bursts (many ITEM_DATA_LOAD_RESULT events, one per search result).
@@ -167,7 +168,7 @@ function Controller.setRecipe(recipe, source)
     local window = ns.Window
     if not window.isShown() then
         local target = ns.Trade.frame()
-        if source == "pin" then target = AuctionHouseFrame or AuctionFrame end
+        if source == "pin" and ns.AH.isOpen then target = AuctionHouseFrame or AuctionFrame end
         window.attach(target, CraftProfitDB.settings.window)
         window.show()
     end
@@ -222,6 +223,62 @@ function Controller.setTracking(checked)
         History.pause(CraftProfitDB, recipe.recipeID)
     end
     Controller.refresh()
+end
+
+-- Known recipes ------------------------------------------------------------------
+
+local knownBusy, knownLast = false, nil
+
+-- Reads the learned recipes of the open profession for the leveling list. Bursts of
+-- TRADE_SKILL_LIST_UPDATE are coalesced: one read at most every few seconds.
+function Controller.refreshKnown()
+    if knownBusy or not ns.Trade.isShown() then return false end
+    local now = GetTime()
+    if knownLast and now - knownLast < 5 then return false end
+    local key, name = ns.Trade.professionInfo()
+    if not key then return false end
+    knownBusy, knownLast = true, now
+    local started = ns.Trade.scanKnown(function(raws)
+        knownBusy = false
+        DB.setKnown(CraftProfitCharDB, key, name, raws, time())
+        if ns.LevelingUI then ns.LevelingUI.refresh() end
+    end, function() knownBusy = false end)
+    if not started then knownBusy = false end
+    return started
+end
+
+-- What the leveling window shows: the current profession, its known recipes ranked
+-- by cost per point from the last scan's prices, and how old those prices are.
+function Controller.levelData()
+    local settings = CraftProfitDB.settings
+    local prof = DB.currentKnown(CraftProfitCharDB)
+    local age = Prices.snapshotAge(Controller.market(), time())
+    local data = {
+        showGrey = settings.levelShowGrey == true, profession = prof, items = {}, hiddenGrey = 0,
+        ageText = Present.ageText(L, age), stale = age == nil or age > settings.staleAfter,
+    }
+    if prof then
+        local ranked = Leveling.rank(prof.recipes, function(recipe)
+            return Controller.evaluate(recipe, 1, true)
+        end, { showGrey = data.showGrey })
+        data.items, data.hiddenGrey = ranked.items, ranked.hiddenGrey
+    end
+    return data
+end
+
+function Controller.setLevelShowGrey(value)
+    CraftProfitDB.settings.levelShowGrey = value and true or false
+    if ns.LevelingUI then ns.LevelingUI.refresh() end
+end
+
+function Controller.nextLevelProfession()
+    DB.nextKnown(CraftProfitCharDB)
+    if ns.LevelingUI then ns.LevelingUI.refresh() end
+end
+
+-- A row of the leveling list was clicked: show that recipe in the main window.
+function Controller.selectKnown(recipe)
+    Controller.setRecipe(recipe, "pin")
 end
 
 function Controller.togglePin()
@@ -397,6 +454,12 @@ function Controller.init()
         end,
     })
     if ns.PinsUI then ns.PinsUI.init(Controller) end
+    if ns.LevelingUI then
+        ns.LevelingUI.init(Controller, {
+            onMoved = function(_, x, y) CraftProfitDB.settings.levelWindow = { x = x, y = y } end,
+        })
+        ns.LevelingUI.attach(CraftProfitDB.settings.levelWindow)
+    end
     ns.AH.setHandlers({
         onOpen = Controller.onAHOpen,
         onSearch = function(itemID, listings)
@@ -431,6 +494,7 @@ function Controller.onEvent(event, arg1, arg2)
         end
     elseif event == "TRADE_SKILL_LIST_UPDATE" then
         Controller.refreshPinDifficulties()
+        Controller.refreshKnown()
         ns.Trade.invalidate()
     end
 end
@@ -487,6 +551,8 @@ local function slash(msg)
         Controller.selftest()
     elseif cmd == "history" then
         Controller.historyCommand(arg)
+    elseif cmd == "level" then
+        if ns.LevelingUI then ns.LevelingUI.toggle() end
     elseif cmd == "market" then
         local name = type(GetRealmName) == "function" and GetRealmName() or "?"
         say(string.format(L.MARKET_INFO, tostring(name), Controller.marketKey()))

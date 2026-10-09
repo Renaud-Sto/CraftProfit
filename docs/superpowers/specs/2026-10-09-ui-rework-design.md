@@ -38,7 +38,8 @@ Today each UI file creates its own text, buttons and colour table. Kit owns them
 - `Kit.panel(parent, title)`: bordered panel with a header bar; returns a table with fields `.frame`, `.body` (a frame field to fill, not a method), `.title`, `.right` (small text at the right of the header) and methods `:setTitle(text)`, `:setRows(rows, rowH, extra)`, `:height()`; panels stack with an 8 px gap.
 - `Kit.button(parent, kind, text)` (kind: `normal`, `primary`, `small`): a `Button` with field `.label` and method `:setText(text)`.
 - `Kit.tile(parent, width, height)`: table with fields `.frame`, `.label`, `.value` and method `:set(spec)`, spec = `{ label, tag, value, best, muted }`.
-- `Kit.check`, `Kit.input`: arrive in PR 2.
+- `Kit.check(parent, text)`: themed check box with its label on the right; `SetChecked`, `GetChecked`, `setText`, and `onToggle(checked)` called after a click. `Kit.input(parent, width, maxLetters)`: themed single-line edit box, 22 px high, text centred; Enter and Escape release the focus. `panel:onHeaderClick(fn)`: makes the header bar clickable (used to fold Materials). Both widgets exist since PR 2.
+- Also added in PR 2: colour and layout helpers `Kit.mix(a, b, t)`, `Kit.colorEscape(c)`, `Kit.plaqueWidth(textWidth, maxWidth)`, `Kit.onTheme(paint)`, `Kit.naturalWidth(fontString)`; constants `PLAQUE_MIN`, `PLAQUE_PAD`, `CLOSE_ROOM`, `TILE_PAD`, `FOLDED_H`; and the theme token `rowHover` (hover highlight of a reagent row).
 - Pure helpers, unit tested: `Kit.panelHeight(rows, rowH, extra)`, `Kit.stack(heights, gap, top)` (offsets of stacked panels and total height), `Kit.fitSize(baseWidth, baseSize, boxWidth, sizes)` (largest size that fits), `Kit.gradient(tex, top, bottom)` (returns the form that worked: `color`, `rgb` or `flat`).
 - `Kit.applyTheme(name)`: re-colours every registered widget (each widget registers a `skin` function); no `/reload` needed.
 
@@ -49,7 +50,7 @@ Edges and fills use solid-colour textures (`SetColorTexture`) layered to draw th
 - `UI/Window.lua`: rebuilt on Kit; panels instead of a counted `y` offset. Order: result banner, tiles, one line under them for the disenchant detail, **Materials** panel (folded or not, click the header to toggle), prices age line, **Options** panel (crafts, track history, cost per point, pin), **Pinned recipes** panel (when the AH is open).
 - `UI/PinsUI.lua`: the list and its three buttons become the Pinned recipes panel; sort button in the panel header; logic untouched.
 - `UI/LevelingUI.lua`: same Kit window; the list is a **Next point** panel; profession, sort and age sit in a strip above it; grey-recipes checkbox below.
-- `Present.lua`: builds a new `banner` and `tiles` in the model (see below). The old `lines` entries for the three exits and the verdict are removed. Existing text builders (`perPointLine`, `pointRow`, `likelyLine`) are kept.
+- `Present.lua`: builds new `banner`, `tiles` and `materials` fields in the model (see below). Amendment 1 (PR 2): the existing `lines` and `verdict` are kept in the model rather than removed, because the pinned list and the tests still use them; the main window reads `lines` only for the `likely` and `perpoint` entries. Existing text builders (`perPointLine`, `pointRow`, `likelyLine`) are kept.
 - `DB.lua`: one setting, `theme` (string, default `gold`), sanitised (unknown name becomes `gold`), account-wide. PR 1 adds it; nothing reads it until PR 4.
 - `Boot.lua`: `/cp theme [name]` (no name lists them); calls `Kit.applyTheme`. Arrives in PR 4. In PR 1 only the developer command `/cp kitdemo [theme]` exists (not in the user help text); it applies a theme without saving it and shows the demo window, which is how PR 1 is checked in game.
 - Locales: panel titles are separate keys written already in capitals (`PANEL_MATERIALS = "MATÉRIAUX"`): `string.upper` in Lua 5.1 does not handle UTF-8 accents (`É` would stay lower case). New keys also for `RESULT`, tile labels and theme names, in en, fr, es.
@@ -101,6 +102,6 @@ Exact values live in `Theme.lua` and follow the mockups. Steel blue uses square 
 ## Delivery (one PR each, merged only on the author's go)
 
 1. `Theme.lua`, `UI/Kit.lua`, `/cpp skin` probe, tests, the `theme` setting in `DB.lua` (sanitised, not yet read), the `/cp kitdemo [theme]` developer command. No visible change.
-2. Main window on Kit: banner, tiles, panels (gold theme only).
+2. Main window on Kit (this PR): result banner, three tiles, the grey likely line, Materials panel (fold by the header, clickable reagents), prices age line, Options panel (Crafts box, Track history, Cost per skill point with its value, Pin/Unpin); `Kit.check`, `Kit.input`, `panel:onHeaderClick`, the `rowHover` token; `Present.build` adds `banner`, `tiles`, `materials`. The pinned list keeps its old look until PR 3. Docs, checklist and CHANGELOG updated.
 3. Pinned panel and leveling window on Kit.
 4. Reading the `theme` setting, `/cp theme`, a theme button in the window header, Copper and Steel blue, docs, checklist, CHANGELOG.

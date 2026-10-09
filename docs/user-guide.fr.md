@@ -10,20 +10,18 @@ Sommaire : [La fenêtre](#la-fenêtre) · [À l'hôtel des ventes](#à-lhôtel-d
 
 Ouvrez une fenêtre de métier et sélectionnez une recette que vous connaissez. Une petite fenêtre apparaît à droite de la fenêtre de métier et suit votre sélection. Vous pouvez la déplacer où vous voulez ; sa position est mémorisée (`/cp reset` la remet en place). Elle se ferme avec la fenêtre de métier, et avec l'hôtel des ventes quand vous l'avez ouverte depuis celui-ci, pour ne jamais encombrer l'écran.
 
-| Ligne | Signification |
+De haut en bas :
+
+| Élément | Signification |
 | --- | --- |
-| **Composants** | Le coût de tous les composants aux prix de l'hôtel des ventes. Cliquez sur la ligne pour replier ou déplier le détail (`-` déplié, `+` replié) ; le choix est mémorisé. |
-| **Hôtel des ventes (net)** | Le prix que l'objet obtenu rapporterait à l'hôtel des ventes, après la commission de 5 %. `n/d` si l'objet ne peut pas y être vendu (lié quand ramassé). |
-| **Marchand** | Ce que paie un marchand pour l'objet. `n/d` s'il ne peut pas être vendu au marchand. |
-| **Désenchantement (bêta)** | La valeur *espérée* du désenchantement, nette de la commission de l'hôtel des ventes sur les composants obtenus. Voir [Désenchantement](#désenchantement). |
-| *ligne grise* | Sous la valeur du désenchantement : le résultat le plus probable, par exemple `75%: 1-2x Poussière d'âme = 7s 30c`. Affichée seulement quand le désenchantement a plusieurs résultats possibles. |
-| **Coût par point** / **Gain par point** | Seulement quand l'option est cochée. Voir [Coût par point de compétence](#coût-par-point-de-compétence). |
-| **Meilleur : …** | La meilleure option et le résultat net du craft (meilleure revente moins les composants), en vert pour un gain et en rouge pour une perte. |
+| Bandeau **Résultat** | La meilleure façon de vendre l'objet et le résultat net du craft (meilleure revente moins les composants), en grand. Vert pour un gain, rouge pour une perte, ambre quand le résultat est incomplet (il manque un prix). |
+| **Trois tuiles** | **Hôtel des ventes (net)** : le prix que l'objet obtenu rapporterait à l'hôtel des ventes, après la commission de 5 %. **Marchand** : ce que paie un marchand pour l'objet. **Désenchantement (bêta)** : la valeur *espérée* du désenchantement, nette de la commission de l'hôtel des ventes sur les composants obtenus (voir [Désenchantement](#désenchantement)). La meilleure est entourée d'or. Une tuile affiche `n/d` quand cette voie est impossible (lié quand ramassé, ne peut pas être vendu au marchand ni désenchanté) et `?` quand elle est possible mais qu'un prix est inconnu. |
+| *ligne grise* | Sous les tuiles : le résultat de désenchantement le plus probable, par exemple `75%: 1-2x Poussière d'âme = 7s 30c`. Affichée seulement quand le désenchantement a plusieurs résultats possibles. |
+| Panneau **Composants** | Le coût de tous les composants aux prix de l'hôtel des ventes. Cliquez sur l'en-tête pour replier ou déplier le détail (`-` déplié, `+` replié) ; le choix est mémorisé. Cliquez sur un composant pour le chercher à l'hôtel des ventes (voir [Rechercher un composant](#rechercher-un-composant)). |
 | **Prix : il y a 5min** | L'âge du prix le plus ancien utilisé. Passe en orange au-delà d'une heure. |
+| Panneau **Options** | **Crafts**, **Suivre l'historique**, **Coût par point de compétence** avec sa valeur à droite (voir [Coût par point de compétence](#coût-par-point-de-compétence)), et le bouton **Épingler** / **Désépingler**. |
 
-La meilleure option est marquée d'un `>` doré devant sa ligne (le vert et le rouge sont réservés aux gains et aux pertes).
-
-Un prix inconnu s'affiche `?`, jamais zéro. S'il manque le prix d'un composant, le total et le verdict indiquent *Incomplet : prix manquants* plutôt qu'un chiffre flatteur.
+Un prix inconnu s'affiche `?`, jamais zéro. S'il manque le prix d'un composant, le bandeau indique *Incomplet : prix manquants* et n'affiche aucun résultat net plutôt qu'un chiffre flatteur.
 
 ### Crafts
 
@@ -89,7 +87,7 @@ Deux sources l'alimentent : la recherche ciblée de **Rechercher les prix** et l
 
 Valeur espérée = la somme, sur les résultats possibles, de *probabilité × quantité moyenne × prix*, nette de la commission de 5 %. Elle est affichée pour tout objet désenchantable, **que vous ayez ou non l'enchantement** : un objet lié quand équipé peut être désenchanté par un autre joueur ou un autre de vos personnages.
 
-L'exception est un objet **lié quand ramassé** : il ne peut pas changer de mains, donc la ligne n'est affichée (sinon `n/d`) que si votre personnage connaît l'enchantement.
+L'exception est un objet **lié quand ramassé** : il ne peut pas changer de mains, donc la tuile n'affiche une valeur (sinon `n/d`) que si votre personnage connaît l'enchantement.
 
 Les tables viennent du Classic et ne sont pas encore vérifiées dans Forever, d'où la mention *bêta*. Les objets épiques au-dessus du niveau d'objet 60 n'ont pas encore de table et affichent `?`. Le désenchantement est un pari : sur beaucoup d'objets, la moyenne est atteinte ; pour un objet seul, la ligne grise donne le résultat le plus probable.
 
@@ -97,7 +95,7 @@ Les tables viennent du Classic et ne sont pas encore vérifiées dans Forever, d
 
 `(composants − valeur de la meilleure revente) ÷ probabilité de gagner un point`
 
-Un craft qui fait perdre 16s 50c avec 25 % de chances de point coûte 66s par point en moyenne. Si les crafts se paient d'eux-mêmes, la ligne affiche **Gain par point** en vert.
+Un craft qui fait perdre 16s 50c avec 25 % de chances de point coûte 66s par point en moyenne. Si les crafts se paient d'eux-mêmes, la valeur à côté de la case devient verte et commence par `+` (un gain par point) ; un coût s'affiche en rouge, avec le pourcentage utilisé et *estimation*.
 
 La probabilité de point dépend de la couleur de la recette et c'est une **estimation**, pas une valeur mesurée : orange 100 %, jaune 75 %, vert 25 %, gris 0 % (affiché `n/d`). Le pourcentage utilisé est affiché sur la ligne. La couleur des recettes épinglées est rafraîchie à chaque mise à jour de la fenêtre de métier, elle suit donc votre niveau.
 
@@ -105,8 +103,8 @@ La probabilité de point dépend de la couleur de la recette et c'est une **esti
 
 | Réglage | Où | Défaut |
 | --- | --- | --- |
-| Coût par point de compétence | Case à cocher dans la fenêtre | Décochée |
-| Détail des composants replié ou déplié | Clic sur la ligne Composants | Déplié |
+| Coût par point de compétence | Case à cocher du panneau Options | Décochée |
+| Détail des composants replié ou déplié | Clic sur l'en-tête Composants | Déplié |
 | Position de la fenêtre | La déplacer ; `/cp reset` pour annuler | À côté de la fenêtre de métier ou de l'hôtel des ventes |
 | Tri de la liste des épingles | Bouton au-dessus de la liste | Gain |
 
@@ -138,7 +136,7 @@ La fenêtre suit la langue du jeu : anglais, français et espagnol (l'espagnol d
 
 **La quantité n'est pas remplie après un clic sur un composant.** Le préremplissage est au mieux. La recherche fonctionne quand même ; saisissez la quantité à la main.
 
-**Le désenchantement affiche `n/d` pour un objet que je viens de fabriquer.** L'objet est lié quand ramassé et votre personnage ne connaît pas l'enchantement, ou l'objet n'est pas désenchantable (ni armure ni arme, ou qualité médiocre).
+**La tuile de désenchantement affiche `n/d` pour un objet que je viens de fabriquer.** L'objet est lié quand ramassé et votre personnage ne connaît pas l'enchantement, ou l'objet n'est pas désenchantable (ni armure ni arme, ou qualité médiocre).
 
 **Le texte n'est pas dans la bonne langue.** Lancez `/cp locale` pour revenir à la langue du jeu. Les traductions manquantes retombent sur l'anglais ; merci de les signaler.
 

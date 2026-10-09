@@ -4,6 +4,9 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ## [Unreleased]
 
+### Changed
+- The main window has a new look: a result banner with the best way to sell and the net result, three tiles for the auction house, vendor and disenchant values, and separate Materials and Options panels. Behaviour is unchanged. The pinned list and the leveling window follow in the next versions.
+
 ### Added
 - Developer groundwork for the UI rework: colour themes (gold, copper, steel blue) and a shared widget kit, with a `/cp kitdemo` window. No existing window changes yet.
 - Leveling window (`/cp level`, or the Leveling button under the pinned list): every learned, not grey recipe of a profession ranked by the cost of a skill point from the last scan, stored per character so it works at the auction house. Grey recipes are hidden unless asked.

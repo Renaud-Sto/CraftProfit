@@ -98,6 +98,30 @@ function Controller.onReagentClick(itemID, qty)
     if not ok then say(L.BROWSE_UNAVAILABLE) end
 end
 
+-- The AH tile or the title of the window was clicked: search the crafted item at the AH
+-- (no quantity preset), to see how many are for sale next to the price shown.
+function Controller.onOutputClick()
+    local recipe = state.recipe
+    if not recipe or not recipe.outputItemID then return end
+    if not ns.AH.isOpen then
+        say(L.SEARCH_NEED_AH)
+        return
+    end
+    local itemID = recipe.outputItemID
+    -- Same rule as Evaluate: an item bound when picked up cannot be auctioned.
+    local info = Controller.itemInfo(itemID)
+    if info and info.bindType == 1 then
+        say(L.SEARCH_UNSELLABLE)
+        return
+    end
+    local name = Controller.itemName(itemID)
+    if not name then
+        say(L.ITEM_NOT_LOADED)
+        return
+    end
+    if not ns.AH.browse(name, itemID, nil) then say(L.BROWSE_UNAVAILABLE) end
+end
+
 -- crafts is only given for the recipe shown in the window; the pinned list is always
 -- one craft.
 function Controller.evaluate(recipe, crafts, forcePerPoint)
@@ -442,6 +466,7 @@ function Controller.init()
     ns.Window.create({
         onPinClick = Controller.togglePin,
         onReagentClick = Controller.onReagentClick,
+        onOutputClick = Controller.onOutputClick,
         onCraftsChange = Controller.setCrafts,
         onTrackToggle = Controller.setTracking,
         onPerPointToggle = function(checked)

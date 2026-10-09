@@ -51,6 +51,7 @@ ns.Locale.register("frFR", {
     SEARCH_DONE = "Prix mis à jour",
     SEARCH_PARTIAL = "Prix mis à jour, %d introuvable(s)",
     SEARCH_NEED_AH = "Ouvrez d'abord l'hôtel des ventes",
+    SEARCH_UNSELLABLE = "Cet objet ne peut pas être vendu à l'hôtel des ventes",
     ITEM_NOT_LOADED = "Objet pas encore chargé, réessayez dans un instant",
     BROWSE_UNAVAILABLE = "La recherche de l'hôtel des ventes n'est pas disponible",
     SEARCH_CANCELLED = "Recherche annulée",

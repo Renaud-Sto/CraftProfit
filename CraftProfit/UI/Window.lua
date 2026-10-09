@@ -119,6 +119,10 @@ local function buildBanner()
     local value = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     value:SetPoint("RIGHT", f, "RIGHT", -12, 0)
     value:SetJustifyH("RIGHT")
+    -- The label stops before the value too, so a long warning cannot run under it.
+    label:SetPoint("RIGHT", value, "LEFT", -8, 0)
+    label:SetJustifyH("LEFT")
+    label:SetWordWrap(false)
     -- The text runs up to the value, so a short or empty value leaves it more room.
     local text = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     text:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 12, 10)
@@ -136,7 +140,11 @@ end
 local function setBanner(spec)
     local b = parts.banner
     local tone = TONES[spec.kind] or TONES.none
-    b.label:SetText(spec.label or "")
+    local label = spec.label or ""
+    if spec.warning then
+        label = label .. " \194\183 " .. Kit.colorEscape(Theme.FIXED.incomplete) .. spec.warning .. "|r"
+    end
+    b.label:SetText(label)
     b.text:SetText(spec.text or "")
     b.value:SetFont(STANDARD_TEXT_FONT, BANNER_SIZES[1], "")
     b.value:SetText(spec.value or "")

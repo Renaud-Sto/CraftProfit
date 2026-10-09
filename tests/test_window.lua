@@ -366,3 +366,26 @@ H.test("a banner text too long for the room beside the value drops to the small 
     H.eq(b.text.font, "GameFontNormal")
     H.eq(b.text.log[#b.text.log], { "colour", best[1], best[2], best[3] })
 end)
+
+H.test("the banner label carries the amber warning after a middle dot, when there is one", function()
+    local T, Window = boot({ record = true })
+    local b = Window.parts.banner
+    local esc = T.ns.Kit.colorEscape(T.ns.Theme.FIXED.incomplete)
+    Window.render(model({ banner = { label = "RESULT", text = "Best known: Auction house", value = "+7s",
+        kind = "incomplete", warning = "PRICES MISSING" } }))
+    H.eq(b.label.text, "RESULT \194\183 " .. esc .. "PRICES MISSING|r")
+    Window.render(model())
+    H.eq(b.label.text, "RESULT")
+end)
+
+H.test("the banner label stops before the value and does not wrap", function()
+    local _, Window = boot({ record = true })
+    local b = Window.parts.banner
+    local found = false
+    for _, p in ipairs(b.label.points) do
+        if p[1] == "RIGHT" and p[2] == b.value and p[3] == "LEFT" and p[4] == -8 and p[5] == 0 then found = true end
+    end
+    H.truthy(found)
+    H.eq(b.label.wordWrap, false)
+    H.eq(b.label.justify, "LEFT")
+end)

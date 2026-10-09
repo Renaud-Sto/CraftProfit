@@ -24,6 +24,8 @@ ns.Locale.register("enUS", {
     ESTIMATE = "estimate",
     VERDICT_BEST = "Best: %s",
     VERDICT_PARTIAL = "Best known: %s (prices missing)",
+    VERDICT_KNOWN = "Best known: %s",
+    WARN_PRICES = "PRICES MISSING",
     VERDICT_INCOMPLETE = "Incomplete: prices missing",
     VERDICT_NONE = "No way to sell this item",
     NA = "n/a",

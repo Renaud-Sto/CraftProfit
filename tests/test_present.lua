@@ -80,6 +80,30 @@ H.test("an unknown option with a known cost shows the best known one as partial"
     H.eq(m.lines[4].value, "?")
 end)
 
+H.test("a partial result moves the warning to the banner label line", function()
+    local ns = load()
+    local m = model(ns, { itemInfo = function() return nil end })
+    H.eq(m.banner, { label = "RESULT", text = "Best known: Auction house", value = "+7s",
+        kind = "incomplete", warning = "PRICES MISSING" })
+    H.eq(m.verdict.text, "Best known: Auction house (prices missing)")
+end)
+
+H.test("only the partial case carries a banner warning", function()
+    local ns = load()
+    local none = model(ns, { priceOf = function(id) if id == 2 then return nil end return 100, 1 end })
+    H.eq(none.banner.warning, nil)
+    H.eq(none.banner.text, "Incomplete: prices missing")
+    H.eq(model(ns).banner.warning, nil)
+end)
+
+H.test("the French partial banner has its own warning and text", function()
+    local ns = load()
+    ns.Locale.select("frFR")
+    local m = model(ns, { itemInfo = function() return nil end })
+    H.eq(m.banner.warning, "PRIX MANQUANTS")
+    H.eq(m.banner.text, "Meilleur connu : Hôtel des ventes")
+end)
+
 H.test("nothing sellable gives the none verdict and n/a lines", function()
     local ns = load()
     local m = model(ns, { itemInfo = function() return { quality = 1, ilvl = 1, sellPrice = 0, classID = 0, bindType = 1 } end })

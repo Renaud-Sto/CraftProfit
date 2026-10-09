@@ -72,6 +72,11 @@ local function perPointLine(L, fmt, perPoint)
     return line
 end
 
+-- The partial case: a best way to sell is known but some price is missing.
+local function isPartial(result)
+    return result.net ~= nil and result.incomplete and true or false
+end
+
 local function verdictFor(result, L, fmt)
     if result.net == nil and result.best == nil and not result.incomplete then
         return { kind = "none", text = L.VERDICT_NONE, value = "" }
@@ -149,12 +154,19 @@ function Present.build(result, L, fmt, opts)
             tag = key == "disenchant" and L.BETA_TAG or nil,
         }
     end
+    -- The partial verdict is too long beside the large value, so its warning moves to
+    -- the label line and the main line keeps only the best way to sell.
+    local banner = { label = L.RESULT, text = verdict.text, value = verdict.value, kind = verdict.kind }
+    if isPartial(result) then
+        banner.text = string.format(L.VERDICT_KNOWN, L[NAME_KEYS[result.best]])
+        banner.warning = L.WARN_PRICES
+    end
     return {
         lines = lines,
         crafts = crafts,
         costLines = costLines,
         verdict = verdict,
-        banner = { label = L.RESULT, text = verdict.text, value = verdict.value, kind = verdict.kind },
+        banner = banner,
         tiles = tiles,
         materials = {
             title = crafts > 1 and string.format(L.PANEL_MATERIALS_MULTI, crafts) or L.PANEL_MATERIALS,

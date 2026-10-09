@@ -45,15 +45,20 @@ local function build()
     addRow(materials, 2, "1x Coarse Weightstone", "8s")
     addRow(materials, 3, "1x Heavy Leather", "10s")
 
+    -- Three buttons of one size, centred in the body; the small kind lives in the
+    -- header, where a sort button belongs.
     local options = Kit.panel(content, "OPTIONS")
-    options:setRows(1, 24)
+    options:setRows(1, 24, 12)
     local x = 8
-    for _, spec in ipairs({ { "primary", "Search prices" }, { "normal", "Scan AH" }, { "small", "Sort" } }) do
+    for _, spec in ipairs({ { "primary", "Search prices" }, { "normal", "Scan AH" }, { "normal", "Reset" } }) do
         local button = Kit.button(options.body, spec[1], spec[2])
-        button:SetWidth(spec[1] == "small" and 50 or 100)
-        button:SetPoint("TOPLEFT", options.body, "TOPLEFT", x, 0)
-        x = x + (spec[1] == "small" and 58 or 108)
+        button:SetWidth(104)
+        button:SetPoint("TOPLEFT", options.body, "TOPLEFT", x, -6)
+        x = x + 112
     end
+    local sort = Kit.button(options.frame, "small", "Sort")
+    sort:SetWidth(50)
+    sort:SetPoint("TOPRIGHT", options.frame, "TOPRIGHT", -6, -3)
 
     local offsets, total = Kit.stack({ TILE_H, materials:height(), options:height() }, Kit.GAP, 0)
     for i, panel in ipairs({ materials, options }) do

@@ -87,8 +87,11 @@ function LevelingUI.refresh()
     end
 end
 
+function LevelingUI.frame() return frame end
+
 function LevelingUI.show()
     if not frame then return end
+    LevelingUI.place()
     frame:Show()
     LevelingUI.refresh()
 end
@@ -183,13 +186,24 @@ function LevelingUI.init(controller, h)
     return frame
 end
 
--- Position: the saved one, else the middle of the screen.
-function LevelingUI.attach(saved)
+local savedPosition
+
+-- Position: the saved one once the window has been dragged; otherwise right beside the
+-- main window when it is on screen (they used to overlap), else the middle of the screen.
+function LevelingUI.place()
     if not frame then return end
     frame:ClearAllPoints()
-    if saved then
-        frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", saved.x, saved.y)
+    local main = ns.Window.frame()
+    if savedPosition then
+        frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", savedPosition.x, savedPosition.y)
+    elseif main and ns.Window.isShown() then
+        frame:SetPoint("TOPLEFT", main, "TOPRIGHT", 6, 0)
     else
         frame:SetPoint("CENTER", UIParent, "CENTER", -200, 0)
     end
+end
+
+function LevelingUI.attach(saved)
+    savedPosition = saved
+    LevelingUI.place()
 end

@@ -34,9 +34,11 @@ API: `Theme.list()`, `Theme.exists(name)`, `Theme.get(name)` (falls back to `gol
 
 Today each UI file creates its own text, buttons and colour table. Kit owns them:
 
-- `Kit.window(name, title)`: frame, gold edge, plaque, close button, drag handling (moved from `Window.create`).
-- `Kit.panel(parent, titleKey)`: bordered panel with a header bar; returns an object with `:setRows(n)`, `:height()`, `:body()`; panels stack with an 8 px gap.
-- `Kit.button(parent, kind)` (`normal`, `primary`, `small`), `Kit.check`, `Kit.input` (these two arrive in PR 2), `Kit.tile`.
+- `Kit.window(name, title, opts)` (opts: `width`, `height`, `onMoved(point, x, y)`): frame, gold edge, plaque, close button, drag handling (moved from `Window.create`). Returns the frame with fields `.content` (the area to fill), `.plaque`, `.titleText`, `.close` and method `:setTitle(text)`. The caller must `SetPoint` it and decide whether it is shown: a new frame starts shown and unanchored.
+- `Kit.panel(parent, title)`: bordered panel with a header bar; returns a table with fields `.frame`, `.body` (a frame field to fill, not a method), `.title`, `.right` (small text at the right of the header) and methods `:setTitle(text)`, `:setRows(rows, rowH, extra)`, `:height()`; panels stack with an 8 px gap.
+- `Kit.button(parent, kind, text)` (kind: `normal`, `primary`, `small`): a `Button` with field `.label` and method `:setText(text)`.
+- `Kit.tile(parent, width, height)`: table with fields `.frame`, `.label`, `.value` and method `:set(spec)`, spec = `{ label, tag, value, best, muted }`.
+- `Kit.check`, `Kit.input`: arrive in PR 2.
 - Pure helpers, unit tested: `Kit.panelHeight(rows, rowH, extra)`, `Kit.stack(heights, gap, top)` (offsets of stacked panels and total height), `Kit.fitSize(baseWidth, baseSize, boxWidth, sizes)` (largest size that fits), `Kit.gradient(tex, top, bottom)` (returns the form that worked: `color`, `rgb` or `flat`).
 - `Kit.applyTheme(name)`: re-colours every registered widget (each widget registers a `skin` function); no `/reload` needed.
 
@@ -91,7 +93,7 @@ Exact values live in `Theme.lua` and follow the mockups. Steel blue uses square 
 
 ## Risks and open checks
 
-1. **`Texture:SetGradient` and the font path in this build are unverified.** A probe command (`/cpp skin`) reports them before Kit is written; Kit has the flat fallback for the gradient.
+1. **`Texture:SetGradient` and the font path in this build are unverified.** A probe command (`/cpp skin`) reports what the client supports; Kit already has the flat fallback for the gradient.
 2. **Click targets.** Reagent rows and the Materials toggle are `Button`s over the panels; the rework must keep `onReagentClick` and `onCostToggle` working (covered by the in-game checklist, not by unit tests).
 3. **Every theme multiplies the visual checking.** Hence three themes, palette only. Adding a fourth later costs one table plus a contrast check.
 4. **Window height.** The main window with pins is about 760 px tall in the mockup; on small screens it may not fit. Kit clamps to the screen and the Pinned panel scrolls as the list does today (visible rows 6).
@@ -101,4 +103,4 @@ Exact values live in `Theme.lua` and follow the mockups. Steel blue uses square 
 1. `Theme.lua`, `UI/Kit.lua`, `/cpp skin` probe, tests, the `theme` setting in `DB.lua` (sanitised, not yet read), the `/cp kitdemo [theme]` developer command. No visible change.
 2. Main window on Kit: banner, tiles, panels (gold theme only).
 3. Pinned panel and leveling window on Kit.
-4. Theme setting, `/cp theme`, a theme button in the window header, Copper and Steel blue, docs, checklist, CHANGELOG.
+4. Reading the `theme` setting, `/cp theme`, a theme button in the window header, Copper and Steel blue, docs, checklist, CHANGELOG.

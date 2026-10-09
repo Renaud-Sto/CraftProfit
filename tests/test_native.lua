@@ -1,0 +1,320 @@
+local H = ...
+local W = dofile("tests/fakewow.lua")
+
+-- The fake frame answers every unknown key with a no-op function, so template internals
+-- (Inset, TitleContainer, Text...) look present but are not tables: the module must treat
+-- them as missing. `rawget` reads what the module really stored on a frame.
+
+local function boot()
+    local T = W.boot(H)
+    return T, T.ns.Native, T.env
+end
+
+-- Records every CreateFrame call and makes frames start shown, as on the real client.
+local function recordFrames(env)
+    local made = {}
+    local create = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        f.shown = true
+        -- false, not nil: a nil field would read as the fake's no-op function.
+        f.kind, f.template, f.createParent = kind, template, parent or false
+        f.SetParent = function(self, p) self.parent = p end
+        f.SetSize = function(self, w, h) self.size = { w, h } end
+        made[#made + 1] = f
+        return f
+    end
+    return made
+end
+
+H.test("the native module loads beside the kit without game globals", function()
+    local ns = H.newNS("Theme", "UI/Kit", "UI/Native")
+    H.truthy(ns.Native)
+    H.eq(ns.Native.CONTENT_PAD, 4)
+end)
+
+H.test("the native file is loaded by the fake game environment, after the kit", function()
+    local T = W.boot(H)
+    H.truthy(T.ns.Native)
+    H.truthy(T.ns.Kit)
+end)
+
+H.test("a window is a ButtonFrameTemplate made without a parent, then put under UIParent, hidden", function()
+    local _, Native, env = boot()
+    local made = recordFrames(env)
+    local win = Native.window("NativeTestWindow", "Title", { width = 400, height = 300 })
+    H.eq(made[1], win)
+    H.eq(win.kind, "Frame")
+    H.eq(win.template, "ButtonFrameTemplate")
+    H.eq(win.createParent, false)
+    H.eq(win.parent, env.UIParent)
+    H.eq(win.shown, false)
+    H.truthy(rawget(win, "content"))
+    H.eq(type(rawget(win, "setTitle")), "function")
+    H.eq(type(rawget(win, "stopDrag")), "function")
+end)
+
+H.test("a window does not raise when the template helpers and internals are missing", function()
+    local _, Native, env = boot()
+    H.eq(env.ButtonFrameTemplate_HidePortrait, nil)
+    H.eq(env.ButtonFrameTemplate_HideButtonBar, nil)
+    local win = Native.window("NativeTestBare", "Title")
+    -- No real Inset: the frame itself is the content area, with its own title string.
+    H.eq(win.content, win)
+    win:setTitle("Another")
+    H.eq(rawget(win, "titleText").text, "Another")
+end)
+
+H.test("a window hides the portrait and the button bar and uses the inset when the client has them", function()
+    local _, Native, env = boot()
+    local calls = {}
+    env.ButtonFrameTemplate_HidePortrait = function(f) calls[#calls + 1] = { "portrait", f } end
+    env.ButtonFrameTemplate_HideButtonBar = function(f) calls[#calls + 1] = { "bar", f } end
+    local inset = W.frame()
+    local titleText = W.frame()
+    local container = W.frame()
+    container.TitleText = titleText
+    local create = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        if template == "ButtonFrameTemplate" then
+            f.Inset = inset
+            f.TitleContainer = container
+            f.SetTitle = function(self, text) self.TitleContainer.TitleText:SetText(text) end
+        end
+        return f
+    end
+    local win = Native.window("NativeTestFull", "Hello")
+    H.eq(calls, { { "portrait", win }, { "bar", win } })
+    H.eq(win.content, inset)
+    H.eq(titleText.text, "Hello")
+    win:setTitle("Changed")
+    H.eq(titleText.text, "Changed")
+end)
+
+H.test("a helper that raises on a changed build does not break the window", function()
+    local _, Native, env = boot()
+    env.ButtonFrameTemplate_HidePortrait = function() error("SetBorder is gone") end
+    local win = Native.window("NativeTestRaise", "T")
+    H.truthy(win.content)
+end)
+
+H.test("a window drags from its body and reports where it was dropped", function()
+    local _, Native = boot()
+    local moved
+    local win = Native.window("NativeTestDrag", "T", { onMoved = function(...) moved = { ... } end })
+    H.truthy(win.scripts.OnDragStart)
+    win.scripts.OnDragStop(win)
+    H.eq(moved, { "TOPLEFT", 100, 700 })
+end)
+
+H.test("the title hit button exists only with onTitleClick", function()
+    local _, Native = boot()
+    local plain = Native.window("NativeTestNoHit", "T")
+    H.eq(rawget(plain, "titleHit"), nil)
+    H.eq(rawget(plain, "titleIcon"), nil)
+    local win = Native.window("NativeTestHit", "T", { onTitleClick = function() end })
+    H.truthy(rawget(win, "titleHit"))
+    H.truthy(rawget(win, "titleIcon"))
+end)
+
+H.test("the title hit button is a Button, fires on click and not on the click that ends a drag", function()
+    local _, Native, env = boot()
+    local made = recordFrames(env)
+    local clicks, moved = 0, 0
+    local win = Native.window("NativeTestTitleClick", "T", {
+        onTitleClick = function() clicks = clicks + 1 end,
+        onMoved = function() moved = moved + 1 end,
+    })
+    local hit = win.titleHit
+    local found
+    for _, f in ipairs(made) do if f == hit then found = f end end
+    H.eq(found.kind, "Button")
+    hit.scripts.OnMouseDown(hit)
+    hit.scripts.OnClick(hit)
+    H.eq(clicks, 1)
+    hit.scripts.OnMouseDown(hit)
+    hit.scripts.OnDragStart(hit)
+    hit.scripts.OnDragStop(hit)
+    hit.scripts.OnClick(hit)
+    H.eq(clicks, 1)
+    H.eq(moved, 1)
+    -- The next press clears the flag.
+    hit.scripts.OnMouseDown(hit)
+    hit.scripts.OnClick(hit)
+    H.eq(clicks, 2)
+end)
+
+H.test("the title hit button stays under the close button", function()
+    local _, Native, env = boot()
+    local close = W.frame()
+    close.level = 510
+    close.GetFrameLevel = function(self) return rawget(self, "level") end
+    close.SetFrameLevel = function(self, l) self.level = l end
+    local create = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        f.GetFrameLevel = function(self) return rawget(self, "level") or 1 end
+        f.SetFrameLevel = function(self, l) self.level = l end
+        if template == "ButtonFrameTemplate" then f.CloseButton = close end
+        return f
+    end
+    local win = Native.window("NativeTestLevels", "T", { onTitleClick = function() end })
+    H.truthy(win.titleHit:GetFrameLevel() < close:GetFrameLevel())
+    -- Even when the close button sits low, it is raised over the hit.
+    close.level = 1
+    local win2 = Native.window("NativeTestLevels2", "T", { onTitleClick = function() end })
+    H.truthy(win2.titleHit:GetFrameLevel() < close:GetFrameLevel())
+end)
+
+H.test("a button is a UIPanelButtonTemplate 22 px high that fires onClick, not when disabled", function()
+    local _, Native, env = boot()
+    local made = recordFrames(env)
+    local clicks = 0
+    local b = Native.button(nil, "Scan", { width = 90, onClick = function() clicks = clicks + 1 end })
+    H.eq(made[1], b)
+    H.eq(b.kind, "Button")
+    H.eq(b.template, "UIPanelButtonTemplate")
+    H.eq(b.createParent, false)
+    H.eq(b.size, { 90, 22 })
+    H.eq(b.text, "Scan")
+    b.scripts.OnClick(b)
+    H.eq(clicks, 1)
+    b.IsEnabled = function() return false end
+    b.scripts.OnClick(b)
+    H.eq(clicks, 1)
+    b:setText("Search")
+    H.eq(b.text, "Search")
+end)
+
+H.test("a button label never wraps", function()
+    local _, Native, env = boot()
+    local label = W.frame()
+    local wrap
+    label.SetWordWrap = function(_, v) wrap = v end
+    local create = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        if template == "UIPanelButtonTemplate" then f.Text = label end
+        return f
+    end
+    Native.button(nil, "A label far too long for a small button", { width = 40 })
+    H.eq(wrap, false)
+end)
+
+H.test("a check box is a UICheckButtonTemplate whose click reports the state the client set", function()
+    local _, Native, env = boot()
+    local made = recordFrames(env)
+    local seen = {}
+    local check = Native.check(nil, "Track history", function(v) seen[#seen + 1] = v end)
+    H.eq(made[1], check)
+    H.eq(check.kind, "CheckButton")
+    H.eq(check.template, "UICheckButtonTemplate")
+    H.falsy(check:GetChecked())
+    -- The client flips a CheckButton before OnClick runs: mimic it.
+    check:SetChecked(true)
+    check.scripts.OnClick(check)
+    check:SetChecked(false)
+    check.scripts.OnClick(check)
+    H.eq(seen, { true, false })
+end)
+
+H.test("clicking a check box label toggles it: the hit area covers the label", function()
+    local _, Native, env = boot()
+    local label = W.frame()
+    label.GetStringWidth = function() return 80 end
+    local insets
+    local create = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        if template == "UICheckButtonTemplate" then
+            f.Text = label
+            f.SetHitRectInsets = function(_, l, r, t, b) insets = { l, r, t, b } end
+        end
+        return f
+    end
+    local check = Native.check(nil, "Cost per point")
+    H.eq(label.text, "Cost per point")
+    H.truthy(insets[2] <= -80)
+    H.eq({ insets[1], insets[3], insets[4] }, { 0, 0, 0 })
+    label.GetStringWidth = function() return 150 end
+    check:setText("A much longer label")
+    H.eq(label.text, "A much longer label")
+    H.truthy(insets[2] <= -150)
+end)
+
+H.test("a check box without the template label falls back to its own and plays the toggle sounds", function()
+    local _, Native, env = boot()
+    local sounds = {}
+    env.SOUNDKIT = { IG_MAINMENU_OPTION_CHECKBOX_ON = 856, IG_MAINMENU_OPTION_CHECKBOX_OFF = 857 }
+    env.PlaySound = function(id) sounds[#sounds + 1] = id end
+    local check = Native.check(nil, "x")
+    H.eq(rawget(check, "label").text, "x")
+    check:SetChecked(true)
+    check.scripts.OnClick(check)
+    check:SetChecked(false)
+    check.scripts.OnClick(check)
+    H.eq(sounds, { 856, 857 })
+    check:setText("y")
+    H.eq(rawget(check, "label").text, "y")
+end)
+
+H.test("clicking a check box without a callback or sounds does not raise", function()
+    local _, Native = boot()
+    local check = Native.check(nil, "x")
+    check:SetChecked(true)
+    check.scripts.OnClick(check)
+    H.truthy(check:GetChecked())
+end)
+
+H.test("an input is an InputBoxTemplate without auto focus that gives up its focus on Enter and Escape", function()
+    local _, Native, env = boot()
+    local made = recordFrames(env)
+    local auto, letters
+    local create = env.CreateFrame
+    env.CreateFrame = function(...)
+        local f = create(...)
+        f.SetAutoFocus = function(_, v) auto = v end
+        f.SetMaxLetters = function(_, n) letters = n end
+        return f
+    end
+    local box = Native.input(nil, 52, 4)
+    H.eq(made[1], box)
+    H.eq(box.kind, "EditBox")
+    H.eq(box.template, "InputBoxTemplate")
+    H.eq(box.createParent, false)
+    H.eq(box.size, { 52, 22 })
+    H.eq(auto, false)
+    H.eq(letters, 4)
+    local cleared = 0
+    box.ClearFocus = function() cleared = cleared + 1 end
+    box.scripts.OnEnterPressed(box)
+    box.scripts.OnEscapePressed(box)
+    H.eq(cleared, 2)
+end)
+
+H.test("searchIcon uses the game's magnifier atlas when the client knows it", function()
+    local _, Native, env = boot()
+    local tex = W.frame()
+    local atlas
+    tex.SetAtlas = function(_, name) atlas = name end
+    env.C_Texture = { GetAtlasInfo = function(name)
+        if name == "common-search-magnifyingglass" then return { width = 24, height = 24 } end
+    end }
+    H.eq(Native.searchIcon(tex), true)
+    H.eq(atlas, "common-search-magnifyingglass")
+end)
+
+H.test("searchIcon falls back to the kit's lookup and reports when nothing was found", function()
+    local _, Native, env = boot()
+    local tex = W.frame()
+    env.C_Texture = nil
+    H.eq(Native.searchIcon(tex), false)
+    local file
+    tex.SetTexture = function(_, f) file = f end
+    env.AuctionHouseFrame = { SearchBar = { SearchBox = { searchIcon = {
+        GetTexture = function() return 12345 end,
+    } } } }
+    H.eq(Native.searchIcon(tex), true)
+    H.eq(file, 12345)
+end)

@@ -439,3 +439,60 @@ H.test("panel.right and the tile tag are painted from the theme, not a literal c
     tile:set({ label = "DISENCH.", tag = "beta", value = "1g" })
     H.truthy(tile.label.text:find(Kit.colorEscape(Theme.FIXED.best) .. "beta", 1, true))
 end)
+
+H.test("a check box toggles on click, reports the new state and keeps its text", function()
+    local _, Kit = boot()
+    local seen = {}
+    local check = Kit.check(nil, "Track history")
+    H.eq(check.label.text, "Track history")
+    H.falsy(check:GetChecked())
+    H.falsy(check.mark.shown)
+    check.onToggle = function(checked) seen[#seen + 1] = checked end
+    check.scripts.OnClick(check)
+    H.truthy(check:GetChecked())
+    H.truthy(check.mark.shown)
+    check.scripts.OnClick(check)
+    H.falsy(check:GetChecked())
+    H.eq(seen, { true, false })
+    check:SetChecked(true)
+    H.truthy(check:GetChecked())
+    check:SetChecked(nil)
+    H.falsy(check:GetChecked())
+    check:setText("Cost per point")
+    H.eq(check.label.text, "Cost per point")
+end)
+
+H.test("clicking a check box without a callback does not raise", function()
+    local _, Kit = boot()
+    local check = Kit.check(nil, "x")
+    check.scripts.OnClick(check)
+    H.truthy(check:GetChecked())
+end)
+
+H.test("an input box gives up its focus on Enter and Escape", function()
+    local _, Kit = boot()
+    local box = Kit.input(nil, 52, 4)
+    local cleared = 0
+    box.ClearFocus = function() cleared = cleared + 1 end
+    box.scripts.OnEnterPressed(box)
+    box.scripts.OnEscapePressed(box)
+    H.eq(cleared, 2)
+end)
+
+H.test("a panel header can be made clickable", function()
+    local _, Kit = boot()
+    local panel = Kit.panel(nil, "MATERIALS")
+    local clicks = 0
+    local hit = panel:onHeaderClick(function() clicks = clicks + 1 end)
+    H.eq(panel.headerHit, hit)
+    hit.scripts.OnClick(hit)
+    H.eq(clicks, 1)
+end)
+
+H.test("the new widgets survive every theme switch", function()
+    local _, Kit = boot()
+    local check = Kit.check(nil, "x")
+    local box = Kit.input(nil, 52, 4)
+    for _, name in ipairs({ "copper", "steel", "gold" }) do Kit.applyTheme(name) end
+    H.truthy(check and box)
+end)

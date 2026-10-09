@@ -103,3 +103,13 @@ H.test("the hover fill token exists in every theme", function()
     local Theme = load()
     for _, name in ipairs(Theme.list()) do H.truthy(Theme.get(name).rowHover) end
 end)
+
+H.test("the text drawn on inputs, check marks and the title plaque stays readable in every theme", function()
+    local Theme = load()
+    for _, name in ipairs(Theme.list()) do
+        local t = Theme.get(name)
+        if contrast(t.textMain, t.inputBg) < 4.5 then error(name .. ": textMain on inputBg") end
+        if contrast(t.checkMark, t.inputBg) < 4.5 then error(name .. ": checkMark on inputBg") end
+        if contrast(t.plaqueText, t.plaqueBg) < 4.5 then error(name .. ": plaqueText on plaqueBg") end
+    end
+end)

@@ -307,6 +307,14 @@ function Kit.panel(parent, title)
         f:SetHeight(Kit.panelHeight(rows, self.rowH, extra))
     end
     p.height = function() return f:GetHeight() end
+    -- A button covering the header, e.g. to fold the panel. Returns it (also p.headerHit).
+    function p:onHeaderClick(fn)
+        local hit = CreateFrame("Button", nil, head)
+        hit:SetAllPoints(head)
+        hit:SetScript("OnClick", fn)
+        self.headerHit = hit
+        return hit
+    end
     p:setTitle(title)
     return p
 end
@@ -394,4 +402,64 @@ function Kit.tile(parent, width, height)
         paint()
     end
     return tile
+end
+
+-- Check box -------------------------------------------------------------------
+
+-- A themed check box with its label on the right. Same calls as a game check button:
+-- SetChecked / GetChecked; `onToggle(checked)` runs after a click.
+function Kit.check(parent, text)
+    local b = CreateFrame("Button", nil, parent)
+    b:SetSize(18, 18)
+    local bg = b:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints(b)
+    Kit.rings(b, { "inputEdge" })
+    b.mark = b:CreateTexture(nil, "OVERLAY")
+    b.mark:SetPoint("TOPLEFT", b, "TOPLEFT", 5, -5)
+    b.mark:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -5, 5)
+    b.label = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.label:SetPoint("LEFT", b, "RIGHT", 6, 0)
+    b.checked = false
+    register(function()
+        paintTexture(bg, "inputBg")
+        paintTexture(b.mark, "checkMark")
+        setTextColor(b.label, "textMain")
+    end)
+
+    b.SetChecked = function(self, value)
+        self.checked = value and true or false
+        self.mark:SetShown(self.checked)
+    end
+    b.GetChecked = function(self) return self.checked end
+    b:SetScript("OnClick", function(self)
+        self:SetChecked(not self.checked)
+        if self.onToggle then self.onToggle(self.checked) end
+    end)
+    b.setText = function(self, value) self.label:SetText(value or "") end
+    b:SetChecked(false)
+    b:setText(text)
+    return b
+end
+
+-- Input box ---------------------------------------------------------------------
+
+-- A themed single-line edit box, 22 px high, text centred.
+function Kit.input(parent, width, maxLetters)
+    local box = CreateFrame("EditBox", nil, parent)
+    box:SetSize(width or 52, 22)
+    box:SetAutoFocus(false)
+    box:SetFontObject("GameFontHighlightSmall")
+    box:SetJustifyH("CENTER")
+    box:SetTextInsets(4, 4, 0, 0)
+    if maxLetters then box:SetMaxLetters(maxLetters) end
+    local bg = box:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints(box)
+    Kit.rings(box, { "inputEdge" })
+    register(function()
+        paintTexture(bg, "inputBg")
+        setTextColor(box, "textMain")
+    end)
+    box:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+    box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    return box
 end

@@ -254,13 +254,14 @@ function Controller.levelData()
     local prof = DB.currentKnown(CraftProfitCharDB)
     local age = Prices.snapshotAge(Controller.market(), time())
     local data = {
-        showGrey = settings.levelShowGrey == true, profession = prof, items = {}, hiddenGrey = 0,
+        showGrey = settings.levelShowGrey == true, sort = settings.levelSort, profession = prof,
+        items = {}, hiddenGrey = 0,
         ageText = Present.ageText(L, age), stale = age == nil or age > settings.staleAfter,
     }
     if prof then
         local ranked = Leveling.rank(prof.recipes, function(recipe)
             return Controller.evaluate(recipe, 1, true)
-        end, { showGrey = data.showGrey })
+        end, { showGrey = data.showGrey, sort = data.sort })
         data.items, data.hiddenGrey = ranked.items, ranked.hiddenGrey
     end
     return data
@@ -268,6 +269,12 @@ end
 
 function Controller.setLevelShowGrey(value)
     CraftProfitDB.settings.levelShowGrey = value and true or false
+    if ns.LevelingUI then ns.LevelingUI.refresh() end
+end
+
+function Controller.toggleLevelSort()
+    local settings = CraftProfitDB.settings
+    settings.levelSort = settings.levelSort == "speed" and "cost" or "speed"
     if ns.LevelingUI then ns.LevelingUI.refresh() end
 end
 

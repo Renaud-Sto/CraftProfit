@@ -34,6 +34,7 @@ ns.Locale.register("esES", {
     SEARCH_PRICES = "Buscar precios",
     SORT_NET = "Orden: ganancia",
     SORT_POINT = "Orden: coste/punto",
+    SORT_SPEED = "Orden: velocidad",
     PER_POINT_SHORT = "/pt",
     SEARCHING = "Buscando %d/%d",
     SEARCH_DONE = "Precios actualizados",

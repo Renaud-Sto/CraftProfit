@@ -14,7 +14,7 @@ H.test("initAccount fills defaults and returns the same table", function()
     local db = {}
     H.truthy(DB.initAccount(db) == db)
     H.eq(db.dbVersion, 1)
-    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false })
+    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost" })
     H.eq(db.prices, {})
 end)
 
@@ -33,7 +33,7 @@ H.test("initAccount replaces invalid settings with defaults", function()
         cut = 0 / 0, medianN = 99, staleAfter = -5, showPerPoint = "yes", costExpanded = "no",
         window = { point = "NOPE", x = 1, y = 2 },
     } })
-    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false })
+    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost" })
 end)
 
 H.test("initAccount keeps valid settings and floors medianN", function()
@@ -43,7 +43,7 @@ H.test("initAccount keeps valid settings and floors medianN", function()
         window = { point = "TOPLEFT", x = 100, y = -50, junk = 1 },
     } })
     H.eq(db.settings, {
-        cut = 0.5, medianN = 7, staleAfter = 120, showPerPoint = true, costExpanded = false, levelShowGrey = false,
+        cut = 0.5, medianN = 7, staleAfter = 120, showPerPoint = true, costExpanded = false, levelShowGrey = false, levelSort = "cost",
         window = { point = "TOPLEFT", x = 100, y = -50 },
     })
     H.eq(DB.initAccount({ settings = { cut = 0.51 } }).settings.cut, 0.05)

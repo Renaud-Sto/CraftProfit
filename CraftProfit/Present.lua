@@ -44,6 +44,15 @@ function Present.pointRow(L, fmt, perPoint)
     return "+" .. fmt(-cost) .. L.PER_POINT_SHORT, "profit"
 end
 
+-- How many crafts a skill point takes on average ("x4", "x1.3"), nil when no point is
+-- possible or the chance is unknown.
+function Present.craftsPerPoint(chance)
+    if not Util.isFinite(chance) or chance <= 0 or chance > 1 then return nil end
+    local n = 1 / chance
+    if math.abs(n - math.floor(n + 0.5)) < 0.05 then return string.format("x%d", math.floor(n + 0.5)) end
+    return string.format("x%.1f", n)
+end
+
 -- Label, value and tone of the cost per point line. A negative cost means each
 -- point pays for itself, which reads better as a gain than as a negative cost.
 local function perPointLine(L, fmt, perPoint)

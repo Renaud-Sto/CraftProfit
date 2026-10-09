@@ -7,7 +7,8 @@ local Leveling = {}
 ns.Leveling = Leveling
 
 -- recipes: normalised recipes; evaluate(recipe) returns an Evaluate result with the
--- per point figures. opts.showGrey keeps recipes that can no longer give a point
+-- per point figures. opts.sort is "cost" (cheapest point first, the default) or "speed"
+-- (likeliest point first). opts.showGrey keeps recipes that can no longer give a point
 -- (chance 0); by default they are left out. Recipes whose cost is unknown stay in,
 -- after the ones that can be ranked.
 -- Returns { items = { { recipe, result } ... } in display order, hiddenGrey = count }.
@@ -25,6 +26,7 @@ function Leveling.rank(recipes, evaluate, opts)
         end
     end
     local sorted = {}
-    for i, index in ipairs(Core.rankByPointCost(entries)) do sorted[i] = items[index] end
+    local rank = opts and opts.sort == "speed" and Core.rankBySpeed or Core.rankByPointCost
+    for i, index in ipairs(rank(entries)) do sorted[i] = items[index] end
     return { items = sorted, hiddenGrey = hidden }
 end

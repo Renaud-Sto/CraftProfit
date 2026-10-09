@@ -793,3 +793,21 @@ H.test("the leveling window opens beside the main window, or at the saved positi
     T.ns.LevelingUI.show()
     H.eq(points[#points], { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 120, 640 })
 end)
+
+H.test("the leveling window switches between the cost sort and the speed sort and remembers it", function()
+    local T = boot()
+    local C = T.ns.Controller
+    stock(T)
+    T.ns.Prices.store(C.market(), 1, 500, 10, 1699999940)
+    T.ns.DB.setKnown(T.env.CraftProfitCharDB, "164", "Forge", { raw(1, 1), raw(2, 0), raw(4, 2) }, 1700000000)
+    H.eq(C.levelData().sort, "cost")
+    C.toggleLevelSort()
+    H.eq(T.env.CraftProfitDB.settings.levelSort, "speed")
+    local ids = {}
+    for i, item in ipairs(C.levelData().items) do ids[i] = item.recipe.recipeID end
+    H.eq(ids, { 2, 1, 4 })    -- orange (100%), yellow (75%), green (25%)
+    C.toggleLevelSort()
+    H.eq(C.levelData().sort, "cost")
+    T.ns.LevelingUI.show()
+    C.toggleLevelSort()
+end)

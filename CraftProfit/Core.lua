@@ -140,6 +140,35 @@ function Core.rankByPointCost(entries)
     return result
 end
 
+-- Display order by speed of levelling: entries = { { chance = 0..1|nil, cost = copper|nil } }.
+-- The likeliest skill point first (fewest crafts per point); among equal chances the
+-- cheapest point first. Recipes that cannot give a point (chance 0) follow, then the
+-- ones whose chance is unknown. Ties keep their original order.
+function Core.rankBySpeed(entries)
+    local order = {}
+    for i, e in ipairs(entries) do
+        local group = 3
+        if Util.isFinite(e.chance) and e.chance > 0 then
+            group = 1
+        elseif e.chance == 0 then
+            group = 2
+        end
+        order[#order + 1] = {
+            index = i, group = group, chance = group == 1 and e.chance or 0,
+            cost = Util.isFinite(e.cost) and e.cost or math.huge,
+        }
+    end
+    table.sort(order, function(a, b)
+        if a.group ~= b.group then return a.group < b.group end
+        if a.chance ~= b.chance then return a.chance > b.chance end
+        if a.cost ~= b.cost then return a.cost < b.cost end
+        return a.index < b.index
+    end)
+    local result = {}
+    for i, o in ipairs(order) do result[i] = o.index end
+    return result
+end
+
 -- Display order by net result: entries = { { net = copper|nil } }. Most profitable
 -- (or least lossy) first, unknown results last, ties keep their original order.
 function Core.rankByNet(entries)

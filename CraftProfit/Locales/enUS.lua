@@ -34,6 +34,7 @@ ns.Locale.register("enUS", {
     SEARCH_PRICES = "Search prices",
     SORT_NET = "Sort: profit",
     SORT_POINT = "Sort: cost/point",
+    SORT_SPEED = "Sort: speed",
     PER_POINT_SHORT = "/pt",
     SEARCHING = "Searching %d/%d",
     SEARCH_DONE = "Prices updated",

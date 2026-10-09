@@ -183,3 +183,17 @@ H.test("rankByNet puts the most profitable first, unknown results last, ties in 
         { 3, 5, 4, 1, 2, 6 })
     H.eq(Core.rankByNet({}), {})
 end)
+
+H.test("rankBySpeed puts the likeliest point first, the cheapest among equals, no-point and unknown last", function()
+    local Core = H.newNS("Util", "Core").Core
+    H.eq(Core.rankBySpeed({
+        { chance = 0.25, cost = -500 },       -- 1
+        { chance = 1, cost = 900 },           -- 2
+        { chance = 0 },                       -- 3
+        { chance = 0.75, cost = 100 },        -- 4
+        {},                                   -- 5
+        { chance = 1, cost = 300 },           -- 6 same chance as 2, cheaper
+        { chance = 0.75 },                    -- 7 same chance as 4, cost unknown
+    }), { 6, 2, 4, 7, 1, 3, 5 })
+    H.eq(Core.rankBySpeed({}), {})
+end)

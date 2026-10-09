@@ -43,3 +43,19 @@ H.test("rank of nothing is empty", function()
     local Leveling = load().Leveling
     H.eq(Leveling.rank({}, evaluator({}), {}), { items = {}, hiddenGrey = 0 })
 end)
+
+H.test("the speed sort lists the likeliest points first and keeps the grey ones for the end", function()
+    local Leveling = load().Leveling
+    local ranked = Leveling.rank({ recipe(1), recipe(2), recipe(3), recipe(4) }, evaluator({
+        [1] = { cost = -900, chance = 0.25 }, [2] = { cost = 400, chance = 1 },
+        [3] = { cost = 100, chance = 0.75 }, [4] = { chance = 0 },
+    }), { sort = "speed", showGrey = true })
+    local ids = {}
+    for i, item in ipairs(ranked.items) do ids[i] = item.recipe.recipeID end
+    H.eq(ids, { 2, 3, 1, 4 })
+    -- the default is the cost sort
+    local byCost = Leveling.rank({ recipe(1), recipe(2), recipe(3) }, evaluator({
+        [1] = { cost = -900, chance = 0.25 }, [2] = { cost = 400, chance = 1 }, [3] = { cost = 100, chance = 0.75 },
+    }), {})
+    H.eq(byCost.items[1].recipe.recipeID, 1)
+end)

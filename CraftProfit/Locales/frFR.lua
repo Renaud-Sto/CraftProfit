@@ -34,6 +34,7 @@ ns.Locale.register("frFR", {
     SEARCH_PRICES = "Rechercher les prix",
     SORT_NET = "Tri : gain",
     SORT_POINT = "Tri : coût/point",
+    SORT_SPEED = "Tri : vitesse",
     PER_POINT_SHORT = "/pt",
     SEARCHING = "Recherche %d/%d",
     SEARCH_DONE = "Prix mis à jour",

@@ -24,7 +24,7 @@ local COLORS = {
 }
 
 local ctl, handlers
-local frame, titleText, professionButton, ageText, greyCheck, greyLabel, hiddenText, emptyText
+local frame, titleText, professionButton, sortButton, ageText, greyCheck, greyLabel, hiddenText, emptyText
 local rows = {}
 local offset = 0
 
@@ -47,6 +47,7 @@ function LevelingUI.refresh()
     local data = ctl.levelData()
     titleText:SetText(L.LEVEL_TITLE)
     greyLabel:SetText(L.LEVEL_SHOW_GREY)
+    sortButton:SetText(data.sort == "speed" and L.SORT_SPEED or L.SORT_POINT)
     greyCheck:SetChecked(data.showGrey)
     if not data.profession then
         professionButton:SetText("-")
@@ -74,6 +75,7 @@ function LevelingUI.refresh()
             row.name:SetText(recipe.name ~= "" and recipe.name or ("#" .. recipe.recipeID))
             local c = COLORS[recipe.difficulty or "normal"] or COLORS.normal
             row.name:SetTextColor(c[1], c[2], c[3])
+            row.crafts:SetText(ns.Present.craftsPerPoint(item.result.perPoint and item.result.perPoint.chance) or "")
             local text, tone = ns.Present.pointRow(L, ctl.fmt, item.result.perPoint)
             row.value:SetText(text)
             local tc = COLORS[tone] or COLORS.normal
@@ -142,12 +144,17 @@ function LevelingUI.init(controller, h)
 
     -- Cycles through the professions stored for this character.
     professionButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    professionButton:SetSize(150, 20)
+    professionButton:SetSize(120, 20)
     professionButton:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD, -34)
     professionButton:SetScript("OnClick", function() ctl.nextLevelProfession() end)
 
+    sortButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+    sortButton:SetSize(130, 20)
+    sortButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD - 18, -34)
+    sortButton:SetScript("OnClick", function() ctl.toggleLevelSort() end)
+
     ageText = newText(frame, "GameFontDisableSmall")
-    ageText:SetPoint("LEFT", professionButton, "RIGHT", 10, 0)
+    ageText:SetPoint("LEFT", professionButton, "RIGHT", 8, 0)
 
     greyCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
     greyCheck:SetSize(22, 22)
@@ -172,8 +179,12 @@ function LevelingUI.init(controller, h)
         row.selected:SetColorTexture(1, 1, 1, 0.08)
         row.name = newText(row, "GameFontHighlightSmall")
         row.name:SetPoint("LEFT", row, "LEFT", 2, 0)
-        row.name:SetWidth(WIDTH - PAD * 2 - 120)
+        row.name:SetWidth(WIDTH - PAD * 2 - 170)
         row.name:SetJustifyH("LEFT")
+        -- Crafts per point, a column of its own so the cost reads as loss x crafts.
+        row.crafts = newText(row, "GameFontDisableSmall")
+        row.crafts:SetPoint("RIGHT", row, "RIGHT", -112, 0)
+        row.crafts:SetJustifyH("RIGHT")
         row.value = newText(row, "GameFontHighlightSmall")
         row.value:SetPoint("RIGHT", row, "RIGHT", -2, 0)
         row.value:SetJustifyH("RIGHT")

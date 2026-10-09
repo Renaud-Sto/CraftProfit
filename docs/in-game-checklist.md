@@ -21,7 +21,7 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] Clicking the Materials header folds the reagent detail in (`+`) and out (`-`); the choice survives `/reload`. With 5+ reagents the window grows and nothing overlaps.
 
 ## Pinned recipes by cost per point
-- [ ] At the AH, the button at the top right of the pinned list reads "Tri : gain"; clicking it switches to "Tri : coût/point", ticks "Coût par point" and reorders the list, cheapest first. Rows show `21g 29s 84c/pt` (red), a recipe that pays for itself shows `+9s 33c/pt` (green), a grey recipe `n/d` and an unpriced one `?`, both at the bottom.
+- [ ] At the AH, the Sort button in the header of the Pinned recipes panel reads "Tri : gain"; clicking it switches to "Tri : coût/point", ticks "Coût par point" and reorders the list, cheapest first. Rows show `21g 29s 84c/pt` (red), a recipe that pays for itself shows `+9s 33c/pt` (green), a grey recipe `n/d` and an unpriced one `?`, both at the bottom.
 - [ ] The value beside "Coût par point" is green with a `+` when each point pays for itself and red otherwise; the best tile is outlined in gold; "Tri : gain" lists the most profitable pin first.
 - [ ] Unticking "Coût par point" returns the sort to "Tri : gain". The choice survives `/reload`.
 - [ ] Level the skill until a pinned recipe changes colour: after the profession window is opened again, its cost per point follows the new colour (pins no longer keep the colour they had when pinned).
@@ -67,7 +67,6 @@ Use a recipe with at least 5 reagents; `/console scriptErrors 1` on.
 - [ ] At the AH with pinned recipes, the window grows by the pinned list and the list starts just below the Options panel. The pinned list now follows the same rules as the other panels (see *Pinned list and leveling window (PR 3)*).
 - [ ] Closing the profession window hides the window (outside the AH); closing the AH hides it when it was opened from there.
 - [ ] `/cp kitdemo`: the check box and the input box look right (box, mark, label; the input is centred, takes focus on click) in all three themes.
-- [ ] Known small limits, not to be reported: the tiles leave 2 px on the right; the empty-state text (no recipe selected) ignores the theme.
 
 ## Pinned list and leveling window (PR 3)
 Pinned list (open the AH with pinned recipes):
@@ -76,7 +75,7 @@ Pinned list (open the AH with pinned recipes):
 - [ ] The thumb is bright enough to see against the track (known: the track itself is almost invisible on purpose).
 - [ ] Pinned names are orange, yellow, green or grey, matching the profession window. The colour is the one known when the profession window was last open: gain skill points, open the profession window, and the colours follow (with the profession closed they can lag). A pin without a known difficulty shows the plain text colour.
 - [ ] The selected row is tinted gold, the row under the mouse is highlighted, and a hovered selected row still looks right. Values are green for a gain, red for a loss, muted when unknown.
-- [ ] The Sort button in the panel header takes clicks (profit and cost/point alternate) and does not overlap the title "Recettes épinglées" under `/cp locale frFR`.
+- [ ] The Sort button in the panel header takes clicks (profit and cost/point alternate) and does not overlap the title "RECETTES ÉPINGLÉES" under `/cp locale frFR`.
 - [ ] Search prices, Scan AH and Leveling work. The status line below them: the longest French and Spanish messages (for example the "no reply from the server ... 15 minute cooldown" one) stay inside the window. Known: a status wrapping to three lines still overruns the bottom margin by about 14 px.
 - [ ] The pinned block sits inside the 12 px margin like the other panels and nothing overlaps the frame border. The window grows when the AH opens and shrinks when it closes.
 - [ ] `/cp kitdemo copper`, `steel`, `gold`: the pinned list, its scroll bar and its buttons repaint at once.

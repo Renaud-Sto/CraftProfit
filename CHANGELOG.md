@@ -17,7 +17,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 ### Changed
 - The pinned list and the leveling window have the new look, like the main window: a Pinned recipes panel with the sort button in its header, a Next point panel, themed buttons, and both follow the colour themes.
 - Pinned recipe names are coloured by difficulty (orange, yellow, green, grey), as in the profession window.
-- The main window has a new look: a result banner with the best way to sell and the net result, three tiles for the auction house, vendor and disenchant values, and separate Materials and Options panels. Its functions are unchanged; what you see differs: the best option is outlined on its tile instead of marked with ">", the per-point result is a coloured value beside its option instead of a "Gain per point" line, and the banner shows the verdict on one line. 
+- The main window has a new look: a result banner with the best way to sell and the net result, three tiles for the auction house, vendor and disenchant values, and separate Materials and Options panels. Its functions are unchanged; what you see differs: the best option is outlined on its tile instead of marked with ">", the per-point result is a coloured value beside its option instead of a "Gain per point" line, and the banner shows the verdict on one line.
 - The best tile of the main window now has a 2 px bright gold outline and a faint gold tint, so it stands out from the other tiles.
 - The partial-result warning ("PRICES MISSING") now sits in amber on the banner label line so it is never cut off; the French and Spanish "cost per point" option labels are shorter.
 

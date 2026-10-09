@@ -43,7 +43,7 @@ La case **Suivre l'historique** (à côté de Crafts) fait garder à CraftProfit
 
 ## À l'hôtel des ventes
 
-À l'ouverture de l'hôtel des ventes, la fenêtre affiche le panneau **Recettes épinglées** sous la recette, avec trois boutons : **Rechercher les prix** (le bouton principal), **Scanner l'HV** et **Montée de métier**, et une ligne de statut en dessous.
+À l'ouverture de l'hôtel des ventes, la fenêtre affiche le panneau **RECETTES ÉPINGLÉES** sous la recette, avec trois boutons : **Rechercher les prix** (le bouton principal), **Scanner l'HV** et **Montée de métier**, et une ligne de statut en dessous.
 
 - **Rechercher les prix** chiffre tous les composants et tous les objets obtenus des recettes épinglées, un objet à la fois, avec un compteur de progression. Les prix sont enregistrés avec leur date. Si vous fermez l'hôtel des ventes en cours de route, la recherche est annulée et les prix déjà reçus sont conservés.
 - **Scanner l'HV** lit tout l'hôtel des ventes d'un coup (le jeu autorise un scan complet par tranche de 15 minutes et par compte). Il chiffre des milliers d'objets, ce qui permet d'évaluer ensuite n'importe quelle recette. Si un autre addon lance un scan, CraftProfit utilise son résultat sans refaire de demande. Si le serveur ne répond pas, le statut le dit : le délai de 15 minutes est probablement en cours.

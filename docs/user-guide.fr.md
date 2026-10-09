@@ -25,7 +25,7 @@ Un prix inconnu s'affiche `?`, jamais zéro. Le bandeau a trois cas particuliers
 
 - *Aucun moyen de revendre cet objet* : aucune des trois tuiles n'est utilisable (toutes `n/d`).
 - *Incomplet : prix manquants* (ambre, sans valeur) : il manque un prix nécessaire au résultat, donc aucun résultat net n'est donné plutôt qu'un chiffre flatteur.
-- *Meilleur connu : Hôtel des ventes* (avec le résultat net, en ambre) : certains prix sont connus, donc une meilleure voie de vente et son résultat net sont affichés. L'avertissement est en ambre sur la ligne du libellé au-dessus, « RÉSULTAT · PRIX MANQUANTS » : le chiffre peut changer quand les prix manquants seront connus, et l'avertissement n'est jamais coupé.
+- *Meilleur connu : Hôtel des ventes* (avec le résultat net, en ambre) : certains prix sont connus, donc une meilleure voie de vente et son résultat net sont affichés. L'avertissement « RÉSULTAT · PRIX MANQUANTS » est en ambre sur la ligne du libellé au-dessus, où il a la place de s'afficher : le chiffre peut changer quand les prix manquants seront connus. Avec un montant très grand, le libellé peut quand même être raccourci.
 
 ### Crafts
 

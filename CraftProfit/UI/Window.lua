@@ -204,20 +204,8 @@ local function buildMaterials()
         if handlers.onCostToggle then handlers.onCostToggle(not expanded) end
     end)
     for i = 1, MAX_DETAIL do
-        local y = -(i - 1) * ROW_H
-        local hit = CreateFrame("Button", nil, panel.body)
-        hit:SetHeight(ROW_H)
-        hit:SetPoint("TOPLEFT", panel.body, "TOPLEFT", 0, y)
-        hit:SetPoint("TOPRIGHT", panel.body, "TOPRIGHT", 0, y)
-        local hover = hit:CreateTexture(nil, "BACKGROUND")
-        hover:SetAllPoints(hit)
-        Kit.onTheme(function(t)
-            local c = t.rowHover
-            hover:SetColorTexture(c[1], c[2], c[3], c[4])
-        end)
-        hover:Hide()
-        hit:HookScript("OnEnter", function() hover:Show() end)
-        hit:HookScript("OnLeave", function() hover:Hide() end)
+        -- A reagent row is never selected: its selected tint stays hidden.
+        local hit = Kit.listRow(panel.body, i, ROW_H, 0)
         local name = hit:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         name:SetPoint("LEFT", hit, "LEFT", 8, 0)
         name:SetPoint("RIGHT", hit, "RIGHT", -80, 0)

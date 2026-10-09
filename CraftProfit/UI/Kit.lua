@@ -293,10 +293,15 @@ function Kit.window(name, title, opts)
     f.titleText = text
 
     text:SetWordWrap(false)
+    -- Refreshes set the same title again and again: measure and paint only a new one.
+    local lastTitle
     f.setTitle = function(_, value)
+        value = value or ""
+        if value == lastTitle then return end
+        lastTitle = value
         text:SetWidth(0)  -- drop the previous constraint before measuring
         text:SetFontObject("GameFontNormal")
-        text:SetText(value or "")
+        text:SetText(value)
         local frameWidth = f:GetWidth()
         local maxWidth = type(frameWidth) == "number" and frameWidth - Kit.CLOSE_ROOM * 2 or nil
         local width = naturalWidth(text)
@@ -548,6 +553,35 @@ function Kit.tile(parent, width, height)
     return tile
 end
 
+-- List row --------------------------------------------------------------------
+
+-- A clickable list row: a Button of `rowH` pixels in slot `index` of `body`, with a
+-- hidden gold "selected" tint and a hover tint under whatever the caller adds. `rightInset`
+-- keeps the row clear of a scroll bar.
+function Kit.listRow(body, index, rowH, rightInset)
+    local y = -(index - 1) * rowH
+    local row = CreateFrame("Button", nil, body)
+    row:SetHeight(rowH)
+    row:SetPoint("TOPLEFT", body, "TOPLEFT", 0, y)
+    row:SetPoint("TOPRIGHT", body, "TOPRIGHT", -(rightInset or 0), y)
+    row.selected = row:CreateTexture(nil, "BACKGROUND")
+    row.selected:SetAllPoints(row)
+    row.selected:Hide()
+    -- Sublevel 1: the hover tint shows over the selected one.
+    local hover = row:CreateTexture(nil, "BACKGROUND", nil, 1)
+    hover:SetAllPoints(row)
+    hover:Hide()
+    register(function(t)
+        local s, h = t.bestFill, t.rowHover
+        row.selected:SetColorTexture(s[1], s[2], s[3], s[4])
+        hover:SetColorTexture(h[1], h[2], h[3], h[4])
+    end)
+    row:HookScript("OnEnter", function() hover:Show() end)
+    row:HookScript("OnLeave", function() hover:Hide() end)
+    row.hover = hover
+    return row
+end
+
 -- Check box -------------------------------------------------------------------
 
 -- A themed check box with its label on the right. Same calls as a game check button:
@@ -642,6 +676,16 @@ function Kit.scrollOffsetAt(total, visible, trackH, y)
     return math.floor(fraction * (total - visible) + 0.5)
 end
 
+-- Where on the thumb the pointer holds it: `y` pixels below the top of the track. Returns
+-- the distance from the thumb top when the pointer is on the thumb, else half the thumb
+-- height (the thumb then centres on the pointer); nil when the list fits.
+function Kit.scrollGrab(total, visible, offset, trackH, y)
+    local thumbH, top = Kit.scrollThumb(total, visible, offset, trackH)
+    if not thumbH or type(y) ~= "number" then return nil end
+    if y >= top and y <= top + thumbH then return y - top end
+    return thumbH / 2
+end
+
 -- A slim scroll bar for a list that shows `visible` of `total` rows. The track takes
 -- clicks and drags; `bar.onScroll(offset)` is asked for the matching row offset and
 -- the owner calls `bar:update(total, visible, offset)` after it has scrolled. Hidden
@@ -674,20 +718,44 @@ function Kit.scrollbar(parent, trackH)
         return true
     end
 
-    local dragging = false
-    local function follow()
+    -- `grab`: where on the thumb the pointer holds it, kept for the whole drag.
+    local dragging, grab = false, 0
+    -- Pointer distance below the top of the track; nil when it cannot be measured.
+    local function pointerY()
         local _, cursorY = GetCursorPosition()
         local top, scale = f:GetTop(), f:GetEffectiveScale()
         if type(cursorY) ~= "number" or type(top) ~= "number" or type(scale) ~= "number" or scale <= 0 then
-            return
+            return nil
         end
-        local offset = Kit.scrollOffsetAt(bar.total, bar.visible, bar.trackH, top - cursorY / scale)
+        return top - cursorY / scale
+    end
+    local function follow()
+        local y = pointerY()
+        if not y then return end
+        local thumbH = Kit.scrollThumb(bar.total, bar.visible, bar.offset, bar.trackH)
+        if not thumbH then return end
+        local offset = Kit.scrollOffsetAt(bar.total, bar.visible, bar.trackH, y - grab + thumbH / 2)
         if offset ~= bar.offset and bar.onScroll then bar.onScroll(offset) end
     end
-    f:SetScript("OnMouseDown", function() dragging = true; follow() end)
+    f:SetScript("OnMouseDown", function(_, button)
+        if button ~= nil and button ~= "LeftButton" then return end
+        local y = pointerY()
+        if not y then return end
+        grab = Kit.scrollGrab(bar.total, bar.visible, bar.offset, bar.trackH, y) or 0
+        dragging = true
+        follow()
+    end)
     f:SetScript("OnMouseUp", function() dragging = false end)
     f:SetScript("OnHide", function() dragging = false end)
-    f:SetScript("OnUpdate", function() if dragging then follow() end end)
+    f:SetScript("OnUpdate", function()
+        if not dragging then return end
+        -- A mouse-up that never arrives (alt-tab, a cinematic) must not leave a drag stuck.
+        if type(IsMouseButtonDown) == "function" and not IsMouseButtonDown("LeftButton") then
+            dragging = false
+            return
+        end
+        follow()
+    end)
     f:Hide()
     return bar
 end

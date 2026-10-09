@@ -839,3 +839,105 @@ H.test("a click that ends a drag runs no handler, on the tile and on the title",
     hit.scripts.OnClick(hit)
     H.eq(clicks, { "tile", "title", "tile2" })
 end)
+
+H.test("scrollGrab keeps the place of a thumb grabbed anywhere and centres a pointer off the thumb", function()
+    local Kit = load()
+    -- 12 rows, 6 visible, track 100: the thumb is 50 high; at offset 0 it covers y 0..50
+    H.eq(Kit.scrollGrab(12, 6, 0, 100, 10), 10)
+    H.eq(Kit.scrollGrab(12, 6, 0, 100, 50), 50)
+    H.eq(Kit.scrollGrab(12, 6, 0, 100, 80), 25)
+    -- at offset 6 it covers y 50..100
+    H.eq(Kit.scrollGrab(12, 6, 6, 100, 60), 10)
+    H.eq(Kit.scrollGrab(12, 6, 6, 100, 20), 25)
+    H.eq(Kit.scrollGrab(6, 6, 0, 100, 10), nil)
+    H.eq(Kit.scrollGrab(nil, 6, 0, 100, 10), nil)
+end)
+
+H.test("grabbing the thumb off-centre does not move the list, then dragging follows the pointer", function()
+    local _, Kit = boot()
+    local bar = Kit.scrollbar(nil, 100)
+    local asked = {}
+    bar.onScroll = function(offset) asked[#asked + 1] = offset end
+    bar:update(12, 6, 3)             -- thumb at y 25..75
+    bar.frame.GetTop = function() return 700 end
+    bar.frame.GetEffectiveScale = function() return 1 end
+    -- press near the top edge of the thumb (y = 28): the list must not jump
+    withCursor(672, function() bar.frame.scripts.OnMouseDown(bar.frame, "LeftButton") end)
+    H.eq(asked, {})
+    -- move 22 px down: the thumb follows (50 free px for 6 rows: 3 + 2.64, rounded to 6)
+    withCursor(650, function() bar.frame.scripts.OnUpdate(bar.frame) end)
+    H.eq(asked, { 6 })
+end)
+
+H.test("only the left button starts a drag and a lost mouse-up ends it", function()
+    local _, Kit = boot()
+    local bar = Kit.scrollbar(nil, 100)
+    local asked = {}
+    bar.onScroll = function(offset) asked[#asked + 1] = offset end
+    bar:update(12, 6, 0)
+    bar.frame.GetTop = function() return 700 end
+    bar.frame.GetEffectiveScale = function() return 1 end
+    withCursor(600, function() bar.frame.scripts.OnMouseDown(bar.frame, "RightButton") end)
+    H.eq(asked, {})
+    withCursor(600, function() bar.frame.scripts.OnUpdate(bar.frame) end)
+    H.eq(asked, {})
+    local saved = _G.IsMouseButtonDown
+    _G.IsMouseButtonDown = function() return true end
+    withCursor(600, function() bar.frame.scripts.OnMouseDown(bar.frame, "LeftButton") end)
+    H.eq(asked, { 6 })
+    bar:update(12, 6, 6)
+    -- the button is no longer down although no mouse-up arrived: the drag stops
+    _G.IsMouseButtonDown = function() return false end
+    withCursor(650, function() bar.frame.scripts.OnUpdate(bar.frame) end)
+    H.eq(asked, { 6 })
+    _G.IsMouseButtonDown = saved
+end)
+
+H.test("a list row has a hidden selected tint, a hover tint and the anchors of its slot", function()
+    local T, Kit = boot()
+    local points, textures = {}, {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.SetPoint = function(_, ...) points[#points + 1] = { ... } end
+        f.CreateTexture = function()
+            local t = W.frame()
+            t.SetColorTexture = function(self, r, g, b, a) self.color = { r, g, b, a } end
+            textures[#textures + 1] = t
+            return t
+        end
+        return f
+    end
+    local body = {}
+    local row = Kit.listRow(body, 3, 18, 14)
+    H.eq(points[1], { "TOPLEFT", body, "TOPLEFT", 0, -36 })
+    H.eq(points[2], { "TOPRIGHT", body, "TOPRIGHT", -14, -36 })
+    local selected, hover = textures[1], textures[2]
+    H.eq(row.selected, selected)
+    H.falsy(selected.shown)
+    H.falsy(hover.shown)
+    H.eq(selected.color, T.ns.Theme.get("gold").bestFill)
+    H.eq(hover.color, T.ns.Theme.get("gold").rowHover)
+    row.scripts.OnEnter(row)
+    H.truthy(hover.shown)
+    row.scripts.OnLeave(row)
+    H.falsy(hover.shown)
+    Kit.applyTheme("steel")
+    H.eq(selected.color, T.ns.Theme.get("steel").bestFill)
+end)
+
+H.test("the window title is measured and painted only when it changes", function()
+    local _, Kit = boot()
+    local win = Kit.window("KitTitleOnce", "Recipe", {})
+    local measures = 0
+    win.titleText.GetUnboundedStringWidth = function() measures = measures + 1; return 100 end
+    win.titleText.GetStringWidth = function() measures = measures + 1; return 100 end
+    win:setTitle("Another")
+    local first = measures
+    H.truthy(first > 0)
+    win:setTitle("Another")
+    win:setTitle("Another")
+    H.eq(measures, first)
+    win:setTitle("Yet another")
+    H.truthy(measures > first)
+end)

@@ -260,6 +260,9 @@ local function buildOptions()
     parts.perPointValue = body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     parts.perPointValue:SetPoint("TOPRIGHT", body, "TOPRIGHT", -8, -OPTION_ROW_H - 7)
     parts.perPointValue:SetJustifyH("RIGHT")
+    -- The value wins: a long (translated) label is cut short before it runs under it.
+    perPoint.label:SetPoint("RIGHT", parts.perPointValue, "LEFT", -8, 0)
+    perPoint.label:SetWordWrap(false)
     parts.perPointTone = nil
     -- A gain or a cost keeps its fixed colour; a neutral value follows the theme.
     parts.paintPerPoint = function()

@@ -1,13 +1,40 @@
 local H = ...
 local W = dofile("tests/fakewow.lua")
 
+-- A fake texture that records the colour painted on it.
+local function recordingTexture()
+    local tex = W.frame()
+    tex.SetColorTexture = function(self, r, g, b, a) self.color = { r, g, b, a } end
+    return tex
+end
+
+-- A fake font string that records its anchors and its word wrap.
+local function recordingFontString()
+    local fs = W.frame()
+    fs.points = {}
+    fs.SetPoint = function(self, ...) self.points[#self.points + 1] = { ... } end
+    fs.SetWordWrap = function(self, v) self.wordWrap = v end
+    return fs
+end
+
 -- Real frames start shown (the fake ones do not): the window must hide itself.
-local function boot()
+-- opts.record: every frame keeps its textures in `f.textures` (recording their colour)
+-- and its font strings record anchors and word wrap.
+local function boot(opts)
     local T = W.boot(H)
     local create = T.env.CreateFrame
     T.env.CreateFrame = function(...)
         local f = create(...)
         f.shown = true
+        if opts and opts.record then
+            f.textures = {}
+            f.CreateTexture = function(self)
+                local tex = recordingTexture()
+                self.textures[#self.textures + 1] = tex
+                return tex
+            end
+            f.CreateFontString = function() return recordingFontString() end
+        end
         return f
     end
     T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
@@ -61,13 +88,26 @@ H.test("render shows the title, the banner and the three tiles", function()
 end)
 
 H.test("the banner tint follows the kind of result and not the theme", function()
-    local T, Window = boot()
+    local T, Window = boot({ record = true })
     local Theme = T.ns.Theme
+    -- The banner frame's first texture is its fill, the next four its ring.
+    local textures = Window.parts.frames.banner.textures
+    local function ringColours()
+        local list = {}
+        for i = 2, 5 do list[#list + 1] = textures[i].color end
+        return list
+    end
+    local function expected(c)
+        local want = { c[1], c[2], c[3], 0.45 }
+        return { want, want, want, want }
+    end
+    H.eq(#textures, 5)
     Window.render(model({ banner = { label = "RESULT", text = "Best: Auction house", value = "-2s", kind = "loss" } }))
-    local b = Window.parts.banner
-    H.eq({ b.edge[1], b.edge[2], b.edge[3] }, { Theme.FIXED.loss[1], Theme.FIXED.loss[2], Theme.FIXED.loss[3] })
+    H.eq(ringColours(), expected(Theme.FIXED.loss))
     T.ns.Kit.applyTheme("steel")
-    H.eq({ b.edge[1], b.edge[2], b.edge[3] }, { Theme.FIXED.loss[1], Theme.FIXED.loss[2], Theme.FIXED.loss[3] })
+    H.eq(ringColours(), expected(Theme.FIXED.loss))
+    Window.render(model())
+    H.eq(ringColours(), expected(Theme.FIXED.profit))
 end)
 
 H.test("an unfolded materials panel lists one row per cost line and hides the rest", function()
@@ -221,9 +261,28 @@ H.test("dropping the window reports its position", function()
     H.eq(calls[#calls], { "onMoved", "TOPLEFT", 100, 700 })
 end)
 
-H.test("switching theme after a render repaints without error", function()
+H.test("switching theme after a render repaints the window's texts", function()
     local T, Window = boot()
+    local Theme = T.ns.Theme
     Window.render(model({ showPerPoint = true, lines = { { label = "Cost per point", value = "1s", key = "perpoint", tone = "loss" } } }))
+    local p = Window.parts
+    local watched = {
+        { Window.frame().titleText, "plaqueText" },
+        { p.banner.label, "headText" },
+        { p.tiles[1].label, "headText" },
+        { p.rows[1].name, "textMain" },
+    }
+    for _, w in ipairs(watched) do
+        w[1].SetTextColor = function(self, r, g, b) self.colour = { r, g, b } end
+    end
+    T.ns.Kit.applyTheme("steel")
+    local steel, gold = Theme.get("steel"), Theme.get("gold")
+    for _, w in ipairs(watched) do
+        local token = w[2]
+        H.eq(w[1].colour, { steel[token][1], steel[token][2], steel[token][3] })
+        H.truthy(w[1].colour[1] ~= gold[token][1] or w[1].colour[2] ~= gold[token][2]
+            or w[1].colour[3] ~= gold[token][3])
+    end
     for _, name in ipairs({ "copper", "steel", "gold" }) do T.ns.Kit.applyTheme(name) end
     H.truthy(Window.frame())
 end)
@@ -241,4 +300,16 @@ H.test("a neutral per-point value follows the theme, a cost keeps its fixed colo
     Window.render(model({ showPerPoint = true, lines = { { label = "Cost per point", value = "1s", key = "perpoint", tone = "loss" } } }))
     Kit.applyTheme("gold")
     H.eq(colour, { Theme.FIXED.loss[1], Theme.FIXED.loss[2], Theme.FIXED.loss[3] })
+end)
+
+H.test("the per-point label stops before its value and never wraps", function()
+    local _, Window = boot({ record = true })
+    local p = Window.parts
+    local label = p.perPoint.label
+    local found = false
+    for _, point in ipairs(label.points) do
+        if point[1] == "RIGHT" and point[2] == p.perPointValue and point[3] == "LEFT" then found = true end
+    end
+    H.truthy(found)
+    H.eq(label.wordWrap, false)
 end)

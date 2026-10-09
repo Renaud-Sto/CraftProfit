@@ -56,7 +56,7 @@ read_globals = {
     "GetTradeSkillReagentInfo", "GetTradeSkillReagentItemLink",
     "GetTradeSkillNumMade",
     "ButtonFrameTemplate_HidePortrait", "ButtonFrameTemplate_HideButtonBar", "ButtonFrameTemplate_HideAttic",
-    "PlaySound", "SOUNDKIT", "NORMAL_FONT_COLOR", "HIGHLIGHT_FONT_COLOR",
+    "PlaySound", "SOUNDKIT", "NORMAL_FONT_COLOR", "HIGHLIGHT_FONT_COLOR", "DISABLED_FONT_COLOR",
     SlashCmdList = {
         other_fields = true,
         fields = { CRAFTPROFIT = { read_only = false } },

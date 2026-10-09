@@ -321,3 +321,268 @@ H.test("searchIcon falls back to the kit's lookup and reports when nothing was f
     H.eq(Native.searchIcon(tex), true)
     H.eq(file, 12345)
 end)
+
+-- Panel and tile ------------------------------------------------------------------
+
+-- A colour object like the game's (NORMAL_FONT_COLOR...): GetRGB and WrapTextInColorCode.
+local function color(r, g, b)
+    return {
+        GetRGB = function() return r, g, b end,
+        WrapTextInColorCode = function(_, text) return "|c" .. r .. g .. b .. text .. "|r" end,
+    }
+end
+
+-- Makes the client know every atlas.
+local function knownAtlases(env)
+    env.C_Texture = { GetAtlasInfo = function() return { width = 100, height = 4 } end }
+end
+
+-- Records every texture made by a frame: what atlas and colour it got, in creation order.
+local function recordTextures(env)
+    local textures = {}
+    local create = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        f.kind, f.template = kind, template
+        f.CreateTexture = function()
+            local tex = W.frame()
+            tex.SetAtlas = function(self, atlas) self.atlas = atlas end
+            tex.SetColorTexture = function(self, r, g, b, a) self.color = { r, g, b, a } end
+            textures[#textures + 1] = tex
+            return tex
+        end
+        return f
+    end
+    return textures
+end
+
+local function withAtlas(textures, atlas)
+    for _, tex in ipairs(textures) do
+        if rawget(tex, "atlas") == atlas then return tex end
+    end
+    return nil
+end
+
+H.test("a panel is as tall as a kit panel with the same rows", function()
+    local T, Native = boot()
+    local Kit = T.ns.Kit
+    local p = Native.panel(nil, "MATERIALS")
+    p:setRows(3, 18)
+    H.eq(p:height(), Kit.panelHeight(3, 18))
+    p:setRows(2, 18, 10)
+    H.eq(p:height(), Kit.panelHeight(2, 18, 10))
+    -- rowH is kept when not given.
+    p:setRows(4)
+    H.eq(p:height(), Kit.panelHeight(4, 18))
+    H.eq(Native.HEAD_H, Kit.HEAD_H)
+end)
+
+H.test("a panel keeps its title and right-hand text and sits on a game inset", function()
+    local _, Native, env = boot()
+    local made = recordFrames(env)
+    local p = Native.panel(nil, "MATERIALS")
+    H.eq(p.title.text, "MATERIALS")
+    p:setTitle("OPTIONS")
+    H.eq(p.title.text, "OPTIONS")
+    p.right:SetText("2g 33s")
+    H.eq(p.right.text, "2g 33s")
+    H.eq(p.inset.template, "InsetFrameTemplate")
+    H.eq(p.inset.createParent, p.frame)
+    H.truthy(made[1] == p.frame)
+end)
+
+H.test("a panel header can be made clickable with one Button at the panel's level", function()
+    local _, Native, env = boot()
+    local made = recordFrames(env)
+    local create = env.CreateFrame
+    env.CreateFrame = function(...)
+        local f = create(...)
+        f.GetFrameLevel = function() return 5 end
+        f.SetFrameLevel = function(self, level) self.level = level end
+        return f
+    end
+    local p = Native.panel(nil, "MATERIALS")
+    local clicks = 0
+    local hit = p:onHeaderClick(function() clicks = clicks + 1 end)
+    H.eq(p.headerHit, hit)
+    H.eq(hit.kind, "Button")
+    H.eq(hit.level, 5)
+    hit.scripts.OnClick(hit)
+    H.eq(clicks, 1)
+    local again = p:onHeaderClick(function() clicks = clicks + 10 end)
+    H.eq(again, hit)
+    hit.scripts.OnClick(hit)
+    H.eq(clicks, 11)
+    H.truthy(#made > 0)
+end)
+
+H.test("the header strip uses the variant chosen before the panel was built", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    local textures = recordTextures(env)
+    H.eq(Native.headerVariant, "a")
+    local a = Native.panel(nil, "A")
+    H.eq(a.headerAtlas, "questlog-reward-header-top")
+    H.eq(a.headerBg.atlas, "questlog-reward-header-top")
+    H.eq(Native.setHeaderVariant("b"), "b")
+    local b = Native.panel(nil, "B")
+    H.eq(b.headerAtlas, "friends-frame-toptexbg")
+    H.truthy(withAtlas(textures, "friends-frame-toptexbg"))
+    -- An unknown key keeps the current variant.
+    H.eq(Native.setHeaderVariant("zz"), "b")
+    H.eq(Native.headerVariant, "b")
+    Native.setHeaderVariant("c")
+    H.eq(Native.panel(nil, "C").headerAtlas, "_UI-Frame-TopTileStreaks")
+    -- The panel built earlier keeps its strip.
+    H.eq(a.headerAtlas, "questlog-reward-header-top")
+    H.truthy(a.divider)
+    H.eq(a.divider.atlas, "perks-divider-short")
+end)
+
+H.test("a panel without the header and divider atlases draws a faint gold strip and does not raise", function()
+    local _, Native, env = boot()
+    env.C_Texture = nil
+    env.NORMAL_FONT_COLOR = color(1, 0.82, 0)
+    recordTextures(env)
+    local p = Native.panel(nil, "X")
+    H.eq(p.headerAtlas, nil)
+    H.eq(p.divider, nil)
+    H.eq(p.headerBg.color, { 1, 0.82, 0, 0.15 })
+    -- No colour object either: still no error.
+    env.NORMAL_FONT_COLOR = nil
+    H.truthy(Native.panel(nil, "Y").frame)
+end)
+
+H.test("a tile shows its label, tag and value, and remembers whether it is the best one", function()
+    local _, Native, env = boot()
+    env.HIGHLIGHT_FONT_COLOR = color(1, 1, 1)
+    local tile = Native.tile(nil, 110, 52)
+    tile:set({ label = "DISENCH.", tag = "beta", value = "2g 2s" })
+    H.truthy(tile.label.text:find("DISENCH.", 1, true))
+    H.truthy(tile.label.text:find("beta", 1, true))
+    H.eq(tile.value.text, "2g 2s")
+    H.falsy(tile.best)
+    tile:set({ label = "AH", value = "3g 24s", best = true })
+    H.truthy(tile.best)
+    tile:set({ label = "AH", value = "n/a", muted = true })
+    H.falsy(tile.best)
+    H.truthy(tile.muted)
+    tile:set({})
+    H.eq(tile.value.text, "")
+    H.eq(tile.label.text, "")
+end)
+
+H.test("a muted tile greys its value with the game's disabled colour, otherwise the highlight one", function()
+    local _, Native, env = boot()
+    env.DISABLED_FONT_COLOR = color(0.5, 0.5, 0.5)
+    env.HIGHLIGHT_FONT_COLOR = color(1, 1, 1)
+    local tile = Native.tile(nil, 110, 52)
+    local last
+    tile.value.SetTextColor = function(_, r, g, b) last = { r, g, b } end
+    tile:set({ label = "AH", value = "n/a", muted = true })
+    H.eq(last, { 0.5, 0.5, 0.5 })
+    tile:set({ label = "AH", value = "1g" })
+    H.eq(last, { 1, 1, 1 })
+end)
+
+H.test("variant a draws the loot card and shows its stroke on the best tile only", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    local textures = recordTextures(env)
+    local tile = Native.tile(nil, 110, 52)
+    H.eq(tile.variant, "a")
+    H.eq(tile.bgAtlas, "looting_itemcard_bg")
+    local stroke = withAtlas(textures, "looting_itemcard_stroke_normal")
+    H.truthy(stroke)
+    H.eq(tile.outline, { stroke })
+    tile:set({ label = "AH", value = "1g", best = true })
+    H.eq(stroke.shown, true)
+    tile:set({ label = "AH", value = "1g" })
+    H.eq(stroke.shown, false)
+end)
+
+H.test("variant b, or a missing card atlas, draws a nested inset with a 2 px gold outline for the best", function()
+    local _, Native, env = boot()
+    env.NORMAL_FONT_COLOR = color(1, 0.82, 0)
+    recordTextures(env)
+    env.C_Texture = nil
+    local fallback = Native.tile(nil, 110, 52)
+    H.eq(fallback.bgAtlas, nil)
+    H.eq(fallback.inset.template, "InsetFrameTemplate")
+    H.eq(#fallback.outline, 4)
+    knownAtlases(env)
+    H.eq(Native.setTileVariant("b"), "b")
+    H.eq(Native.setTileVariant("nope"), "b")
+    local tile = Native.tile(nil, 110, 52)
+    H.eq(tile.variant, "b")
+    H.eq(tile.bgAtlas, nil)
+    H.eq(tile.inset.template, "InsetFrameTemplate")
+    H.eq(#tile.outline, 4)
+    for _, line in ipairs(tile.outline) do H.eq(line.color, { 1, 0.82, 0, 1 }) end
+    tile:set({ label = "AH", value = "1g", best = true })
+    for _, line in ipairs(tile.outline) do H.eq(line.shown, true) end
+    tile:set({ label = "AH", value = "1g" })
+    for _, line in ipairs(tile.outline) do H.eq(line.shown, false) end
+end)
+
+H.test("a tile steps its value down the game fonts until it fits, measured unbounded", function()
+    local T, Native = boot()
+    local Kit = T.ns.Kit
+    local tile = Native.tile(nil, 110, 52)
+    local fonts = {}
+    tile.value.SetFontObject = function(_, name) fonts[#fonts + 1] = name end
+    tile.value.GetStringWidth = function() return 50 end
+    tile.value.GetUnboundedStringWidth = function() return 200 end
+    tile:set({ label = "AH", value = "123456g 12s" })
+    local sizes = {}
+    for i, font in ipairs(Native.TILE_FONTS) do sizes[i] = font[2] end
+    local want = Kit.fitSize(200, sizes[1], 110 - Native.TILE_PAD * 2, sizes)
+    H.truthy(want < sizes[1])
+    local expected
+    for _, font in ipairs(Native.TILE_FONTS) do if font[2] == want then expected = font[1] end end
+    H.eq(fonts[#fonts], expected)
+    fonts = {}
+    tile.value.GetUnboundedStringWidth = function() return 40 end
+    tile:set({ label = "AH", value = "1g" })
+    H.eq(fonts, { "GameFontNormalHuge" })
+end)
+
+H.test("a clickable tile is a Button that fires, not on the click that ends a drag", function()
+    local _, Native, env = boot()
+    local made = recordFrames(env)
+    local tile = Native.tile(nil, 110, 52)
+    H.eq(tile.hit, nil)
+    local clicks = 0
+    local hit = tile:onClick(function() clicks = clicks + 1 end)
+    H.eq(tile.hit, hit)
+    H.eq(hit.kind, "Button")
+    hit.scripts.OnClick(hit)
+    H.eq(clicks, 1)
+    local win = Native.window("NativeTestTileDrag", "T")
+    Native.forwardDrag(hit, win)
+    hit.scripts.OnMouseDown(hit)
+    hit.scripts.OnDragStart(hit)
+    hit.scripts.OnDragStop(hit)
+    hit.scripts.OnClick(hit)
+    H.eq(clicks, 1)
+    H.truthy(#made > 0)
+end)
+
+H.test("a tile hover lights it up and showIcon shows the magnifier only when one was found", function()
+    local _, Native, env = boot()
+    local tile = Native.tile(nil, 110, 52)
+    tile:showIcon(true)  -- no hit yet: nothing to show, no error
+    local hit = tile:onClick(function() end)
+    hit.scripts.OnEnter(hit)
+    H.eq(tile.hover.shown, true)
+    hit.scripts.OnLeave(hit)
+    H.eq(tile.hover.shown, false)
+    env.C_Texture = nil
+    tile:showIcon(true)
+    H.eq(tile.icon.shown, false)
+    knownAtlases(env)
+    tile:showIcon(true)
+    H.eq(tile.icon.shown, true)
+    tile:showIcon(false)
+    H.eq(tile.icon.shown, false)
+end)

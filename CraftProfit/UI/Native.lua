@@ -62,10 +62,36 @@ end
 
 -- Paints a font string with one of the game's colour objects (NORMAL_FONT_COLOR...);
 -- does nothing when the object is missing or not a colour.
-local function paintText(fs, color)
-    if type(color) ~= "table" or type(color.GetRGB) ~= "function" then return end
+local function rgbOf(color)
+    if type(color) ~= "table" or type(color.GetRGB) ~= "function" then return nil end
     local ok, r, g, b = pcall(color.GetRGB, color)
-    if ok and type(r) == "number" then fs:SetTextColor(r, g, b) end
+    if ok and type(r) == "number" then return r, g, b end
+    return nil
+end
+
+local function paintText(fs, color)
+    local r, g, b = rgbOf(color)
+    if r then fs:SetTextColor(r, g, b) end
+end
+
+-- The client's description of an atlas, or nil when it does not know the name (or cannot
+-- say): an unknown atlas would draw nothing, or a green square.
+local function atlasInfo(name)
+    local api = C_Texture
+    if type(api) ~= "table" or type(api.GetAtlasInfo) ~= "function" then return nil end
+    local ok, info = pcall(api.GetAtlasInfo, name)
+    if ok and type(info) == "table" then return info end
+    return nil
+end
+
+-- Puts atlas `name` on `tex`, stretched to the texture's anchors. Returns the atlas info
+-- when it was applied, nil otherwise (the caller draws its fallback).
+local function applyAtlas(tex, name)
+    local info = atlasInfo(name)
+    if not info or not pcall(tex.SetAtlas, tex, name) then return nil end
+    -- A leading underscore marks an atlas made to tile horizontally (as the templates use it).
+    if name:sub(1, 1) == "_" and type(tex.SetHorizTile) == "function" then tex:SetHorizTile(true) end
+    return info
 end
 
 -- Magnifier ---------------------------------------------------------------------
@@ -326,4 +352,288 @@ function Native.input(parent, width, maxLetters)
     box:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
     box:HookScript("OnEscapePressed", function(self) self:ClearFocus() end)
     return box
+end
+
+-- Panel ---------------------------------------------------------------------------
+
+Native.HEAD_H = 22
+-- Header strip candidates, chosen at the /cp kitdemo checkpoint. Switching applies to
+-- panels built afterwards (the demo rebuilds its window).
+Native.HEADER_VARIANTS = {
+    a = "questlog-reward-header-top",
+    b = "friends-frame-toptexbg",
+    c = "_UI-Frame-TopTileStreaks",
+}
+Native.headerVariant = "a"
+Native.DIVIDER_ATLAS = "perks-divider-short"
+-- The header sits this far inside the panel's inset border, on every side but the bottom;
+-- the body keeps the same margin at the bottom. 2 + 22 + 4 + rows + 2 = Kit.panelHeight.
+local PANEL_EDGE = 2
+
+-- Picks the header strip for panels built from now on; an unknown key keeps the current
+-- one. Returns the key in use.
+function Native.setHeaderVariant(key)
+    if Native.HEADER_VARIANTS[key] then Native.headerVariant = key end
+    return Native.headerVariant
+end
+
+-- A section of a window: the game's dark inset as background, a header strip with a title
+-- (and an optional right-hand text in p.right), a divider under it, and a body to fill.
+-- Same fields and methods as Kit.panel: frame, body, title, right, setTitle, setRows,
+-- height, onHeaderClick. Also: inset, headerBg, headerAtlas (nil when the fallback was
+-- drawn), divider (nil when its atlas is missing).
+function Native.panel(parent, title)
+    local Kit = ns.Kit
+    local p = {}
+    local f = CreateFrame("Frame", nil, parent)
+    p.frame = f
+    -- InsetFrameTemplate shares its parent's level (useParentLevel): everything else here is
+    -- in child frames, one level up, so it always draws over it.
+    p.inset = CreateFrame("Frame", nil, f, "InsetFrameTemplate")
+    p.inset:SetAllPoints(f)
+
+    local head = CreateFrame("Frame", nil, f)
+    head:SetPoint("TOPLEFT", f, "TOPLEFT", PANEL_EDGE, -PANEL_EDGE)
+    head:SetPoint("TOPRIGHT", f, "TOPRIGHT", -PANEL_EDGE, -PANEL_EDGE)
+    head:SetHeight(Native.HEAD_H)
+    p.head = head
+    local headBg = head:CreateTexture(nil, "BACKGROUND")
+    headBg:SetAllPoints(head)
+    p.headerBg = headBg
+    local atlas = Native.HEADER_VARIANTS[Native.headerVariant]
+    if applyAtlas(headBg, atlas) then
+        p.headerAtlas = atlas
+    else
+        -- A faint gold strip, the colour of the game's header text.
+        local r, g, b = rgbOf(NORMAL_FONT_COLOR)
+        if r then headBg:SetColorTexture(r, g, b, 0.15) end
+    end
+    local divider = head:CreateTexture(nil, "ARTWORK")
+    local info = applyAtlas(divider, Native.DIVIDER_ATLAS)
+    if info then
+        -- Centred on the header's bottom edge, at most 6 px tall whatever the atlas size.
+        divider:SetPoint("LEFT", head, "BOTTOMLEFT", 0, 0)
+        divider:SetPoint("RIGHT", head, "BOTTOMRIGHT", 0, 0)
+        divider:SetHeight(math.min(type(info.height) == "number" and info.height or 2, 6))
+        p.divider = divider
+    else
+        divider:Hide()
+    end
+
+    p.right = head:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    p.right:SetPoint("RIGHT", head, "RIGHT", -8, 0)
+    p.right:SetWordWrap(false)
+    p.title = head:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    p.title:SetPoint("LEFT", head, "LEFT", 8, 0)
+    -- Stops before the right-hand text: a long title is cut, never drawn under it.
+    p.title:SetPoint("RIGHT", p.right, "LEFT", -8, 0)
+    p.title:SetJustifyH("LEFT")
+    p.title:SetWordWrap(false)
+
+    p.body = CreateFrame("Frame", nil, f)
+    p.body:SetPoint("TOPLEFT", head, "BOTTOMLEFT", 0, -Kit.BODY_PAD)
+    p.body:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -PANEL_EDGE, PANEL_EDGE)
+
+    p.rowH = 18
+    function p:setTitle(text) self.title:SetText(text or "") end
+    function p:setRows(rows, rowH, extra)
+        self.rowH = rowH or self.rowH
+        f:SetHeight(Kit.panelHeight(rows, self.rowH, extra))
+    end
+    p.height = function() return f:GetHeight() end
+    -- A button covering the header, e.g. to fold the panel. Returns it (also p.headerHit);
+    -- calling it again replaces the handler of the same button.
+    function p:onHeaderClick(fn)
+        if not self.headerHit then
+            local hit = CreateFrame("Button", nil, head)
+            hit:SetAllPoints(head)
+            -- A child of the header would sit above buttons parented to the panel frame
+            -- (a sort button, say) and swallow their clicks, so stay at the panel's level.
+            local level = f:GetFrameLevel()
+            if type(level) == "number" then hit:SetFrameLevel(level) end
+            self.headerHit = hit
+        end
+        self.headerHit:SetScript("OnClick", fn)
+        return self.headerHit
+    end
+    p:setTitle(title)
+    return p
+end
+
+-- Tile ----------------------------------------------------------------------------
+
+-- Tile background candidates, chosen at the /cp kitdemo checkpoint; applies to tiles built
+-- afterwards. "a": the loot card atlas, its stroke as the best-tile outline. "b": a nested
+-- game inset with a 2 px gold outline for the best tile.
+Native.TILE_VARIANTS = { a = "looting_itemcard_bg", b = "inset" }
+Native.tileVariant = "a"
+Native.TILE_STROKE_ATLAS = "looting_itemcard_stroke_normal"
+Native.TILE_PAD = 10
+Native.TILE_ICON = 12
+-- The value font steps down this ladder of game fonts (never SetFont with a file) until it
+-- fits; the sizes are the fonts' heights, for Kit.fitSize.
+Native.TILE_FONTS = {
+    { "GameFontNormalHuge", 20 },
+    { "GameFontNormalLarge2", 18 },
+    { "GameFontNormalLarge", 16 },
+    { "GameFontNormalMed2", 14 },
+    { "GameFontNormal", 12 },
+}
+local TILE_OUTLINE = 2
+local HOVER_FILE = "Interface\\QuestFrame\\UI-QuestTitleHighlight"
+
+function Native.setTileVariant(key)
+    if Native.TILE_VARIANTS[key] then Native.tileVariant = key end
+    return Native.tileVariant
+end
+
+-- A 2 px outline inside `frame`, in the game's gold; hidden. Returns its four textures.
+local function goldOutline(frame)
+    local r, g, b = rgbOf(NORMAL_FONT_COLOR)
+    local lines = {}
+    local function line(p1, p2, width, height)
+        local tex = frame:CreateTexture(nil, "BORDER")
+        tex:SetPoint(p1, frame, p1, 0, 0)
+        tex:SetPoint(p2, frame, p2, 0, 0)
+        if width then tex:SetWidth(width) end
+        if height then tex:SetHeight(height) end
+        if r then tex:SetColorTexture(r, g, b, 1) end
+        tex:Hide()
+        lines[#lines + 1] = tex
+    end
+    line("TOPLEFT", "TOPRIGHT", nil, TILE_OUTLINE)
+    line("BOTTOMLEFT", "BOTTOMRIGHT", nil, TILE_OUTLINE)
+    line("TOPLEFT", "BOTTOMLEFT", TILE_OUTLINE, nil)
+    line("TOPRIGHT", "BOTTOMRIGHT", TILE_OUTLINE, nil)
+    return lines
+end
+
+-- A small card with a label and a large value that shrinks to fit its width. Same fields
+-- and methods as Kit.tile: frame, label, value, set(spec), onClick(fn), showIcon(show),
+-- hit, icon, best, muted. Also: variant (the one it was built with), bgAtlas (nil when the
+-- card atlas was missing and the inset was drawn instead), outline (the best-tile marks).
+function Native.tile(parent, width, height)
+    local Kit = ns.Kit
+    local tile = { best = false, muted = false, width = width, variant = Native.tileVariant }
+    local f = CreateFrame("Frame", nil, parent)
+    f:SetSize(width or 110, height or 52)
+    tile.frame = f
+    -- Texts, outline and hover live on `face`, a child one level above the background
+    -- (the nested inset shares the tile's level).
+    local face = CreateFrame("Frame", nil, f)
+    face:SetAllPoints(f)
+    tile.face = face
+
+    local cardAtlas = Native.TILE_VARIANTS.a
+    if tile.variant == "a" then
+        local bg = f:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints(f)
+        if applyAtlas(bg, cardAtlas) then
+            tile.bgAtlas = cardAtlas
+        else
+            bg:Hide()
+        end
+    end
+    if not tile.bgAtlas then
+        tile.inset = CreateFrame("Frame", nil, f, "InsetFrameTemplate")
+        tile.inset:SetAllPoints(f)
+    end
+    -- The best mark: the card's own stroke when the card and its stroke exist, else gold.
+    local stroke
+    if tile.bgAtlas then
+        stroke = face:CreateTexture(nil, "BORDER")
+        stroke:SetAllPoints(face)
+        if applyAtlas(stroke, Native.TILE_STROKE_ATLAS) then
+            stroke:Hide()
+            tile.outline = { stroke }
+        end
+    end
+    if not tile.outline then
+        if stroke then stroke:Hide() end
+        tile.outline = goldOutline(face)
+    end
+
+    tile.label = face:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    tile.label:SetPoint("TOPLEFT", f, "TOPLEFT", Native.TILE_PAD, -8)
+    tile.label:SetPoint("TOPRIGHT", f, "TOPRIGHT", -Native.TILE_PAD, -8)
+    tile.label:SetJustifyH("LEFT")
+    tile.label:SetWordWrap(false)
+    tile.value = face:CreateFontString(nil, "OVERLAY", Native.TILE_FONTS[1][1])
+    tile.value:SetPoint("TOPLEFT", f, "TOPLEFT", Native.TILE_PAD, -24)
+    tile.value:SetPoint("TOPRIGHT", f, "TOPRIGHT", -Native.TILE_PAD, -24)
+    tile.value:SetJustifyH("LEFT")
+    tile.value:SetWordWrap(false)
+
+    local function paint()
+        for _, mark in ipairs(tile.outline) do mark:SetShown(tile.best) end
+        -- SetFontObject resets the colour to the font's own: paint after every font change.
+        paintText(tile.value, tile.muted and DISABLED_FONT_COLOR or HIGHLIGHT_FONT_COLOR)
+    end
+
+    -- spec: { label, tag, value, best, muted }
+    function tile:set(spec)
+        self.best = spec.best and true or false
+        self.muted = spec.muted and true or false
+        local label = spec.label or ""
+        if spec.tag then
+            local tag = spec.tag
+            local color = HIGHLIGHT_FONT_COLOR
+            if type(color) == "table" and type(color.WrapTextInColorCode) == "function" then
+                local ok, wrapped = pcall(color.WrapTextInColorCode, color, tag)
+                if ok and type(wrapped) == "string" then tag = wrapped end
+            end
+            label = label .. " " .. tag
+        end
+        self.label:SetText(label)
+        local fonts = Native.TILE_FONTS
+        local sizes = {}
+        for i, font in ipairs(fonts) do sizes[i] = font[2] end
+        self.value:SetFontObject(fonts[1][1])
+        self.value:SetText(spec.value or "")
+        local room = (f:GetWidth() or width or 110) - Native.TILE_PAD * 2
+        local size = Kit.fitSize(naturalWidth(self.value), sizes[1], room, sizes)
+        if size ~= sizes[1] then
+            for _, font in ipairs(fonts) do
+                if font[2] == size then self.value:SetFontObject(font[1]) end
+            end
+        end
+        paint()
+    end
+
+    -- Makes the whole tile a button (e.g. to search the item at the AH): the game's quest
+    -- highlight on hover and a magnifier at the top right that `tile:showIcon(true)`
+    -- reveals. Calling it again replaces the handler. The button takes the mouse: the owner
+    -- forwards drags to its window with Native.forwardDrag(tile.hit, window).
+    function tile:onClick(fn)
+        if not self.hit then
+            local hit = CreateFrame("Button", nil, f)
+            hit:SetAllPoints(f)
+            local hover = face:CreateTexture(nil, "BACKGROUND")
+            hover:SetAllPoints(face)
+            hover:SetTexture(HOVER_FILE)
+            hover:SetBlendMode("ADD")
+            hover:Hide()
+            hit:HookScript("OnEnter", function() hover:Show() end)
+            hit:HookScript("OnLeave", function() hover:Hide() end)
+            self.hover = hover
+            self.icon = hit:CreateTexture(nil, "OVERLAY")
+            self.icon:SetSize(Native.TILE_ICON, Native.TILE_ICON)
+            self.icon:SetPoint("TOPRIGHT", hit, "TOPRIGHT", -6, -6)
+            self.icon:Hide()
+            self.hit = hit
+        end
+        -- A click that ends a drag (see Native.forwardDrag) runs nothing.
+        local hit = self.hit
+        hit:SetScript("OnClick", function(...)
+            if hit.dragged == true then return end
+            fn(...)
+        end)
+        return hit
+    end
+
+    function tile:showIcon(show)
+        if not self.icon then return end
+        if show and Native.searchIcon(self.icon) then self.icon:Show() else self.icon:Hide() end
+    end
+    return tile
 end

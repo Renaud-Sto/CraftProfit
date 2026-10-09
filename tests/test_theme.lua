@@ -98,3 +98,8 @@ H.test("meaningful colours and text stay readable on the panels of every theme",
         if contrast(t.primaryText, t.primaryBg) < 4.5 then error(name .. ": primaryText") end
     end
 end)
+
+H.test("the hover fill token exists in every theme", function()
+    local Theme = load()
+    for _, name in ipairs(Theme.list()) do H.truthy(Theme.get(name).rowHover) end
+end)

@@ -198,7 +198,7 @@ H.test("a tile steps its value font down until the text fits, and keeps the big 
     tile.value.SetFont = function(_, _, size) sizes[#sizes + 1] = size end
     tile.value.GetStringWidth = function() return measured end
     tile:set({ label = "AH", value = "123456g 12s" })
-    local expected = Kit.fitSize(200, 19, 90, Kit.TILE_SIZES)
+    local expected = Kit.fitSize(200, 19, 110 - Kit.TILE_PAD * 2, Kit.TILE_SIZES)
     H.truthy(expected < Kit.TILE_SIZES[1])
     H.eq(sizes[#sizes], expected)
     sizes = {}
@@ -273,4 +273,117 @@ H.test("a small button fits the usable height of a panel header with equal margi
     local usable = Kit.HEAD_H - 1
     H.eq((usable - Kit.SMALL_BUTTON_H) % 2, 0)
     H.truthy(Kit.SMALL_BUTTON_H <= usable - 2)
+end)
+
+-- Frames whose textures record the last colour they were given, so a repaint is observable.
+local function recordingFrames(T)
+    local rec = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.CreateTexture = function()
+            local tex = W.frame()
+            tex.SetColorTexture = function(self, r, g, b, a) self.color = { r, g, b, a } end
+            rec[#rec + 1] = tex
+            return tex
+        end
+        return f
+    end
+    return rec
+end
+
+H.test("mix moves a colour toward another by a fraction, channel by channel", function()
+    local Kit = load()
+    H.eq(Kit.mix({ 0, 0, 0, 1 }, { 1, 0.5, 1, 0 }, 0.5), { 0.5, 0.25, 0.5, 0.5 })
+    H.eq(Kit.mix({ 0.2, 0.2, 0.2, 1 }, { 1, 1, 1, 1 }, 0), { 0.2, 0.2, 0.2, 1 })
+end)
+
+H.test("colorEscape turns a colour into a chat colour escape and clamps out-of-range channels", function()
+    local Kit = load()
+    H.eq(Kit.colorEscape({ 1, 0.82, 0, 1 }), "|cffffd100")
+    H.eq(Kit.colorEscape({ 0, 0, 0, 1 }), "|cff000000")
+    H.eq(Kit.colorEscape({ 2, -1, 0.5, 1 }), "|cffff0080")
+end)
+
+H.test("plaqueWidth keeps the minimum, grows with the title and stops at the window width", function()
+    local Kit = load()
+    H.eq(Kit.plaqueWidth(50, 348), 210)
+    H.eq(Kit.plaqueWidth(200, 348), 244)
+    H.eq(Kit.plaqueWidth(400, 348), 348)
+    H.eq(Kit.plaqueWidth(nil, 348), 210)
+    H.eq(Kit.plaqueWidth(300, nil), 344)
+end)
+
+H.test("onTheme paints now and again on every theme switch", function()
+    local _, Kit = boot()
+    local seen = {}
+    Kit.onTheme(function(t) seen[#seen + 1] = t.name end)
+    Kit.applyTheme("steel")
+    H.eq(seen, { "gold", "steel" })
+end)
+
+H.test("rings accept a function returning a colour table", function()
+    local T, Kit = boot()
+    local rec = recordingFrames(T)
+    local frame = T.env.CreateFrame("Frame")
+    local edge = { 1, 0, 0, 0.5 }
+    local refresh = Kit.rings(frame, { function() return edge end })
+    H.eq(rec[1].color, { 1, 0, 0, 0.5 })
+    edge[1] = 0.25
+    refresh()
+    H.eq(rec[1].color, { 0.25, 0, 0, 0.5 })
+end)
+
+H.test("a normal button lights up on hover and a primary one gets a lighter fill", function()
+    local T, Kit = boot()
+    local rec = recordingFrames(T)
+    local Theme = T.ns.Theme
+    local gold = Theme.get("gold")
+    local normal = Kit.button(nil, "normal", "Ok")
+    H.eq(rec[1].color, gold.buttonBg)
+    normal.scripts.OnEnter(normal)
+    H.eq(rec[1].color, gold.primaryBg)
+    normal.scripts.OnLeave(normal)
+    H.eq(rec[1].color, gold.buttonBg)
+    local before = #rec
+    local primary = Kit.button(nil, "primary", "Go")
+    local bg = rec[before + 1]
+    H.eq(bg.color, gold.primaryBg)
+    primary.scripts.OnEnter(primary)
+    H.eq(bg.color, Kit.mix(gold.primaryBg, gold.primaryEdge, 0.35))
+end)
+
+H.test("the plaque drags the window", function()
+    local _, Kit = boot()
+    local moved
+    local win = Kit.window("KitTestPlaque", "T", { onMoved = function(...) moved = { ... } end })
+    H.truthy(win.plaque.scripts.OnDragStart)
+    win.plaque.scripts.OnDragStop(win.plaque)
+    H.eq(moved, { "TOPLEFT", 100, 700 })
+end)
+
+H.test("a long title uses the small font and the plaque stops at the content width", function()
+    local _, Kit = boot()
+    local win = Kit.window("KitTestTitle", "T", { width = 372 })
+    local fonts, widths = {}, {}
+    win.GetWidth = function() return 372 end
+    win.titleText.SetFontObject = function(_, name) fonts[#fonts + 1] = name end
+    win.titleText.GetStringWidth = function() return 500 end
+    win.plaque.SetWidth = function(_, w) widths[#widths + 1] = w end
+    win:setTitle("A very long recipe name")
+    H.eq(fonts, { "GameFontNormal", "GameFontNormalSmall" })
+    H.eq(widths[#widths], 348)
+end)
+
+H.test("panel.right and the tile tag are painted from the theme, not a literal colour", function()
+    local T, Kit = boot()
+    local Theme = T.ns.Theme
+    local panel = Kit.panel(nil, "X")
+    local last
+    panel.right.SetTextColor = function(_, r, g, b, a) last = { r, g, b, a } end
+    Kit.applyTheme("steel")
+    H.eq(last, Theme.get("steel").textMain)
+    local tile = Kit.tile(nil, 110, 52)
+    tile:set({ label = "DISENCH.", tag = "beta", value = "1g" })
+    H.truthy(tile.label.text:find(Kit.colorEscape(Theme.FIXED.best) .. "beta", 1, true))
 end)

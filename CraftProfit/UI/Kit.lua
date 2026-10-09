@@ -18,6 +18,10 @@ Kit.CONTENT_TOP = 34
 Kit.CONTENT_SIDE = 12
 Kit.CONTENT_BOTTOM = 12
 Kit.TILE_SIZES = { 19, 17, 15, 13, 11 }
+Kit.PLAQUE_MIN = 210
+Kit.PLAQUE_PAD = 44
+Kit.TILE_PAD = 10
+Kit.FOLDED_H = Kit.HEAD_H + 2
 
 -- Height of a panel holding `rows` rows of `rowH` pixels (plus `extra`).
 function Kit.panelHeight(rows, rowH, extra)
@@ -70,6 +74,29 @@ function Kit.gradient(tex, top, bottom)
     return "flat"
 end
 
+-- Colour `a` moved toward colour `b` by the fraction `t` (0..1), channel by channel.
+function Kit.mix(a, b, t)
+    return {
+        a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t,
+        a[3] + (b[3] - a[3]) * t, a[4] + (b[4] - a[4]) * t,
+    }
+end
+
+-- "|cffRRGGBB" chat colour escape for a colour (alpha is ignored).
+function Kit.colorEscape(c)
+    local function byte(v) return math.floor(math.max(0, math.min(1, v)) * 255 + 0.5) end
+    return string.format("|cff%02x%02x%02x", byte(c[1]), byte(c[2]), byte(c[3]))
+end
+
+-- Width of a title plaque: wide enough for the text, never below the minimum, never
+-- above `maxWidth`; the minimum when the text cannot be measured.
+function Kit.plaqueWidth(textWidth, maxWidth)
+    local width = Kit.PLAQUE_MIN
+    if type(textWidth) == "number" then width = math.max(width, textWidth + Kit.PLAQUE_PAD) end
+    if type(maxWidth) == "number" then width = math.min(width, maxWidth) end
+    return width
+end
+
 Kit.themeName = Theme.DEFAULT
 Kit.current = Theme.get(Theme.DEFAULT)
 
@@ -91,9 +118,14 @@ function Kit.applyTheme(name)
     return Kit.current
 end
 
--- A token name, a function returning one, or "black".
+-- For code outside the kit that paints itself from the theme: `paint(theme)` is called
+-- now and on every theme switch.
+function Kit.onTheme(paint) register(paint) end
+
+-- A token name, a colour table, a function returning either, or "black".
 local function colorOf(token)
     if type(token) == "function" then token = token() end
+    if type(token) == "table" then return token end
     if token == "black" then return { 0, 0, 0, 1 } end
     return Kit.current[token]
 end
@@ -138,7 +170,6 @@ end
 -- Window ----------------------------------------------------------------------
 
 local WINDOW_RINGS = { "black", "frameInner", "frameInner", "frameShade", "frameOuter", "black" }
-local PLAQUE_MIN_WIDTH = 210
 
 -- A movable framed window with a title plaque straddling its top edge and a close
 -- button. `frame.content` is the area to fill. opts: width, height, onMoved(point, x, y).
@@ -157,8 +188,7 @@ function Kit.window(name, title, opts)
     register(function(t) bg:SetColorTexture(t.windowBg[1], t.windowBg[2], t.windowBg[3], t.windowBg[4]) end)
     Kit.rings(f, WINDOW_RINGS)
 
-    f:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    f:SetScript("OnDragStop", function(self)
+    local function stopDrag(self)
         self:StopMovingOrSizing()
         -- Re-anchor to the screen's bottom-left corner so saved offsets are absolute.
         local left, top = self:GetLeft(), self:GetTop()
@@ -167,11 +197,17 @@ function Kit.window(name, title, opts)
             self:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
             if opts.onMoved then opts.onMoved("TOPLEFT", left, top) end
         end
-    end)
+    end
+    f:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    f:SetScript("OnDragStop", stopDrag)
 
     local plaque = CreateFrame("Frame", nil, f)
     plaque:SetPoint("TOP", f, "TOP", 0, 14)
-    plaque:SetSize(PLAQUE_MIN_WIDTH, 26)
+    plaque:SetSize(Kit.PLAQUE_MIN, 26)
+    plaque:EnableMouse(true)
+    plaque:RegisterForDrag("LeftButton")
+    plaque:SetScript("OnDragStart", function() f:StartMoving() end)
+    plaque:SetScript("OnDragStop", function() stopDrag(f) end)
     local plaqueBg = plaque:CreateTexture(nil, "BACKGROUND")
     plaqueBg:SetAllPoints(plaque)
     register(function(t) plaqueBg:SetColorTexture(t.plaqueBg[1], t.plaqueBg[2], t.plaqueBg[3], t.plaqueBg[4]) end)
@@ -182,10 +218,20 @@ function Kit.window(name, title, opts)
     f.plaque = plaque
     f.titleText = text
 
+    text:SetWordWrap(false)
     f.setTitle = function(_, value)
+        text:SetFontObject("GameFontNormal")
         text:SetText(value or "")
+        local frameWidth = f:GetWidth()
+        local maxWidth = type(frameWidth) == "number" and frameWidth - Kit.CONTENT_SIDE * 2 or nil
         local width = text:GetStringWidth()
-        if type(width) == "number" then plaque:SetWidth(math.max(PLAQUE_MIN_WIDTH, width + 44)) end
+        if maxWidth and type(width) == "number" and width + Kit.PLAQUE_PAD > maxWidth then
+            text:SetFontObject("GameFontNormalSmall")
+            width = text:GetStringWidth()
+        end
+        local plaqueW = Kit.plaqueWidth(width, maxWidth)
+        plaque:SetWidth(plaqueW)
+        text:SetWidth(plaqueW - 16)
     end
     f:setTitle(title)
 
@@ -232,6 +278,7 @@ function Kit.panel(parent, title)
         Kit.gradient(headBg, t.headBgTop, t.headBgBottom)
         paintTexture(rule, "headRule")
         setTextColor(p.title, "headText")
+        setTextColor(p.right, "textMain")
     end)
 
     p.body = CreateFrame("Frame", nil, f)
@@ -265,13 +312,18 @@ function Kit.button(parent, kind, text)
 
     local hover = false
     local function paint(t)
-        local c = (primary or hover) and t.primaryBg or t.buttonBg
+        local c
+        if primary then
+            c = hover and Kit.mix(t.primaryBg, t.primaryEdge, 0.35) or t.primaryBg
+        else
+            c = hover and t.primaryBg or t.buttonBg
+        end
         bg:SetColorTexture(c[1], c[2], c[3], c[4])
         setTextColor(b.label, primary and "primaryText" or "buttonText")
     end
     register(paint)
-    b:SetScript("OnEnter", function() hover = true; paint(Kit.current) end)
-    b:SetScript("OnLeave", function() hover = false; paint(Kit.current) end)
+    b:HookScript("OnEnter", function() hover = true; paint(Kit.current) end)
+    b:HookScript("OnLeave", function() hover = false; paint(Kit.current) end)
 
     function b:setText(value) self.label:SetText(value or "") end
     b:setText(text)
@@ -292,9 +344,15 @@ function Kit.tile(parent, width, height)
     local refreshRings = Kit.rings(f, { function() return tile.best and "bestEdge" or "panelEdge" end })
 
     tile.label = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    tile.label:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -8)
+    tile.label:SetPoint("TOPLEFT", f, "TOPLEFT", Kit.TILE_PAD, -8)
+    tile.label:SetPoint("TOPRIGHT", f, "TOPRIGHT", -Kit.TILE_PAD, -8)
+    tile.label:SetJustifyH("LEFT")
+    tile.label:SetWordWrap(false)
     tile.value = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    tile.value:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -24)
+    tile.value:SetPoint("TOPLEFT", f, "TOPLEFT", Kit.TILE_PAD, -24)
+    tile.value:SetPoint("TOPRIGHT", f, "TOPRIGHT", -Kit.TILE_PAD, -24)
+    tile.value:SetJustifyH("LEFT")
+    tile.value:SetWordWrap(false)
 
     local function paint()
         setTextColor(tile.label, "headText")
@@ -308,12 +366,12 @@ function Kit.tile(parent, width, height)
         self.best = spec.best and true or false
         self.muted = spec.muted and true or false
         local label = spec.label or ""
-        if spec.tag then label = label .. " |cffffd100" .. spec.tag .. "|r" end
+        if spec.tag then label = label .. " " .. Kit.colorEscape(Theme.FIXED.best) .. spec.tag .. "|r" end
         self.label:SetText(label)
         local big = Kit.TILE_SIZES[1]
         self.value:SetFont(STANDARD_TEXT_FONT, big, "")
         self.value:SetText(spec.value or "")
-        local room = (f:GetWidth() or width or 110) - 20
+        local room = (f:GetWidth() or width or 110) - Kit.TILE_PAD * 2
         local size = Kit.fitSize(self.value:GetStringWidth(), big, room, Kit.TILE_SIZES)
         if size ~= big then self.value:SetFont(STANDARD_TEXT_FONT, size, "") end
         paint()

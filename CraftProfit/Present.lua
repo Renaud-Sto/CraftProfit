@@ -10,6 +10,7 @@ ns.Present = Present
 local LIKELY_MIN = 0.999
 local LINE_KEYS = { ah = "LINE_AH", vendor = "LINE_VENDOR", disenchant = "LINE_DISENCHANT" }
 local NAME_KEYS = { ah = "NAME_AH", vendor = "NAME_VENDOR", disenchant = "NAME_DISENCHANT" }
+local TILE_KEYS = { ah = "TILE_AH", vendor = "TILE_VENDOR", disenchant = "TILE_DISENCHANT" }
 local UNIT_KEYS = { sec = "AGE_SEC", min = "AGE_MIN", hour = "AGE_HOUR", day = "AGE_DAY" }
 
 local DEFAULT_STALE = 3600
@@ -134,11 +135,35 @@ function Present.build(result, L, fmt, opts)
             unitText = fmt(line.unit), subtotalText = fmt(line.subtotal),
         }
     end
+    local verdict = verdictFor(result, L, fmt)
+    local tiles = {}
+    for _, key in ipairs(Core.OPTION_ORDER) do
+        local option = result.options[key]
+        local text
+        if option.status == "ok" then
+            text = fmt(option.value)
+        elseif option.status == "na" then
+            text = L.NA
+        else
+            text = L.UNKNOWN
+        end
+        tiles[#tiles + 1] = {
+            key = key, label = L[TILE_KEYS[key]], value = text,
+            best = result.best == key, muted = option.status ~= "ok",
+            tag = key == "disenchant" and L.BETA_TAG or nil,
+        }
+    end
     return {
         lines = lines,
         crafts = crafts,
         costLines = costLines,
-        verdict = verdictFor(result, L, fmt),
+        verdict = verdict,
+        banner = { label = L.RESULT, text = verdict.text, value = verdict.value, kind = verdict.kind },
+        tiles = tiles,
+        materials = {
+            title = crafts > 1 and string.format(L.PANEL_MATERIALS_MULTI, crafts) or L.PANEL_MATERIALS,
+            total = fmt(result.cost.total),
+        },
         ageText = Present.ageText(L, result.oldestAge),
         stale = not Util.isFinite(result.oldestAge) or result.oldestAge > staleAfter,
     }

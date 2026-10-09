@@ -40,12 +40,12 @@ Price history view and graphs (designed separately afterwards, on the native kit
 
 ## Delivery
 
-One branch, one PR per step so each can be reverted alone:
+The native kit is a NEW module, `ns.Native` in `UI/Native.lua`, built beside the old `ns.Kit` so the addon keeps working after every PR. The old Kit and Theme go away only in the last step. One PR per step so each can be reverted alone:
 
-1. **Demo and base**: `Kit.window` on `ButtonFrameTemplate`, `Kit.panel` header strip, `Kit.button`, `check`, `input`, rewritten `/cp kitdemo` as a visual checkpoint (the user compares with the game's panels and picks the header strip and tile atlas); remove themes (Theme.lua to Colors.lua, `/cp theme`, swatch, `settings.theme`).
-2. **Main window** on the native kit (banner, tiles, materials, options), money icons.
-3. **Pinned list and leveling window**, native rows and scroll bar.
-4. **Docs and cleanup**: README, both user guides, technical notes, checklist, changelog; delete dead Kit code and tests; probe findings F10 (native templates).
+1. **Native foundations** (plan `2026-10-10-native-ui-foundations.md`): `Native.window` (on `ButtonFrameTemplate`), `panel`, `tile`, `button`, `check`, `input`, and a native `/cp kitdemo [a|b|c]` (header strip and tile variants) as the visual checkpoint. Nothing else changes; themes still work.
+2. **Main window** on `ns.Native` (banner, tiles, materials, options), money icons, meaning colours in `ns.Colors`.
+3. **Pinned list and leveling window**: native rows, hover and scroll bar (`Native.listRow`, `Native.scrollbar`).
+4. **Cleanup and docs**: delete `Kit.lua`, `Theme.lua`, `/cp theme`, the swatch, `settings.theme` (dropped by `DB.lua`), `KitDemo` old paths and their tests; move the pure layout helpers (`panelHeight`, `stack`, `fitSize`, scroll maths) into `UI/Layout.lua`; README, both user guides, technical notes, checklist, changelog; probe findings F10.
 
 Each step: `sh tests/check.sh` green, in-game checklist lines, and a screenshot comparison with the game's own panel.
 

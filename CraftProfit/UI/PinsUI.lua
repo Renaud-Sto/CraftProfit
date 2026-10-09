@@ -1,33 +1,31 @@
--- The pinned-recipes section of the window, shown while the AH is open, with
--- the "Search prices" and "Scan AH" buttons.
+-- The pinned-recipes section of the window, on the shared UI kit, shown while the
+-- AH is open, with the "Search prices", "Scan AH" and "Leveling" buttons.
 local _, ns = ...
 local L = ns.L
+local Kit, Theme = ns.Kit, ns.Theme
 
 local PinsUI = {}
 ns.PinsUI = PinsUI
 
-local PAD = 10
 local ROW_H = 18
 local VISIBLE = 6
-local TOP = 26
-local FOOTER_H = 76
+local BUTTON_H = 24
+local STATUS_H = 14
+local FOOTER_H = BUTTON_H + 6 + BUTTON_H + 6 + STATUS_H
 local SEARCH_TIMEOUT = 6
 local TICK_SECONDS = 0.2
-
-local COLORS = {
-    profit = { 0.35, 0.90, 0.45 },
-    loss = { 1.00, 0.40, 0.35 },
-    muted = { 0.65, 0.65, 0.70 },
-}
+local SCAN_REPLY_TIMEOUT = 15
 
 local ctl
-local host, header, emptyText, statusText, searchButton, scanButton, sortButton, levelButton
-local rows = {}
+local host, panel, statusText
+-- The widgets, exposed for tests.
+local parts = { rows = {} }
+local rows = parts.rows
 local offset = 0
 local queue, ticker
 local notFound = 0
-local SCAN_REPLY_TIMEOUT = 15
 
+PinsUI.parts = parts
 PinsUI.state = "idle"
 PinsUI.status = ""
 
@@ -68,10 +66,12 @@ function PinsUI.orderedPins(pins, sortMode, evaluate)
     return sorted
 end
 
--- Text and color of a row's value in the cost-per-point view.
+-- Text and colour of a row's value in the cost-per-point view.
 local function pointValue(perPoint)
     local text, tone = ns.Present.pointRow(L, ctl.fmt, perPoint)
-    return text, COLORS[tone]
+    local colour = tone == "profit" and Theme.FIXED.profit or tone == "loss" and Theme.FIXED.loss
+        or Kit.current.textMuted
+    return text, colour
 end
 
 function PinsUI.refresh()
@@ -82,33 +82,35 @@ function PinsUI.refresh()
     offset = math.max(0, math.min(offset, #pins - VISIBLE))
     local currentID = ctl.currentRecipeID()
 
-    header:SetText(L.PINS_TITLE)
-    sortButton:SetText(byPoint and L.SORT_POINT or L.SORT_NET)
-    searchButton:SetText(L.SEARCH_PRICES)
-    scanButton:SetText(L.SCAN)
-    levelButton:SetText(L.LEVEL_BUTTON)
-    emptyText:SetText(L.PINS_EMPTY)
-    emptyText:SetShown(#pins == 0)
+    panel:setTitle(L.PINS_TITLE)
+    parts.sort:setText(byPoint and L.SORT_POINT or L.SORT_NET)
+    parts.search:setText(L.SEARCH_PRICES)
+    parts.scan:setText(L.SCAN)
+    parts.level:setText(L.LEVEL_BUTTON)
+    parts.empty:SetText(L.PINS_EMPTY)
+    parts.empty:SetShown(#pins == 0)
 
     for i = 1, VISIBLE do
         local row, item = rows[i], ordered[offset + i]
         if item then
             local recipe, result = item.recipe, item.result
             row.recipeID = recipe.recipeID
-            row.name:SetWidth(ns.Window.WIDTH - PAD * 2 - (byPoint and 115 or 90))
             row.name:SetText(recipe.name ~= "" and recipe.name or ("#" .. recipe.recipeID))
+            -- The difficulty stored with the pin, kept up to date while the profession
+            -- window is open; a pin without one keeps the plain text colour.
+            local nc = Theme.FIXED[recipe.difficulty] or Kit.current.textMain
+            row.name:SetTextColor(nc[1], nc[2], nc[3], nc[4])
+            local text, c
             if byPoint then
-                local text, c = pointValue(result.perPoint)
-                row.value:SetText(text)
-                row.value:SetTextColor(c[1], c[2], c[3])
+                text, c = pointValue(result.perPoint)
             elseif result.net ~= nil then
-                row.value:SetText(ctl.fmt(result.net))
-                local c = result.net >= 0 and COLORS.profit or COLORS.loss
-                row.value:SetTextColor(c[1], c[2], c[3])
+                text = ctl.fmt(result.net)
+                c = result.net >= 0 and Theme.FIXED.profit or Theme.FIXED.loss
             else
-                row.value:SetText("?")
-                row.value:SetTextColor(COLORS.muted[1], COLORS.muted[2], COLORS.muted[3])
+                text, c = L.UNKNOWN, Kit.current.textMuted
             end
+            row.value:SetText(text)
+            row.value:SetTextColor(c[1], c[2], c[3], c[4])
             row.selected:SetShown(recipe.recipeID == currentID)
             row:Show()
         else
@@ -117,16 +119,19 @@ function PinsUI.refresh()
         end
     end
 
-    local shown = math.max(1, math.min(#pins, VISIBLE))
-    local top = TOP + shown * ROW_H + 6
-    searchButton:ClearAllPoints()
-    searchButton:SetPoint("TOPLEFT", host, "TOPLEFT", PAD, -top)
-    scanButton:ClearAllPoints()
-    scanButton:SetPoint("TOPRIGHT", host, "TOPRIGHT", -PAD, -top)
-    levelButton:ClearAllPoints()
-    levelButton:SetPoint("TOPLEFT", host, "TOPLEFT", PAD, -top - 26)
+    local shownRows = math.max(1, math.min(#pins, VISIBLE))
+    local panelH = Kit.panelHeight(shownRows, ROW_H)
+    panel.frame:SetHeight(panelH)
+    parts.bar:update(#pins, VISIBLE, offset)
+    local top = panelH + Kit.GAP
+    parts.search:ClearAllPoints()
+    parts.search:SetPoint("TOPLEFT", host, "TOPLEFT", 0, -top)
+    parts.scan:ClearAllPoints()
+    parts.scan:SetPoint("TOPRIGHT", host, "TOPRIGHT", 0, -top)
+    parts.level:ClearAllPoints()
+    parts.level:SetPoint("TOPLEFT", host, "TOPLEFT", 0, -top - BUTTON_H - 6)
     statusText:ClearAllPoints()
-    statusText:SetPoint("TOPLEFT", host, "TOPLEFT", PAD, -top - 52)
+    statusText:SetPoint("TOPLEFT", host, "TOPLEFT", 0, -top - (BUTTON_H + 6) * 2)
     host:SetHeight(top + FOOTER_H)
     ns.Window.relayout()
 end
@@ -215,55 +220,92 @@ end
 function PinsUI.init(controller)
     ctl = controller
     host = ns.Window.pinsHost()
+    local inner = ns.Window.INNER_WIDTH
+    local half = math.floor((inner - Kit.GAP) / 2)
 
-    header = host:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    header:SetPoint("TOPLEFT", host, "TOPLEFT", PAD, -6)
-    sortButton = CreateFrame("Button", nil, host, "UIPanelButtonTemplate")
-    sortButton:SetSize(120, 18)
-    sortButton:SetPoint("TOPRIGHT", host, "TOPRIGHT", -PAD, -4)
-    sortButton:SetScript("OnClick", function() ctl.toggleSort() end)
-    emptyText = host:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    emptyText:SetPoint("TOPLEFT", host, "TOPLEFT", PAD, -TOP - 2)
+    panel = Kit.panel(host, L.PINS_TITLE)
+    parts.panel = panel
+    panel.frame:SetPoint("TOPLEFT", host, "TOPLEFT", 0, 0)
+    panel.frame:SetPoint("TOPRIGHT", host, "TOPRIGHT", 0, 0)
+    panel.frame:SetHeight(Kit.panelHeight(1, ROW_H))
 
+    -- The sort button lives in the panel header, above the header's own hit area.
+    parts.sort = Kit.button(panel.frame, "small", "")
+    parts.sort:SetWidth(120)
+    parts.sort:SetPoint("TOPRIGHT", panel.frame, "TOPRIGHT", -6, -3)
+    parts.sort:SetScript("OnClick", function() ctl.toggleSort() end)
+
+    local body = panel.body
+    parts.empty = body:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    parts.empty:SetPoint("TOPLEFT", body, "TOPLEFT", 8, -2)
+    Kit.onTheme(function(t)
+        local c = t.textMuted
+        parts.empty:SetTextColor(c[1], c[2], c[3], c[4])
+    end)
+
+    local rightInset = Kit.SCROLL_W + 6
     for i = 1, VISIBLE do
-        local row = CreateFrame("Button", nil, host)
-        row:SetSize(ns.Window.WIDTH - PAD * 2, ROW_H)
-        row:SetPoint("TOPLEFT", host, "TOPLEFT", PAD, -(TOP + (i - 1) * ROW_H))
-        row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+        local y = -(i - 1) * ROW_H
+        local row = CreateFrame("Button", nil, body)
+        row:SetHeight(ROW_H)
+        row:SetPoint("TOPLEFT", body, "TOPLEFT", 0, y)
+        row:SetPoint("TOPRIGHT", body, "TOPRIGHT", -rightInset, y)
         row.selected = row:CreateTexture(nil, "BACKGROUND")
-        row.selected:SetAllPoints()
-        row.selected:SetColorTexture(1, 1, 1, 0.08)
+        row.selected:SetAllPoints(row)
+        local hover = row:CreateTexture(nil, "BACKGROUND")
+        hover:SetAllPoints(row)
+        Kit.onTheme(function(t)
+            local s, h = t.bestFill, t.rowHover
+            row.selected:SetColorTexture(s[1], s[2], s[3], s[4])
+            hover:SetColorTexture(h[1], h[2], h[3], h[4])
+        end)
+        hover:Hide()
+        row:HookScript("OnEnter", function() hover:Show() end)
+        row:HookScript("OnLeave", function() hover:Hide() end)
+        row.value = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.value:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+        row.value:SetJustifyH("RIGHT")
         row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row.name:SetPoint("LEFT", row, "LEFT", 2, 0)
-        row.name:SetWidth(ns.Window.WIDTH - PAD * 2 - 90)
+        row.name:SetPoint("LEFT", row, "LEFT", 8, 0)
+        row.name:SetPoint("RIGHT", row.value, "LEFT", -8, 0)
         row.name:SetJustifyH("LEFT")
         row.name:SetWordWrap(false)
-        row.value = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row.value:SetPoint("RIGHT", row, "RIGHT", -2, 0)
-        row.value:SetJustifyH("RIGHT")
         row:SetScript("OnClick", function(self)
             if self.recipeID then ctl.selectPin(self.recipeID) end
         end)
         rows[i] = row
     end
 
-    searchButton = CreateFrame("Button", nil, host, "UIPanelButtonTemplate")
-    searchButton:SetSize(120, 22)
-    searchButton:SetScript("OnClick", PinsUI.startSearch)
-    levelButton = CreateFrame("Button", nil, host, "UIPanelButtonTemplate")
-    levelButton:SetSize(120, 22)
-    levelButton:SetScript("OnClick", function() if ns.LevelingUI then ns.LevelingUI.toggle() end end)
-    scanButton = CreateFrame("Button", nil, host, "UIPanelButtonTemplate")
-    scanButton:SetSize(90, 22)
-    scanButton:SetScript("OnClick", PinsUI.scan)
+    parts.bar = Kit.scrollbar(body, VISIBLE * ROW_H)
+    parts.bar.frame:SetPoint("TOPRIGHT", body, "TOPRIGHT", -2, 0)
+    parts.bar.onScroll = function(newOffset)
+        offset = newOffset
+        PinsUI.refresh()
+    end
+
+    parts.search = Kit.button(host, "primary", "")
+    parts.search:SetWidth(half)
+    parts.search:SetScript("OnClick", PinsUI.startSearch)
+    parts.scan = Kit.button(host, "normal", "")
+    parts.scan:SetWidth(half)
+    parts.scan:SetScript("OnClick", PinsUI.scan)
+    parts.level = Kit.button(host, "normal", "")
+    parts.level:SetWidth(half)
+    parts.level:SetScript("OnClick", function() if ns.LevelingUI then ns.LevelingUI.toggle() end end)
     statusText = host:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    statusText:SetWidth(ns.Window.WIDTH - PAD * 2)
+    statusText:SetWidth(inner)
     statusText:SetJustifyH("LEFT")
+    Kit.onTheme(function(t)
+        local c = t.textMuted
+        statusText:SetTextColor(c[1], c[2], c[3], c[4])
+    end)
 
     host:EnableMouseWheel(true)
     host:SetScript("OnMouseWheel", function(_, delta)
         offset = math.max(0, offset - delta)
         PinsUI.refresh()
     end)
+    -- Muted values and the plain name colour come from the theme: redraw on a switch.
+    Kit.onTheme(function() PinsUI.refresh() end)
     host:Hide()
 end

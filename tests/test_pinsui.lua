@@ -226,3 +226,128 @@ H.test("the pins list refreshes in both sort modes without errors", function()
     T.ns.Controller.toggleSort()
     T.ns.PinsUI.refresh()
 end)
+
+local function openList(T)
+    T.ns.AH.isOpen = true
+    T.ns.Controller.onAHOpen(true)
+    return T.ns.PinsUI.parts
+end
+
+H.test("pinned names take the colour of their difficulty, a missing difficulty keeps the text colour", function()
+    local T = boot()
+    local Theme = T.ns.Theme
+    local pins = T.env.CraftProfitCharDB.pins
+    pins[1].difficulty = "optimal"
+    pins[2].difficulty = nil
+    local parts = openList(T)
+    local colours = {}
+    for i = 1, 2 do
+        parts.rows[i].name.SetTextColor = function(_, r, g, b, a) colours[i] = { r, g, b, a } end
+    end
+    T.ns.PinsUI.refresh()
+    local byID = {}
+    for i = 1, 2 do byID[parts.rows[i].recipeID] = colours[i] end
+    H.eq(byID[1], Theme.FIXED.optimal)
+    H.eq(byID[2], T.ns.Kit.current.textMain)
+end)
+
+H.test("each difficulty has its colour in the pinned list", function()
+    local T = boot()
+    local Theme = T.ns.Theme
+    local pins = T.env.CraftProfitCharDB.pins
+    local parts = openList(T)
+    local last
+    parts.rows[1].name.SetTextColor = function(_, r, g, b, a) last = { r, g, b, a } end
+    for _, name in ipairs({ "optimal", "medium", "easy", "trivial" }) do
+        for _, pin in ipairs(pins) do pin.difficulty = name end
+        T.ns.PinsUI.refresh()
+        H.eq(last, Theme.FIXED[name])
+    end
+end)
+
+H.test("the scroll bar shows only when there are more pins than rows and follows the offset", function()
+    local T = boot()
+    local parts = openList(T)
+    H.falsy(parts.bar.frame.shown)
+    for i = 3, 12 do
+        T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(i, 100, { { itemID = 1, qty = 1 } }))
+    end
+    T.ns.PinsUI.refresh()
+    H.truthy(parts.bar.frame.shown)
+    H.eq(parts.bar.total, 12)
+    H.eq(parts.bar.visible, 6)
+    H.eq(parts.bar.offset, 0)
+    parts.bar.onScroll(4)
+    H.eq(parts.bar.offset, 4)
+    parts.bar.onScroll(99)
+    H.eq(parts.bar.offset, 6)
+end)
+
+H.test("the mouse wheel scrolls the list and the bar, and removing pins clamps the offset", function()
+    local T = boot()
+    local parts = openList(T)
+    for i = 3, 12 do
+        T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(i, 100, { { itemID = 1, qty = 1 } }))
+    end
+    T.ns.PinsUI.refresh()
+    local host = T.ns.Window.pinsHost()
+    host.scripts.OnMouseWheel(host, -1)
+    host.scripts.OnMouseWheel(host, -1)
+    H.eq(parts.bar.offset, 2)
+    host.scripts.OnMouseWheel(host, 1)
+    H.eq(parts.bar.offset, 1)
+    for _ = 1, 7 do table.remove(T.env.CraftProfitCharDB.pins) end
+    T.ns.PinsUI.refresh()
+    H.eq(parts.bar.offset, 0)
+    H.falsy(parts.bar.frame.shown)
+end)
+
+H.test("the panel height follows the number of pinned rows shown and the host height follows the panel", function()
+    local T = boot()
+    local Kit = T.ns.Kit
+    local parts = openList(T)
+    H.eq(parts.panel.frame.height, Kit.panelHeight(2, 18))
+    for i = 3, 12 do
+        T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(i, 100, { { itemID = 1, qty = 1 } }))
+    end
+    T.ns.PinsUI.refresh()
+    H.eq(parts.panel.frame.height, Kit.panelHeight(6, 18))
+    local host = T.ns.Window.pinsHost()
+    H.truthy(host.height > Kit.panelHeight(6, 18))
+end)
+
+H.test("the sort button reads the sort mode and toggles it", function()
+    local T = boot()
+    local parts = openList(T)
+    H.eq(parts.sort.label.text, "Sort: profit")
+    parts.sort.scripts.OnClick(parts.sort)
+    H.eq(parts.sort.label.text, "Sort: cost/point")
+end)
+
+H.test("the three buttons read their text and keep their actions", function()
+    local T = boot()
+    local parts = openList(T)
+    H.eq(parts.search.label.text, "Search prices")
+    H.eq(parts.scan.label.text, "Scan AH")
+    H.eq(parts.level.label.text, "Leveling")
+    parts.search.scripts.OnClick(parts.search)
+    H.eq(T.ns.PinsUI.state, "running")
+    parts.level.scripts.OnClick(parts.level)
+    H.truthy(T.ns.LevelingUI.isShown())
+end)
+
+H.test("clicking a pinned row selects that recipe", function()
+    local T = boot()
+    local parts = openList(T)
+    local id2
+    for i = 1, 2 do if parts.rows[i].recipeID == 2 then id2 = parts.rows[i] end end
+    id2.scripts.OnClick(id2)
+    H.eq(T.ns.Controller.currentRecipeID(), 2)
+end)
+
+H.test("a theme switch repaints the pinned list without error", function()
+    local T = boot()
+    openList(T)
+    for _, name in ipairs({ "copper", "steel", "gold" }) do T.ns.Kit.applyTheme(name) end
+    H.truthy(T.ns.PinsUI.parts.panel)
+end)

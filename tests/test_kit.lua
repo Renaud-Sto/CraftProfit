@@ -941,3 +941,24 @@ H.test("the window title is measured and painted only when it changes", function
     win:setTitle("Yet another")
     H.truthy(measures > first)
 end)
+
+H.test("a window can have a theme swatch that runs its handler and shows the theme colour", function()
+    local T, Kit = boot()
+    recordingFrames(T)
+    local clicks = 0
+    local win = Kit.window("KitSwatch", "T", { onThemeClick = function() clicks = clicks + 1 end })
+    local hit = win.themeHit
+    H.truthy(hit)
+    hit.scripts.OnClick(hit)
+    H.eq(clicks, 1)
+    H.eq(win.themeSwatch.color, T.ns.Theme.get("gold").frameOuter)
+    Kit.applyTheme("copper")
+    H.eq(win.themeSwatch.color, T.ns.Theme.get("copper").frameOuter)
+    Kit.applyTheme("steel")
+    H.eq(win.themeSwatch.color, T.ns.Theme.get("steel").frameOuter)
+end)
+
+H.test("a window without a theme handler has no swatch", function()
+    local _, Kit = boot()
+    H.falsy(rawget(Kit.window("KitNoSwatch", "T", {}), "themeHit"))
+end)

@@ -320,6 +320,9 @@ function Window.create(h)
             if handlers.onMoved then handlers.onMoved(point, x, y) end
         end,
         onTitleClick = searchOutput,
+        onThemeClick = function()
+            if handlers.onThemeClick then handlers.onThemeClick() end
+        end,
     })
     content = frame.content
     buildBanner()

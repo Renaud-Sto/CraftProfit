@@ -244,7 +244,8 @@ end
 local WINDOW_RINGS = { "black", "frameInner", "frameInner", "frameShade", "frameOuter", "black" }
 
 -- A movable framed window with a title plaque straddling its top edge and a close
--- button. `frame.content` is the area to fill. opts: width, height, onMoved(point, x, y).
+-- button. `frame.content` is the area to fill. opts: width, height, onMoved(point, x, y),
+-- onTitleClick(), onThemeClick().
 function Kit.window(name, title, opts)
     opts = opts or {}
     local f = CreateFrame("Frame", name, UIParent)
@@ -344,6 +345,32 @@ function Kit.window(name, title, opts)
     close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -8, -8)
     close:SetScript("OnClick", function() f:Hide() end)
     f.close = close
+
+    -- opts.onThemeClick: a small square in the current theme's frame colour, left of the
+    -- close button and just under the plaque (its bottom edge is 12 px below the top).
+    -- It takes no drag: 14 px of the body are all it covers.
+    if opts.onThemeClick then
+        local hit = CreateFrame("Button", nil, f)
+        hit:SetSize(14, 14)
+        hit:SetPoint("TOPRIGHT", f, "TOPRIGHT", -32, -12)
+        local swatch = hit:CreateTexture(nil, "ARTWORK")
+        swatch:SetPoint("TOPLEFT", hit, "TOPLEFT", 1, -1)
+        swatch:SetPoint("BOTTOMRIGHT", hit, "BOTTOMRIGHT", -1, 1)
+        local tint = hit:CreateTexture(nil, "OVERLAY")
+        tint:SetAllPoints(swatch)
+        register(function(t)
+            paintTexture(swatch, "frameOuter")
+            local c = t.rowHover
+            tint:SetColorTexture(c[1], c[2], c[3], c[4])
+        end)
+        Kit.rings(hit, { "buttonEdge" })
+        tint:Hide()
+        hit:HookScript("OnEnter", function() tint:Show() end)
+        hit:HookScript("OnLeave", function() tint:Hide() end)
+        hit:SetScript("OnClick", function() opts.onThemeClick() end)
+        f.themeHit = hit
+        f.themeSwatch = swatch
+    end
 
     local content = CreateFrame("Frame", nil, f)
     content:SetPoint("TOPLEFT", f, "TOPLEFT", Kit.CONTENT_SIDE, -Kit.CONTENT_TOP)

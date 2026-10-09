@@ -66,6 +66,7 @@ ns.Locale.register("enUS", {
     LEVEL_HIDDEN = "%d grey hidden",
     LEVEL_EMPTY = "No known recipe yet. Open the profession window once.",
     LEVEL_NONE = "No recipe can give a skill point",
+    LEVEL_PANEL = "NEXT POINT",
     TRACK_LABEL = "Track history",
     TRACK_FULL = "Too many tracked recipes (%d max)",
     TRACK_ACTIVE = "tracking",

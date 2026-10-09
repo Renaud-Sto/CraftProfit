@@ -66,6 +66,7 @@ ns.Locale.register("esES", {
     LEVEL_HIDDEN = "%d grises ocultas",
     LEVEL_EMPTY = "Ninguna receta conocida. Abre una vez la ventana de profesión.",
     LEVEL_NONE = "Ninguna receta puede dar un punto",
+    LEVEL_PANEL = "PRÓXIMO PUNTO",
     TRACK_LABEL = "Seguir historial",
     TRACK_FULL = "Demasiadas recetas seguidas (máximo %d)",
     TRACK_ACTIVE = "seguida",

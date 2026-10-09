@@ -66,6 +66,7 @@ ns.Locale.register("frFR", {
     LEVEL_HIDDEN = "%d grises masquées",
     LEVEL_EMPTY = "Aucune recette connue. Ouvrez une fois la fenêtre de métier.",
     LEVEL_NONE = "Aucune recette ne peut donner de point",
+    LEVEL_PANEL = "PROCHAIN POINT",
     TRACK_LABEL = "Suivre l'historique",
     TRACK_FULL = "Trop de recettes suivies (%d maximum)",
     TRACK_ACTIVE = "suivie",

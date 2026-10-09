@@ -58,8 +58,9 @@ local function build()
 
     -- B: a plain frame with a nine-slice border
     label(inset, "B: NineSlice GenericMetal", 10, -8)
-    local b = CreateFrame("Frame", nil, nil, "NineSlicePanelTemplate")
-    b:SetParent(inset)
+    -- NineSlicePanelTemplate reads its parent's layoutType in OnLoad: it needs a parent at creation.
+    local b = CreateFrame("Frame", nil, inset, "NineSlicePanelTemplate")
+    b:ClearAllPoints()
     b:SetSize(230, 90)
     b:SetPoint("TOPLEFT", inset, "TOPLEFT", 10, -28)
     if NineSliceUtil and NineSliceUtil.ApplyLayoutByName then

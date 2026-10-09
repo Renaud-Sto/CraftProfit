@@ -6,7 +6,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ### Added
 - Developer groundwork for the UI rework: colour themes (gold, copper, steel blue) and a shared widget kit, with a `/cp kitdemo` window. No existing window changes yet.
-- Leveling window (`/cp level`, or the Leveling button under the pinned list): every learned, not grey recipe of a profession ranked by the cost of a skill point from the last scan, stored per character so it works at the auction house. Grey recipes are hidden unless asked.
+- Leveling window (`/cp level`, or the Leveling button under the pinned list): every learned recipe of a profession (grey ones hidden unless asked) ranked by the cost of a skill point from the last scan, stored per character so it works at the auction house. Grey recipes are hidden unless asked.
 - The leveling window shows the crafts per point and can be sorted by cost per point or by speed (likeliest point first).
 - Scroll bars on the pinned list (6 rows visible) and on the leveling list (12 rows visible): mouse wheel, drag the bar or click it; hidden while everything fits.
 - `/cp market` shows the market the prices are saved under.

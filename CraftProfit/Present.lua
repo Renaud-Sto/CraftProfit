@@ -106,6 +106,16 @@ local function likelyLine(likely, fmt, itemName)
     }
 end
 
+-- Text shown for an option amount: the price, "n/a" or "?".
+local function optionText(option, L, fmt)
+    if option.status == "ok" then
+        return fmt(option.value)
+    elseif option.status == "na" then
+        return L.NA
+    end
+    return L.UNKNOWN
+end
+
 function Present.build(result, L, fmt, opts)
     local staleAfter = opts and opts.staleAfter or DEFAULT_STALE
     local lines = {}
@@ -114,14 +124,7 @@ function Present.build(result, L, fmt, opts)
     lines[1] = { label = materials, value = fmt(result.cost.total), key = "cost", best = false }
     for _, key in ipairs(Core.OPTION_ORDER) do
         local option = result.options[key]
-        local text
-        if option.status == "ok" then
-            text = fmt(option.value)
-        elseif option.status == "na" then
-            text = L.NA
-        else
-            text = L.UNKNOWN
-        end
+        local text = optionText(option, L, fmt)
         lines[#lines + 1] = { label = L[LINE_KEYS[key]], value = text, key = key, best = result.best == key }
         if key == "disenchant" and option.status == "ok" and option.likely and option.likely.chance < LIKELY_MIN then
             lines[#lines + 1] = likelyLine(option.likely, fmt, opts and opts.itemName)
@@ -139,14 +142,7 @@ function Present.build(result, L, fmt, opts)
     local tiles = {}
     for _, key in ipairs(Core.OPTION_ORDER) do
         local option = result.options[key]
-        local text
-        if option.status == "ok" then
-            text = fmt(option.value)
-        elseif option.status == "na" then
-            text = L.NA
-        else
-            text = L.UNKNOWN
-        end
+        local text = optionText(option, L, fmt)
         tiles[#tiles + 1] = {
             key = key, label = L[TILE_KEYS[key]], value = text,
             best = result.best == key, muted = option.status ~= "ok",

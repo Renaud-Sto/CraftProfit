@@ -812,3 +812,30 @@ H.test("a window without a title click has no title button", function()
     -- rawget: a fake frame answers any missing key with a no-op method
     H.falsy(rawget(win, "titleHit"))
 end)
+
+H.test("a click that ends a drag runs no handler, on the tile and on the title", function()
+    local _, Kit = boot()
+    local clicks = {}
+    local win = Kit.window("KitDragClick", "Recipe", { onTitleClick = function() clicks[#clicks + 1] = "title" end })
+    local tile = Kit.tile(win.content, 110, 52)
+    local hit = tile:onClick(function() clicks[#clicks + 1] = "tile" end)
+    Kit.forwardDrag(hit, win)
+    local title = win.titleHit
+    for _, button in ipairs({ hit, title }) do
+        button.scripts.OnDragStart(button)
+        button.scripts.OnClick(button)
+    end
+    H.eq(clicks, {})
+    for _, button in ipairs({ hit, title }) do
+        button.scripts.OnMouseDown(button)
+        button.scripts.OnClick(button)
+    end
+    H.eq(clicks, { "tile", "title" })
+    -- a replaced tile handler keeps the guard
+    tile:onClick(function() clicks[#clicks + 1] = "tile2" end)
+    hit.scripts.OnDragStart(hit)
+    hit.scripts.OnClick(hit)
+    hit.scripts.OnMouseDown(hit)
+    hit.scripts.OnClick(hit)
+    H.eq(clicks, { "tile", "title", "tile2" })
+end)

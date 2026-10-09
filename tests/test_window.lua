@@ -490,3 +490,19 @@ H.test("dragging the AH tile moves the window and reports where it was dropped",
     hit.scripts.OnDragStop(hit)
     H.eq(calls[#calls], { "onMoved", "TOPLEFT", 100, 700 })
 end)
+
+H.test("a click that ends a drag of the AH tile or the title searches nothing", function()
+    local _, Window, calls = boot()
+    Window.render(model())
+    for _, button in ipairs({ Window.parts.tiles[1].hit, Window.frame().titleHit }) do
+        button.scripts.OnDragStart(button)
+        button.scripts.OnClick(button)
+        H.eq(#calls, 0)
+    end
+    for i, button in ipairs({ Window.parts.tiles[1].hit, Window.frame().titleHit }) do
+        button.scripts.OnMouseDown(button)
+        button.scripts.OnClick(button)
+        H.eq(#calls, i)
+        H.eq(calls[i], { "onOutputClick" })
+    end
+end)

@@ -884,14 +884,17 @@ H.test("clicking with no recipe shown, or when the AH cannot browse, does not ra
     local T = boot()
     local C = T.ns.Controller
     T.ns.AH.isOpen = true
+    local before = #T.chat
     C.onOutputClick()
+    H.eq(#T.chat, before)
     T.ns.AH.browse = function() return false, "unavailable" end
     C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
     C.onOutputClick()
-    H.truthy(#T.chat > 0)
+    H.truthy(table.concat(T.chat, "\n"):find("The auction house search is not available", 1, true))
 end)
 
 H.test("the window is given the output click handler", function()
     local T = boot()
+    H.truthy(T.ns.Window.lastHandlers.onOutputClick)
     H.eq(T.ns.Window.lastHandlers.onOutputClick, T.ns.Controller.onOutputClick)
 end)

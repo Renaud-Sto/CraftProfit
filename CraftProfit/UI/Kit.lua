@@ -227,9 +227,15 @@ end
 
 -- A button takes the mouse, so a press on it no longer reaches the window under it:
 -- make a left drag on `button` move `window` (a Kit.window) as a drag on its body does.
+-- The mouse-up that ends a drag can still fire OnClick: `button.dragged` is true from the
+-- start of a drag to the next press, and click handlers return early while it is.
 function Kit.forwardDrag(button, window)
     button:RegisterForDrag("LeftButton")
-    button:SetScript("OnDragStart", function() window:StartMoving() end)
+    button:HookScript("OnMouseDown", function() button.dragged = false end)
+    button:SetScript("OnDragStart", function()
+        button.dragged = true
+        window:StartMoving()
+    end)
     button:SetScript("OnDragStop", function() window.stopDrag(window) end)
 end
 
@@ -311,7 +317,10 @@ function Kit.window(name, title, opts)
     if opts.onTitleClick then
         local hit = CreateFrame("Button", nil, plaque)
         hit:SetAllPoints(plaque)
-        hit:SetScript("OnClick", function() opts.onTitleClick() end)
+        hit:SetScript("OnClick", function()
+            if hit.dragged == true then return end
+            opts.onTitleClick()
+        end)
         Kit.forwardDrag(hit, f)
         hit:HookScript("OnEnter", function() setTextColor(text, "textMain") end)
         hit:HookScript("OnLeave", function() setTextColor(text, "plaqueText") end)
@@ -523,8 +532,13 @@ function Kit.tile(parent, width, height)
             self.icon:Hide()
             self.hit = hit
         end
-        self.hit:SetScript("OnClick", fn)
-        return self.hit
+        -- A click that ends a drag (see Kit.forwardDrag) runs nothing.
+        local hit = self.hit
+        hit:SetScript("OnClick", function(...)
+            if hit.dragged == true then return end
+            fn(...)
+        end)
+        return hit
     end
 
     function tile:showIcon(show)

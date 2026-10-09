@@ -8,13 +8,28 @@ local function recordingTexture()
     return tex
 end
 
--- A fake font string that records its anchors and its word wrap.
+-- A fake font string that records its anchors, word wrap, justification, widths, and
+-- in `log` its font object and colour calls in order.
 local function recordingFontString()
     local fs = W.frame()
-    fs.points = {}
+    fs.points, fs.widths, fs.log = {}, {}, {}
     fs.SetPoint = function(self, ...) self.points[#self.points + 1] = { ... } end
     fs.SetWordWrap = function(self, v) self.wordWrap = v end
+    fs.SetJustifyH = function(self, v) self.justify = v end
+    fs.SetWidth = function(self, w) self.widths[#self.widths + 1] = w end
+    fs.SetFontObject = function(self, name)
+        self.font = name
+        self.log[#self.log + 1] = { "font", name }
+    end
+    fs.SetTextColor = function(self, r, g, b) self.log[#self.log + 1] = { "colour", r, g, b } end
     return fs
+end
+
+local function anchoredTo(fs, point, target, relPoint)
+    for _, p in ipairs(fs.points) do
+        if p[1] == point and p[2] == target and p[3] == relPoint then return true end
+    end
+    return false
 end
 
 -- Real frames start shown (the fake ones do not): the window must hide itself.
@@ -302,14 +317,52 @@ H.test("a neutral per-point value follows the theme, a cost keeps its fixed colo
     H.eq(colour, { Theme.FIXED.loss[1], Theme.FIXED.loss[2], Theme.FIXED.loss[3] })
 end)
 
-H.test("the per-point label stops before its value and never wraps", function()
+H.test("the per-point label stops before its value, never wraps and reads from the left", function()
     local _, Window = boot({ record = true })
     local p = Window.parts
     local label = p.perPoint.label
-    local found = false
-    for _, point in ipairs(label.points) do
-        if point[1] == "RIGHT" and point[2] == p.perPointValue and point[3] == "LEFT" then found = true end
-    end
-    H.truthy(found)
+    H.truthy(anchoredTo(label, "RIGHT", p.perPointValue, "LEFT"))
     H.eq(label.wordWrap, false)
+    H.eq(label.justify, "LEFT")
+end)
+
+H.test("turning the per-point option off empties and hides its value", function()
+    local _, Window = boot()
+    local p = Window.parts
+    Window.render(model({ showPerPoint = true, lines = { { label = "Cost per point", value = "1s", key = "perpoint", tone = "loss" } } }))
+    H.eq(p.perPointValue.text, "1s")
+    Window.render(model())
+    H.eq(p.perPointValue.text, "")
+    H.falsy(p.perPointValue.shown)
+end)
+
+H.test("the banner text runs up to the value and has no fixed width", function()
+    local _, Window = boot({ record = true })
+    local b = Window.parts.banner
+    H.truthy(anchoredTo(b.text, "RIGHT", b.value, "LEFT"))
+    H.eq(b.text.justify, "LEFT")
+    H.eq(b.text.wordWrap, false)
+    Window.render(model())
+    H.eq(b.text.widths, {})
+end)
+
+H.test("a banner text too long for the room beside the value drops to the small font, in gold", function()
+    local T, Window = boot({ record = true })
+    local best = T.ns.Theme.FIXED.best
+    local b = Window.parts.banner
+    -- 240 px in the normal font, 190 in the small one; room = 372 - 24 - 24 - value - 8.
+    b.text.GetUnboundedStringWidth = function(self) return self.font == "GameFontNormalSmall" and 190 or 240 end
+    local valueWidth = 40
+    b.value.GetUnboundedStringWidth = function() return valueWidth end
+    local long = { label = "RESULT", text = "Best known: Auction house (prices missing)", value = "+7s", kind = "incomplete" }
+    Window.render(model({ banner = long }))
+    H.eq(b.text.font, "GameFontNormal")
+    valueWidth = 100
+    Window.render(model({ banner = long }))
+    H.eq(b.text.font, "GameFontNormalSmall")
+    H.eq(b.text.log[#b.text.log], { "colour", best[1], best[2], best[3] })
+    valueWidth = 40
+    Window.render(model({ banner = long }))
+    H.eq(b.text.font, "GameFontNormal")
+    H.eq(b.text.log[#b.text.log], { "colour", best[1], best[2], best[3] })
 end)

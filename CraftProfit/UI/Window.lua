@@ -21,7 +21,7 @@ local OPTION_ROW_H = 26
 local EMPTY_H = 24
 local MAX_DETAIL = 12 -- Recipes.MAX_REAGENTS
 local BANNER_SIZES = { 22, 19, 16, 13 }
-local BANNER_VALUE_ROOM = 120
+local BANNER_VALUE_ROOM = 120 -- widest the value may be before it shrinks
 local BANNER_FILL, BANNER_EDGE = 0.09, 0.45
 
 local TONES = {
@@ -116,16 +116,17 @@ local function buildBanner()
     local label = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     label:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -10)
     themed(label, "headText")
+    local value = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    value:SetPoint("RIGHT", f, "RIGHT", -12, 0)
+    value:SetJustifyH("RIGHT")
+    -- The text runs up to the value, so a short or empty value leaves it more room.
     local text = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     text:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 12, 10)
-    text:SetWidth(WIDTH - Kit.CONTENT_SIDE * 2 - 24 - BANNER_VALUE_ROOM - 8)
+    text:SetPoint("RIGHT", value, "LEFT", -8, 0)
     text:SetJustifyH("LEFT")
     text:SetWordWrap(false)
     local best = Theme.FIXED.best
     text:SetTextColor(best[1], best[2], best[3], best[4])
-    local value = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    value:SetPoint("RIGHT", f, "RIGHT", -12, 0)
-    value:SetJustifyH("RIGHT")
     parts.banner = {
         label = label, text = text, value = value,
         fill = fill, edge = edge, paintFill = paintFill, refreshEdge = refreshEdge,
@@ -142,6 +143,17 @@ local function setBanner(spec)
     local size = Kit.fitSize(Kit.naturalWidth(b.value), BANNER_SIZES[1], BANNER_VALUE_ROOM, BANNER_SIZES)
     if size ~= BANNER_SIZES[1] then b.value:SetFont(STANDARD_TEXT_FONT, size, "") end
     b.value:SetTextColor(tone[1], tone[2], tone[3], tone[4])
+    -- A text too long for the room left by the value (a partial result, say) drops to
+    -- the small font rather than losing its end; kept normal when it cannot be measured.
+    b.text:SetFontObject("GameFontNormal")
+    local valueWidth, textWidth = Kit.naturalWidth(b.value), Kit.naturalWidth(b.text)
+    if type(valueWidth) == "number" and type(textWidth) == "number"
+        and textWidth > WIDTH - Kit.CONTENT_SIDE * 2 - 24 - valueWidth - 8 then
+        b.text:SetFontObject("GameFontNormalSmall")
+    end
+    -- SetFontObject resets the colour to the font object's own.
+    local best = Theme.FIXED.best
+    b.text:SetTextColor(best[1], best[2], best[3], best[4])
     b.fill[1], b.fill[2], b.fill[3], b.fill[4] = tone[1], tone[2], tone[3], BANNER_FILL
     b.edge[1], b.edge[2], b.edge[3], b.edge[4] = tone[1], tone[2], tone[3], BANNER_EDGE
     b.paintFill()
@@ -263,6 +275,7 @@ local function buildOptions()
     -- The value wins: a long (translated) label is cut short before it runs under it.
     perPoint.label:SetPoint("RIGHT", parts.perPointValue, "LEFT", -8, 0)
     perPoint.label:SetWordWrap(false)
+    perPoint.label:SetJustifyH("LEFT")
     parts.perPointTone = nil
     -- A gain or a cost keeps its fixed colour; a neutral value follows the theme.
     parts.paintPerPoint = function()
@@ -361,6 +374,8 @@ end
 local function setPerPoint(line)
     local value = parts.perPointValue
     if not line then
+        -- Emptied too: the label is anchored to it and would stay cut short.
+        value:SetText("")
         value:Hide()
         return
     end

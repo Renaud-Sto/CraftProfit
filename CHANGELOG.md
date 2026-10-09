@@ -21,6 +21,9 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - The best tile of the main window now has a 2 px bright gold outline and a faint gold tint, so it stands out from the other tiles.
 - The partial-result warning ("PRICES MISSING") now sits in amber on the banner label line so it is never cut off; the French and Spanish "cost per point" option labels are shorter.
 
+### Fixed
+- Show grey recipes in the leveling window now works: grey recipes are stored when the profession window is read (open it once after updating).
+
 ## [0.1.0] - not yet released
 
 First version, developed against the WoW: Forever beta (build 1.60.1, Interface 16001).

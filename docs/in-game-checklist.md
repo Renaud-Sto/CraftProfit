@@ -98,6 +98,7 @@ Leveling window (`/cp level`):
 ## Leveling window
 - [ ] Opening a profession window and then `/cp level` lists the learned recipes of that profession, coloured by difficulty, cheapest skill point first (use **Scan AH** beforehand; the top line shows the age of the prices). Run `/cpp known` in the profession window: the count of learned recipes must match the list plus the hidden grey ones.
 - [ ] Grey recipes are hidden ("N grises masquées") and appear when *Afficher les recettes grises* is ticked; the tick survives `/reload`.
+- [ ] Grey recipes only appear after the profession window has been opened once (the stored list is read when the window opens): open the profession window, then tick "Show grey recipes": the list grows and the "N grey hidden" count disappears.
 - [ ] Each row shows `x1`, `x1.3` or `x4` before the amount (crafts per point); the top right button switches between *Tri : coût/point* and *Tri : vitesse* (orange first, then yellow, then green) and the choice survives `/reload`.
 - [ ] The leveling window opens to the right of the main window, not over it.
 - [ ] Unpriced recipes show `?` at the bottom. A recipe whose crafts pay for themselves shows `+…/pt` in green and comes first.

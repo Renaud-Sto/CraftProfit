@@ -121,6 +121,18 @@ Leveling window (`/cp level`):
 - [ ] Clicking the matching result opens its buy view with the quantity already set to 20. (Best effort: if the quantity stays at 1, note the AH view; the search itself is the part that must work.)
 - [ ] With the AH closed, clicking a reagent prints "Open the auction house first". No Lua error and no `ADDON_ACTION_BLOCKED` in any case. CraftProfit never presses Buy.
 
+## Search the crafted item
+Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its search box).
+- [ ] Run `/cpp icon`, then `/reload`, and read the `icon` lines in the probe log: the keys of the AH search box that contain "icon", `searchIcon` / `SearchIcon` with `GetAtlas`, `GetTexture`, `GetTexCoord`, and `C_Texture.GetAtlasInfo` for `common-search-magnifyingglass`, `search-icon` and `auctionhouse-icon-search`.
+- [ ] With the AH open and a recipe shown, a small magnifier shows at the top right of the AH tile and at the right of the title plaque. When the AH closes both are gone (and with no recipe shown); they come back when it reopens.
+- [ ] Hovering the AH tile tints it (under the text); moving off restores it. The title lights up on hover.
+- [ ] Clicking the AH tile opens the AH Buy view on the crafted item's name, in the search box (compare with clicking a reagent: same view, but no quantity preset). Same for clicking the title. No Lua error, nothing is bought.
+- [ ] Drag the window by the title and by the AH tile (press and move), once with the AH open and once with it closed: the window moves, NOTHING is searched and no chat line appears. A plain click searches. A sloppy click that moves a few pixels drags instead of searching: expected.
+- [ ] AH closed: clicking the tile or the title prints "Open the auction house first".
+- [ ] A recipe whose product is bind on pickup: clicking prints "This item cannot be sold at the auction house" and the search box is unchanged.
+- [ ] After `/cp kitdemo copper` (then `steel`, `gold`): no Lua error and the AH tile's tint still shows on hover.
+- [ ] If no magnifier appears, report the `/cpp icon` lines. Known: the icon is optional, the click works without it.
+
 ## Numbers
 - [ ] For one recipe, compare each reagent price with the AH listing prices: the stored price is the median of the 5 cheapest units (not the minimum).
 - [ ] Sell one crafted item (or use `docs/probe-findings.md` F5): the mailed amount matches `price × (1 − cut)`. If not, change `DB.DEFAULTS.cut` and the test expectations.

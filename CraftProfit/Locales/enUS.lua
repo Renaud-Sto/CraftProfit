@@ -51,6 +51,7 @@ ns.Locale.register("enUS", {
     SEARCH_DONE = "Prices updated",
     SEARCH_PARTIAL = "Prices updated, %d not found",
     SEARCH_NEED_AH = "Open the auction house first",
+    SEARCH_UNSELLABLE = "This item cannot be sold at the auction house",
     ITEM_NOT_LOADED = "Item not loaded yet, try again in a moment",
     BROWSE_UNAVAILABLE = "The auction house search is not available",
     SEARCH_CANCELLED = "Search cancelled",

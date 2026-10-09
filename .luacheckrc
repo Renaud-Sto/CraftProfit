@@ -46,7 +46,7 @@ globals = {
 read_globals = {
     "CreateFrame", "GetCursorPosition", "GetLocale", "GetTime", "time", "GetCoinTextureString",
     "issecretvalue", "C_Timer", "C_AuctionHouse", "C_TradeSkillUI", "C_Item",
-    "Enum", "UIParent", "DEFAULT_CHAT_FRAME", "STANDARD_TEXT_FONT", "CreateColor",
+    "Enum", "UIParent", "DEFAULT_CHAT_FRAME", "STANDARD_TEXT_FONT", "CreateColor", "C_Texture",
     "ProfessionsFrame", "TradeSkillFrame", "AuctionHouseFrame", "AuctionFrame",
     "AuctionHouseFrameDisplayMode",
     "GetProfessions", "GetProfessionInfo", "IsPlayerSpell",

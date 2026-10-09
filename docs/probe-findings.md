@@ -45,3 +45,9 @@ Status marks: ✅ measured in game · ⚠️ not measured · ❌ unusable.
 - AH frame global: `AuctionHouseFrame` / `AuctionFrame` — ____
 - `GetLocale()`: ____ · `GetCoinTextureString(123456)`: ____
 - `C_Item.GetItemInfo(2772)` fields (sellPrice, classID, bindType): ____
+
+## F9. Magnifier icon of the AH search box (`/cpp icon`, auction house open, 2026-10)
+- `AuctionHouseFrame.SearchBar.SearchBox.searchIcon` exists (the key is `searchIcon`; `SearchIcon` is nil).
+- `searchIcon:GetAtlas()`: `common-search-magnifyingglass`; `GetTexture()`: `6725697` (a file id); `GetTexCoord()`: `0,0,0,1,1,0,1,1`.
+- `C_Texture.GetAtlasInfo("common-search-magnifyingglass")`: found, 24 x 24 (file 6725697). `search-icon` and `auctionhouse-icon-search`: nil.
+- Used by `Kit.searchIcon` (`CraftProfit/UI/Kit.lua`): the first source it tries is the one measured here.

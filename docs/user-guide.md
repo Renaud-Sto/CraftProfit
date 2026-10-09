@@ -15,13 +15,13 @@ From top to bottom:
 | Part | Meaning |
 | --- | --- |
 | **Result** banner | The best way to sell the item and the net result of the craft (best resale minus materials) in large type. Green for a gain, red for a loss, amber when the result is incomplete (a price is missing). |
-| **Three tiles** | **AH (NET)**: the price the crafted item would fetch at the auction house, after the 5 % commission. **VENDOR**: what a vendor pays for the item. **DISENCH.** with a *beta* tag: the *expected* value of disenchanting the item, net of the auction house commission on the materials (see [Disenchanting](#disenchanting)). The best one is outlined in gold. A tile reads `n/a` when that way is not possible (bound when picked up, cannot be vendored or disenchanted) and `?` when it is possible but a price is unknown. |
+| **Three tiles** | **AH (NET)**: the price the crafted item would fetch at the auction house, after the 5 % commission. **VENDOR**: what a vendor pays for the item. **DISENCH.** with a *beta* tag: the *expected* value of disenchanting the item, net of the auction house commission on the materials (see [Disenchanting](#disenchanting)). The best one is outlined in gold. A tile reads `n/a` when that way is not possible (bound when picked up, cannot be vendored or disenchanted) and `?` when it is possible but a price is unknown. With the auction house open, the **AH (NET)** tile can be clicked to search the crafted item (see [Searching the crafted item](#searching-the-crafted-item)). |
 | *grey line* | Under the tiles: the most probable disenchant outcome, for example `75%: 1-2x Soul Dust = 7s 30c`. Only shown when the disenchant has several possible results. |
 | **Materials** panel | The cost of all reagents at auction house prices. Click the header to fold or unfold the detail (`-` unfolded, `+` folded); the choice is saved. Click a reagent to search it at the auction house (see [Searching a reagent](#searching-a-reagent)). |
 | **Prices: 5m ago** | How old the oldest price used is. It turns orange when prices are more than an hour old. |
 | **Options** panel | **Crafts**, **Track history**, **Cost per skill point** with its value on the right (see [Cost per skill point](#cost-per-skill-point)), and the **Pin** / **Unpin** button. |
 
-A price that is not known is shown as `?`, never as zero. The banner has three special cases:
+The recipe title at the top of the window is clickable too, with the same effect, and still drags the window. A price that is not known is shown as `?`, never as zero. The banner has three special cases:
 
 - *No way to sell this item*: none of the three tiles can be used (all `n/a`).
 - *Incomplete: prices missing* (amber, no value): a price needed for the result is missing, so no net result can be given rather than a flattering number.
@@ -77,6 +77,15 @@ Click a recipe in the list to show it in the window above.
 - Click a row to show that recipe in the main window (crafts multiplier, material detail, click a reagent to search it).
 
 The ranking is as reliable as the skill-up chances behind it, which are still estimates by recipe colour. It ranks the *next point*; it is not a full plan from your current skill to the maximum. A recipe whose output is not an item (an enchantment, for example) is left out.
+
+### Searching the crafted item
+
+With the auction house open, click the **AH (NET)** tile or the recipe title to search the crafted item there, to see how many are for sale next to its price. CraftProfit opens the same *Buy* view as for a reagent and types the item name in the search box, without presetting a quantity. A small magnifier shows on the tile and on the title while the auction house is open and a recipe is displayed.
+
+- With the auction house closed, the click only says to open it first.
+- An item that is bound when picked up cannot be sold at the auction house: the click says so and nothing is searched.
+- The title and the tile still drag the window: press and move to drag, a plain click searches.
+- If no magnifier shows, the click works all the same: the icon is optional.
 
 ### Searching a reagent
 
@@ -144,6 +153,8 @@ The window follows the game language: English, French and Spanish (Latin America
 **The scan never finishes ("No reply from the server").** The game limits full scans to one per 15 minutes per account, and any addon's scan counts. Wait and try once.
 
 **"Item not loaded yet, try again".** The game has not cached the item name yet; click again after a moment.
+
+**The click on the AH tile or the title only prints a message.** Nothing is searched, and the message says why: "Open the auction house first" (the auction house is closed); "This item cannot be sold at the auction house" (the item is bound when picked up); "Item not loaded yet, try again in a moment" (the game has not cached the item name yet: click again).
 
 **The quantity is not filled in after clicking a reagent.** The preset is best-effort. The search itself still works; type the quantity by hand.
 

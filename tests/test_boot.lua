@@ -833,3 +833,68 @@ H.test("the leveling window switches between the cost sort and the speed sort an
     T.ns.LevelingUI.show()
     C.toggleLevelSort()
 end)
+
+H.test("clicking the crafted item searches it at the AH without a quantity preset", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local calls = {}
+    T.ns.AH.isOpen = true
+    T.ns.AH.browse = function(name, itemID, qty) calls[#calls + 1] = { name, itemID, qty }; return true end
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    C.onOutputClick()
+    H.eq(calls, { { "Item100", 100, nil } })
+end)
+
+H.test("clicking the crafted item with the AH closed says so and searches nothing", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local calls = 0
+    T.ns.AH.browse = function() calls = calls + 1; return true end
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    C.onOutputClick()
+    H.eq(calls, 0)
+    H.truthy(table.concat(T.chat, "\n"):find("Open the auction house first", 1, true))
+end)
+
+H.test("clicking a bind-on-pickup crafted item says it cannot be sold", function()
+    local T = boot({ items = { [100] = { quality = 2, ilvl = 15, sellPrice = 200, classID = 0, bindType = 1 } } })
+    local C = T.ns.Controller
+    local calls = 0
+    T.ns.AH.isOpen = true
+    T.ns.AH.browse = function() calls = calls + 1; return true end
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    C.onOutputClick()
+    H.eq(calls, 0)
+    H.truthy(table.concat(T.chat, "\n"):find("cannot be sold at the auction house", 1, true))
+end)
+
+H.test("clicking the crafted item before its name is loaded says so and searches nothing", function()
+    local T = boot({ items = {} })
+    local C = T.ns.Controller
+    local calls = 0
+    T.ns.AH.isOpen = true
+    T.ns.AH.browse = function() calls = calls + 1; return true end
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    C.onOutputClick()
+    H.eq(calls, 0)
+    H.truthy(table.concat(T.chat, "\n"):find("Item not loaded yet", 1, true))
+end)
+
+H.test("clicking with no recipe shown, or when the AH cannot browse, does not raise and says what is wrong", function()
+    local T = boot()
+    local C = T.ns.Controller
+    T.ns.AH.isOpen = true
+    local before = #T.chat
+    C.onOutputClick()
+    H.eq(#T.chat, before)
+    T.ns.AH.browse = function() return false, "unavailable" end
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    C.onOutputClick()
+    H.truthy(table.concat(T.chat, "\n"):find("The auction house search is not available", 1, true))
+end)
+
+H.test("the window is given the output click handler", function()
+    local T = boot()
+    H.truthy(T.ns.Window.lastHandlers.onOutputClick)
+    H.eq(T.ns.Window.lastHandlers.onOutputClick, T.ns.Controller.onOutputClick)
+end)

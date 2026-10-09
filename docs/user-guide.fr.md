@@ -15,13 +15,13 @@ De haut en bas :
 | Élément | Signification |
 | --- | --- |
 | Bandeau **Résultat** | La meilleure façon de vendre l'objet et le résultat net du craft (meilleure revente moins les composants), en grand. Vert pour un gain, rouge pour une perte, ambre quand le résultat est incomplet (il manque un prix). |
-| **Trois tuiles** | **HV (NET)** : le prix que l'objet obtenu rapporterait à l'hôtel des ventes, après la commission de 5 %. **MARCHAND** : ce que paie un marchand pour l'objet. **DÉSENCH.** avec la mention *bêta* : la valeur *espérée* du désenchantement, nette de la commission de l'hôtel des ventes sur les composants obtenus (voir [Désenchantement](#désenchantement)). La meilleure est entourée d'or. Une tuile affiche `n/d` quand cette voie est impossible (lié quand ramassé, ne peut pas être vendu au marchand ni désenchanté) et `?` quand elle est possible mais qu'un prix est inconnu. |
+| **Trois tuiles** | **HV (NET)** : le prix que l'objet obtenu rapporterait à l'hôtel des ventes, après la commission de 5 %. **MARCHAND** : ce que paie un marchand pour l'objet. **DÉSENCH.** avec la mention *bêta* : la valeur *espérée* du désenchantement, nette de la commission de l'hôtel des ventes sur les composants obtenus (voir [Désenchantement](#désenchantement)). La meilleure est entourée d'or. Une tuile affiche `n/d` quand cette voie est impossible (lié quand ramassé, ne peut pas être vendu au marchand ni désenchanté) et `?` quand elle est possible mais qu'un prix est inconnu. Quand l'hôtel des ventes est ouvert, on peut cliquer sur la tuile **HV (NET)** pour rechercher l'objet obtenu (voir [Rechercher l'objet obtenu](#rechercher-lobjet-obtenu)). |
 | *ligne grise* | Sous les tuiles : le résultat de désenchantement le plus probable, par exemple `75%: 1-2x Poussière d'âme = 7s 30c`. Affichée seulement quand le désenchantement a plusieurs résultats possibles. |
 | Panneau **Composants** | Le coût de tous les composants aux prix de l'hôtel des ventes. Cliquez sur l'en-tête pour replier ou déplier le détail (`-` déplié, `+` replié) ; le choix est mémorisé. Cliquez sur un composant pour le chercher à l'hôtel des ventes (voir [Rechercher un composant](#rechercher-un-composant)). |
 | **Prix : il y a 5min** | L'âge du prix le plus ancien utilisé. Passe en orange au-delà d'une heure. |
 | Panneau **Options** | **Crafts**, **Suivre l'historique**, **Coût par point** avec sa valeur à droite (voir [Coût par point de compétence](#coût-par-point-de-compétence)), et le bouton **Épingler** / **Désépingler**. |
 
-Un prix inconnu s'affiche `?`, jamais zéro. Le bandeau a trois cas particuliers :
+Le titre de la recette, en haut de la fenêtre, est cliquable lui aussi, avec le même effet, et déplace toujours la fenêtre. Un prix inconnu s'affiche `?`, jamais zéro. Le bandeau a trois cas particuliers :
 
 - *Aucun moyen de revendre cet objet* : aucune des trois tuiles n'est utilisable (toutes `n/d`).
 - *Incomplet : prix manquants* (ambre, sans valeur) : il manque un prix nécessaire au résultat, donc aucun résultat net n'est donné plutôt qu'un chiffre flatteur.
@@ -77,6 +77,15 @@ Cliquez sur une recette de la liste pour l'afficher dans la fenêtre au-dessus.
 - Cliquez sur une ligne pour afficher la recette dans la fenêtre principale (multiplicateur de crafts, détail des composants, clic sur un composant pour le chercher).
 
 Le classement vaut autant que les chances de point sur lesquelles il repose, qui restent des estimations selon la couleur. Il classe le *prochain point* ; ce n'est pas un plan complet de votre niveau actuel jusqu'au maximum. Une recette dont le résultat n'est pas un objet (un enchantement, par exemple) est écartée.
+
+### Rechercher l'objet obtenu
+
+Quand l'hôtel des ventes est ouvert, cliquez sur la tuile **HV (NET)** ou sur le titre de la recette pour rechercher l'objet obtenu : vous voyez combien sont en vente, à côté de son prix. CraftProfit ouvre la même vue *Acheter* que pour un composant et tape le nom de l'objet dans la barre de recherche, sans préremplir de quantité. Une petite loupe s'affiche sur la tuile et sur le titre tant que l'hôtel des ventes est ouvert et qu'une recette est affichée.
+
+- Si l'hôtel des ventes est fermé, le clic vous demande seulement de l'ouvrir d'abord.
+- Un objet lié quand ramassé ne peut pas être vendu à l'hôtel des ventes : le clic le dit et rien n'est recherché.
+- Le titre et la tuile déplacent toujours la fenêtre : maintenez le clic et bougez pour la déplacer, un simple clic lance la recherche.
+- Si aucune loupe n'apparaît, le clic fonctionne quand même : l'icône est facultative.
 
 ### Rechercher un composant
 
@@ -144,6 +153,8 @@ La fenêtre suit la langue du jeu : anglais, français et espagnol (l'espagnol d
 **Le scan ne se termine jamais (« Pas de réponse du serveur »).** Le jeu limite les scans complets à un par tranche de 15 minutes et par compte, et le scan de n'importe quel addon compte. Attendez et réessayez une seule fois.
 
 **« Objet pas encore chargé, réessayez ».** Le jeu n'a pas encore mis le nom de l'objet en cache ; cliquez de nouveau après un instant.
+
+**Le clic sur la tuile HV ou sur le titre n'affiche qu'un message.** Rien n'est recherché, et le message dit pourquoi : « Ouvrez d'abord l'hôtel des ventes » (l'hôtel des ventes est fermé) ; « Cet objet ne peut pas être vendu à l'hôtel des ventes » (l'objet est lié quand ramassé) ; « Objet pas encore chargé, réessayez dans un instant » (le jeu n'a pas encore le nom de l'objet en mémoire : cliquez de nouveau).
 
 **La quantité n'est pas remplie après un clic sur un composant.** Le préremplissage est au mieux. La recherche fonctionne quand même ; saisissez la quantité à la main.
 

@@ -180,6 +180,65 @@ local function naturalWidth(fs)
 end
 Kit.naturalWidth = naturalWidth
 
+-- Magnifier icon -------------------------------------------------------------
+
+Kit.SEARCH_ATLASES = { "common-search-magnifyingglass" }
+
+local function searchBoxIcon()
+    local frame = AuctionHouseFrame
+    local bar = type(frame) == "table" and frame.SearchBar
+    local box = type(bar) == "table" and bar.SearchBox
+    if type(box) ~= "table" then return nil end
+    return box.searchIcon or box.SearchIcon
+end
+
+-- Gives `texture` the game's magnifier: the icon of the AH search box if it can be read,
+-- else a known atlas that exists. Never guesses a file path (a missing file would draw a
+-- green square). Returns true when an icon was applied.
+function Kit.searchIcon(texture)
+    local ok, applied = pcall(function()
+        local source = searchBoxIcon()
+        if type(source) == "table" then
+            local atlas = type(source.GetAtlas) == "function" and source:GetAtlas()
+            if type(atlas) == "string" and atlas ~= "" then
+                texture:SetAtlas(atlas)
+                return true
+            end
+            local file = type(source.GetTexture) == "function" and source:GetTexture()
+            if file and file ~= "" then
+                texture:SetTexture(file)
+                if type(source.GetTexCoord) == "function" then texture:SetTexCoord(source:GetTexCoord()) end
+                return true
+            end
+        end
+        local api = C_Texture
+        if type(api) == "table" and type(api.GetAtlasInfo) == "function" then
+            for _, name in ipairs(Kit.SEARCH_ATLASES) do
+                if type(api.GetAtlasInfo(name)) == "table" then
+                    texture:SetAtlas(name)
+                    return true
+                end
+            end
+        end
+        return false
+    end)
+    return ok and applied == true
+end
+
+-- A button takes the mouse, so a press on it no longer reaches the window under it:
+-- make a left drag on `button` move `window` (a Kit.window) as a drag on its body does.
+-- The mouse-up that ends a drag can still fire OnClick: `button.dragged` is true from the
+-- start of a drag to the next press, and click handlers return early while it is.
+function Kit.forwardDrag(button, window)
+    button:RegisterForDrag("LeftButton")
+    button:HookScript("OnMouseDown", function() button.dragged = false end)
+    button:SetScript("OnDragStart", function()
+        button.dragged = true
+        window:StartMoving()
+    end)
+    button:SetScript("OnDragStop", function() window.stopDrag(window) end)
+end
+
 -- Window ----------------------------------------------------------------------
 
 local WINDOW_RINGS = { "black", "frameInner", "frameInner", "frameShade", "frameOuter", "black" }
@@ -213,6 +272,8 @@ function Kit.window(name, title, opts)
     end
     f:SetScript("OnDragStart", function(self) self:StartMoving() end)
     f:SetScript("OnDragStop", stopDrag)
+    -- For Kit.forwardDrag: buttons covering the window drag it like its body.
+    f.stopDrag = stopDrag
 
     local plaque = CreateFrame("Frame", nil, f)
     plaque:SetPoint("TOP", f, "TOP", 0, 14)
@@ -250,6 +311,28 @@ function Kit.window(name, title, opts)
         setTextColor(text, "plaqueText")
     end
     f:setTitle(title)
+
+    -- opts.onTitleClick: the plaque becomes a button (it lights the title up on hover and
+    -- can show a magnifier) that still drags the window, the plaque being its handle.
+    if opts.onTitleClick then
+        local hit = CreateFrame("Button", nil, plaque)
+        hit:SetAllPoints(plaque)
+        hit:SetScript("OnClick", function()
+            if hit.dragged == true then return end
+            opts.onTitleClick()
+        end)
+        Kit.forwardDrag(hit, f)
+        hit:HookScript("OnEnter", function() setTextColor(text, "textMain") end)
+        hit:HookScript("OnLeave", function() setTextColor(text, "plaqueText") end)
+        f.titleHit = hit
+        f.titleIcon = hit:CreateTexture(nil, "OVERLAY")
+        f.titleIcon:SetSize(12, 12)
+        f.titleIcon:SetPoint("RIGHT", plaque, "RIGHT", -8, 0)
+        f.titleIcon:Hide()
+        f.showTitleIcon = function(_, show)
+            if show and Kit.searchIcon(f.titleIcon) then f.titleIcon:Show() else f.titleIcon:Hide() end
+        end
+    end
 
     local close = Kit.button(f, "small", "x")
     close:SetSize(18, 18)
@@ -420,6 +503,47 @@ function Kit.tile(parent, width, height)
         local size = Kit.fitSize(naturalWidth(self.value), big, room, Kit.TILE_SIZES)
         if size ~= big then self.value:SetFont(STANDARD_TEXT_FONT, size, "") end
         paint()
+    end
+
+    -- Makes the whole tile a button (e.g. to search the item at the AH): a hover tint and a
+    -- small icon at the top right that `tile:showIcon(true)` reveals when the game's
+    -- magnifier can be found. Calling it again replaces the handler. The button takes the
+    -- mouse: the owner forwards drags to its window with Kit.forwardDrag(tile.hit, window).
+    function tile:onClick(fn)
+        if not self.hit then
+            local hit = CreateFrame("Button", nil, f)
+            hit:SetAllPoints(f)
+            -- The tint is the tile's own (a child frame draws above all of its parent's
+            -- regions): sublevel 1 puts it over the background, under the fill, the
+            -- outline and the texts.
+            local tint = f:CreateTexture(nil, "BACKGROUND", nil, 1)
+            tint:SetAllPoints(f)
+            Kit.onTheme(function(t)
+                local c = t.rowHover
+                tint:SetColorTexture(c[1], c[2], c[3], c[4])
+            end)
+            tint:Hide()
+            hit:HookScript("OnEnter", function() tint:Show() end)
+            hit:HookScript("OnLeave", function() tint:Hide() end)
+            self.tint = tint
+            self.icon = hit:CreateTexture(nil, "OVERLAY")
+            self.icon:SetSize(12, 12)
+            self.icon:SetPoint("TOPRIGHT", hit, "TOPRIGHT", -6, -6)
+            self.icon:Hide()
+            self.hit = hit
+        end
+        -- A click that ends a drag (see Kit.forwardDrag) runs nothing.
+        local hit = self.hit
+        hit:SetScript("OnClick", function(...)
+            if hit.dragged == true then return end
+            fn(...)
+        end)
+        return hit
+    end
+
+    function tile:showIcon(show)
+        if not self.icon then return end
+        if show and Kit.searchIcon(self.icon) then self.icon:Show() else self.icon:Hide() end
     end
     return tile
 end

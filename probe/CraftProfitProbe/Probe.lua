@@ -1,6 +1,6 @@
 -- CraftProfitProbe: THROWAWAY addon measuring what the Forever client exposes.
 -- Every output line starts with the version so a stale install is obvious.
-local VERSION = "0.6.0"
+local VERSION = "0.7.0"
 local TAG = "|cff66ccff[CPP " .. VERSION .. "]|r "
 
 local function isSecret(v)
@@ -448,6 +448,50 @@ cmds.skin = function()
     end
 end
 
+-- Where the game's magnifier comes from: the AH search box icon (needs the AH opened once)
+-- and the atlases the addon may fall back to. Prints only, never changes anything.
+cmds.icon = function()
+    local f = AuctionHouseFrame
+    if type(f) ~= "table" then
+        out("AuctionHouseFrame is missing (open the auction house once):", type(f))
+    else
+        local box = type(f.SearchBar) == "table" and f.SearchBar.SearchBox
+        out("SearchBar.SearchBox:", type(box))
+        if type(box) == "table" then
+            local keys = {}
+            for k, v in pairs(box) do
+                if type(k) == "string" and (k:find("icon", 1, true) or k:find("Icon", 1, true)) then
+                    keys[#keys + 1] = k .. "=" .. type(v)
+                end
+            end
+            table.sort(keys)
+            out(" icon keys:", #keys == 0 and "(none)" or table.concat(keys, ", "))
+            for _, name in ipairs({ "searchIcon", "SearchIcon" }) do
+                local icon = box[name]
+                if type(icon) == "table" then
+                    out(" " .. name .. ":GetAtlas", try(icon.GetAtlas, icon))
+                    out(" " .. name .. ":GetTexture", try(icon.GetTexture, icon))
+                    out(" " .. name .. ":GetTexCoord", try(icon.GetTexCoord, icon))
+                else
+                    out(" " .. name .. ":", type(icon))
+                end
+            end
+        end
+    end
+    out("C_Texture.GetAtlasInfo:", type(C_Texture) == "table" and type(C_Texture.GetAtlasInfo) or "C_Texture " .. type(C_Texture))
+    for _, name in ipairs({ "common-search-magnifyingglass", "search-icon", "auctionhouse-icon-search" }) do
+        local info = try(function()
+            local t = C_Texture.GetAtlasInfo(name)
+            if type(t) ~= "table" then return t end
+            local parts = {}
+            for k, v in pairs(t) do parts[#parts + 1] = tostring(k) .. "=" .. show(v) end
+            table.sort(parts)
+            return "{" .. table.concat(parts, " ") .. "}"
+        end)
+        out(" atlas " .. name .. ":", info)
+    end
+end
+
 SLASH_CPP1 = "/cpp"
 SlashCmdList.CPP = function(msg)
     local cmd, arg = (msg or ""):match("^(%S*)%s*(.-)$")
@@ -463,7 +507,7 @@ SlashCmdList.CPP = function(msg)
         out("== " .. cmd .. " " .. arg)
         fn(arg)
     else
-        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | qty | ruleset | known | skin | log | clear")
+        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | qty | ruleset | known | skin | icon | log | clear")
     end
 end
 out("loaded. /cpp for commands. Enable Lua errors: /console scriptErrors 1")

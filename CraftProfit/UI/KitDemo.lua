@@ -77,6 +77,10 @@ function KitDemo.toggle(name)
         frame:Show()
         return
     end
-    if not frame then build() end
+    if not frame then
+        build()
+        frame:Show() -- a new client frame is already shown, but do not rely on it
+        return
+    end
     if frame:IsShown() then frame:Hide() else frame:Show() end
 end

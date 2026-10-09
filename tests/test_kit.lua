@@ -219,21 +219,48 @@ H.test("a button keeps the text it is given and runs its click handler", functio
     H.eq(clicks, 1)
 end)
 
+-- Wrap CreateFrame so frames start shown, as on the real client.
+local function realisticFrames(T)
+    local made = { count = 0 }
+    local orig = T.env.CreateFrame
+    T.env.CreateFrame = function(kind, name, ...)
+        local f = orig(kind, name, ...)
+        f.shown = true
+        made.count = made.count + 1
+        if name == "CraftProfitKitDemo" then made.demo = f end
+        return f
+    end
+    return made
+end
+
 H.test("kitdemo shows the demo window in the asked theme and toggles without one", function()
     local T = W.boot(H)
     T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
-    T.env.SlashCmdList.CRAFTPROFIT("kitdemo copper")
+    local made = realisticFrames(T)
+    local slash = T.env.SlashCmdList.CRAFTPROFIT
+    slash("kitdemo")
+    H.truthy(made.demo)
+    H.eq(made.demo.shown, true)
+    slash("kitdemo")
+    H.eq(made.demo.shown, false)
+    slash("kitdemo")
+    H.eq(made.demo.shown, true)
+    slash("kitdemo copper")
     H.eq(T.ns.Kit.themeName, "copper")
-    T.env.SlashCmdList.CRAFTPROFIT("kitdemo")
-    T.env.SlashCmdList.CRAFTPROFIT("kitdemo")
-    T.env.SlashCmdList.CRAFTPROFIT("kitdemo steel")
+    slash("kitdemo")
+    H.eq(made.demo.shown, false)
+    slash("kitdemo steel")
+    H.eq(made.demo.shown, true)
     H.eq(T.ns.Kit.themeName, "steel")
 end)
 
 H.test("kitdemo with an unknown theme says so and keeps the current theme", function()
     local T = W.boot(H)
     T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    local made = realisticFrames(T)
     T.env.SlashCmdList.CRAFTPROFIT("kitdemo nope")
+    H.eq(made.count, 0)
+    H.eq(made.demo, nil)
     H.eq(T.ns.Kit.themeName, "gold")
     local said = table.concat(T.chat, "\n")
     H.truthy(said:find("nope", 1, true))

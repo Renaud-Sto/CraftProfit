@@ -477,3 +477,16 @@ H.test("the magnifier icons show only while the AH is open and a recipe is displ
     _G.AuctionHouseFrame = saved
     if not ok then error(err, 0) end
 end)
+
+H.test("dragging the AH tile moves the window and reports where it was dropped", function()
+    local _, Window, calls = boot()
+    Window.render(model())
+    local hit = Window.parts.tiles[1].hit
+    local starts = 0
+    Window.frame().StartMoving = function() starts = starts + 1 end
+    H.truthy(hit.scripts.OnDragStart)
+    hit.scripts.OnDragStart(hit)
+    H.eq(starts, 1)
+    hit.scripts.OnDragStop(hit)
+    H.eq(calls[#calls], { "onMoved", "TOPLEFT", 100, 700 })
+end)

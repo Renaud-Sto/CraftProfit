@@ -744,7 +744,7 @@ end)
 
 H.test("a tile can be made clickable, with a hover tint and a magnifier that shows on request", function()
     local T, Kit = boot()
-    local rec = recordingFrames(T)
+    recordingFrames(T)
     local clicks = 0
     local tile = Kit.tile(nil, 110, 52)
     local hit = tile:onClick(function() clicks = clicks + 1 end)
@@ -766,10 +766,18 @@ H.test("a tile can be made clickable, with a hover tint and a magnifier that sho
         tile:showIcon(true)
         H.falsy(tile.icon.shown)
     end)
+    -- The tint belongs to the tile frame (under its fill, outline and texts), not to the button.
+    H.falsy(tile.tint.shown)
     hit.scripts.OnEnter(hit)
+    H.truthy(tile.tint.shown)
     hit.scripts.OnLeave(hit)
+    H.falsy(tile.tint.shown)
+    -- Every theme uses the same rowHover today, so check that a repaint happens and
+    -- gives the steel colour.
+    local painted
+    tile.tint.SetColorTexture = function(_, r, g, b, a) painted = { r, g, b, a } end
     Kit.applyTheme("steel")
-    H.truthy(rec)
+    H.eq(painted, T.ns.Theme.get("steel").rowHover)
 end)
 
 H.test("the window title can be clicked, drags the window and lights up on hover", function()
@@ -781,7 +789,10 @@ H.test("the window title can be clicked, drags the window and lights up on hover
     H.truthy(hit)
     hit.scripts.OnClick(hit)
     H.eq(clicked, 1)
-    H.truthy(hit.scripts.OnDragStart)
+    local starts = 0
+    win.StartMoving = function() starts = starts + 1 end
+    hit.scripts.OnDragStart(hit)
+    H.eq(starts, 1)
     hit.scripts.OnDragStop(hit)
     H.eq(moved, { "TOPLEFT", 100, 700 })
     local colours = {}

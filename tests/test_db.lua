@@ -164,30 +164,30 @@ end)
 H.test("known recipes are stored per profession, repaired, and cycled", function()
     local ns = H.newNS("Util", "Data/Skillup", "Recipes", "DB")
     local DB = ns.DB
-    local function raw(id) return { recipeID = id, name = "R" .. id, difficulty = 1, outputItemID = 100, qtyMin = 1, qtyMax = 1,
+    local function rawRecipe(id) return { recipeID = id, name = "R" .. id, difficulty = 1, outputItemID = 100, qtyMin = 1, qtyMax = 1,
         reagents = { { itemID = 1, qty = 2 } } } end
     local db = DB.initChar({})
     H.eq(db.known, {})
     H.eq(DB.currentKnown(db), nil)
     H.eq(DB.nextKnown(db), nil)
-    H.truthy(DB.setKnown(db, "164", "Forge", { raw(1), raw(2), raw(1), "junk", { recipeID = 0 } }, 1700000000))
+    H.truthy(DB.setKnown(db, "164", "Forge", { rawRecipe(1), rawRecipe(2), rawRecipe(1), "junk", { recipeID = 0 } }, 1700000000))
     H.eq(#db.known[1].recipes, 2)
     H.eq(db.known[1].name, "Forge")
     H.eq(db.knownCurrent, "164")
-    H.truthy(DB.setKnown(db, "185", "Cuisine", { raw(7) }, 1700000100))
+    H.truthy(DB.setKnown(db, "185", "Cuisine", { rawRecipe(7) }, 1700000100))
     H.eq(DB.currentKnown(db).key, "185")
     H.eq(DB.nextKnown(db).key, "164")
     H.eq(DB.nextKnown(db).key, "185")
     -- replaced, not duplicated
-    H.truthy(DB.setKnown(db, "164", "Forge", { raw(3) }, 1700000200))
+    H.truthy(DB.setKnown(db, "164", "Forge", { rawRecipe(3) }, 1700000200))
     H.eq(#db.known, 2)
     H.eq(db.known[1].recipes[1].recipeID, 3)
     H.eq(DB.setKnown(db, "", "x", {}, 1), false)
     H.eq(DB.setKnown(db, "x", "x", "junk", 1), false)
-    for i = 1, DB.MAX_PROFESSIONS + 2 do DB.setKnown(db, "k" .. i, "P", { raw(i) }, 1700000300) end
+    for i = 1, DB.MAX_PROFESSIONS + 2 do DB.setKnown(db, "k" .. i, "P", { rawRecipe(i) }, 1700000300) end
     H.eq(#db.known, DB.MAX_PROFESSIONS)
     -- saved data is repaired on load
-    local bad = { known = { { key = "a", name = 5, updated = -1, recipes = { raw(1), "junk" } }, "junk",
+    local bad = { known = { { key = "a", name = 5, updated = -1, recipes = { rawRecipe(1), "junk" } }, "junk",
         { key = "a", recipes = {} }, { key = "", recipes = {} } }, knownCurrent = 7 }
     DB.initChar(bad)
     H.eq(#bad.known, 1)

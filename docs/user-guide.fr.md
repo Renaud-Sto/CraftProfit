@@ -55,6 +55,20 @@ Le bouton en haut à droite de la liste bascule entre :
 
 Cliquez sur une recette de la liste pour l'afficher dans la fenêtre au-dessus.
 
+### La fenêtre de montée de métier
+
+**Montée de métier** (bouton sous la liste des épingles, ou `/cp level`) ouvre une fenêtre séparée et déplaçable avec **toutes les recettes que vous connaissez** dans un métier, le point de compétence le moins cher en premier : vous voyez d'un coup d'œil quoi fabriquer ensuite pour monter en perdant le moins possible.
+
+- Chaque ligne montre la recette (colorée selon la difficulté), puis le coût par point, avec les mêmes écritures que la liste des épingles : `21g 29s/pt` en rouge, `+9s 33c/pt` en vert quand les crafts se paient d'eux-mêmes, `?` quand un prix manque (ces recettes restent en bas).
+- Le petit chiffre gris avant le montant, comme `x4`, est le nombre de crafts qu'un point demande en moyenne (100 % = `x1`, 75 % = `x1.3`, 25 % = `x4`). Le montant est la perte (ou le gain) d'un craft multipliée par ce chiffre, donc facile à relire : un craft qui perd 5s et demande 4 crafts par point affiche environ `20s/pt`.
+- Le bouton en haut à droite change l'ordre : **Tri : coût/point** (le point le moins cher en premier, par défaut) ou **Tri : vitesse** (le point le plus probable en premier, donc le moins de crafts ; à chance égale, le moins cher). Utilisez la vitesse pour les derniers points à obtenir vite, le coût pour dépenser le moins. Le choix est mémorisé.
+- Les **recettes grises** ne peuvent plus donner de point : elles sont masquées par défaut, cochez *Afficher les recettes grises* pour les voir.
+- Le bouton du métier fait défiler les métiers que CraftProfit a lus pour ce personnage. La liste est enregistrée quand vous ouvrez une fenêtre de métier : elle est donc disponible à l'hôtel des ventes, fenêtre de métier fermée. Elle est relue à chaque mise à jour de la fenêtre de métier, ses couleurs suivent donc votre niveau.
+- L'âge des prix (le dernier scan) est affiché en haut : tout le classement en dépend, lancez donc **Scanner l'HV** d'abord.
+- Cliquez sur une ligne pour afficher la recette dans la fenêtre principale (multiplicateur de crafts, détail des composants, clic sur un composant pour le chercher).
+
+Le classement vaut autant que les chances de point sur lesquelles il repose, qui restent des estimations selon la couleur. Il classe le *prochain point* ; ce n'est pas un plan complet de votre niveau actuel jusqu'au maximum. Une recette dont le résultat n'est pas un objet (un enchantement, par exemple) est écartée.
+
 ### Rechercher un composant
 
 Avec le détail des composants déplié, cliquez sur la ligne d'un composant, par exemple `20x Barre de bronze`. CraftProfit ouvre la vue *Acheter* de l'hôtel des ventes, tape le nom de l'objet dans la barre de recherche et lance la recherche. Quand vous ouvrez la vue d'achat de l'objet, la quantité est déjà réglée sur 20 (multipliée par le nombre de crafts). C'est vous qui choisissez l'offre et qui appuyez sur **Acheter** : CraftProfit n'achète jamais rien.
@@ -96,7 +110,7 @@ La probabilité de point dépend de la couleur de la recette et c'est une **esti
 | Position de la fenêtre | La déplacer ; `/cp reset` pour annuler | À côté de la fenêtre de métier ou de l'hôtel des ventes |
 | Tri de la liste des épingles | Bouton au-dessus de la liste | Gain |
 
-Commandes : `/cp` (ou `/craftprofit`) avec `show`, `hide`, `reset`, `scan`, `history`, `locale <code>` et `selftest`. Voir le [README](../README.fr.md#commandes).
+Commandes : `/cp` (ou `/craftprofit`) avec `show`, `hide`, `reset`, `scan`, `history`, `market`, `level`, `locale <code>` et `selftest`. Voir le [README](../README.fr.md#commandes).
 
 ## Langues
 

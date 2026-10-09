@@ -33,10 +33,12 @@ Files load in the order of `CraftProfit/CraftProfit.toc`. Each file receives the
 | `History.lua` | `ns.History` | Tracked recipes (cap 15), price history points per item, retention (raw, daily, weekly) | no |
 | `PriceQueue.lua` | `ns.PriceQueue` | Sequential search queue with timeouts | no (a `send` function is injected) |
 | `Evaluate.lua` | `ns.Evaluate` | Combines recipe, prices and item facts into one result | no (lookups injected) |
+| `Leveling.lua` | `ns.Leveling` | Ranks the known recipes of a profession by cost per point | no |
 | `Present.lua` | `ns.Present` | Turns a result into display lines (text only) | no |
 | `AHAdapter.lua` | `ns.AH` | Auction house: scan, targeted search, search box helper | `C_AuctionHouse`, auction house frame |
 | `TradeAdapter.lua` | `ns.Trade` | Profession window: selected recipe, raw recipe data, difficulty, known professions | `C_TradeSkillUI`, professions API |
 | `UI/Window.lua` | `ns.Window` | The floating window | frames |
+| `UI/LevelingUI.lua` | `ns.LevelingUI` | The leveling window | frames |
 | `UI/PinsUI.lua` | `ns.PinsUI` | Pinned list, sort button, Search prices and Scan AH buttons | frames |
 | `Boot.lua` | `ns.Controller` | Wires everything, owns the selection state, slash commands, self-test | events, slash commands |
 
@@ -61,6 +63,12 @@ Dependencies point one way: `Core`, `Data`, `Util`, `Format` know nothing of the
 - `Prices.store` and `Prices.merge` write compact rows `{ unit, volume, time }` into `CraftProfitDB.prices`; `Prices.get` returns the unit price and its age, and `nil` for the age when the clock cannot be trusted.
 - `DB.prune` removes prices older than 14 days at load.
 - Selling uses a commission of 5 % (`settings.cut`, measured). The deposit is ignored: it is refunded when an item sells.
+
+## Leveling list
+
+`Trade.scanKnown` reads every learned recipe of the open profession that is not grey (`C_TradeSkillUI.GetAllRecipeIDs`, `GetRecipeInfo`, then the usual schematic read), 40 recipes per frame so the client never hitches, and abandons the read if the window closes (a partial list never replaces a good one). `Controller.refreshKnown` runs it on `TRADE_SKILL_LIST_UPDATE`, at most every 5 seconds, and stores the result with `DB.setKnown` in `CraftProfitCharDB.known = { { key, name, updated, recipes } }` (8 professions, 400 recipes each at most). The profession key is the id of `C_TradeSkillUI.GetBaseProfessionInfo()` when it has one, else the profession name. `Leveling.rank` evaluates each stored recipe with the per point figures forced on, drops the ones with a chance of 0 unless asked, and orders them with `Core.rankByPointCost`. Prices come from the last scan, so no search is needed.
+
+A recipe whose cost per point is negative (it pays for itself) ranks first in the cost order, and the more so the rarer the point, because the figure is the money made per point: that order is about money, not speed. The speed order (`Core.rankBySpeed`, setting `levelSort`) puts the highest chance first and breaks ties by cost; the window also shows the crafts per point (`Present.craftsPerPoint`, 1 / chance) so the amount can be read as the loss of one craft times that figure.
 
 ## Price history
 
@@ -99,6 +107,7 @@ Retention (`History.compact`): all points for 14 days, then one point per day up
 
 | Key | Content |
 | --- | --- |
+| `known` | Learned recipes per profession for the leveling list |
 | `pins` | Up to 12 normalised recipes `{ recipeID, name, difficulty, outputItemID, outputQty, reagents = { { itemID, qty } } }` |
 | `sortMode` | `"net"` or `"point"` |
 

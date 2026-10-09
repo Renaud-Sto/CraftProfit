@@ -385,6 +385,7 @@ function Window.attach(target, saved)
     end
 end
 
+function Window.frame() return frame end
 function Window.show() if frame then frame:Show() end end
 function Window.hide() if frame then frame:Hide() end end
 function Window.isShown() return frame ~= nil and frame:IsShown() == true end

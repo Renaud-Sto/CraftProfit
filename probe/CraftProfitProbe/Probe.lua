@@ -1,6 +1,6 @@
 -- CraftProfitProbe: THROWAWAY addon measuring what the Forever client exposes.
 -- Every output line starts with the version so a stale install is obvious.
-local VERSION = "0.4.1"
+local VERSION = "0.5.0"
 local TAG = "|cff66ccff[CPP " .. VERSION .. "]|r "
 
 local function isSecret(v)
@@ -308,6 +308,29 @@ cmds.ruleset = function()
     end
 end
 
+-- Profession window must be open. What identifies the profession, and how many recipes
+-- are learned, grey or not (for the leveling list).
+cmds.known = function()
+    local api = C_TradeSkillUI
+    out("GetBaseProfessionInfo:", type(api and api.GetBaseProfessionInfo))
+    local ok, info = pcall(api.GetBaseProfessionInfo)
+    dumpTable("GetBaseProfessionInfo", ok and info or nil)
+    out("GetTradeSkillLine:", try(GetTradeSkillLine))
+    local ids = api.GetAllRecipeIDs and api.GetAllRecipeIDs() or {}
+    local learned, grey = 0, 0
+    local sample
+    for _, id in ipairs(ids) do
+        local r = api.GetRecipeInfo(id)
+        if type(r) == "table" and r.learned == true then
+            learned = learned + 1
+            if r.relativeDifficulty == 3 then grey = grey + 1 end
+            sample = sample or r
+        end
+    end
+    out("recipes:", #ids, "learned:", learned, "learned grey:", grey)
+    dumpTable("first learned recipe info", sample)
+end
+
 cmds.trade = function()
     out("ProfessionsFrame:", type(ProfessionsFrame), "shown:", ProfessionsFrame and ProfessionsFrame:IsShown())
     out("TradeSkillFrame:", type(TradeSkillFrame), "shown:", TradeSkillFrame and TradeSkillFrame:IsShown())
@@ -413,7 +436,7 @@ SlashCmdList.CPP = function(msg)
         out("== " .. cmd .. " " .. arg)
         fn(arg)
     else
-        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | qty | ruleset | log | clear")
+        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | qty | ruleset | known | log | clear")
     end
 end
 out("loaded. /cpp for commands. Enable Lua errors: /console scriptErrors 1")

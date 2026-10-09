@@ -55,6 +55,20 @@ The button at the top right of the list switches between:
 
 Click a recipe in the list to show it in the window above.
 
+### The leveling window
+
+**Leveling** (button under the pinned list, or `/cp level`) opens a separate, movable window with **every recipe you know** in a profession, cheapest skill point first, so you can see at a glance what to craft next to level at the smallest loss.
+
+- Each row shows the recipe (coloured by difficulty), then the cost per point, with the same wording as the pinned list: `21g 29s/pt` in red, `+9s 33c/pt` in green when the crafts pay for themselves, `?` when a price is missing (those stay at the bottom).
+- The small grey figure before the amount, such as `x4`, is how many crafts a point takes on average (100 % = `x1`, 75 % = `x1.3`, 25 % = `x4`). The amount is the loss (or gain) of one craft times that figure, which makes it easy to read: a craft that loses 5s and needs 4 crafts per point shows about `20s/pt`.
+- The button at the top right switches the order: **Sort: cost/point** (cheapest point first, the default) or **Sort: speed** (the likeliest point first, the fewest crafts; among equal chances the cheapest first). Use speed when you need the last points quickly, cost when you want to spend the least. The choice is saved.
+- **Grey recipes** cannot give a skill point any more, so they are hidden by default; tick *Show grey recipes* to see them.
+- The profession button cycles through the professions CraftProfit has read for this character. The list is saved when you open a profession window, so it is available at the auction house with the profession window closed. It is read again whenever the profession window updates, so the colours follow your skill.
+- The age of the prices (the last scan) is shown at the top: the whole list depends on it, so run **Scan AH** first.
+- Click a row to show that recipe in the main window (crafts multiplier, material detail, click a reagent to search it).
+
+The ranking is as reliable as the skill-up chances behind it, which are still estimates by recipe colour. It ranks the *next point*; it is not a full plan from your current skill to the maximum. A recipe whose output is not an item (an enchantment, for example) is left out.
+
 ### Searching a reagent
 
 With the material detail unfolded, click a reagent line, for example `20x Bronze Bar`. CraftProfit opens the auction house *Buy* view, types the item name in the search box and starts the search. When you open the item's buy view, the quantity is already set to 20 (multiplied by the number of crafts). You still choose the listing and press **Buy** yourself: CraftProfit never buys anything.
@@ -96,7 +110,7 @@ The chance of a point depends on the colour of the recipe and is an **estimate**
 | Window position | Drag it; `/cp reset` to undo | Beside the profession or auction house window |
 | Sort of the pinned list | Button above the list | Profit |
 
-Commands: `/cp` (or `/craftprofit`) with `show`, `hide`, `reset`, `scan`, `history`, `locale <code>` and `selftest`. See the [README](../README.md#commands).
+Commands: `/cp` (or `/craftprofit`) with `show`, `hide`, `reset`, `scan`, `history`, `market`, `level`, `locale <code>` and `selftest`. See the [README](../README.md#commands).
 
 ## Languages
 

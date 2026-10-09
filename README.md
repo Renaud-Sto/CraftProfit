@@ -57,6 +57,7 @@ The full walkthrough, every option and the explanation of each number are in the
 | `/cp history` | List the tracked recipes; `/cp history remove <n>` deletes one |
 | `/cp level` | Open or close the leveling window |
 | `/cp market` | Show which market (ruleset and faction) the prices are saved under |
+| `/cp theme [name]` | List the themes and the current one; with a name, switch to it (`gold`, `copper`, `steel`: Gold, Copper, Steel blue) |
 | `/cp locale <code>` | Force a language (`enUS`, `frFR`, `esES`, `esMX`); without code, back to the game language |
 | `/cp selftest` | Run the built-in self-test |
 

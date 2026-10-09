@@ -45,7 +45,7 @@ Select a recipe you know and a small window appears next to your profession wind
 
 ### Slash commands
 
-`/cp` or `/craftprofit`: `show`, `hide`, `reset`, `scan`, `locale <code>`, `selftest`.
+`/cp` or `/craftprofit`: `show`, `hide`, `reset`, `scan`, `history`, `market`, `level`, `locale <code>`, `theme [name]`, `selftest`.
 
 ### Compatibility
 

@@ -55,7 +55,7 @@ local function boot(opts)
     T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
     local calls = {}
     for _, name in ipairs({ "onPinClick", "onReagentClick", "onCraftsChange", "onTrackToggle",
-        "onPerPointToggle", "onCostToggle", "onMoved", "onOutputClick" }) do
+        "onPerPointToggle", "onCostToggle", "onMoved", "onOutputClick", "onThemeClick" }) do
         T.ns.Window.lastHandlers[name] = function(...) calls[#calls + 1] = { name, ... } end
     end
     return T, T.ns.Window, calls
@@ -505,4 +505,12 @@ H.test("a click that ends a drag of the AH tile or the title searches nothing", 
         H.eq(#calls, i)
         H.eq(calls[i], { "onOutputClick" })
     end
+end)
+
+H.test("the header swatch asks to switch the theme", function()
+    local _, Window, calls = boot()
+    local hit = rawget(Window.frame(), "themeHit")
+    H.truthy(hit)
+    hit.scripts.OnClick(hit)
+    H.eq(calls[#calls], { "onThemeClick" })
 end)

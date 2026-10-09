@@ -4,7 +4,7 @@
 
 CraftProfit tells you what a profession recipe really costs at the auction house and what to do with the result. This guide explains every part of the window, how each number is computed, and what the addon cannot know.
 
-Contents: [The window](#the-window) · [At the auction house](#at-the-auction-house) · [How the numbers are computed](#how-the-numbers-are-computed) · [Options and commands](#options-and-commands) · [Languages](#languages) · [Known limitations](#known-limitations) · [FAQ and troubleshooting](#faq-and-troubleshooting)
+Contents: [The window](#the-window) · [At the auction house](#at-the-auction-house) · [How the numbers are computed](#how-the-numbers-are-computed) · [Themes](#themes) · [Options and commands](#options-and-commands) · [Languages](#languages) · [Known limitations](#known-limitations) · [FAQ and troubleshooting](#faq-and-troubleshooting)
 
 ## The window
 
@@ -119,6 +119,15 @@ A craft that loses 16s 50c with a 25 % chance of a point costs 66s per point on 
 
 The chance of a point depends on the colour of the recipe and is an **estimate**, not a measured value: orange 100 %, yellow 75 %, green 25 %, grey 0 % (shown `n/a`). The percentage used is displayed beside the check box, next to the value. The colour of pinned recipes is refreshed whenever the profession window updates, so it follows your skill.
 
+## Themes
+
+CraftProfit has three colour themes: **Gold** (the default), **Copper** and **Steel blue**. A theme changes the colours of the frames, panels and buttons, never the layout.
+
+- Type `/cp theme` to list the themes and see the one in use, or `/cp theme copper` (`gold`, `copper` or `steel`; capitals do not matter) to switch. An unknown name changes nothing and says so.
+- Or click the small coloured square in the header of the main window, left of the close button: each click goes to the next theme (Gold, Copper, Steel blue, then Gold again) and prints `Theme set: ...` in the chat. The square shows the main colour of the theme in use.
+- The change applies at once to the main window, the pinned list, the leveling window and the scroll bars, with no `/reload`. It is saved for the whole account, so every character uses it.
+- Colours that carry a meaning never change with the theme: gain in green, loss in red, the difficulty colours of recipes (orange, yellow, green, grey) and the tint of the result banner.
+
 ## Options and commands
 
 | Setting | Where | Default |
@@ -127,8 +136,9 @@ The chance of a point depends on the colour of the recipe and is an **estimate**
 | Material detail folded or unfolded | Click the Materials header | Unfolded |
 | Window position | Drag it; `/cp reset` to undo | Beside the profession or auction house window |
 | Sort of the pinned list | Button in the header of the Pinned recipes panel | Profit |
+| Theme | `/cp theme [name]`, or the coloured square in the main window header; saved for the account | Gold |
 
-Commands: `/cp` (or `/craftprofit`) with `show`, `hide`, `reset`, `scan`, `history`, `market`, `level`, `locale <code>` and `selftest`. See the [README](../README.md#commands).
+Commands: `/cp` (or `/craftprofit`) with `show`, `hide`, `reset`, `scan`, `history`, `market`, `level`, `locale <code>`, `theme [name]` and `selftest`. See the [README](../README.md#commands).
 
 ## Languages
 

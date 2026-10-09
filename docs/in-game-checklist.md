@@ -133,6 +133,18 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] After `/cp kitdemo copper` (then `steel`, `gold`): no Lua error and the AH tile's tint still shows on hover.
 - [ ] If no magnifier appears, report the `/cpp icon` lines. Known: the icon is optional, the click works without it.
 
+## Themes (PR 4)
+- [ ] `/cp theme` prints the current theme and the list (`gold, copper, steel`).
+- [ ] `/cp theme copper`, `/cp theme steel` and `/cp theme gold` (also in capitals) repaint at once, with the windows open and no `/reload`: the main window, the pinned list, the leveling window and the scroll bars. A button that was being hovered is repainted too. Each prints `Theme set: ...`.
+- [ ] The choice survives `/reload` and a relog, and another character of the account opens in the same theme.
+- [ ] `/cp theme purple` prints `Unknown theme 'purple'. Available: ...` and changes nothing (the colours and the saved choice stay).
+- [ ] The coloured square in the main window header, left of the close button, shows the accent colour of the theme in use. Each click goes gold, copper, steel, gold and prints `Theme set: ...`; the square changes colour with it and lights up on hover.
+- [ ] The square does not overlap the close button or the title plaque. Clicking it never drags the window and never starts a search; dragging the window by the header next to it still works.
+- [ ] Readability in each theme, in every window: gain green and loss red, muted text, the best tile outline and tint, the banner tint (green, red, amber: it follows the result, not the theme), the recipe difficulty colours of the pinned and leveling names, the check boxes and the input box.
+- [ ] Scroll bar (pinned list with more than 6 pins, leveling list with more than 12 rows): grabbing the thumb off-centre does not make it jump; clicking the track outside the thumb still centres it on the pointer; releasing the button outside the window or after alt-tab while dragging ends the drag (the thumb no longer follows the mouse); a right or middle click on the bar does not scroll.
+- [ ] Pinned list and leveling list rows still show the hover tint and, in the pinned list, the gold selected row; clicking selects. Rows stay clear of the scroll bar. Materials rows still highlight on hover and a click searches the reagent.
+- [ ] Known small limits: nothing new beyond those listed under the windows above.
+
 ## Numbers
 - [ ] For one recipe, compare each reagent price with the AH listing prices: the stored price is the median of the 5 cheapest units (not the minimum).
 - [ ] Sell one crafted item (or use `docs/probe-findings.md` F5): the mailed amount matches `price × (1 − cut)`. If not, change `DB.DEFAULTS.cut` and the test expectations.

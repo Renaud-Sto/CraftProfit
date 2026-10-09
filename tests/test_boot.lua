@@ -898,3 +898,57 @@ H.test("the window is given the output click handler", function()
     H.truthy(T.ns.Window.lastHandlers.onOutputClick)
     H.eq(T.ns.Window.lastHandlers.onOutputClick, T.ns.Controller.onOutputClick)
 end)
+
+H.test("the saved theme is applied before any window is built, and a bad one falls back to gold", function()
+    local T = W.boot(H, { items = ITEMS })
+    T.env.CraftProfitDB = { settings = { theme = "copper" } }
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(T.ns.Kit.themeName, "copper")
+    local T2 = W.boot(H, { items = ITEMS })
+    T2.env.CraftProfitDB = { settings = { theme = "nope" } }
+    T2.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(T2.ns.Kit.themeName, "gold")
+    H.eq(T2.env.CraftProfitDB.settings.theme, "gold")
+end)
+
+H.test("/cp theme lists the themes, sets one, refuses an unknown one and saves the choice", function()
+    local T = boot()
+    local slash = T.env.SlashCmdList.CRAFTPROFIT
+    slash("theme")
+    H.truthy(T.chat[#T.chat]:find("Gold", 1, true))
+    H.truthy(T.chat[#T.chat]:find("gold, copper, steel", 1, true))
+    slash("theme copper")
+    H.eq(T.ns.Kit.themeName, "copper")
+    H.eq(T.env.CraftProfitDB.settings.theme, "copper")
+    H.truthy(T.chat[#T.chat]:find("Copper", 1, true))
+    slash("theme STEEL")
+    H.eq(T.ns.Kit.themeName, "steel")
+    slash("theme nope")
+    H.eq(T.ns.Kit.themeName, "steel")
+    H.eq(T.env.CraftProfitDB.settings.theme, "steel")
+    H.truthy(T.chat[#T.chat]:find("nope", 1, true))
+end)
+
+H.test("cycleTheme steps through the themes in order and wraps", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local seen = {}
+    for _ = 1, 4 do C.cycleTheme(); seen[#seen + 1] = T.ns.Kit.themeName end
+    H.eq(seen, { "copper", "steel", "gold", "copper" })
+    H.eq(T.env.CraftProfitDB.settings.theme, "copper")
+end)
+
+H.test("setTheme returns false for an unknown theme and changes nothing", function()
+    local T = boot()
+    H.falsy(T.ns.Controller.setTheme("nope"))
+    H.eq(T.ns.Kit.themeName, "gold")
+    H.truthy(T.ns.Controller.setTheme("steel"))
+end)
+
+H.test("the window is given the theme handler and the French messages exist", function()
+    local T = boot({ locale = "frFR", items = ITEMS })
+    H.truthy(T.ns.Window.lastHandlers.onThemeClick)
+    T.env.SlashCmdList.CRAFTPROFIT("theme")
+    H.truthy(T.chat[#T.chat]:find("Thème", 1, true))
+    H.truthy(T.chat[#T.chat]:find("Or", 1, true))
+end)

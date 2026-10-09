@@ -10,7 +10,8 @@ ns.PinsUI = PinsUI
 local ROW_H = 18
 local VISIBLE = 6
 local BUTTON_H = 24
-local STATUS_H = 14
+-- Two lines of the small font: a long translated status wraps rather than being cut.
+local STATUS_H = 28
 local FOOTER_H = BUTTON_H + 6 + BUTTON_H + 6 + STATUS_H
 local SEARCH_TIMEOUT = 6
 local TICK_SECONDS = 0.2
@@ -26,6 +27,7 @@ local queue, ticker
 local notFound = 0
 
 PinsUI.parts = parts
+PinsUI.FOOTER_H = FOOTER_H
 PinsUI.state = "idle"
 PinsUI.status = ""
 
@@ -295,6 +297,7 @@ function PinsUI.init(controller)
     statusText = host:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     statusText:SetWidth(inner)
     statusText:SetJustifyH("LEFT")
+    statusText:SetJustifyV("TOP")
     Kit.onTheme(function(t)
         local c = t.textMuted
         statusText:SetTextColor(c[1], c[2], c[3], c[4])

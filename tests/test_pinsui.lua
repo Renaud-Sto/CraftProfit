@@ -313,7 +313,24 @@ H.test("the panel height follows the number of pinned rows shown and the host he
     T.ns.PinsUI.refresh()
     H.eq(parts.panel.frame.height, Kit.panelHeight(6, 18))
     local host = T.ns.Window.pinsHost()
-    H.truthy(host.height > Kit.panelHeight(6, 18))
+    H.eq(host.height, Kit.panelHeight(6, 18) + Kit.GAP + T.ns.PinsUI.FOOTER_H)
+end)
+
+H.test("the host is the panel, a gap and a footer with two lines of status, and the window grows by it", function()
+    local T = boot()
+    local Kit, P = T.ns.Kit, T.ns.PinsUI
+    -- Two 24 px buttons with their 6 px gaps, then two lines of the small font.
+    H.truthy(P.FOOTER_H >= 24 * 2 + 12 + 28)
+    openList(T)
+    local host = T.ns.Window.pinsHost()
+    H.eq(host.height, Kit.panelHeight(2, 18) + Kit.GAP + P.FOOTER_H)
+    local frame = T.ns.Window.frame()
+    H.truthy(host:IsShown())
+    local shownHeight = frame.height
+    P.onAHOpen(false)
+    H.falsy(host:IsShown())
+    local hiddenHeight = frame.height
+    H.eq(shownHeight - hiddenHeight, Kit.GAP + host.height)
 end)
 
 H.test("the sort button reads the sort mode and toggles it", function()
@@ -345,9 +362,24 @@ H.test("clicking a pinned row selects that recipe", function()
     H.eq(T.ns.Controller.currentRecipeID(), 2)
 end)
 
-H.test("a theme switch repaints the pinned list without error", function()
+H.test("a theme switch repaints the pinned names and values in the new theme", function()
     local T = boot()
-    openList(T)
-    for _, name in ipairs({ "copper", "steel", "gold" }) do T.ns.Kit.applyTheme(name) end
-    H.truthy(T.ns.PinsUI.parts.panel)
+    local Theme = T.ns.Theme
+    for _, pin in ipairs(T.env.CraftProfitCharDB.pins) do pin.difficulty = nil end
+    local parts = openList(T)
+    local row = parts.rows[1]
+    -- No listing was recorded, so the value is unknown and drawn muted.
+    H.eq(row.value.text, "?")
+    local name, value
+    row.name.SetTextColor = function(_, r, g, b, a) name = { r, g, b, a } end
+    row.value.SetTextColor = function(_, r, g, b, a) value = { r, g, b, a } end
+    local gold, steel = Theme.get("gold"), Theme.get("steel")
+    H.truthy(steel.textMain[1] ~= gold.textMain[1] or steel.textMain[3] ~= gold.textMain[3])
+    H.truthy(steel.textMuted[1] ~= gold.textMuted[1] or steel.textMuted[3] ~= gold.textMuted[3])
+    T.ns.Kit.applyTheme("steel")
+    H.eq(name, steel.textMain)
+    H.eq(value, steel.textMuted)
+    for _, theme in ipairs({ "copper", "steel", "gold" }) do T.ns.Kit.applyTheme(theme) end
+    H.eq(name, gold.textMain)
+    H.eq(value, gold.textMuted)
 end)

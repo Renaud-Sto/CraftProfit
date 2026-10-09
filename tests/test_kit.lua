@@ -517,3 +517,12 @@ H.test("the new widgets survive every theme switch and repaint with the new colo
     H.falsy(gold.checkMark[1] == steel.checkMark[1] and gold.checkMark[2] == steel.checkMark[2]
         and gold.checkMark[3] == steel.checkMark[3])
 end)
+
+H.test("naturalWidth prefers the unbounded width and falls back to the string width", function()
+    local Kit = load()
+    local fs = W.frame()
+    fs.GetStringWidth = function() return 40 end
+    H.eq(Kit.naturalWidth(fs), 40)
+    fs.GetUnboundedStringWidth = function() return 90 end
+    H.eq(Kit.naturalWidth(fs), 90)
+end)

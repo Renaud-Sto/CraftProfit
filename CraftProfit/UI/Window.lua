@@ -1,56 +1,79 @@
--- The small floating window. Parented to UIParent (never to a Blizzard frame, to
--- avoid taint); anchored beside the profession or AH window until the user
--- drags it, after which the saved position wins.
+-- The main window, built on the shared UI kit (UI/Kit.lua): a result banner, three
+-- tiles for the ways to sell the item, a Materials panel and an Options panel; at the
+-- auction house the pinned list (UI/PinsUI.lua) hangs below. Parented to UIParent
+-- (never to a Blizzard frame, to avoid taint); anchored beside the profession or AH
+-- window until the user drags it, after which the saved position wins.
 local _, ns = ...
 local L = ns.L
+local Kit, Theme = ns.Kit, ns.Theme
 
 local Window = {}
 ns.Window = Window
 
-local WIDTH = 320
-local PAD = 10
-local ROW_H = 16
-local HEADER_H = 26
-local MAX_LINES = 7
+local WIDTH = 372
+local ROW_H = 18
+local BANNER_H = 52
+local TILE_H = 52
+local LIKELY_H = 16
+local AGE_H = 14
+local OPTION_ROWS = 3
+local OPTION_ROW_H = 26
+local EMPTY_H = 24
 local MAX_DETAIL = 12 -- Recipes.MAX_REAGENTS
+local BANNER_SIZES = { 22, 19, 16, 13 }
+local BANNER_VALUE_ROOM = 120
+local BANNER_FILL, BANNER_EDGE = 0.09, 0.45
 
-local COLORS = {
-    profit = { 0.35, 0.90, 0.45 },
-    loss = { 1.00, 0.40, 0.35 },
-    incomplete = { 1.00, 0.82, 0.25 },
-    none = { 0.70, 0.70, 0.70 },
-    normal = { 0.90, 0.90, 0.90 },
-    best = { 1.00, 0.82, 0.00 }, -- gold: green and red are kept for gain and loss
-    muted = { 0.65, 0.65, 0.70 },
-    stale = { 1.00, 0.60, 0.25 },
+local TONES = {
+    profit = Theme.FIXED.profit,
+    loss = Theme.FIXED.loss,
+    incomplete = Theme.FIXED.incomplete,
+    none = Theme.FIXED.trivial,
 }
 
-local frame, titleText, emptyText, verdictText, verdictValue, ageText
-local perPointCheck, perPointLabel, pinButton, pinsHost, costHit, craftsLabel, craftsBox, trackCheck, trackLabel
-local detailRows = {}
-local costLines = {}
-local expanded = true
-local lineRows = {}
+local frame, content, pinsHost
 local handlers = {}
+local expanded = true
 local contentHeight = 80
+-- The widgets, exposed for tests: `frames` maps a section key to its frame.
+local parts = { frames = {}, tiles = {}, rows = {} }
 
 Window.WIDTH = WIDTH
+Window.parts = parts
 Window.lastModel = nil
 Window.lastHandlers = nil
 
-local function color(fontString, rgb)
-    fontString:SetTextColor(rgb[1], rgb[2], rgb[3])
+-- Blocks of the recipe view, top to bottom, with their heights. Pure.
+-- opts: hasLikely (a "likely outcome" line), expanded (Materials unfolded), reagents.
+function Window.sections(opts)
+    local list = { { key = "banner", height = BANNER_H }, { key = "tiles", height = TILE_H } }
+    if opts.hasLikely then list[#list + 1] = { key = "likely", height = LIKELY_H } end
+    list[#list + 1] = {
+        key = "materials",
+        height = opts.expanded and Kit.panelHeight(opts.reagents, ROW_H) or Kit.FOLDED_H,
+    }
+    list[#list + 1] = { key = "age", height = AGE_H }
+    list[#list + 1] = { key = "options", height = Kit.panelHeight(OPTION_ROWS, OPTION_ROW_H) }
+    return list
 end
 
-local function newText(parent, template)
-    local fs = parent:CreateFontString(nil, "OVERLAY", template)
-    fs:SetWordWrap(false)
-    return fs
+local function heightsOf(list)
+    local heights = {}
+    for i, section in ipairs(list) do heights[i] = section.height end
+    return heights
 end
 
-local function place(region, point, x, y)
-    region:ClearAllPoints()
-    region:SetPoint(point, frame, point, x, y)
+-- Window height needed for these sections (without the pinned list).
+function Window.contentHeightOf(list)
+    local _, total = Kit.stack(heightsOf(list), Kit.GAP, 0)
+    return total + Kit.CONTENT_TOP + Kit.CONTENT_BOTTOM
+end
+
+local function themed(fontString, token)
+    Kit.onTheme(function(t)
+        local c = t[token]
+        fontString:SetTextColor(c[1], c[2], c[3], c[4])
+    end)
 end
 
 -- Item name for the fold-out; "#id" while the game has not loaded it (or when
@@ -64,14 +87,196 @@ local function reagentName(itemID)
     return "#" .. itemID
 end
 
--- Long recipe names drop to the small font before they would be cut off.
-function Window.setTitle(text)
-    titleText:SetFontObject("GameFontNormal")
-    titleText:SetText(text)
-    local textWidth, boxWidth = titleText:GetStringWidth(), titleText:GetWidth()
-    if type(textWidth) == "number" and type(boxWidth) == "number" and textWidth > boxWidth then
-        titleText:SetFontObject("GameFontNormalSmall")
+local function findLine(lines, key)
+    for _, line in ipairs(lines or {}) do
+        if line.key == key then return line end
     end
+    return nil
+end
+
+local function newSection(key, height)
+    local f = CreateFrame("Frame", nil, content)
+    f:SetHeight(height)
+    parts.frames[key] = f
+    return f
+end
+
+-- Banner: the label, the best way to sell and the net result in large type; its tint
+-- follows the kind of result (gain, loss, incomplete) and not the theme.
+local function buildBanner()
+    local f = newSection("banner", BANNER_H)
+    local fill = { 0, 0, 0, 0 }
+    local edge = { 0, 0, 0, 0 }
+    local bg = f:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints(f)
+    local function paintFill() bg:SetColorTexture(fill[1], fill[2], fill[3], fill[4]) end
+    paintFill()
+    local refreshEdge = Kit.rings(f, { function() return edge end })
+
+    local label = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    label:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -10)
+    themed(label, "headText")
+    local text = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    text:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 12, 10)
+    text:SetWidth(WIDTH - Kit.CONTENT_SIDE * 2 - 24 - BANNER_VALUE_ROOM - 8)
+    text:SetJustifyH("LEFT")
+    text:SetWordWrap(false)
+    local best = Theme.FIXED.best
+    text:SetTextColor(best[1], best[2], best[3], best[4])
+    local value = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    value:SetPoint("RIGHT", f, "RIGHT", -12, 0)
+    value:SetJustifyH("RIGHT")
+    parts.banner = {
+        label = label, text = text, value = value,
+        fill = fill, edge = edge, paintFill = paintFill, refreshEdge = refreshEdge,
+    }
+end
+
+local function setBanner(spec)
+    local b = parts.banner
+    local tone = TONES[spec.kind] or TONES.none
+    b.label:SetText(spec.label or "")
+    b.text:SetText(spec.text or "")
+    b.value:SetFont(STANDARD_TEXT_FONT, BANNER_SIZES[1], "")
+    b.value:SetText(spec.value or "")
+    local size = Kit.fitSize(Kit.naturalWidth(b.value), BANNER_SIZES[1], BANNER_VALUE_ROOM, BANNER_SIZES)
+    if size ~= BANNER_SIZES[1] then b.value:SetFont(STANDARD_TEXT_FONT, size, "") end
+    b.value:SetTextColor(tone[1], tone[2], tone[3], tone[4])
+    b.fill[1], b.fill[2], b.fill[3], b.fill[4] = tone[1], tone[2], tone[3], BANNER_FILL
+    b.edge[1], b.edge[2], b.edge[3], b.edge[4] = tone[1], tone[2], tone[3], BANNER_EDGE
+    b.paintFill()
+    b.refreshEdge()
+end
+
+local function buildTiles()
+    local f = newSection("tiles", TILE_H)
+    local width = math.floor((WIDTH - Kit.CONTENT_SIDE * 2 - Kit.GAP * 2) / 3)
+    for i = 1, 3 do
+        local tile = Kit.tile(f, width, TILE_H)
+        tile.frame:SetPoint("TOPLEFT", f, "TOPLEFT", (i - 1) * (width + Kit.GAP), 0)
+        parts.tiles[i] = tile
+    end
+end
+
+-- One grey line under the tiles: the most probable disenchant outcome.
+local function buildLikely()
+    local f = newSection("likely", LIKELY_H)
+    local text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    text:SetPoint("LEFT", f, "LEFT", 4, 0)
+    text:SetPoint("RIGHT", f, "RIGHT", -4, 0)
+    text:SetJustifyH("LEFT")
+    text:SetWordWrap(false)
+    themed(text, "textMuted")
+    parts.likely = text
+end
+
+-- Materials: the header folds the detail; each row searches its reagent at the AH.
+local function buildMaterials()
+    local panel = Kit.panel(content, "")
+    parts.frames.materials = panel.frame
+    parts.materials = panel
+    panel:onHeaderClick(function()
+        if handlers.onCostToggle then handlers.onCostToggle(not expanded) end
+    end)
+    for i = 1, MAX_DETAIL do
+        local y = -(i - 1) * ROW_H
+        local hit = CreateFrame("Button", nil, panel.body)
+        hit:SetHeight(ROW_H)
+        hit:SetPoint("TOPLEFT", panel.body, "TOPLEFT", 0, y)
+        hit:SetPoint("TOPRIGHT", panel.body, "TOPRIGHT", 0, y)
+        local hover = hit:CreateTexture(nil, "BACKGROUND")
+        hover:SetAllPoints(hit)
+        Kit.onTheme(function(t)
+            local c = t.rowHover
+            hover:SetColorTexture(c[1], c[2], c[3], c[4])
+        end)
+        hover:Hide()
+        hit:HookScript("OnEnter", function() hover:Show() end)
+        hit:HookScript("OnLeave", function() hover:Hide() end)
+        local name = hit:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        name:SetPoint("LEFT", hit, "LEFT", 8, 0)
+        name:SetPoint("RIGHT", hit, "RIGHT", -80, 0)
+        name:SetJustifyH("LEFT")
+        name:SetWordWrap(false)
+        themed(name, "textMain")
+        local value = hit:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        value:SetPoint("RIGHT", hit, "RIGHT", -8, 0)
+        value:SetJustifyH("RIGHT")
+        themed(value, "textMuted")
+        local row = { hit = hit, name = name, value = value }
+        hit:SetScript("OnClick", function()
+            if row.itemID and handlers.onReagentClick then handlers.onReagentClick(row.itemID, row.qty) end
+        end)
+        parts.rows[i] = row
+    end
+end
+
+local function buildAge()
+    local f = newSection("age", AGE_H)
+    local text = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    text:SetPoint("LEFT", f, "LEFT", 4, 0)
+    parts.age = text
+    parts.ageStale = false
+    parts.paintAge = function()
+        local c = parts.ageStale and Theme.FIXED.stale or Kit.current.textMuted
+        text:SetTextColor(c[1], c[2], c[3], c[4])
+    end
+    Kit.onTheme(function() parts.paintAge() end)
+end
+
+-- Options: the crafts multiplier, history tracking, the cost-per-point option and the
+-- pin button.
+local function buildOptions()
+    local panel = Kit.panel(content, L.PANEL_OPTIONS)
+    parts.frames.options = panel.frame
+    parts.options = panel
+    local body = panel.body
+
+    parts.craftsLabel = body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    parts.craftsLabel:SetPoint("TOPLEFT", body, "TOPLEFT", 8, -6)
+    themed(parts.craftsLabel, "textMain")
+    local box = Kit.input(body, 52, 4)
+    box:SetNumeric(true)
+    box:SetPoint("TOPLEFT", body, "TOPLEFT", 70, -2)
+    -- Applied when the box loses focus (Enter, Escape or a click elsewhere).
+    box:SetScript("OnEditFocusLost", function(self)
+        if handlers.onCraftsChange then handlers.onCraftsChange(self:GetText()) end
+    end)
+    parts.craftsBox = box
+
+    local track = Kit.check(body, "")
+    track:SetPoint("TOPLEFT", body, "TOPLEFT", 160, -4)
+    track.onToggle = function(checked)
+        if handlers.onTrackToggle then handlers.onTrackToggle(checked) end
+    end
+    parts.track = track
+
+    local perPoint = Kit.check(body, "")
+    perPoint:SetPoint("TOPLEFT", body, "TOPLEFT", 8, -OPTION_ROW_H - 4)
+    perPoint.onToggle = function(checked)
+        if handlers.onPerPointToggle then handlers.onPerPointToggle(checked) end
+    end
+    parts.perPoint = perPoint
+    parts.perPointValue = body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    parts.perPointValue:SetPoint("TOPRIGHT", body, "TOPRIGHT", -8, -OPTION_ROW_H - 7)
+    parts.perPointValue:SetJustifyH("RIGHT")
+    parts.perPointTone = nil
+    -- A gain or a cost keeps its fixed colour; a neutral value follows the theme.
+    parts.paintPerPoint = function()
+        local tone = parts.perPointTone
+        local c = tone == "profit" and Theme.FIXED.profit or tone == "loss" and Theme.FIXED.loss
+            or Kit.current.textMain
+        parts.perPointValue:SetTextColor(c[1], c[2], c[3], c[4])
+    end
+    Kit.onTheme(function() parts.paintPerPoint() end)
+
+    local pin = Kit.button(body, "normal", "")
+    pin:SetWidth(120)
+    pin:SetPoint("TOPLEFT", body, "TOPLEFT", 8, -OPTION_ROW_H * 2 - 2)
+    pin:SetScript("OnClick", function()
+        if handlers.onPinClick then handlers.onPinClick() end
+    end)
+    parts.pin = pin
 end
 
 function Window.create(h)
@@ -79,127 +284,38 @@ function Window.create(h)
     handlers = h or {}
     Window.lastHandlers = handlers
 
-    frame = CreateFrame("Frame", "CraftProfitWindow", UIParent, "BackdropTemplate")
-    frame:SetSize(WIDTH, 100)
-    frame:SetFrameStrata("MEDIUM")
-    frame:SetClampedToScreen(true)
-    frame:SetMovable(true)
-    frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetBackdrop({
-        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        edgeSize = 12,
-        insets = { left = 3, right = 3, top = 3, bottom = 3 },
+    frame = Kit.window("CraftProfitWindow", L.TITLE, {
+        width = WIDTH,
+        onMoved = function(point, x, y)
+            if handlers.onMoved then handlers.onMoved(point, x, y) end
+        end,
     })
-    frame:SetBackdropColor(0.05, 0.05, 0.08, 0.92)
-    frame:SetBackdropBorderColor(0.40, 0.40, 0.50, 1)
-    frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    frame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        -- Re-anchor to the screen's bottom-left corner so saved offsets are absolute.
-        local left, top = self:GetLeft(), self:GetTop()
-        if left and top then
-            self:ClearAllPoints()
-            self:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
-            if handlers.onMoved then handlers.onMoved("TOPLEFT", left, top) end
-        end
-    end)
+    content = frame.content
+    buildBanner()
+    buildTiles()
+    buildLikely()
+    buildMaterials()
+    buildAge()
+    buildOptions()
 
-    titleText = newText(frame, "GameFontNormal")
-    place(titleText, "TOPLEFT", PAD, -8)
-    titleText:SetWidth(WIDTH - 40)
-    titleText:SetJustifyH("LEFT")
-
-    local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-    close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 2, 2)
-
-    emptyText = newText(frame, "GameFontDisable")
-    emptyText:SetPoint("TOP", frame, "TOP", 0, -HEADER_H - 8)
-
-    for i = 1, MAX_LINES do
-        local label = newText(frame, "GameFontHighlightSmall")
-        label:SetWidth(150)
-        label:SetJustifyH("LEFT")
-        local value = newText(frame, "GameFontHighlightSmall")
-        value:SetJustifyH("RIGHT")
-        lineRows[i] = { label = label, value = value }
-    end
-
-    -- Click area over the Materials line: folds the reagent detail in and out.
-    costHit = CreateFrame("Button", nil, frame)
-    costHit:SetScript("OnClick", function()
-        if handlers.onCostToggle then handlers.onCostToggle(not expanded) end
-    end)
-    for i = 1, MAX_DETAIL do
-        local label = newText(frame, "GameFontDisableSmall")
-        label:SetWidth(170)
-        label:SetJustifyH("LEFT")
-        local value = newText(frame, "GameFontDisableSmall")
-        value:SetJustifyH("RIGHT")
-        -- Click area: searches this reagent at the auction house.
-        local hit = CreateFrame("Button", nil, frame)
-        hit:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
-        local row = { label = label, value = value, hit = hit }
-        hit:SetScript("OnClick", function()
-            if row.itemID and handlers.onReagentClick then handlers.onReagentClick(row.itemID, row.qty) end
-        end)
-        detailRows[i] = row
-    end
-
-    verdictText = newText(frame, "GameFontNormal")
-    verdictText:SetWidth(WIDTH - PAD * 2)
-    verdictText:SetWordWrap(true)
-    verdictText:SetJustifyH("LEFT")
-    verdictValue = newText(frame, "GameFontNormal")
-    verdictValue:SetJustifyH("RIGHT")
-    ageText = newText(frame, "GameFontDisableSmall")
-    ageText:SetJustifyH("LEFT")
-
-    craftsLabel = newText(frame, "GameFontHighlightSmall")
-    craftsBox = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
-    craftsBox:SetSize(52, 20)
-    craftsBox:SetAutoFocus(false)
-    craftsBox:SetNumeric(true)
-    craftsBox:SetMaxLetters(4)
-    craftsBox:SetJustifyH("CENTER")
-    craftsBox:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
-    craftsBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-    -- Applied when the box loses focus (Enter, Escape or a click elsewhere).
-    craftsBox:SetScript("OnEditFocusLost", function(self)
-        if handlers.onCraftsChange then handlers.onCraftsChange(self:GetText()) end
-    end)
-
-    trackCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
-    trackCheck:SetSize(22, 22)
-    trackCheck:SetScript("OnClick", function(self)
-        if handlers.onTrackToggle then handlers.onTrackToggle(self:GetChecked() and true or false) end
-    end)
-    trackLabel = newText(frame, "GameFontHighlightSmall")
-
-    perPointCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
-    perPointCheck:SetSize(22, 22)
-    perPointCheck:SetScript("OnClick", function(self)
-        if handlers.onPerPointToggle then handlers.onPerPointToggle(self:GetChecked() and true or false) end
-    end)
-    perPointLabel = newText(frame, "GameFontHighlightSmall")
-
-    pinButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    pinButton:SetSize(86, 20)
-    pinButton:SetScript("OnClick", function()
-        if handlers.onPinClick then handlers.onPinClick() end
-    end)
+    parts.empty = content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+    parts.empty:SetPoint("TOP", content, "TOP", 0, -4)
 
     pinsHost = CreateFrame("Frame", nil, frame)
     pinsHost:SetWidth(WIDTH)
     pinsHost:SetHeight(0)
     pinsHost:Hide()
 
+    -- A new frame starts shown: the controller decides when the window appears.
     frame:Hide()
     return frame
 end
 
--- Frame height = recipe section + pinned-recipes section (when shown).
+function Window.setTitle(text)
+    if frame then frame:setTitle(text) end
+end
+
+-- Frame height = recipe sections + pinned-recipes section (when shown).
 function Window.relayout()
     if not frame then return end
     pinsHost:ClearAllPoints()
@@ -208,164 +324,99 @@ function Window.relayout()
     frame:SetHeight(contentHeight + extra)
 end
 
-local function hideLines()
-    for i = 1, MAX_LINES do
-        lineRows[i].label:Hide()
-        lineRows[i].value:Hide()
-    end
-    costHit:Hide()
-    for i = 1, MAX_DETAIL do
-        detailRows[i].label:Hide()
-        detailRows[i].value:Hide()
-        detailRows[i].hit:Hide()
-    end
-    craftsLabel:Hide()
-    craftsBox:Hide()
-    trackCheck:Hide()
-    trackLabel:Hide()
-    verdictText:Hide()
-    verdictValue:Hide()
-    ageText:Hide()
-    perPointCheck:Hide()
-    perPointLabel:Hide()
-    pinButton:Hide()
+local function hideSections()
+    for _, f in pairs(parts.frames) do f:Hide() end
 end
 
 function Window.showEmpty(text)
     if not frame then return end
     Window.lastModel = nil
-    titleText:SetText(L.TITLE)
-    hideLines()
-    emptyText:SetText(text)
-    emptyText:Show()
-    contentHeight = HEADER_H + 34
+    frame:setTitle(L.TITLE)
+    hideSections()
+    parts.empty:SetText(text)
+    parts.empty:Show()
+    contentHeight = Kit.CONTENT_TOP + EMPTY_H + Kit.CONTENT_BOTTOM
     Window.relayout()
 end
 
--- Reagent rows under the Materials line; returns the y below them.
-local function placeDetails(y)
-    for i = 1, MAX_DETAIL do
-        local row, cost = detailRows[i], expanded and costLines[i] or nil
-        if cost then
-            row.itemID, row.qty = cost.itemID, cost.qty
-            row.hit:ClearAllPoints()
-            row.hit:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD + 12, -y)
-            row.hit:SetSize(WIDTH - PAD * 2 - 12, ROW_H - 2)
-            row.hit:Show()
-            row.label:SetText(cost.qty .. "x " .. reagentName(cost.itemID))
-            row.value:SetText(cost.subtotalText)
-            row.label:ClearAllPoints()
-            row.label:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD + 12, -y)
-            row.value:ClearAllPoints()
-            row.value:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD, -y)
-            row.label:Show()
-            row.value:Show()
-            y = y + ROW_H - 2
-        else
-            row.itemID = nil
-            row.hit:Hide()
-            row.label:Hide()
-            row.value:Hide()
-        end
+-- Stacks the sections of `list` under each other and sizes the frame.
+local function layout(list)
+    hideSections()
+    local offsets = Kit.stack(heightsOf(list), Kit.GAP, 0)
+    for i, section in ipairs(list) do
+        local f = parts.frames[section.key]
+        f:ClearAllPoints()
+        f:SetPoint("TOPLEFT", content, "TOPLEFT", 0, offsets[i])
+        f:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, offsets[i])
+        f:SetHeight(section.height)
+        f:Show()
     end
-    return y
+    contentHeight = Window.contentHeightOf(list)
+    Window.relayout()
+end
+
+local function setPerPoint(line)
+    local value = parts.perPointValue
+    if not line then
+        value:Hide()
+        return
+    end
+    parts.perPointTone = line.tone
+    value:SetText((line.tone == "profit" and "+" or "") .. (line.value or ""))
+    parts.paintPerPoint()
+    value:Show()
 end
 
 function Window.render(model)
     if not frame then return end
     Window.lastModel = model
-    costLines = model.costLines or {}
+    local costLines = model.costLines or {}
     expanded = model.costExpanded ~= false
-    Window.setTitle(model.title or L.TITLE)
-    emptyText:Hide()
+    frame:setTitle(model.title or L.TITLE)
+    parts.empty:Hide()
 
-    local y = HEADER_H
-    for i = 1, MAX_LINES do
-        local row, line = lineRows[i], model.lines[i]
-        if line then
-            row.label:SetText(line.label)
-            row.value:SetText(line.value)
-            local tone = line.best and COLORS.best or line.tone and COLORS[line.tone]
-            color(row.label, tone or line.muted and COLORS.muted or COLORS.normal)
-            color(row.value, tone or COLORS.normal)
-            if line.best then row.label:SetText("> " .. line.label) end
-            place(row.label, "TOPLEFT", line.muted and PAD + 12 or PAD, -y)
-            place(row.value, "TOPRIGHT", -PAD, -y)
-            row.label:Show()
-            row.value:Show()
-            if line.key == "cost" then
-                -- "-" folded in, "+" folded out: plain characters every font has.
-                row.label:SetText((expanded and "- " or "+ ") .. line.label)
-                costHit:ClearAllPoints()
-                costHit:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD, -y)
-                costHit:SetSize(WIDTH - PAD * 2, ROW_H)
-                costHit:Show()
-            end
-            y = y + (line.muted and ROW_H - 2 or ROW_H)
-            if line.key == "cost" then y = placeDetails(y) end
+    setBanner(model.banner or { kind = "none", text = "", value = "" })
+    for i, tile in ipairs(parts.tiles) do tile:set((model.tiles or {})[i] or {}) end
+
+    local likely = findLine(model.lines, "likely")
+    parts.likely:SetText(likely and likely.label or "")
+
+    local materials = model.materials or { title = L.PANEL_MATERIALS, total = "" }
+    parts.materials:setTitle((expanded and "- " or "+ ") .. materials.title)
+    parts.materials.right:SetText(materials.total)
+    parts.materials.body:SetShown(expanded)
+    for i = 1, MAX_DETAIL do
+        local row, cost = parts.rows[i], expanded and costLines[i] or nil
+        if cost then
+            row.itemID, row.qty = cost.itemID, cost.qty
+            row.name:SetText(cost.qty .. "x " .. reagentName(cost.itemID))
+            row.value:SetText(cost.subtotalText)
+            row.hit:Show()
         else
-            row.label:Hide()
-            row.value:Hide()
+            row.itemID = nil
+            row.hit:Hide()
         end
     end
 
-    y = y + 6
-    local verdictColor = COLORS[model.verdict.kind == "profit" and "profit"
-        or model.verdict.kind == "loss" and "loss"
-        or model.verdict.kind == "incomplete" and "incomplete" or "none"]
-    verdictText:SetText(model.verdict.text)
-    verdictValue:SetText(model.verdict.value)
-    color(verdictText, verdictColor)
-    color(verdictValue, verdictColor)
-    place(verdictText, "TOPLEFT", PAD, -y)
-    verdictText:Show()
-    -- The qualifier can wrap onto several lines; the value sits on its own row below.
-    y = y + math.max(ROW_H, verdictText:GetStringHeight() or ROW_H)
-    place(verdictValue, "TOPRIGHT", -PAD, -y)
-    verdictValue:Show()
-    y = y + ROW_H + 4
+    parts.age:SetText(model.ageText or "")
+    parts.ageStale = model.stale and true or false
+    parts.paintAge()
 
-    ageText:SetText(model.ageText)
-    color(ageText, model.stale and COLORS.stale or COLORS.muted)
-    place(ageText, "TOPLEFT", PAD, -y)
-    ageText:Show()
-    y = y + ROW_H + 2
-
-    craftsLabel:SetText(L.CRAFTS_LABEL)
-    place(craftsLabel, "TOPLEFT", PAD, -y - 3)
-    craftsLabel:Show()
-    craftsBox:ClearAllPoints()
-    craftsBox:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD + 62, -y)
+    parts.craftsLabel:SetText(L.CRAFTS_LABEL)
     -- Never rewrite the box while the player is typing in it.
-    if not craftsBox:HasFocus() then craftsBox:SetText(tostring(model.crafts or 1)) end
-    craftsBox:Show()
-    trackCheck:ClearAllPoints()
-    trackCheck:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD + 62 + 52 + 14, -y + 1)
-    trackCheck:SetChecked(model.tracked)
-    trackLabel:SetText(L.TRACK_LABEL)
-    trackLabel:ClearAllPoints()
-    trackLabel:SetPoint("LEFT", trackCheck, "RIGHT", 2, 0)
-    trackCheck:Show()
-    trackLabel:Show()
-    y = y + 24
+    if not parts.craftsBox:HasFocus() then parts.craftsBox:SetText(tostring(model.crafts or 1)) end
+    parts.track:setText(L.TRACK_LABEL)
+    parts.track:SetChecked(model.tracked)
+    parts.perPoint:setText(L.OPT_PER_POINT)
+    parts.perPoint:SetChecked(model.showPerPoint)
+    setPerPoint(findLine(model.lines, "perpoint"))
+    parts.pin:setText(model.pinned and L.UNPIN or L.PIN)
 
-    perPointCheck:SetChecked(model.showPerPoint)
-    perPointLabel:SetText(L.OPT_PER_POINT)
-    perPointCheck:ClearAllPoints()
-    perPointCheck:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD - 4, -y)
-    perPointLabel:ClearAllPoints()
-    perPointLabel:SetPoint("LEFT", perPointCheck, "RIGHT", 2, 0)
-    perPointLabel:SetWidth(WIDTH - PAD * 2 - 24 - 90)
-    perPointCheck:Show()
-    perPointLabel:Show()
-
-    pinButton:SetText(model.pinned and L.UNPIN or L.PIN)
-    pinButton:ClearAllPoints()
-    pinButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD, -y - 1)
-    pinButton:Show()
-
-    contentHeight = y + 28
-    Window.relayout()
+    layout(Window.sections({
+        hasLikely = likely ~= nil,
+        expanded = expanded,
+        reagents = math.min(#costLines, MAX_DETAIL),
+    }))
 end
 
 -- Position: the saved one if there is one, else beside the target window.

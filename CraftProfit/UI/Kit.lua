@@ -178,6 +178,7 @@ local function naturalWidth(fs)
     if type(width) ~= "number" then width = fs:GetStringWidth() end
     return width
 end
+Kit.naturalWidth = naturalWidth
 
 -- Window ----------------------------------------------------------------------
 

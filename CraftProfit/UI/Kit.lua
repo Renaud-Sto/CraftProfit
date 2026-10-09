@@ -10,7 +10,8 @@ ns.Kit = Kit
 Kit.HEAD_H = 22
 Kit.BODY_PAD = 4
 Kit.GAP = 8
-Kit.CONTENT_TOP = 26
+-- The close button sits 8 px below the top edge and is 18 px tall: keep 8 px of air under it.
+Kit.CONTENT_TOP = 34
 Kit.CONTENT_SIDE = 12
 Kit.CONTENT_BOTTOM = 12
 Kit.TILE_SIZES = { 19, 17, 15, 13, 11 }

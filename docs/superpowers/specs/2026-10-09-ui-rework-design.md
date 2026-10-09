@@ -58,7 +58,8 @@ Edges and fills use solid-colour textures (`SetColorTexture`) layered to draw th
 ### Model changes (testable)
 
 ```
-model.banner    = { label = L.RESULT, text = verdict.text, value = verdict.value, kind = verdict.kind }
+model.banner    = { label = L.RESULT, text = verdict.text, value = verdict.value, kind = verdict.kind,
+                    warning = nil }  -- optional: partial case only; text is then "Best known: X" and warning "PRICES MISSING", shown amber on the label line
 model.tiles     = {
   { key = "ah",         label = L.TILE_AH,         value = "3g 24s", best = true,  muted = false },
   { key = "vendor",     label = L.TILE_VENDOR,     value = "1g 12s", best = false, muted = false },

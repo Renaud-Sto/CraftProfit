@@ -25,7 +25,7 @@ A price that is not known is shown as `?`, never as zero. The banner has three s
 
 - *No way to sell this item*: none of the three tiles can be used (all `n/a`).
 - *Incomplete: prices missing* (amber, no value): a price needed for the result is missing, so no net result can be given rather than a flattering number.
-- *Best known: Auction house (prices missing)* (amber, with the net result): some prices are known, so a best way to sell and its net result are shown, with a warning that the figure may change once the missing prices are known.
+- *Best known: Auction house* (with the net result, in amber): some prices are known, so a best way to sell and its net result are shown. The warning sits in amber on the label line above, "RESULT · PRICES MISSING", so the figure may change once the missing prices are known and the warning is never cut off.
 
 ### Crafts
 

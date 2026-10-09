@@ -15,6 +15,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ### Changed
 - The main window has a new look: a result banner with the best way to sell and the net result, three tiles for the auction house, vendor and disenchant values, and separate Materials and Options panels. Its functions are unchanged; what you see differs: the best option is outlined on its tile instead of marked with ">", the per-point result is a coloured value beside its option instead of a "Gain per point" line, and the banner shows the verdict on one line. The pinned list and the leveling window follow in the next versions.
+- The partial-result warning ("PRICES MISSING") now sits in amber on the banner label line so it is never cut off; the French and Spanish "cost per point" option labels are shorter.
 
 ## [0.1.0] - not yet released
 

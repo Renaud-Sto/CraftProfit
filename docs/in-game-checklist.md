@@ -21,9 +21,9 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] Clicking the Materials header folds the reagent detail in (`+`) and out (`-`); the choice survives `/reload`. With 5+ reagents the window grows and nothing overlaps.
 
 ## Pinned recipes by cost per point
-- [ ] At the AH, the button at the top right of the pinned list reads "Tri : gain"; clicking it switches to "Tri : coût/point", ticks "Coût par point de compétence" and reorders the list, cheapest first. Rows show `21g 29s 84c/pt` (red), a recipe that pays for itself shows `+9s 33c/pt` (green), a grey recipe `n/d` and an unpriced one `?`, both at the bottom.
-- [ ] The value beside "Coût par point de compétence" is green with a `+` when each point pays for itself and red otherwise; the best tile is outlined in gold; "Tri : gain" lists the most profitable pin first.
-- [ ] Unticking "Coût par point de compétence" returns the sort to "Tri : gain". The choice survives `/reload`.
+- [ ] At the AH, the button at the top right of the pinned list reads "Tri : gain"; clicking it switches to "Tri : coût/point", ticks "Coût par point" and reorders the list, cheapest first. Rows show `21g 29s 84c/pt` (red), a recipe that pays for itself shows `+9s 33c/pt` (green), a grey recipe `n/d` and an unpriced one `?`, both at the bottom.
+- [ ] The value beside "Coût par point" is green with a `+` when each point pays for itself and red otherwise; the best tile is outlined in gold; "Tri : gain" lists the most profitable pin first.
+- [ ] Unticking "Coût par point" returns the sort to "Tri : gain". The choice survives `/reload`.
 - [ ] Level the skill until a pinned recipe changes colour: after the profession window is opened again, its cost per point follows the new colour (pins no longer keep the colour they had when pinned).
 
 ## Auction house
@@ -53,8 +53,8 @@ Use a recipe with at least 5 reagents; `/console scriptErrors 1` on.
 - [ ] A recipe that makes money tints the banner green; one that loses money tints it red (value shown with a minus sign); a recipe with an unpriced reagent shows the amber *Incomplete* banner. The tint stays the same through `/cp kitdemo copper`, `steel` and `gold` (it follows the result, not the theme).
 - [ ] The best tile is outlined in gold; an impossible way shows `n/a` muted, an unknown price `?`.
 - [ ] Amounts: `999g 99s 99c` (use a stack of expensive reagents, or a pin with huge prices) shrinks in the banner and the tiles without running into the verdict text or leaving its box; the "RÉSULTAT" label does not touch the value.
-- [ ] French client: a partial result ("Meilleur connu : Hôtel des ventes (prix manquants)") shrinks to the small font when it does not fit beside the value, and is never drawn over the value. Known: with a very large value it can still be cut off rather than wrapped.
-- [ ] French client, "Coût par point de compétence" ticked and a gold-range cost: the label is truncated before the value and the two do not overlap.
+- [ ] French client: a partial result shows "RÉSULTAT · PRIX MANQUANTS" (warning in amber) on the label line and "Meilleur connu : Hôtel des ventes" on the main line; neither is cut off or drawn over the value, including with a very large value.
+- [ ] French client, "Coût par point" ticked and a gold-range cost: the label is not truncated and does not overlap the value.
 - [ ] Accents render in the French titles: RÉSULTAT, DÉSENCH., COMPOSANTS, OPTIONS.
 - [ ] Materials: clicking the header folds and unfolds the panel and flips the marker (`-` / `+`); the choice survives `/reload`. Unfolded with 12 reagents, the 12th row is not clipped.
 - [ ] Hovering a reagent row shows a highlight above the panel background and under the text; clicking a row starts the AH search with the quantity (see *Click a reagent* below). With the AH closed it prints "Open the auction house first".

@@ -19,13 +19,13 @@ De haut en bas :
 | *ligne grise* | Sous les tuiles : le résultat de désenchantement le plus probable, par exemple `75%: 1-2x Poussière d'âme = 7s 30c`. Affichée seulement quand le désenchantement a plusieurs résultats possibles. |
 | Panneau **Composants** | Le coût de tous les composants aux prix de l'hôtel des ventes. Cliquez sur l'en-tête pour replier ou déplier le détail (`-` déplié, `+` replié) ; le choix est mémorisé. Cliquez sur un composant pour le chercher à l'hôtel des ventes (voir [Rechercher un composant](#rechercher-un-composant)). |
 | **Prix : il y a 5min** | L'âge du prix le plus ancien utilisé. Passe en orange au-delà d'une heure. |
-| Panneau **Options** | **Crafts**, **Suivre l'historique**, **Coût par point de compétence** avec sa valeur à droite (voir [Coût par point de compétence](#coût-par-point-de-compétence)), et le bouton **Épingler** / **Désépingler**. |
+| Panneau **Options** | **Crafts**, **Suivre l'historique**, **Coût par point** avec sa valeur à droite (voir [Coût par point de compétence](#coût-par-point-de-compétence)), et le bouton **Épingler** / **Désépingler**. |
 
 Un prix inconnu s'affiche `?`, jamais zéro. Le bandeau a trois cas particuliers :
 
 - *Aucun moyen de revendre cet objet* : aucune des trois tuiles n'est utilisable (toutes `n/d`).
 - *Incomplet : prix manquants* (ambre, sans valeur) : il manque un prix nécessaire au résultat, donc aucun résultat net n'est donné plutôt qu'un chiffre flatteur.
-- *Meilleur connu : Hôtel des ventes (prix manquants)* (ambre, avec le résultat net) : certains prix sont connus, donc une meilleure voie de vente et son résultat net sont affichés, avec l'avertissement que le chiffre peut changer quand les prix manquants seront connus.
+- *Meilleur connu : Hôtel des ventes* (avec le résultat net, en ambre) : certains prix sont connus, donc une meilleure voie de vente et son résultat net sont affichés. L'avertissement est en ambre sur la ligne du libellé au-dessus, « RÉSULTAT · PRIX MANQUANTS » : le chiffre peut changer quand les prix manquants seront connus, et l'avertissement n'est jamais coupé.
 
 ### Crafts
 
@@ -107,7 +107,7 @@ La probabilité de point dépend de la couleur de la recette et c'est une **esti
 
 | Réglage | Où | Défaut |
 | --- | --- | --- |
-| Coût par point de compétence | Case à cocher du panneau Options | Décochée |
+| Coût par point | Case à cocher du panneau Options | Décochée |
 | Détail des composants replié ou déplié | Clic sur l'en-tête Composants | Déplié |
 | Position de la fenêtre | La déplacer ; `/cp reset` pour annuler | À côté de la fenêtre de métier ou de l'hôtel des ventes |
 | Tri de la liste des épingles | Bouton au-dessus de la liste | Gain |

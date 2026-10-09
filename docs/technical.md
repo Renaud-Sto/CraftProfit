@@ -102,7 +102,7 @@ Retention (`History.compact`): all points for 14 days, then one point per day up
 | `pins` | Up to 12 normalised recipes `{ recipeID, name, difficulty, outputItemID, outputQty, reagents = { { itemID, qty } } }` |
 | `sortMode` | `"net"` or `"point"` |
 
-A market holds `prices[itemID] = { unit, volume, time }`, `snapshotTime` (the last full scan) and `series[itemID]`, the history points `{ t, unit, volume, low, high, n }` of the items of tracked recipes. The market key is the normalised realm name plus the player's faction (`Controller.marketKey`); the neutral auction house is not told apart from the faction one yet. Prices saved before markets existed (`prices` and `snapshotTime` at the top level) are adopted by the first market used.
+A market holds `prices[itemID] = { unit, volume, time }`, `snapshotTime` (the last full scan) and `series[itemID]`, the history points `{ t, unit, volume, low, high, n }` of the items of tracked recipes. The market key is the realm id plus the player's faction (`Controller.marketKey`, for example `4613-Horde`), with the normalised realm name as fallback. Forever has rulesets (Normal, PvP, RP, Hardcore) instead of realms; in the beta each ruleset is a "realm" such as *Classic Beta PvP 2* (id 4613), measured with `/cpp ruleset`. `C_GameRules.GetActiveGameMode()` only returns the client's game mode (1, Standard), not the ruleset. The neutral auction house is not told apart from the faction one yet. Prices saved before markets existed (`prices` and `snapshotTime` at the top level) are adopted by the first market used.
 
 Every field is validated on load (finite numbers, ranges, anchor names, array holes); anything invalid falls back to the default.
 

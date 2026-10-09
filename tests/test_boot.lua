@@ -532,15 +532,22 @@ H.test("the first market adopts the prices saved before markets existed", functi
     H.eq(T.env.CraftProfitDB.prices, {})
 end)
 
-H.test("each realm and faction has its own prices", function()
+H.test("each realm id and faction has its own prices, with the realm name as fallback", function()
     local T = boot()
-    T.env.GetNormalizedRealmName = function() return "Sulfuron" end
+    T.env.GetRealmID = function() return 4613 end
     T.env.UnitFactionGroup = function() return "Horde" end
-    H.eq(T.ns.Controller.marketKey(), "Sulfuron-Horde")
+    H.eq(T.ns.Controller.marketKey(), "4613-Horde")
     T.ns.Prices.store(T.ns.Controller.market(), 1, 100, 1, 1700000000)
-    T.env.UnitFactionGroup = function() return "Alliance" end
-    H.eq(T.ns.Controller.marketKey(), "Sulfuron-Alliance")
+    T.env.GetRealmID = function() return 4702 end
+    H.eq(T.ns.Controller.marketKey(), "4702-Horde")
     H.eq(T.ns.Controller.market().prices[1], nil)
+    T.env.GetRealmID = function() return 4613 end
+    T.env.UnitFactionGroup = function() return "Alliance" end
+    H.eq(T.ns.Controller.marketKey(), "4613-Alliance")
+    H.eq(T.ns.Controller.market().prices[1], nil)
+    T.env.GetRealmID = nil
+    T.env.GetNormalizedRealmName = function() return "ClassicBetaPvP2" end
+    H.eq(T.ns.Controller.marketKey(), "ClassicBetaPvP2-Alliance")
     T.env.GetNormalizedRealmName = function() return nil end
     T.env.GetRealmName = function() return nil end
     T.env.UnitFactionGroup = function() return nil end

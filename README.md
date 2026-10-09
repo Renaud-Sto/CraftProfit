@@ -23,7 +23,7 @@ CraftProfit is an addon for **World of Warcraft: Forever**. Select a recipe you 
 - **Several crafts at once**: multiply a recipe by 1 to 9999 crafts.
 - **Pinned recipes** (up to 12 per character), sorted by profit or by cost per point, to compare what to craft next.
 - **Auction house tools**: one button prices every pinned recipe, another scans the whole auction house. Click a reagent to search it in the auction house, quantity already filled in. CraftProfit never buys anything for you.
-- **Price history** (recording): tick *Track history* on up to 15 recipes and CraftProfit keeps their prices scan after scan, per realm and faction. The graphs come later.
+- **Price history** (recording): tick *Track history* on up to 15 recipes and CraftProfit keeps their prices scan after scan, per ruleset (the game "realm" in the beta) and faction. The graphs come later.
 - **Standalone**: no Auctionator, no other addon required. It also picks up the scans other addons start.
 - **English, French and Spanish** (follows the game language).
 

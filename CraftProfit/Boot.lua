@@ -24,17 +24,24 @@ end
 
 -- Item facts, or nil while the game has not loaded the item yet. The request is
 -- made once per item; ITEM_DATA_LOAD_RESULT triggers the refresh.
--- Prices differ between realms and between auction house factions, so each market
--- (realm + player faction) has its own price table and history. The neutral auction
--- house is not told apart from the faction one yet.
+-- Prices differ between markets, so each one has its own price table and history.
+-- Forever has rulesets (Normal, PvP, RP, Hardcore) instead of realms; in the beta the
+-- ruleset is the "realm" the character is on (for example "Classic Beta PvP 2", realm
+-- id 4613). The realm id follows the real economy best, the faction picks the faction
+-- auction house. The realm name is the fallback when no id is given. The neutral
+-- auction house is not told apart from the faction one yet.
 function Controller.marketKey()
-    local realm = type(GetNormalizedRealmName) == "function" and GetNormalizedRealmName() or nil
-    if type(realm) ~= "string" or realm == "" then
-        realm = type(GetRealmName) == "function" and GetRealmName() or nil
+    local id = type(GetRealmID) == "function" and GetRealmID() or nil
+    local realm = Util.id(id) and tostring(id) or nil
+    if not realm then
+        local name = type(GetNormalizedRealmName) == "function" and GetNormalizedRealmName() or nil
+        if type(name) ~= "string" or name == "" then
+            name = type(GetRealmName) == "function" and GetRealmName() or nil
+        end
+        realm = type(name) == "string" and name ~= "" and name or "unknown"
     end
     local faction = type(UnitFactionGroup) == "function" and UnitFactionGroup("player") or nil
-    return (type(realm) == "string" and realm ~= "" and realm or "unknown") ..
-        "-" .. (type(faction) == "string" and faction ~= "" and faction or "Neutral")
+    return realm .. "-" .. (type(faction) == "string" and faction ~= "" and faction or "Neutral")
 end
 
 function Controller.market()

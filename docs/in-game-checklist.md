@@ -44,7 +44,7 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] A recipe whose output is bind-on-pickup still records (its output is never priced).
 - [ ] Unticking pauses recording; `/cp history` lists it as paused; `/cp history remove 1` deletes it and its series.
 - [ ] A 16th tracked recipe is refused with "Trop de recettes suivies (15 maximum)".
-- [ ] After an update from an earlier build, prices are still shown (adopted by the current realm and faction) and a character on another realm or faction starts with no prices.
+- [ ] After an update from an earlier build, prices are still shown (adopted by the current ruleset and faction) and a character on another ruleset or faction starts with no prices.
 - [ ] The saved file stays small: note the size of `CraftProfit.lua` after a few scans with 15 tracked recipes.
 
 ## Click a reagent to search it (quality of life, never buys)

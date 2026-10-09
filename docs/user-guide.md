@@ -33,7 +33,7 @@ For large quantities the total is an estimate: the price of a reagent is the med
 
 ### Track history
 
-The **Track history** box (next to Crafts) makes CraftProfit keep the prices of this recipe's reagents and result over time. Up to 15 recipes can be tracked, independently of the pinned list. A point is recorded after every scan and every price search that touches one of the recipe's items, as long as all the needed prices are known. Unticking the box pauses recording and keeps what was recorded. `/cp history` lists the tracked recipes and `/cp history remove <n>` deletes one with its history. Prices are kept per realm and faction, so the history of one market never mixes with another. A view of the history (graphs, "cheaper than usual") is planned; for now the data is only being gathered.
+The **Track history** box (next to Crafts) makes CraftProfit keep the prices of this recipe's reagents and result over time. Up to 15 recipes can be tracked, independently of the pinned list. A point is recorded after every scan and every price search that touches one of the recipe's items, as long as all the needed prices are known. Unticking the box pauses recording and keeps what was recorded. `/cp history` lists the tracked recipes and `/cp history remove <n>` deletes one with its history. Prices are kept per ruleset (the game "realm" in the beta) and faction, so the history of one market never mixes with another. A view of the history (graphs, "cheaper than usual") is planned; for now the data is only being gathered.
 
 ### Pin button
 

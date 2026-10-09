@@ -4,7 +4,7 @@
 
 Target: **World of Warcraft: Forever** beta, build 1.60.1, `## Interface: 16001`. The client uses the Mainline (Midnight-style) UI and API set on a Classic base, Lua 5.1, and the *secret values* restrictions. The addon is about 3,000 lines of Lua and has no library dependency.
 
-Contents: [Design principles](#design-principles) · [Architecture](#architecture) · [Data flow](#data-flow) · [Price model](#price-model) · [Evaluation](#evaluation) · [Saved variables](#saved-variables) · [Game API used](#game-api-used) · [Measured behaviour of the beta](#measured-behaviour-of-the-beta) · [Constraints that shape the code](#constraints-that-shape-the-code) · [Localization](#localization) · [Testing](#testing) · [Probe addon](#probe-addon) · [Packaging](#packaging)
+Contents: [Design principles](#design-principles) · [Architecture](#architecture) · [Data flow](#data-flow) · [Price model](#price-model) · [Price history](#price-history) · [Evaluation](#evaluation) · [Saved variables](#saved-variables) · [Game API used](#game-api-used) · [Measured behaviour of the beta](#measured-behaviour-of-the-beta) · [Constraints that shape the code](#constraints-that-shape-the-code) · [Localization](#localization) · [Testing](#testing) · [Probe addon](#probe-addon) · [Packaging](#packaging)
 
 ## Design principles
 
@@ -30,6 +30,7 @@ Files load in the order of `CraftProfit/CraftProfit.toc`. Each file receives the
 | `Recipes.lua` | `ns.Recipes` | Validation and normalisation of a recipe read from the game | no |
 | `DB.lua` | `ns.DB` | Saved variable defaults, repair, migration, pins, sort mode | no |
 | `Prices.lua` | `ns.Prices` | Median price, scan aggregation, price storage and ageing | no |
+| `History.lua` | `ns.History` | Tracked recipes (cap 15), price history points per item, retention (raw, daily, weekly) | no |
 | `PriceQueue.lua` | `ns.PriceQueue` | Sequential search queue with timeouts | no (a `send` function is injected) |
 | `Evaluate.lua` | `ns.Evaluate` | Combines recipe, prices and item facts into one result | no (lookups injected) |
 | `Present.lua` | `ns.Present` | Turns a result into display lines (text only) | no |
@@ -61,6 +62,12 @@ Dependencies point one way: `Core`, `Data`, `Util`, `Format` know nothing of the
 - `DB.prune` removes prices older than 14 days at load.
 - Selling uses a commission of 5 % (`settings.cut`, measured). The deposit is ignored: it is refunded when an item sells.
 
+## Price history
+
+A recipe is *tracked* with the "Track history" box (account wide, 15 at most; unticking pauses recording and keeps the history, `/cp history remove <n>` deletes it). After every full scan and every price search, `History.record` writes one point per item of each active tracked recipe **touched by that update**, provided every required item has a price (the output of a bind-on-pickup recipe is never required). A point is `{ t, unit, volume, low, high, n }` with `t` the time of the operation, so the items of one recipe share a timestamp and the recipe's cost and net can be rebuilt for that date.
+
+Retention (`History.compact`): all points for 14 days, then one point per day up to 90 days, then one per week up to a year, each merged point keeping the weighted average, the low, the high and the number of measurements. A rough bound is 12 KB per tracked recipe, under 200 KB for 15. The search button still only prices the pinned recipes; tracked recipes are fed by scans and by any search that touches their items. The history is recorded; there is no view of it yet.
+
 ## Evaluation
 
 `Evaluate.run(ctx)` returns `{ recipe, crafts, cost, options, best, bestValue, net, incomplete, perPoint, oldestAge }`.
@@ -74,7 +81,7 @@ Dependencies point one way: `Core`, `Data`, `Util`, `Format` know nothing of the
 
 ## Saved variables
 
-`CraftProfitDB` (account), repaired by `DB.initAccount`:
+`CraftProfitDB` (account), repaired by `DB.initAccount` and `History.sanitize`:
 
 | Key | Content |
 | --- | --- |
@@ -85,8 +92,8 @@ Dependencies point one way: `Core`, `Data`, `Util`, `Format` know nothing of the
 | `settings.showPerPoint` | Cost per point enabled |
 | `settings.costExpanded` | Material detail unfolded |
 | `settings.window` | `{ point, x, y }` once dragged |
-| `prices[itemID]` | `{ unit, volume, time }` |
-| `snapshotTime` | Time of the last full scan |
+| `markets["<realm>-<faction>"]` | One price table per market (see below) |
+| `tracked` | Up to 15 tracked recipes `{ recipe, active }` |
 
 `CraftProfitCharDB` (per character), repaired by `DB.initChar`:
 
@@ -94,6 +101,8 @@ Dependencies point one way: `Core`, `Data`, `Util`, `Format` know nothing of the
 | --- | --- |
 | `pins` | Up to 12 normalised recipes `{ recipeID, name, difficulty, outputItemID, outputQty, reagents = { { itemID, qty } } }` |
 | `sortMode` | `"net"` or `"point"` |
+
+A market holds `prices[itemID] = { unit, volume, time }`, `snapshotTime` (the last full scan) and `series[itemID]`, the history points `{ t, unit, volume, low, high, n }` of the items of tracked recipes. The market key is the realm id plus the player's faction (`Controller.marketKey`, for example `4613-Horde`), with the normalised realm name as fallback. Forever has rulesets (Normal, PvP, RP, Hardcore) instead of realms; in the beta each ruleset is a "realm" such as *Classic Beta PvP 2* (id 4613), measured with `/cpp ruleset`. `C_GameRules.GetActiveGameMode()` only returns the client's game mode (1, Standard), not the ruleset. A hardcore character gets a `-HC` suffix (`C_GameRules.IsHardcoreActive`). Not measured yet: whether the other rulesets have their own realm id, because they could not be created in the beta; verify with `/cp market` at launch. The neutral auction house is not told apart from the faction one yet. Prices saved before markets existed (`prices` and `snapshotTime` at the top level) are adopted by the first market used.
 
 Every field is validated on load (finite numbers, ranges, anchor names, array holes); anything invalid falls back to the default.
 

@@ -31,6 +31,10 @@ The **Crafts** box multiplies the selected recipe by a number of crafts (1 to 99
 
 For large quantities the total is an estimate: the price of a reagent is the median of the cheapest listings, but buying 100 units goes through more expensive listings. The real price appears in the auction house when you search.
 
+### Track history
+
+The **Track history** box (next to Crafts) makes CraftProfit keep the prices of this recipe's reagents and result over time. Up to 15 recipes can be tracked, independently of the pinned list. A point is recorded after every scan and every price search that touches one of the recipe's items, as long as all the needed prices are known. Unticking the box pauses recording and keeps what was recorded. `/cp history` lists the tracked recipes and `/cp history remove <n>` deletes one with its history. Prices are kept per ruleset (the game "realm" in the beta) and faction, so the history of one market never mixes with another. A view of the history (graphs, "cheaper than usual") is planned; for now the data is only being gathered.
+
 ### Pin button
 
 **Pin** keeps the recipe in your pinned list (up to 12 per character), usable even with the profession window closed. **Unpin** removes it.
@@ -92,7 +96,7 @@ The chance of a point depends on the colour of the recipe and is an **estimate**
 | Window position | Drag it; `/cp reset` to undo | Beside the profession or auction house window |
 | Sort of the pinned list | Button above the list | Profit |
 
-Commands: `/cp` (or `/craftprofit`) with `show`, `hide`, `reset`, `scan`, `locale <code>` and `selftest`. See the [README](../README.md#commands).
+Commands: `/cp` (or `/craftprofit`) with `show`, `hide`, `reset`, `scan`, `history`, `locale <code>` and `selftest`. See the [README](../README.md#commands).
 
 ## Languages
 

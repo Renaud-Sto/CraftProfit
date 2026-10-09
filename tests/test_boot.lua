@@ -19,7 +19,7 @@ local function boot(opts)
 end
 
 local function stock(T)
-    local P, db = T.ns.Prices, T.env.CraftProfitDB
+    local P, db = T.ns.Prices, T.ns.Controller.market()
     P.store(db, 1, 100, 10, 1699999940)
     P.store(db, 2, 50, 10, 1699999880)
     P.store(db, 100, 1000, 10, 1699999970)
@@ -120,9 +120,9 @@ H.test("recordListings stores the median price and ignores empty answers", funct
     local T = boot()
     local C = T.ns.Controller
     H.eq(C.recordListings(7, { { unit = 10, qty = 1 }, { unit = 20, qty = 1 }, { unit = 1000, qty = 1 } }), true)
-    H.eq(T.env.CraftProfitDB.prices[7][1], 20)
+    H.eq(T.ns.Controller.market().prices[7][1], 20)
     H.eq(C.recordListings(8, {}), false)
-    H.eq(T.env.CraftProfitDB.prices[8], nil)
+    H.eq(T.ns.Controller.market().prices[8], nil)
 end)
 
 H.test("the selection watcher shows, updates and hides the window", function()
@@ -253,7 +253,7 @@ H.test("every verdict kind renders without errors", function()
     H.eq(T.ns.Window.lastModel.verdict.kind, "incomplete")
     C.refresh()
     H.eq(T.ns.Window.lastModel.verdict.kind, "profit")
-    T.env.CraftProfitDB.prices[100][1] = 1
+    T.ns.Controller.market().prices[100][1] = 1
     C.refresh()
     H.eq(T.ns.Window.lastModel.verdict.kind, "loss")
     T.ns.Window.render({
@@ -514,4 +514,173 @@ H.test("a reagent click searches the multiplied quantity", function()
     local row = T.ns.Window.lastModel.costLines[1]
     T.ns.Window.lastHandlers.onReagentClick(row.itemID, row.qty)
     H.eq(searched, { "Bronze Bar", 1, 6 })
+end)
+
+-- Price history
+local function track(T, recipe)
+    local ok = T.ns.History.track(T.env.CraftProfitDB, T.ns.Recipes.normalize(recipe or RAW))
+    H.truthy(ok)
+end
+
+H.test("the first market adopts the prices saved before markets existed", function()
+    local T = W.boot(H, { items = ITEMS })
+    T.env.CraftProfitDB = { prices = { [1] = { 100, 5, 1699999000 } }, snapshotTime = 1699999000 }
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    local market = T.ns.Controller.market()
+    H.eq(market.prices[1], { 100, 5, 1699999000 })
+    H.eq(market.snapshotTime, 1699999000)
+    H.eq(T.env.CraftProfitDB.prices, {})
+end)
+
+H.test("each realm id and faction has its own prices, with the realm name as fallback", function()
+    local T = boot()
+    T.env.GetRealmID = function() return 4613 end
+    T.env.UnitFactionGroup = function() return "Horde" end
+    H.eq(T.ns.Controller.marketKey(), "4613-Horde")
+    T.ns.Prices.store(T.ns.Controller.market(), 1, 100, 1, 1700000000)
+    T.env.GetRealmID = function() return 4702 end
+    H.eq(T.ns.Controller.marketKey(), "4702-Horde")
+    H.eq(T.ns.Controller.market().prices[1], nil)
+    T.env.GetRealmID = function() return 4613 end
+    T.env.UnitFactionGroup = function() return "Alliance" end
+    H.eq(T.ns.Controller.marketKey(), "4613-Alliance")
+    H.eq(T.ns.Controller.market().prices[1], nil)
+    T.env.GetRealmID = nil
+    T.env.GetNormalizedRealmName = function() return "ClassicBetaPvP2" end
+    H.eq(T.ns.Controller.marketKey(), "ClassicBetaPvP2-Alliance")
+    T.env.GetNormalizedRealmName = function() return nil end
+    T.env.GetRealmName = function() return nil end
+    T.env.UnitFactionGroup = function() return nil end
+    H.eq(T.ns.Controller.marketKey(), "unknown-Neutral")
+end)
+
+H.test("a price search records a history point for a tracked recipe it touches, once complete", function()
+    local T = boot()
+    local C = T.ns.Controller
+    track(T)
+    local listing = { { unit = 100, qty = 5 } }
+    C.recordListings(1, listing)
+    C.commitSearch()
+    H.eq(C.market().series[1], nil)       -- reagent 2 and the output have no price yet
+    C.recordListings(1, listing)
+    C.recordListings(2, listing)
+    C.recordListings(100, listing)
+    C.commitSearch()
+    H.eq(#C.market().series[1], 1)
+    H.eq(#C.market().series[2], 1)
+    H.eq(#C.market().series[100], 1)
+    H.eq(C.market().series[1][1][2], 100)
+end)
+
+H.test("a point needs a touched item: an unrelated search records nothing", function()
+    local T = boot()
+    local C = T.ns.Controller
+    track(T)
+    stock(T)
+    C.recordListings(999, { { unit = 5, qty = 1 } })
+    C.commitSearch()
+    H.eq(C.market().series[1], nil)
+end)
+
+H.test("a scan records points for the tracked recipes it covers", function()
+    local T = boot()
+    local C = T.ns.Controller
+    track(T)
+    local agg = T.ns.Prices.newAggregator()
+    agg.add(1, 100, 1)
+    agg.add(2, 50, 1)
+    agg.add(100, 1000, 1)
+    agg.add(555, 7, 1)
+    C.onSnapshot(agg)
+    H.eq(#C.market().series[1], 1)
+    H.eq(#C.market().series[100], 1)
+    H.eq(C.market().series[555], nil)
+end)
+
+H.test("a paused recipe records nothing; resuming records again", function()
+    local T = boot()
+    local C = T.ns.Controller
+    track(T)
+    T.ns.History.pause(T.env.CraftProfitDB, 5)
+    stock(T)
+    local agg = T.ns.Prices.newAggregator()
+    agg.add(1, 100, 1)
+    C.onSnapshot(agg)
+    H.eq(C.market().series[1], nil)
+    T.ns.History.track(T.env.CraftProfitDB, T.ns.Recipes.normalize(RAW))
+    T.clock = T.clock + 10
+    C.onSnapshot(agg)
+    H.eq(#C.market().series[1], 1)
+end)
+
+H.test("a bind-on-pickup output does not have to be priced for a point to be recorded", function()
+    local T = boot({ items = { [100] = { quality = 2, ilvl = 15, sellPrice = 200, classID = 0, bindType = 1 } } })
+    local C = T.ns.Controller
+    track(T)
+    local agg = T.ns.Prices.newAggregator()
+    agg.add(1, 100, 1)
+    agg.add(2, 50, 1)
+    C.onSnapshot(agg)
+    H.eq(#C.market().series[1], 1)
+    H.eq(C.market().series[100], nil)
+end)
+
+H.test("the tracking box starts and pauses recording and refuses a sixteenth recipe", function()
+    local T = boot()
+    local C = T.ns.Controller
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    H.falsy(T.ns.Window.lastModel.tracked)
+    T.ns.Window.lastHandlers.onTrackToggle(true)
+    H.truthy(T.ns.Window.lastModel.tracked)
+    H.eq(#T.env.CraftProfitDB.tracked, 1)
+    T.ns.Window.lastHandlers.onTrackToggle(false)
+    H.falsy(T.ns.Window.lastModel.tracked)
+    H.eq(#T.env.CraftProfitDB.tracked, 1)
+    for id = 1000, 1013 do
+        local r = T.ns.Recipes.normalize(RAW)
+        r.recipeID = id
+        H.truthy(T.ns.History.track(T.env.CraftProfitDB, r))
+    end
+    H.eq(#T.env.CraftProfitDB.tracked, 15)
+    local extra = T.ns.Recipes.normalize(RAW)
+    extra.recipeID = 2000
+    C.setRecipe(extra, "profession")
+    T.ns.Window.lastHandlers.onTrackToggle(true)
+    H.falsy(T.ns.Window.lastModel.tracked)
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Too many tracked recipes (15 max)")
+end)
+
+H.test("/cp history lists the tracked recipes and removes one with its history", function()
+    local T = boot()
+    local C = T.ns.Controller
+    C.historyCommand("")
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r No tracked recipe")
+    track(T)
+    stock(T)
+    local agg = T.ns.Prices.newAggregator()
+    agg.add(1, 100, 1)
+    C.onSnapshot(agg)
+    H.truthy(C.market().series[1])
+    C.historyCommand("")
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r 1. Sword (tracking)")
+    C.historyCommand("remove 9")
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r No such tracked recipe. Use /cp history to list them")
+    C.historyCommand("remove 1")
+    H.eq(#T.env.CraftProfitDB.tracked, 0)
+    H.eq(C.market().series[1], nil)
+end)
+
+H.test("a hardcore character has its own market, and /cp market tells which one is in use", function()
+    local T = boot()
+    T.env.GetRealmID = function() return 4613 end
+    T.env.GetRealmName = function() return "Classic Beta PvP 2" end
+    T.env.UnitFactionGroup = function() return "Horde" end
+    T.env.C_GameRules = { IsHardcoreActive = function() return false end }
+    H.eq(T.ns.Controller.marketKey(), "4613-Horde")
+    T.env.C_GameRules = { IsHardcoreActive = function() return true end }
+    H.eq(T.ns.Controller.marketKey(), "4613-Horde-HC")
+    T.env.C_GameRules = { IsHardcoreActive = function() error("boom") end }
+    H.eq(T.ns.Controller.marketKey(), "4613-Horde")
+    T.env.SlashCmdList.CRAFTPROFIT("market")
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Market: Classic Beta PvP 2 (saved as 4613-Horde)")
 end)

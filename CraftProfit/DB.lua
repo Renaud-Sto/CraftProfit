@@ -78,7 +78,35 @@ function DB.initAccount(db)
     if type(db.prices) ~= "table" then db.prices = {} end
     sanitizePrices(db.prices)
     if not Util.isCopper(db.snapshotTime) then db.snapshotTime = nil end
+    -- One price table per market (realm and auction house faction); see DB.market.
+    if type(db.markets) ~= "table" then db.markets = {} end
+    for key, market in pairs(db.markets) do
+        if type(key) ~= "string" or type(market) ~= "table" then
+            db.markets[key] = nil
+        else
+            if type(market.prices) ~= "table" then market.prices = {} end
+            sanitizePrices(market.prices)
+            if not Util.isCopper(market.snapshotTime) then market.snapshotTime = nil end
+            if type(market.series) ~= "table" then market.series = {} end
+        end
+    end
     return db
+end
+
+-- The price table of one market, created on first use: { prices, snapshotTime, series }.
+-- Prices from before markets existed (db.prices) belong to the first market used.
+function DB.market(db, key)
+    if type(key) ~= "string" then key = "unknown" end
+    local market = db.markets[key]
+    if not market then
+        market = { prices = {}, series = {} }
+        if next(db.markets) == nil and next(db.prices) ~= nil then
+            market.prices, market.snapshotTime = db.prices, db.snapshotTime
+            db.prices, db.snapshotTime = {}, nil
+        end
+        db.markets[key] = market
+    end
+    return market
 end
 
 -- Removes prices older than PRICE_MAX_AGE. A price dated in the future (clock
@@ -86,12 +114,16 @@ end
 function DB.prune(db, now)
     if not Util.isFinite(now) then return 0 end
     local removed = 0
-    for itemID, row in pairs(db.prices) do
-        if now - row[3] > DB.PRICE_MAX_AGE then
-            db.prices[itemID] = nil
-            removed = removed + 1
+    local function prune(prices)
+        for itemID, row in pairs(prices) do
+            if now - row[3] > DB.PRICE_MAX_AGE then
+                prices[itemID] = nil
+                removed = removed + 1
+            end
         end
     end
+    prune(db.prices)
+    for _, market in pairs(db.markets) do prune(market.prices) end
     return removed
 end
 

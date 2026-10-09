@@ -56,3 +56,15 @@ H.test("no addon file uses syntax or APIs missing from WoW's Lua 5.1", function(
         end
     end
 end)
+
+H.test("the probe TOC is not empty and declares its interface, saved variable and file", function()
+    local f = assert(io.open("probe/CraftProfitProbe/CraftProfitProbe.toc"))
+    local text = f:read("*a")
+    f:close()
+    H.truthy(text:find("## Interface: 16001", 1, true))
+    H.truthy(text:find("## SavedVariables: CraftProfitProbeLog", 1, true))
+    H.truthy(text:find("Probe.lua", 1, true))
+    local lua = assert(io.open("probe/CraftProfitProbe/Probe.lua"))
+    H.truthy(#lua:read("*a") > 0)
+    lua:close()
+end)

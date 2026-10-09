@@ -23,8 +23,13 @@ local offset = 0
 -- The widgets, exposed for tests.
 local parts = { rows = {}, frames = {} }
 
+-- The empty-list message wraps inside the panel body (content width less the panel's
+-- 1 px edges) with 8 px of air on each side.
+local EMPTY_WIDTH = WIDTH - Kit.CONTENT_SIDE * 2 - 2 - 16
+
 LevelingUI.parts = parts
 LevelingUI.WIDTH = WIDTH
+LevelingUI.EMPTY_WIDTH = EMPTY_WIDTH
 
 local function themed(fontString, token)
     Kit.onTheme(function(t)
@@ -217,6 +222,9 @@ function LevelingUI.init(controller, h)
     -- At the top of the list, where no row shows while it is displayed.
     parts.empty = parts.panel.body:CreateFontString(nil, "OVERLAY", "GameFontDisable")
     parts.empty:SetPoint("TOP", parts.panel.body, "TOP", 0, -20)
+    parts.empty:SetWidth(EMPTY_WIDTH)
+    parts.empty:SetJustifyH("CENTER")
+    parts.empty:SetWordWrap(true)
     themed(parts.empty, "textMuted")
 
     local footer = section("footer", CHECK_H)

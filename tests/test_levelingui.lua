@@ -2,7 +2,8 @@ local H = ...
 local W = dofile("tests/fakewow.lua")
 
 -- Real frames start shown (the fake ones do not): the window must hide itself.
-local function boot()
+-- `onFrame(f)`, when given, sees every frame created from ADDON_LOADED on, before use.
+local function boot(onFrame)
     local T = W.boot(H)
     local create = T.env.CreateFrame
     T.env.CreateFrame = function(...)
@@ -10,6 +11,7 @@ local function boot()
         f.shown = true
         -- The fake SetSize is a no-op: record the height like SetHeight does.
         f.SetSize = function(self, _, h) self.height = h end
+        if onFrame then onFrame(f) end
         return f
     end
     T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
@@ -165,11 +167,42 @@ H.test("dropping the window reports its position", function()
     H.eq(moved, { x = 100, y = 700 })
 end)
 
-H.test("toggle and hide work and a theme switch repaints without error", function()
+H.test("the empty message wraps, centred, inside the panel body", function()
+    -- Font strings record their width and justification from creation on.
+    local T, UI = boot(function(f)
+        f.CreateFontString = function()
+            local fs = W.frame()
+            fs.widths = {}
+            fs.SetWidth = function(self, w) self.widths[#self.widths + 1] = w end
+            fs.SetJustifyH = function(self, v) self.justify = v end
+            return fs
+        end
+    end)
+    local Kit = T.ns.Kit
+    H.eq(UI.EMPTY_WIDTH, UI.WIDTH - Kit.CONTENT_SIDE * 2 - 2 - 16)
+    H.eq(UI.parts.empty.widths, { UI.EMPTY_WIDTH })
+    H.eq(UI.parts.empty.justify, "CENTER")
+end)
+
+H.test("toggle and hide work and a theme switch repaints the rows", function()
     local T, UI = boot()
-    feed(T, data())
+    local Theme = T.ns.Theme
+    -- No difficulty: the name takes the theme's main text colour; no cost: the value
+    -- is "?" in the muted colour. Both come from the theme, not from Theme.FIXED.
+    feed(T, data({ items = { item(1, "Plain", nil, 1, nil) } }))
     UI.toggle()
     H.truthy(UI.isShown())
+    local p = UI.parts
+    H.eq(p.rows[1].value.text, "?")
+    local nameColour, valueColour
+    p.rows[1].name.SetTextColor = function(_, r, g, b, a) nameColour = { r, g, b, a } end
+    p.rows[1].value.SetTextColor = function(_, r, g, b, a) valueColour = { r, g, b, a } end
+    local gold, steel = Theme.get("gold"), Theme.get("steel")
+    H.truthy(gold.textMain[3] ~= steel.textMain[3])
+    H.truthy(gold.textMuted[1] ~= steel.textMuted[1])
+    T.ns.Kit.applyTheme("steel")
+    H.eq(nameColour, steel.textMain)
+    H.eq(valueColour, steel.textMuted)
     for _, name in ipairs({ "copper", "steel", "gold" }) do T.ns.Kit.applyTheme(name) end
     UI.toggle()
     H.falsy(UI.isShown())

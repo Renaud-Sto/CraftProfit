@@ -29,6 +29,7 @@ Present.lua
 Leveling.lua
 AHAdapter.lua
 TradeAdapter.lua
+UI/Kit.lua
 UI/Window.lua
 UI/PinsUI.lua
 UI/LevelingUI.lua

@@ -362,8 +362,9 @@ H.test("the plaque drags the window", function()
     H.eq(moved, { "TOPLEFT", 100, 700 })
 end)
 
-H.test("a long title uses the small font and the plaque stops at the content width", function()
+H.test("a long title uses the small font and the plaque stops short of the close button", function()
     local _, Kit = boot()
+    H.eq(Kit.CLOSE_ROOM, 30)
     local win = Kit.window("KitTestTitle", "T", { width = 372 })
     local fonts, widths = {}, {}
     win.GetWidth = function() return 372 end
@@ -372,7 +373,58 @@ H.test("a long title uses the small font and the plaque stops at the content wid
     win.plaque.SetWidth = function(_, w) widths[#widths + 1] = w end
     win:setTitle("A very long recipe name")
     H.eq(fonts, { "GameFontNormal", "GameFontNormalSmall" })
-    H.eq(widths[#widths], 348)
+    H.eq(widths[#widths], 372 - Kit.CLOSE_ROOM * 2)
+    H.eq(widths[#widths], 312)
+end)
+
+H.test("the title is measured unbounded when the client can, and normally otherwise", function()
+    local _, Kit = boot()
+    local win = Kit.window("KitTestTitle2", "T", { width = 372 })
+    local fonts, widths = {}, {}
+    win.GetWidth = function() return 372 end
+    win.titleText.SetFontObject = function(_, name) fonts[#fonts + 1] = name end
+    win.titleText.GetStringWidth = function() return 100 end
+    win.titleText.GetUnboundedStringWidth = function() return 500 end
+    win.plaque.SetWidth = function(_, w) widths[#widths + 1] = w end
+    win:setTitle("A very long recipe name")
+    H.eq(fonts, { "GameFontNormal", "GameFontNormalSmall" })
+    H.eq(widths[#widths], 312)
+    fonts = {}
+    win.titleText.GetUnboundedStringWidth = function() return 100 end
+    win.titleText.GetStringWidth = function() return 500 end
+    win:setTitle("Short")
+    H.eq(fonts, { "GameFontNormal" })
+    H.eq(widths[#widths], 210)
+    win.titleText.GetUnboundedStringWidth = nil
+    fonts = {}
+    win:setTitle("Long again")
+    H.eq(fonts, { "GameFontNormal", "GameFontNormalSmall" })
+    H.eq(widths[#widths], 312)
+end)
+
+H.test("setTitle repaints the title colour and so does a theme switch", function()
+    local T, Kit = boot()
+    local Theme = T.ns.Theme
+    local win = Kit.window("KitTestTitle3", "T")
+    local last
+    win.titleText.SetTextColor = function(_, r, g, b, a) last = { r, g, b, a } end
+    win:setTitle("x")
+    H.eq(last, Theme.get("gold").plaqueText)
+    Kit.applyTheme("steel")
+    H.eq(last, Theme.get("steel").plaqueText)
+end)
+
+H.test("a tile shrinks its value by the unbounded width, not the capped one", function()
+    local _, Kit = boot()
+    local tile = Kit.tile(nil, 110, 52)
+    local sizes = {}
+    tile.value.SetFont = function(_, _, size) sizes[#sizes + 1] = size end
+    tile.value.GetStringWidth = function() return 50 end
+    tile.value.GetUnboundedStringWidth = function() return 200 end
+    tile:set({ label = "AH", value = "123456g 12s" })
+    local expected = Kit.fitSize(200, 19, 110 - Kit.TILE_PAD * 2, Kit.TILE_SIZES)
+    H.truthy(expected < Kit.TILE_SIZES[1])
+    H.eq(sizes[#sizes], expected)
 end)
 
 H.test("panel.right and the tile tag are painted from the theme, not a literal colour", function()

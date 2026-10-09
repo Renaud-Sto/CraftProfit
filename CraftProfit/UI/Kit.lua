@@ -21,6 +21,9 @@ Kit.TILE_SIZES = { 19, 17, 15, 13, 11 }
 Kit.PLAQUE_MIN = 210
 Kit.PLAQUE_PAD = 44
 Kit.TILE_PAD = 10
+-- Room kept on each side of the title plaque for the close button: its 8 px inset,
+-- its 18 px width and a 4 px gap.
+Kit.CLOSE_ROOM = 8 + 18 + 4
 Kit.FOLDED_H = Kit.HEAD_H + 2
 
 -- Height of a panel holding `rows` rows of `rowH` pixels (plus `extra`).
@@ -167,6 +170,15 @@ function Kit.rings(frame, tokens, layer)
     return refresh
 end
 
+-- Width of a string at its natural size: GetStringWidth can be capped by a width or
+-- by two anchors, so prefer the unbounded measure when the client has it.
+local function naturalWidth(fs)
+    local width
+    if fs.GetUnboundedStringWidth then width = fs:GetUnboundedStringWidth() end
+    if type(width) ~= "number" then width = fs:GetStringWidth() end
+    return width
+end
+
 -- Window ----------------------------------------------------------------------
 
 local WINDOW_RINGS = { "black", "frameInner", "frameInner", "frameShade", "frameOuter", "black" }
@@ -220,18 +232,21 @@ function Kit.window(name, title, opts)
 
     text:SetWordWrap(false)
     f.setTitle = function(_, value)
+        text:SetWidth(0)  -- drop the previous constraint before measuring
         text:SetFontObject("GameFontNormal")
         text:SetText(value or "")
         local frameWidth = f:GetWidth()
-        local maxWidth = type(frameWidth) == "number" and frameWidth - Kit.CONTENT_SIDE * 2 or nil
-        local width = text:GetStringWidth()
+        local maxWidth = type(frameWidth) == "number" and frameWidth - Kit.CLOSE_ROOM * 2 or nil
+        local width = naturalWidth(text)
         if maxWidth and type(width) == "number" and width + Kit.PLAQUE_PAD > maxWidth then
             text:SetFontObject("GameFontNormalSmall")
-            width = text:GetStringWidth()
+            width = naturalWidth(text)
         end
         local plaqueW = Kit.plaqueWidth(width, maxWidth)
         plaque:SetWidth(plaqueW)
         text:SetWidth(plaqueW - 16)
+        -- SetFontObject resets the colour to the font object's own.
+        setTextColor(text, "plaqueText")
     end
     f:setTitle(title)
 
@@ -310,6 +325,8 @@ function Kit.button(parent, kind, text)
     b.label:SetPoint("CENTER", b, "CENTER", 0, 0)
     Kit.rings(b, { primary and "primaryEdge" or "buttonEdge" })
 
+    -- Callers adding a tooltip or any other OnEnter/OnLeave behaviour must use
+    -- HookScript for those two scripts, never SetScript: it would replace the hover.
     local hover = false
     local function paint(t)
         local c
@@ -372,7 +389,7 @@ function Kit.tile(parent, width, height)
         self.value:SetFont(STANDARD_TEXT_FONT, big, "")
         self.value:SetText(spec.value or "")
         local room = (f:GetWidth() or width or 110) - Kit.TILE_PAD * 2
-        local size = Kit.fitSize(self.value:GetStringWidth(), big, room, Kit.TILE_SIZES)
+        local size = Kit.fitSize(naturalWidth(self.value), big, room, Kit.TILE_SIZES)
         if size ~= big then self.value:SetFont(STANDARD_TEXT_FONT, size, "") end
         paint()
     end

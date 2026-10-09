@@ -154,7 +154,7 @@ La fenêtre suit la langue du jeu : anglais, français et espagnol (l'espagnol d
 
 **« Objet pas encore chargé, réessayez ».** Le jeu n'a pas encore mis le nom de l'objet en cache ; cliquez de nouveau après un instant.
 
-**Rien ne se passe quand je clique sur la tuile HV ou sur le titre.** Ouvrez d'abord l'hôtel des ventes. Un objet lié quand ramassé ne peut pas y être vendu, il n'est donc pas recherché.
+**Le clic sur la tuile HV ou sur le titre n'affiche qu'un message.** Rien n'est recherché, et le message dit pourquoi : « Ouvrez d'abord l'hôtel des ventes » (l'hôtel des ventes est fermé) ; « Cet objet ne peut pas être vendu à l'hôtel des ventes » (l'objet est lié quand ramassé) ; « Objet pas encore chargé, réessayez dans un instant » (le jeu n'a pas encore le nom de l'objet en mémoire : cliquez de nouveau).
 
 **La quantité n'est pas remplie après un clic sur un composant.** Le préremplissage est au mieux. La recherche fonctionne quand même ; saisissez la quantité à la main.
 

@@ -154,7 +154,7 @@ The window follows the game language: English, French and Spanish (Latin America
 
 **"Item not loaded yet, try again".** The game has not cached the item name yet; click again after a moment.
 
-**Nothing happens when I click the AH tile or the title.** Open the auction house first. An item that is bound when picked up cannot be sold there, so it is not searched.
+**The click on the AH tile or the title only prints a message.** Nothing is searched, and the message says why: "Open the auction house first" (the auction house is closed); "This item cannot be sold at the auction house" (the item is bound when picked up); "Item not loaded yet, try again in a moment" (the game has not cached the item name yet: click again).
 
 **The quantity is not filled in after clicking a reagent.** The preset is best-effort. The search itself still works; type the quantity by hand.
 

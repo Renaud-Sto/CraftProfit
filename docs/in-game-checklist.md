@@ -127,10 +127,10 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] With the AH open and a recipe shown, a small magnifier shows at the top right of the AH tile and at the right of the title plaque. When the AH closes both are gone (and with no recipe shown); they come back when it reopens.
 - [ ] Hovering the AH tile tints it (under the text); moving off restores it. The title lights up on hover.
 - [ ] Clicking the AH tile opens the AH Buy view on the crafted item's name, in the search box (compare with clicking a reagent: same view, but no quantity preset). Same for clicking the title. No Lua error, nothing is bought.
-- [ ] Drag the window by the title and by the AH tile (press and move): it moves and nothing is searched. A plain click searches.
+- [ ] Drag the window by the title and by the AH tile (press and move), once with the AH open and once with it closed: the window moves, NOTHING is searched and no chat line appears. A plain click searches. A sloppy click that moves a few pixels drags instead of searching: expected.
 - [ ] AH closed: clicking the tile or the title prints "Open the auction house first".
 - [ ] A recipe whose product is bind on pickup: clicking prints "This item cannot be sold at the auction house" and the search box is unchanged.
-- [ ] `/cp kitdemo copper` (then `steel`, `gold`) repaints the hover tint of the AH tile.
+- [ ] After `/cp kitdemo copper` (then `steel`, `gold`): no Lua error and the AH tile's tint still shows on hover.
 - [ ] If no magnifier appears, report the `/cpp icon` lines. Known: the icon is optional, the click works without it.
 
 ## Numbers

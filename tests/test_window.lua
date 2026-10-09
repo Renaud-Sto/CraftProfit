@@ -55,7 +55,7 @@ local function boot(opts)
     T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
     local calls = {}
     for _, name in ipairs({ "onPinClick", "onReagentClick", "onCraftsChange", "onTrackToggle",
-        "onPerPointToggle", "onCostToggle", "onMoved" }) do
+        "onPerPointToggle", "onCostToggle", "onMoved", "onOutputClick" }) do
         T.ns.Window.lastHandlers[name] = function(...) calls[#calls + 1] = { name, ... } end
     end
     return T, T.ns.Window, calls
@@ -442,4 +442,38 @@ H.test("the empty-state text follows the theme", function()
     Window.parts.empty.SetTextColor = function(_, r, g, b, a) colour = { r, g, b, a } end
     T.ns.Kit.applyTheme("steel")
     H.eq(colour, T.ns.Theme.get("steel").textMuted)
+end)
+
+H.test("clicking the AH tile or the title asks to search the crafted item", function()
+    local _, Window, calls = boot()
+    Window.render(model())
+    local tile = Window.parts.tiles[1]
+    tile.hit.scripts.OnClick(tile.hit)
+    H.eq(calls[#calls], { "onOutputClick" })
+    local title = Window.frame().titleHit
+    title.scripts.OnClick(title)
+    H.eq(calls[#calls], { "onOutputClick" })
+    H.falsy(Window.parts.tiles[2].hit)
+end)
+
+H.test("the magnifier icons show only while the AH is open and a recipe is displayed", function()
+    local T, Window = boot()
+    local function icons(want)
+        H.eq(Window.parts.tiles[1].icon.shown == true, want)
+        H.eq(Window.frame().titleIcon.shown == true, want)
+    end
+    local saved = _G.AuctionHouseFrame
+    _G.AuctionHouseFrame = { SearchBar = { SearchBox = { searchIcon = { GetAtlas = function() return "a" end } } } }
+    local ok, err = pcall(function()
+        T.ns.AH.isOpen = false
+        Window.render(model())
+        icons(false)
+        T.ns.AH.isOpen = true
+        Window.render(model())
+        icons(true)
+        Window.showEmpty("Select a recipe")
+        icons(false)
+    end)
+    _G.AuctionHouseFrame = saved
+    if not ok then error(err, 0) end
 end)

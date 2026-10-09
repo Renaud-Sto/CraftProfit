@@ -684,3 +684,120 @@ H.test("the label of a check box is part of its click area", function()
     check:setText("x")
     H.eq(insets, { 0, 0, 0, 0 })
 end)
+
+local function withGlobals(values, fn)
+    local saved = {}
+    for k, v in pairs(values) do saved[k] = _G[k]; _G[k] = v end
+    local ok, err = pcall(fn)
+    for k in pairs(values) do _G[k] = saved[k] end
+    if not ok then error(err, 0) end
+end
+
+local function fakeTexture()
+    local t = W.frame()
+    t.calls = {}
+    t.SetAtlas = function(_, a) t.calls[#t.calls + 1] = { "atlas", a } end
+    t.SetTexture = function(_, p) t.calls[#t.calls + 1] = { "texture", p } end
+    t.SetTexCoord = function(_, ...) t.calls[#t.calls + 1] = { "coord", ... } end
+    return t
+end
+
+H.test("searchIcon copies the AH search box icon (atlas first, then texture and coordinates)", function()
+    local _, Kit = boot()
+    local source = { GetAtlas = function() return "common-search-magnifyingglass" end }
+    withGlobals({ AuctionHouseFrame = { SearchBar = { SearchBox = { searchIcon = source } } } }, function()
+        local tex = fakeTexture()
+        H.truthy(Kit.searchIcon(tex))
+        H.eq(tex.calls, { { "atlas", "common-search-magnifyingglass" } })
+    end)
+    local plain = { GetAtlas = function() return nil end, GetTexture = function() return "Interface\\X" end,
+        GetTexCoord = function() return 0, 1, 0, 1 end }
+    withGlobals({ AuctionHouseFrame = { SearchBar = { SearchBox = { SearchIcon = plain } } } }, function()
+        local tex = fakeTexture()
+        H.truthy(Kit.searchIcon(tex))
+        H.eq(tex.calls, { { "texture", "Interface\\X" }, { "coord", 0, 1, 0, 1 } })
+    end)
+end)
+
+H.test("searchIcon falls back to a verified atlas and gives up without drawing anything", function()
+    local _, Kit = boot()
+    withGlobals({ AuctionHouseFrame = false, C_Texture = { GetAtlasInfo = function(name)
+        if name == "common-search-magnifyingglass" then return { width = 14 } end
+    end } }, function()
+        local tex = fakeTexture()
+        H.truthy(Kit.searchIcon(tex))
+        H.eq(tex.calls, { { "atlas", "common-search-magnifyingglass" } })
+    end)
+    withGlobals({ AuctionHouseFrame = false, C_Texture = { GetAtlasInfo = function() return nil end } }, function()
+        local tex = fakeTexture()
+        H.falsy(Kit.searchIcon(tex))
+        H.eq(tex.calls, {})
+    end)
+    withGlobals({ AuctionHouseFrame = false, C_Texture = false }, function()
+        H.falsy(Kit.searchIcon(fakeTexture()))
+    end)
+    withGlobals({ AuctionHouseFrame = { SearchBar = { SearchBox = { searchIcon = { GetAtlas = function() error("x") end } } } },
+        C_Texture = false }, function()
+        H.falsy(Kit.searchIcon(fakeTexture()))
+    end)
+end)
+
+H.test("a tile can be made clickable, with a hover tint and a magnifier that shows on request", function()
+    local T, Kit = boot()
+    local rec = recordingFrames(T)
+    local clicks = 0
+    local tile = Kit.tile(nil, 110, 52)
+    local hit = tile:onClick(function() clicks = clicks + 1 end)
+    H.eq(tile.hit, hit)
+    hit.scripts.OnClick(hit)
+    H.eq(clicks, 1)
+    local again = tile:onClick(function() clicks = clicks + 10 end)
+    H.eq(again, hit)
+    hit.scripts.OnClick(hit)
+    H.eq(clicks, 11)
+    withGlobals({ AuctionHouseFrame = { SearchBar = { SearchBox = { searchIcon = { GetAtlas = function() return "a" end } } } } }, function()
+        tile.icon.SetAtlas = function() end
+        tile:showIcon(true)
+        H.truthy(tile.icon.shown)
+        tile:showIcon(false)
+        H.falsy(tile.icon.shown)
+    end)
+    withGlobals({ AuctionHouseFrame = false, C_Texture = false }, function()
+        tile:showIcon(true)
+        H.falsy(tile.icon.shown)
+    end)
+    hit.scripts.OnEnter(hit)
+    hit.scripts.OnLeave(hit)
+    Kit.applyTheme("steel")
+    H.truthy(rec)
+end)
+
+H.test("the window title can be clicked, drags the window and lights up on hover", function()
+    local _, Kit = boot()
+    local moved, clicked = nil, 0
+    local win = Kit.window("KitTitleClick", "Recipe", { onMoved = function(...) moved = { ... } end,
+        onTitleClick = function() clicked = clicked + 1 end })
+    local hit = win.titleHit
+    H.truthy(hit)
+    hit.scripts.OnClick(hit)
+    H.eq(clicked, 1)
+    H.truthy(hit.scripts.OnDragStart)
+    hit.scripts.OnDragStop(hit)
+    H.eq(moved, { "TOPLEFT", 100, 700 })
+    local colours = {}
+    win.titleText.SetTextColor = function(_, r, g, b, a) colours[#colours + 1] = { r, g, b, a } end
+    hit.scripts.OnEnter(hit)
+    H.eq(colours[#colours], Kit.current.textMain)
+    hit.scripts.OnLeave(hit)
+    H.eq(colours[#colours], Kit.current.plaqueText)
+    H.truthy(win.titleIcon)
+    win:showTitleIcon(false)
+    H.falsy(win.titleIcon.shown)
+end)
+
+H.test("a window without a title click has no title button", function()
+    local _, Kit = boot()
+    local win = Kit.window("KitPlain", "Plain", {})
+    -- rawget: a fake frame answers any missing key with a no-op method
+    H.falsy(rawget(win, "titleHit"))
+end)

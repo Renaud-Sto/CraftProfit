@@ -180,6 +180,51 @@ local function naturalWidth(fs)
 end
 Kit.naturalWidth = naturalWidth
 
+-- Magnifier icon -------------------------------------------------------------
+
+Kit.SEARCH_ATLASES = { "common-search-magnifyingglass" }
+
+local function searchBoxIcon()
+    local frame = AuctionHouseFrame
+    local bar = type(frame) == "table" and frame.SearchBar
+    local box = type(bar) == "table" and bar.SearchBox
+    if type(box) ~= "table" then return nil end
+    return box.searchIcon or box.SearchIcon
+end
+
+-- Gives `texture` the game's magnifier: the icon of the AH search box if it can be read,
+-- else a known atlas that exists. Never guesses a file path (a missing file would draw a
+-- green square). Returns true when an icon was applied.
+function Kit.searchIcon(texture)
+    local ok, applied = pcall(function()
+        local source = searchBoxIcon()
+        if type(source) == "table" then
+            local atlas = type(source.GetAtlas) == "function" and source:GetAtlas()
+            if type(atlas) == "string" and atlas ~= "" then
+                texture:SetAtlas(atlas)
+                return true
+            end
+            local file = type(source.GetTexture) == "function" and source:GetTexture()
+            if file and file ~= "" then
+                texture:SetTexture(file)
+                if type(source.GetTexCoord) == "function" then texture:SetTexCoord(source:GetTexCoord()) end
+                return true
+            end
+        end
+        local api = C_Texture
+        if type(api) == "table" and type(api.GetAtlasInfo) == "function" then
+            for _, name in ipairs(Kit.SEARCH_ATLASES) do
+                if type(api.GetAtlasInfo(name)) == "table" then
+                    texture:SetAtlas(name)
+                    return true
+                end
+            end
+        end
+        return false
+    end)
+    return ok and applied == true
+end
+
 -- Window ----------------------------------------------------------------------
 
 local WINDOW_RINGS = { "black", "frameInner", "frameInner", "frameShade", "frameOuter", "black" }
@@ -250,6 +295,27 @@ function Kit.window(name, title, opts)
         setTextColor(text, "plaqueText")
     end
     f:setTitle(title)
+
+    -- opts.onTitleClick: the plaque becomes a button (it lights the title up on hover and
+    -- can show a magnifier) that still drags the window, the plaque being its handle.
+    if opts.onTitleClick then
+        local hit = CreateFrame("Button", nil, plaque)
+        hit:SetAllPoints(plaque)
+        hit:RegisterForDrag("LeftButton")
+        hit:SetScript("OnClick", function() opts.onTitleClick() end)
+        hit:SetScript("OnDragStart", function() f:StartMoving() end)
+        hit:SetScript("OnDragStop", function() stopDrag(f) end)
+        hit:HookScript("OnEnter", function() setTextColor(text, "textMain") end)
+        hit:HookScript("OnLeave", function() setTextColor(text, "plaqueText") end)
+        f.titleHit = hit
+        f.titleIcon = hit:CreateTexture(nil, "OVERLAY")
+        f.titleIcon:SetSize(12, 12)
+        f.titleIcon:SetPoint("RIGHT", plaque, "RIGHT", -8, 0)
+        f.titleIcon:Hide()
+        f.showTitleIcon = function(_, show)
+            if show and Kit.searchIcon(f.titleIcon) then f.titleIcon:Show() else f.titleIcon:Hide() end
+        end
+    end
 
     local close = Kit.button(f, "small", "x")
     close:SetSize(18, 18)
@@ -420,6 +486,37 @@ function Kit.tile(parent, width, height)
         local size = Kit.fitSize(naturalWidth(self.value), big, room, Kit.TILE_SIZES)
         if size ~= big then self.value:SetFont(STANDARD_TEXT_FONT, size, "") end
         paint()
+    end
+
+    -- Makes the whole tile a button (e.g. to search the item at the AH): a hover tint and a
+    -- small icon at the top right that `tile:showIcon(true)` reveals when the game's
+    -- magnifier can be found. Calling it again replaces the handler.
+    function tile:onClick(fn)
+        if not self.hit then
+            local hit = CreateFrame("Button", nil, f)
+            hit:SetAllPoints(f)
+            local tint = hit:CreateTexture(nil, "BACKGROUND")
+            tint:SetAllPoints(hit)
+            Kit.onTheme(function(t)
+                local c = t.rowHover
+                tint:SetColorTexture(c[1], c[2], c[3], c[4])
+            end)
+            tint:Hide()
+            hit:HookScript("OnEnter", function() tint:Show() end)
+            hit:HookScript("OnLeave", function() tint:Hide() end)
+            self.icon = hit:CreateTexture(nil, "OVERLAY")
+            self.icon:SetSize(12, 12)
+            self.icon:SetPoint("TOPRIGHT", hit, "TOPRIGHT", -6, -6)
+            self.icon:Hide()
+            self.hit = hit
+        end
+        self.hit:SetScript("OnClick", fn)
+        return self.hit
+    end
+
+    function tile:showIcon(show)
+        if not self.icon then return end
+        if show and Kit.searchIcon(self.icon) then self.icon:Show() else self.icon:Hide() end
     end
     return tile
 end

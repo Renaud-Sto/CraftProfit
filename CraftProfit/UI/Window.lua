@@ -308,6 +308,19 @@ local function buildOptions()
     parts.pin = pin
 end
 
+-- The AH tile and the title search the crafted item; the handler is looked up when
+-- clicked.
+local function searchOutput()
+    if handlers.onOutputClick then handlers.onOutputClick() end
+end
+
+-- The magnifiers on the AH tile and the title: only while the AH is open and a recipe
+-- is displayed.
+local function showSearchIcons(show)
+    parts.tiles[1]:showIcon(show)
+    if frame.showTitleIcon then frame:showTitleIcon(show) end
+end
+
 function Window.create(h)
     if frame then return frame end
     handlers = h or {}
@@ -318,10 +331,12 @@ function Window.create(h)
         onMoved = function(point, x, y)
             if handlers.onMoved then handlers.onMoved(point, x, y) end
         end,
+        onTitleClick = searchOutput,
     })
     content = frame.content
     buildBanner()
     buildTiles()
+    parts.tiles[1]:onClick(searchOutput)
     buildLikely()
     buildMaterials()
     buildAge()
@@ -366,6 +381,7 @@ function Window.showEmpty(text)
     hideSections()
     parts.empty:SetText(text)
     parts.empty:Show()
+    showSearchIcons(false)
     contentHeight = Kit.CONTENT_TOP + EMPTY_H + Kit.CONTENT_BOTTOM
     Window.relayout()
 end
@@ -410,6 +426,7 @@ function Window.render(model)
 
     setBanner(model.banner or { kind = "none", text = "", value = "" })
     for i, tile in ipairs(parts.tiles) do tile:set((model.tiles or {})[i] or {}) end
+    showSearchIcons(ns.AH ~= nil and ns.AH.isOpen == true)
 
     local likely = findLine(model.lines, "likely")
     parts.likely:SetText(likely and likely.label or "")

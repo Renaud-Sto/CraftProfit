@@ -8,6 +8,9 @@ local Kit = {}
 ns.Kit = Kit
 
 Kit.HEAD_H = 22
+-- A panel header has a 1 px rule at its bottom, so 21 px are usable: a 17 px button placed
+-- 3 px below the panel's top edge leaves 2 px above and below it.
+Kit.SMALL_BUTTON_H = 17
 Kit.BODY_PAD = 4
 Kit.GAP = 8
 -- The close button sits 8 px below the top edge and is 18 px tall: keep 8 px of air under it.
@@ -253,7 +256,7 @@ function Kit.button(parent, kind, text)
     local small = kind == "small"
     local primary = kind == "primary"
     local b = CreateFrame("Button", nil, parent)
-    b:SetHeight(small and 18 or 24)
+    b:SetHeight(small and Kit.SMALL_BUTTON_H or 24)
     local bg = b:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints(b)
     b.label = b:CreateFontString(nil, "OVERLAY", small and "GameFontNormalSmall" or "GameFontNormal")

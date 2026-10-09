@@ -266,3 +266,11 @@ H.test("kitdemo with an unknown theme says so and keeps the current theme", func
     H.truthy(said:find("nope", 1, true))
     H.truthy(said:find("gold, copper, steel", 1, true))
 end)
+
+H.test("a small button fits the usable height of a panel header with equal margins", function()
+    local Kit = load()
+    -- 1 px panel ring above, 1 px header rule below: HEAD_H - 1 pixels are usable.
+    local usable = Kit.HEAD_H - 1
+    H.eq((usable - Kit.SMALL_BUTTON_H) % 2, 0)
+    H.truthy(Kit.SMALL_BUTTON_H <= usable - 2)
+end)

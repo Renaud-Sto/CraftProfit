@@ -554,3 +554,118 @@ H.test("naturalWidth prefers the unbounded width and falls back to the string wi
     fs.GetUnboundedStringWidth = function() return 90 end
     H.eq(Kit.naturalWidth(fs), 90)
 end)
+
+H.test("scrollThumb sizes and places the thumb, nil when the list fits", function()
+    local Kit = load()
+    local h, top = Kit.scrollThumb(12, 6, 0, 100)
+    H.eq({ h, top }, { 50, 0 })
+    h, top = Kit.scrollThumb(12, 6, 6, 100)
+    H.eq({ h, top }, { 50, 50 })
+    h, top = Kit.scrollThumb(12, 6, 3, 100)
+    H.eq({ h, top }, { 50, 25 })
+    h = Kit.scrollThumb(1000, 6, 0, 100)
+    H.eq(h, Kit.SCROLL_MIN_THUMB)
+    H.eq(Kit.scrollThumb(6, 6, 0, 100), nil)
+    H.eq(Kit.scrollThumb(3, 6, 0, 100), nil)
+    H.eq(Kit.scrollThumb(12, 0, 0, 100), nil)
+    H.eq(Kit.scrollThumb(12, 6, 0, 0), nil)
+    H.eq(Kit.scrollThumb(nil, 6, 0, 100), nil)
+    top = select(2, Kit.scrollThumb(12, 6, 99, 100))
+    H.eq(top, 50)
+    top = select(2, Kit.scrollThumb(12, 6, -4, 100))
+    H.eq(top, 0)
+end)
+
+H.test("scrollOffsetAt maps a pointer position to a row offset and clamps it", function()
+    local Kit = load()
+    H.eq(Kit.scrollOffsetAt(12, 6, 100, 0), 0)
+    H.eq(Kit.scrollOffsetAt(12, 6, 100, 100), 6)
+    H.eq(Kit.scrollOffsetAt(12, 6, 100, 50), 3)
+    H.eq(Kit.scrollOffsetAt(12, 6, 100, -30), 0)
+    H.eq(Kit.scrollOffsetAt(12, 6, 100, 400), 6)
+    H.eq(Kit.scrollOffsetAt(5, 6, 100, 50), 0)
+    H.eq(Kit.scrollOffsetAt(nil, 6, 100, 50), 0)
+end)
+
+local function withCursor(y, fn)
+    local saved = _G.GetCursorPosition
+    _G.GetCursorPosition = function() return 0, y end
+    local ok, err = pcall(fn)
+    _G.GetCursorPosition = saved
+    if not ok then error(err, 0) end
+end
+
+H.test("the scroll bar hides when the list fits and shows a thumb of the right size otherwise", function()
+    local _, Kit = boot()
+    local bar = Kit.scrollbar(nil, 100)
+    H.falsy(bar:update(6, 6, 0))
+    H.falsy(bar.frame.shown)
+    local heights = {}
+    bar.thumb.SetHeight = function(_, h) heights[#heights + 1] = h end
+    H.truthy(bar:update(12, 6, 3))
+    H.truthy(bar.frame.shown)
+    H.eq(heights[#heights], 50)
+    H.falsy(bar:update(4, 6, 0))
+    H.falsy(bar.frame.shown)
+end)
+
+H.test("clicking the scroll bar track asks for the matching offset and dragging follows the pointer", function()
+    local _, Kit = boot()
+    local bar = Kit.scrollbar(nil, 100)
+    local asked = {}
+    bar.onScroll = function(offset) asked[#asked + 1] = offset end
+    bar:update(12, 6, 0)
+    bar.frame.GetTop = function() return 700 end
+    bar.frame.GetEffectiveScale = function() return 1 end
+    -- pointer 100 px below the top of the track: bottom of the track, last offset
+    withCursor(600, function() bar.frame.scripts.OnMouseDown(bar.frame) end)
+    H.eq(asked, { 6 })
+    bar:update(12, 6, 6)
+    -- still pressed: moving to the middle follows it
+    withCursor(650, function() bar.frame.scripts.OnUpdate(bar.frame) end)
+    H.eq(asked, { 6, 3 })
+    -- released: no more following
+    bar.frame.scripts.OnMouseUp(bar.frame)
+    withCursor(700, function() bar.frame.scripts.OnUpdate(bar.frame) end)
+    H.eq(asked, { 6, 3 })
+end)
+
+H.test("the scroll bar ignores a pointer it cannot measure and works without a callback", function()
+    local _, Kit = boot()
+    local bar = Kit.scrollbar(nil, 100)
+    bar:update(12, 6, 0)
+    -- the fake environment has no GetCursorPosition; a client that cannot say answers nil
+    local saved = _G.GetCursorPosition
+    _G.GetCursorPosition = function() end
+    bar.frame.scripts.OnMouseDown(bar.frame)
+    bar.frame.scripts.OnUpdate(bar.frame)
+    _G.GetCursorPosition = saved
+    bar.frame.GetTop = function() return 700 end
+    bar.frame.GetEffectiveScale = function() return 1 end
+    withCursor(600, function() bar.frame.scripts.OnMouseDown(bar.frame) end)
+    bar.frame.scripts.OnMouseUp(bar.frame)
+end)
+
+H.test("the scroll bar is painted from the theme and survives theme switches", function()
+    local T, Kit = boot()
+    local rec = recordingFrames(T)
+    local Theme = T.ns.Theme
+    local bar = Kit.scrollbar(nil, 100)
+    H.eq(rec[1].color, Theme.get("gold").inputBg)
+    H.eq(rec[2].color, Theme.get("gold").frameInner)
+    Kit.applyTheme("steel")
+    H.eq(rec[1].color, Theme.get("steel").inputBg)
+    H.eq(rec[2].color, Theme.get("steel").frameInner)
+    H.truthy(bar)
+end)
+
+H.test("onHeaderClick called twice reuses the hit button and replaces its handler", function()
+    local _, Kit = boot()
+    local panel = Kit.panel(nil, "X")
+    local hits = {}
+    local first = panel:onHeaderClick(function() hits[#hits + 1] = "a" end)
+    local second = panel:onHeaderClick(function() hits[#hits + 1] = "b" end)
+    H.eq(first, second)
+    first.scripts.OnClick(first)
+    H.eq(hits, { "b" })
+end)

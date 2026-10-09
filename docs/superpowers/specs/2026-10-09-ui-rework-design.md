@@ -28,7 +28,7 @@ Tokens (RGBA): `windowBg`, `frameOuter`, `frameInner`, `frameShade`, `plaqueBg`,
 
 Fixed colours, identical in every theme because they carry meaning: gain green, loss red, incomplete amber, stale orange, recipe difficulty (orange, yellow, green, grey), best-option gold.
 
-API: `Theme.list()`, `Theme.get(name)` (falls back to `gold`), `Theme.validate(theme)` (every token present, four numbers in 0..1), used by a unit test over all themes.
+API: `Theme.list()`, `Theme.exists(name)`, `Theme.get(name)` (falls back to `gold`), `Theme.validate(theme)` (every token present, four numbers in 0..1), used by a unit test over all themes.
 
 ### New: `UI/Kit.lua` (shared widgets)
 
@@ -37,6 +37,7 @@ Today each UI file creates its own text, buttons and colour table. Kit owns them
 - `Kit.window(name, title)`: frame, gold edge, plaque, close button, drag handling (moved from `Window.create`).
 - `Kit.panel(parent, titleKey)`: bordered panel with a header bar; returns an object with `:setRows(n)`, `:height()`, `:body()`; panels stack with an 8 px gap.
 - `Kit.button(parent, kind)` (`normal`, `primary`, `small`), `Kit.check`, `Kit.input` (these two arrive in PR 2), `Kit.tile`.
+- Pure helpers, unit tested: `Kit.panelHeight(rows, rowH, extra)`, `Kit.stack(heights, gap, top)` (offsets of stacked panels and total height), `Kit.fitSize(baseWidth, baseSize, boxWidth, sizes)` (largest size that fits), `Kit.gradient(tex, top, bottom)` (returns the form that worked: `color`, `rgb` or `flat`).
 - `Kit.applyTheme(name)`: re-colours every registered widget (each widget registers a `skin` function); no `/reload` needed.
 
 Edges and fills use solid-colour textures (`SetColorTexture`) layered to draw the chiselled frame, not Blizzard atlases or backdrop files: atlas names are not verified in this beta and would tie the look to the client build. The header bar uses a vertical gradient if `Texture:SetGradient` exists in this client, a flat colour otherwise (checked by a probe, see Risks).
@@ -47,8 +48,8 @@ Edges and fills use solid-colour textures (`SetColorTexture`) layered to draw th
 - `UI/PinsUI.lua`: the list and its three buttons become the Pinned recipes panel; sort button in the panel header; logic untouched.
 - `UI/LevelingUI.lua`: same Kit window; the list is a **Next point** panel; profession, sort and age sit in a strip above it; grey-recipes checkbox below.
 - `Present.lua`: builds a new `banner` and `tiles` in the model (see below). The old `lines` entries for the three exits and the verdict are removed. Existing text builders (`perPointLine`, `pointRow`, `likelyLine`) are kept.
-- `DB.lua`: one setting, `theme` (string, default `gold`), sanitised (unknown name becomes `gold`), account-wide.
-- `Boot.lua`: `/cp theme [name]` (no name lists them); calls `Kit.applyTheme`.
+- `DB.lua`: one setting, `theme` (string, default `gold`), sanitised (unknown name becomes `gold`), account-wide. PR 1 adds it; nothing reads it until PR 4.
+- `Boot.lua`: `/cp theme [name]` (no name lists them); calls `Kit.applyTheme`. Arrives in PR 4. In PR 1 only the developer command `/cp kitdemo [theme]` exists (not in the user help text); it applies a theme without saving it and shows the demo window, which is how PR 1 is checked in game.
 - Locales: panel titles are separate keys written already in capitals (`PANEL_MATERIALS = "MATÉRIAUX"`): `string.upper` in Lua 5.1 does not handle UTF-8 accents (`É` would stay lower case). New keys also for `RESULT`, tile labels and theme names, in en, fr, es.
 
 ### Model changes (testable)
@@ -97,7 +98,7 @@ Exact values live in `Theme.lua` and follow the mockups. Steel blue uses square 
 
 ## Delivery (one PR each, merged only on the author's go)
 
-1. `Theme.lua`, `UI/Kit.lua`, `/cpp skin` probe, tests. No visible change.
+1. `Theme.lua`, `UI/Kit.lua`, `/cpp skin` probe, tests, the `theme` setting in `DB.lua` (sanitised, not yet read), the `/cp kitdemo [theme]` developer command. No visible change.
 2. Main window on Kit: banner, tiles, panels (gold theme only).
 3. Pinned panel and leveling window on Kit.
 4. Theme setting, `/cp theme`, a theme button in the window header, Copper and Steel blue, docs, checklist, CHANGELOG.

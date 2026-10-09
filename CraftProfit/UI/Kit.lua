@@ -370,7 +370,19 @@ function Kit.tile(parent, width, height)
     local bg = f:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints(f)
     register(function() paintTexture(bg, "panelBg") end)
-    local refreshRings = Kit.rings(f, { function() return tile.best and "bestEdge" or "panelEdge" end })
+    -- Gold tint of the best tile, drawn under the rings and the text; clear otherwise.
+    local fill = f:CreateTexture(nil, "BORDER")
+    fill:SetAllPoints(f)
+    tile.fill = fill
+    local function paintFill()
+        paintTexture(fill, function() return tile.best and "bestFill" or { 0, 0, 0, 0 } end)
+    end
+    -- Two rings: the best tile gets a 2 px outline; the second ring blends into the
+    -- tile background when it is not the best one.
+    local refreshRings = Kit.rings(f, {
+        function() return tile.best and "bestEdge" or "panelEdge" end,
+        function() return tile.best and "bestEdge" or "panelBg" end,
+    })
 
     tile.label = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     tile.label:SetPoint("TOPLEFT", f, "TOPLEFT", Kit.TILE_PAD, -8)
@@ -386,6 +398,7 @@ function Kit.tile(parent, width, height)
     local function paint()
         setTextColor(tile.label, "headText")
         setTextColor(tile.value, tile.muted and "textMuted" or "textMain")
+        paintFill()
         refreshRings()
     end
     register(paint)

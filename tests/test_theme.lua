@@ -113,3 +113,14 @@ H.test("the text drawn on inputs, check marks and the title plaque stays readabl
         if contrast(t.plaqueText, t.plaqueBg) < 4.5 then error(name .. ": plaqueText on plaqueBg") end
     end
 end)
+
+H.test("the best tile outline is opaque and stands out from the tile edge and background in every theme", function()
+    local Theme = load()
+    for _, name in ipairs(Theme.list()) do
+        local t = Theme.get(name)
+        if t.bestEdge[4] ~= 1 then error(name .. ": bestEdge is not opaque") end
+        if t.bestFill[4] < 0.15 then error(name .. ": bestFill too faint") end
+        if contrast(t.bestEdge, t.panelEdge) < 3 then error(name .. ": bestEdge on panelEdge") end
+        if contrast(t.bestEdge, t.panelBg) < 4.5 then error(name .. ": bestEdge on panelBg") end
+    end
+end)

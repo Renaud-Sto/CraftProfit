@@ -50,7 +50,7 @@ local themes = {
         buttonBg = hex("1B1814"), buttonEdge = hex("5D4A22"), buttonText = hex("D9C48A"),
         primaryBg = hex("3B2A0C"), primaryEdge = hex("B08D3C"), primaryText = hex("FFD100"),
         inputBg = hex("0B0A09"), inputEdge = hex("3B3322"), checkMark = hex("C9A95A"),
-        bestFill = hex("FFD100", 0.11), bestEdge = hex("B08D3C", 0.65),
+        bestFill = hex("FFD100", 0.16), bestEdge = hex("FFD100"),
         textMain = hex("E8E0CC"), textMuted = hex("8A8372"),
     },
     copper = {
@@ -64,7 +64,7 @@ local themes = {
         buttonBg = hex("26180E"), buttonEdge = hex("6B4524"), buttonText = hex("E0A46A"),
         primaryBg = hex("5A2E10"), primaryEdge = hex("C87533"), primaryText = hex("FFC58A"),
         inputBg = hex("0A0604"), inputEdge = hex("4A2F18"), checkMark = hex("E0A46A"),
-        bestFill = hex("FFD100", 0.12), bestEdge = hex("FFD100", 0.70),
+        bestFill = hex("FFD100", 0.16), bestEdge = hex("FFD100"),
         textMain = hex("E8E0CC"), textMuted = hex("957757"),
     },
     steel = {
@@ -78,7 +78,7 @@ local themes = {
         buttonBg = hex("1A2036"), buttonEdge = hex("4A5272"), buttonText = hex("CFD8FF"),
         primaryBg = hex("243A78"), primaryEdge = hex("6A86E0"), primaryText = hex("FFFFFF"),
         inputBg = hex("05060D"), inputEdge = hex("3A4260"), checkMark = hex("8FA4E6"),
-        bestFill = hex("FFD100", 0.12), bestEdge = hex("FFD100", 0.60),
+        bestFill = hex("FFD100", 0.16), bestEdge = hex("FFD100"),
         textMain = hex("E6E8F2"), textMuted = hex("7A82A6"),
     },
 }

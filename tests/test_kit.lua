@@ -334,6 +334,34 @@ H.test("rings accept a function returning a colour table", function()
     H.eq(rec[1].color, { 0.25, 0, 0, 0.5 })
 end)
 
+H.test("the best tile gets a 2 px bright outline and a gold tint, the others a 1 px dark ring and no fill", function()
+    local T, Kit = boot()
+    local rec = recordingFrames(T)
+    local Theme = T.ns.Theme
+    local gold = Theme.get("gold")
+    local tile = Kit.tile(nil, 110, 52)
+    -- creation order: background, fill, outer ring (4 textures), second ring (4 textures)
+    local fill = rec[2]
+    local function ring(first) local r = {} for i = first, first + 3 do r[#r + 1] = rec[i].color end return r end
+    local function all(list, want)
+        for _, c in ipairs(list) do H.eq(c, want) end
+    end
+    tile:set({ label = "AH", value = "1g", best = true })
+    H.eq(fill.color, gold.bestFill)
+    all(ring(3), gold.bestEdge)
+    all(ring(7), gold.bestEdge)
+    tile:set({ label = "AH", value = "1g", best = false })
+    H.eq(fill.color[4], 0)
+    all(ring(3), gold.panelEdge)
+    all(ring(7), gold.panelBg)
+    tile:set({ label = "AH", value = "1g", best = true })
+    Kit.applyTheme("steel")
+    local steel = Theme.get("steel")
+    H.eq(fill.color, steel.bestFill)
+    all(ring(3), steel.bestEdge)
+    all(ring(7), steel.bestEdge)
+end)
+
 H.test("a normal button lights up on hover and a primary one gets a lighter fill", function()
     local T, Kit = boot()
     local rec = recordingFrames(T)

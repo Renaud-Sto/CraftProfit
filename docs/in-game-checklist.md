@@ -51,7 +51,7 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 Use a recipe with at least 5 reagents; `/console scriptErrors 1` on.
 - [ ] Selecting a recipe shows the result banner, the three tiles (Auction house, Vendor, Disenchant with its beta tag), the Materials panel, the prices age line and the Options panel.
 - [ ] A recipe that makes money tints the banner green; one that loses money tints it red (value shown with a minus sign); a recipe with an unpriced reagent shows the amber *Incomplete* banner. The tint stays the same through `/cp kitdemo copper`, `steel` and `gold` (it follows the result, not the theme).
-- [ ] The best tile is outlined in gold; an impossible way shows `n/a` muted, an unknown price `?`.
+- [ ] The best tile has a 2 px bright gold outline and a faint gold tint (clearly different from the other tiles, in each theme); an impossible way shows `n/a` muted, an unknown price `?`.
 - [ ] Amounts: `999g 99s 99c` (use a stack of expensive reagents, or a pin with huge prices) shrinks in the banner and the tiles without running into the verdict text or leaving its box; the "RÉSULTAT" label does not touch the value.
 - [ ] French client: a partial result shows "RÉSULTAT · PRIX MANQUANTS" (warning in amber) on the label line and "Meilleur connu : Hôtel des ventes" on the main line; neither is cut off or drawn over the value, including with a very large value.
 - [ ] French client, "Coût par point" ticked and a gold-range cost: the label is not truncated and does not overlap the value.

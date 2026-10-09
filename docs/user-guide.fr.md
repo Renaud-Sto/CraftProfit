@@ -43,14 +43,20 @@ La case **Suivre l'historique** (à côté de Crafts) fait garder à CraftProfit
 
 ## À l'hôtel des ventes
 
-À l'ouverture de l'hôtel des ventes, la fenêtre affiche la liste **Recettes épinglées** sous la recette, avec deux boutons.
+À l'ouverture de l'hôtel des ventes, la fenêtre affiche le panneau **Recettes épinglées** sous la recette, avec trois boutons : **Rechercher les prix** (le bouton principal), **Scanner l'HV** et **Montée de métier**, et une ligne de statut en dessous.
 
 - **Rechercher les prix** chiffre tous les composants et tous les objets obtenus des recettes épinglées, un objet à la fois, avec un compteur de progression. Les prix sont enregistrés avec leur date. Si vous fermez l'hôtel des ventes en cours de route, la recherche est annulée et les prix déjà reçus sont conservés.
 - **Scanner l'HV** lit tout l'hôtel des ventes d'un coup (le jeu autorise un scan complet par tranche de 15 minutes et par compte). Il chiffre des milliers d'objets, ce qui permet d'évaluer ensuite n'importe quelle recette. Si un autre addon lance un scan, CraftProfit utilise son résultat sans refaire de demande. Si le serveur ne répond pas, le statut le dit : le délai de 15 minutes est probablement en cours.
 
+### La liste des épingles
+
+La liste montre 6 recettes à la fois. Au-delà, une fine barre de défilement apparaît sur son bord droit : utilisez la molette de la souris (sur les lignes, sur la barre ou sur l'espace vide de la liste), faites glisser la barre, ou cliquez dessus pour y sauter. Avec 6 épingles ou moins, il n'y a pas de barre.
+
+Le nom de chaque recette est coloré selon sa difficulté : orange (optimal), jaune (moyen), vert (facile) ou gris (trivial). La couleur est celle connue lors de la dernière ouverture de la fenêtre de métier : après avoir gagné des points de compétence, ouvrez la fenêtre de métier pour l'actualiser, car fenêtre fermée elle peut avoir du retard. Une épingle dont la difficulté n'est pas encore connue garde la couleur de texte normale. La valeur à droite est verte pour un gain, rouge pour une perte et grise si elle est inconnue. La recette sélectionnée a une teinte dorée ; la ligne sous la souris est surlignée.
+
 ### Trier la liste des épingles
 
-Le bouton en haut à droite de la liste bascule entre :
+Le petit bouton dans l'en-tête du panneau bascule entre :
 
 - **Tri : gain** : le craft le plus rentable en premier (le moins déficitaire quand tous perdent de l'argent) ; les recettes sans prix en dernier.
 - **Tri : coût/point** : le point de compétence le moins cher en premier. Une recette dont les crafts se paient d'eux-mêmes passe en tête (`+…/pt` en vert), puis les coûts en rouge (`…/pt`), puis les recettes grises (`n/d`, aucun point possible), puis celles sans prix (`?`). Ce mode active l'option du coût par point, et décocher cette option ramène le tri sur le gain.
@@ -59,11 +65,12 @@ Cliquez sur une recette de la liste pour l'afficher dans la fenêtre au-dessus.
 
 ### La fenêtre de montée de métier
 
-**Montée de métier** (bouton sous la liste des épingles, ou `/cp level`) ouvre une fenêtre séparée et déplaçable avec **toutes les recettes que vous connaissez** dans un métier, le point de compétence le moins cher en premier : vous voyez d'un coup d'œil quoi fabriquer ensuite pour monter en perdant le moins possible.
+**Montée de métier** (bouton sous la liste des épingles, ou `/cp level`) ouvre une fenêtre séparée et déplaçable, à côté de la fenêtre principale, avec le même style et le même thème de couleurs. Sa position est mémorisée et la croix la ferme. Elle montre **toutes les recettes que vous connaissez** dans un métier, le point de compétence le moins cher en premier : vous voyez d'un coup d'œil quoi fabriquer ensuite pour monter en perdant le moins possible.
 
 - Chaque ligne montre la recette (colorée selon la difficulté), puis le coût par point, avec les mêmes écritures que la liste des épingles : `21g 29s/pt` en rouge, `+9s 33c/pt` en vert quand les crafts se paient d'eux-mêmes, `?` quand un prix manque (ces recettes restent en bas).
 - Le petit chiffre gris avant le montant, comme `x4`, est le nombre de crafts qu'un point demande en moyenne (100 % = `x1`, 75 % = `x1.3`, 25 % = `x4`). Le montant est la perte (ou le gain) d'un craft multipliée par ce chiffre, donc facile à relire : un craft qui perd 5s et demande 4 crafts par point affiche environ `20s/pt`.
-- Le bouton en haut à droite change l'ordre : **Tri : coût/point** (le point le moins cher en premier, par défaut) ou **Tri : vitesse** (le point le plus probable en premier, donc le moins de crafts ; à chance égale, le moins cher). Utilisez la vitesse pour les derniers points à obtenir vite, le coût pour dépenser le moins. Le choix est mémorisé.
+- La liste s'intitule **PROCHAIN POINT** et montre 12 recettes à la fois. Au-delà, elle a la même barre de défilement que la liste des épingles (molette, glisser la barre ou cliquer dessus). La fenêtre garde toujours la même hauteur, et un nom de recette trop long est coupé par `...` au lieu de passer à la ligne.
+- Le bouton de tri, à côté du bouton du métier en haut, change l'ordre : **Tri : coût/point** (le point le moins cher en premier, par défaut) ou **Tri : vitesse** (le point le plus probable en premier, donc le moins de crafts ; à chance égale, le moins cher). Utilisez la vitesse pour les derniers points à obtenir vite, le coût pour dépenser le moins. Le choix est mémorisé.
 - Les **recettes grises** ne peuvent plus donner de point : elles sont masquées par défaut, cochez *Afficher les recettes grises* pour les voir.
 - Le bouton du métier fait défiler les métiers que CraftProfit a lus pour ce personnage. La liste est enregistrée quand vous ouvrez une fenêtre de métier : elle est donc disponible à l'hôtel des ventes, fenêtre de métier fermée. Elle est relue à chaque mise à jour de la fenêtre de métier, ses couleurs suivent donc votre niveau.
 - L'âge des prix (le dernier scan) est affiché en haut : tout le classement en dépend, lancez donc **Scanner l'HV** d'abord.
@@ -110,7 +117,7 @@ La probabilité de point dépend de la couleur de la recette et c'est une **esti
 | Coût par point | Case à cocher du panneau Options | Décochée |
 | Détail des composants replié ou déplié | Clic sur l'en-tête Composants | Déplié |
 | Position de la fenêtre | La déplacer ; `/cp reset` pour annuler | À côté de la fenêtre de métier ou de l'hôtel des ventes |
-| Tri de la liste des épingles | Bouton au-dessus de la liste | Gain |
+| Tri de la liste des épingles | Bouton dans l'en-tête du panneau des épingles | Gain |
 
 Commandes : `/cp` (ou `/craftprofit`) avec `show`, `hide`, `reset`, `scan`, `history`, `market`, `level`, `locale <code>` et `selftest`. Voir le [README](../README.fr.md#commandes).
 

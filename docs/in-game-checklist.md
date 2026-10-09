@@ -64,10 +64,32 @@ Use a recipe with at least 5 reagents; `/console scriptErrors 1` on.
 - [ ] A very long recipe title is set in a smaller font, cut off inside the plaque, and stays clear of the close button.
 - [ ] Drag the window by its body and by the title plaque; `/reload`; the position is restored. `/cp reset` puts it back beside the profession window.
 - [ ] `/cp level` opens the leveling window beside the main window, not over it.
-- [ ] At the AH with pinned recipes, the window grows by the pinned list and the list starts just below the Options panel. Known: the pinned list keeps its old look until the next release (PR 3), and its rows sit 10 px from the edge instead of 12.
+- [ ] At the AH with pinned recipes, the window grows by the pinned list and the list starts just below the Options panel. The pinned list now follows the same rules as the other panels (see *Pinned list and leveling window (PR 3)*).
 - [ ] Closing the profession window hides the window (outside the AH); closing the AH hides it when it was opened from there.
 - [ ] `/cp kitdemo`: the check box and the input box look right (box, mark, label; the input is centred, takes focus on click) in all three themes.
 - [ ] Known small limits, not to be reported: the tiles leave 2 px on the right; the empty-state text (no recipe selected) ignores the theme.
+
+## Pinned list and leveling window (PR 3)
+Pinned list (open the AH with pinned recipes):
+- [ ] With more than 6 pins a scroll bar shows at the right edge of the list. The thumb moves with the mouse wheel over the rows, over the bar and over the empty space of the list. Dragging the thumb scrolls; clicking the track jumps there. Dragging far outside the bar and releasing stops the scrolling.
+- [ ] With 6 pins or fewer there is no bar. Unpin recipes while scrolled down to the end: the list clamps back and the bar disappears when 6 or fewer are left.
+- [ ] The thumb is bright enough to see against the track (known: the track itself is almost invisible on purpose).
+- [ ] Pinned names are orange, yellow, green or grey, matching the profession window. The colour is the one known when the profession window was last open: gain skill points, open the profession window, and the colours follow (with the profession closed they can lag). A pin without a known difficulty shows the plain text colour.
+- [ ] The selected row is tinted gold, the row under the mouse is highlighted, and a hovered selected row still looks right. Values are green for a gain, red for a loss, muted when unknown.
+- [ ] The Sort button in the panel header takes clicks (profit and cost/point alternate) and does not overlap the title "Recettes épinglées" under `/cp locale frFR`.
+- [ ] Search prices, Scan AH and Leveling work. The status line below them: the longest French and Spanish messages (for example the "no reply from the server ... 15 minute cooldown" one) stay inside the window. Known: a status wrapping to three lines still overruns the bottom margin by about 14 px.
+- [ ] The pinned block sits inside the 12 px margin like the other panels and nothing overlaps the frame border. The window grows when the AH opens and shrinks when it closes.
+- [ ] `/cp kitdemo copper`, `steel`, `gold`: the pinned list, its scroll bar and its buttons repaint at once.
+
+Leveling window (`/cp level`):
+- [ ] It opens beside the main window, with the kit look; the profession button cycles through the professions read; the sort button toggles cost/point and speed.
+- [ ] The grey-recipes check box shows or hides grey recipes, and the hidden count follows.
+- [ ] With more than 12 recipes the scroll bar appears and the wheel and the bar scroll. With 12 or fewer there is no bar. The window height never changes.
+- [ ] A long French recipe name is cut with "..." and does not wrap; no text runs under the scroll bar.
+- [ ] With no profession read, the French empty message stays inside the panel and wraps.
+- [ ] Drag the window, `/reload`: the position is remembered. The x closes it. Clicking a row shows that recipe in the main window.
+- [ ] `/cp kitdemo copper` (then `steel`, `gold`) repaints the leveling window.
+- [ ] Known small limits of the scroll bar, not to be reported: grabbing the thumb off-centre makes it jump to centre on the pointer; any mouse button can scroll it; a lost mouse-up (alt-tab while dragging) is not recovered.
 
 ## Several crafts
 - [ ] The "Crafts : [ 1 ]" box in the Options panel takes a number from 1 to 9999. Type 5 and press Enter (or click elsewhere): reagent quantities, the Materials total, the AH / vendor / disenchant values and the verdict all become five times larger, and the Materials header reads "COMPOSANTS x5 (ESTIMATION)". Cost or gain per point is unchanged.

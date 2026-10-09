@@ -8,13 +8,16 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - Developer groundwork for the UI rework: colour themes (gold, copper, steel blue) and a shared widget kit, with a `/cp kitdemo` window. No existing window changes yet.
 - Leveling window (`/cp level`, or the Leveling button under the pinned list): every learned, not grey recipe of a profession ranked by the cost of a skill point from the last scan, stored per character so it works at the auction house. Grey recipes are hidden unless asked.
 - The leveling window shows the crafts per point and can be sorted by cost per point or by speed (likeliest point first).
+- Scroll bars on the pinned list (6 rows visible) and on the leveling list (12 rows visible): mouse wheel, drag the bar or click it; hidden while everything fits.
 - `/cp market` shows the market the prices are saved under.
 - Prices are kept per ruleset (the game "realm" in the beta) and faction. Prices saved by earlier builds are adopted by the first market used.
 - Price history: the *Track history* box records the prices of up to 15 recipes after every scan and price search (retention: all points for 14 days, then daily, then weekly averages up to a year); `/cp history` lists and removes tracked recipes. Recording only, the graphs are planned.
 - Project documentation: README (English and French), user guide (English and French), technical documentation, contributing guide, CurseForge page text and submission checklist, issue and pull request templates, continuous integration.
 
 ### Changed
-- The main window has a new look: a result banner with the best way to sell and the net result, three tiles for the auction house, vendor and disenchant values, and separate Materials and Options panels. Its functions are unchanged; what you see differs: the best option is outlined on its tile instead of marked with ">", the per-point result is a coloured value beside its option instead of a "Gain per point" line, and the banner shows the verdict on one line. The pinned list and the leveling window follow in the next versions.
+- The pinned list and the leveling window have the new look, like the main window: a Pinned recipes panel with the sort button in its header, a Next point panel, themed buttons, and both follow the colour themes.
+- Pinned recipe names are coloured by difficulty (orange, yellow, green, grey), as in the profession window.
+- The main window has a new look: a result banner with the best way to sell and the net result, three tiles for the auction house, vendor and disenchant values, and separate Materials and Options panels. Its functions are unchanged; what you see differs: the best option is outlined on its tile instead of marked with ">", the per-point result is a coloured value beside its option instead of a "Gain per point" line, and the banner shows the verdict on one line. 
 - The best tile of the main window now has a 2 px bright gold outline and a faint gold tint, so it stands out from the other tiles.
 - The partial-result warning ("PRICES MISSING") now sits in amber on the banner label line so it is never cut off; the French and Spanish "cost per point" option labels are shorter.
 

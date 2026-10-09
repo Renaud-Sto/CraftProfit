@@ -560,6 +560,8 @@ local function slash(msg)
         Controller.historyCommand(arg)
     elseif cmd == "level" then
         if ns.LevelingUI then ns.LevelingUI.toggle() end
+    elseif cmd == "kitdemo" then
+        if ns.KitDemo then ns.KitDemo.toggle(arg) end
     elseif cmd == "market" then
         local name = type(GetRealmName) == "function" and GetRealmName() or "?"
         say(string.format(L.MARKET_INFO, tostring(name), Controller.marketKey()))

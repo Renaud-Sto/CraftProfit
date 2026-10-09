@@ -1,6 +1,6 @@
 -- CraftProfitProbe: THROWAWAY addon measuring what the Forever client exposes.
 -- Every output line starts with the version so a stale install is obvious.
-local VERSION = "0.5.0"
+local VERSION = "0.6.0"
 local TAG = "|cff66ccff[CPP " .. VERSION .. "]|r "
 
 local function isSecret(v)
@@ -421,6 +421,33 @@ frame:SetScript("OnEvent", function(_, event, a1)
     end
 end)
 
+-- What the UI rework needs from the client: fonts, solid-colour textures, gradients.
+cmds.skin = function()
+    out("STANDARD_TEXT_FONT:", show(STANDARD_TEXT_FONT))
+    out("GameFontNormal font:", try(GameFontNormal and GameFontNormal.GetFont, GameFontNormal))
+    out("GameFontNormalSmall font:", try(GameFontNormalSmall and GameFontNormalSmall.GetFont, GameFontNormalSmall))
+    out("GameFontHighlightSmall font:", try(GameFontHighlightSmall and GameFontHighlightSmall.GetFont, GameFontHighlightSmall))
+    local f = CreateFrame("Frame")
+    local t = f:CreateTexture(nil, "BACKGROUND")
+    out("Texture:SetColorTexture:", type(t.SetColorTexture))
+    out("CreateColor:", type(CreateColor))
+    if type(CreateColor) == "function" then
+        out("SetGradient(colour objects, bottom first):", try(t.SetGradient, t, "VERTICAL",
+            CreateColor(0, 0, 0, 1), CreateColor(1, 1, 1, 1)))
+    end
+    out("SetGradient(six numbers):", try(t.SetGradient, t, "VERTICAL", 0, 0, 0, 1, 1, 1))
+    out("Texture:SetGradientAlpha:", type(t.SetGradientAlpha))
+    out("BackdropTemplateMixin:", type(BackdropTemplateMixin))
+    local fs = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    for _, size in ipairs({ 19, 15, 11 }) do
+        out("SetFont", size, try(fs.SetFont, fs, STANDARD_TEXT_FONT, size, ""))
+        fs:SetText("999g 99s 99c")
+        out("  width of '999g 99s 99c':", try(fs.GetStringWidth, fs))
+        fs:SetText("21g 29s")
+        out("  width of '21g 29s':", try(fs.GetStringWidth, fs))
+    end
+end
+
 SLASH_CPP1 = "/cpp"
 SlashCmdList.CPP = function(msg)
     local cmd, arg = (msg or ""):match("^(%S*)%s*(.-)$")
@@ -436,7 +463,7 @@ SlashCmdList.CPP = function(msg)
         out("== " .. cmd .. " " .. arg)
         fn(arg)
     else
-        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | qty | ruleset | known | log | clear")
+        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | qty | ruleset | known | skin | log | clear")
     end
 end
 out("loaded. /cpp for commands. Enable Lua errors: /console scriptErrors 1")

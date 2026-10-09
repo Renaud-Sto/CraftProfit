@@ -33,4 +33,5 @@ UI/Kit.lua
 UI/Window.lua
 UI/PinsUI.lua
 UI/LevelingUI.lua
+UI/KitDemo.lua
 Boot.lua

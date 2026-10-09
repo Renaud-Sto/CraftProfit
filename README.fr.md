@@ -57,6 +57,7 @@ Le pas-à-pas complet, toutes les options et l'explication de chaque chiffre son
 | `/cp history` | Liste les recettes suivies ; `/cp history remove <n>` en supprime une |
 | `/cp level` | Ouvre ou ferme la fenêtre de montée de métier |
 | `/cp market` | Indique sous quel marché (ruleset et faction) les prix sont enregistrés |
+| `/cp theme [nom]` | Liste les thèmes et le thème actuel ; avec un nom, passe à ce thème (`gold`, `copper`, `steel` : Or, Cuivre, Bleu acier) |
 | `/cp locale <code>` | Force une langue (`enUS`, `frFR`, `esES`, `esMX`) ; sans code, retour à la langue du jeu |
 | `/cp selftest` | Lance l'auto-test intégré |
 

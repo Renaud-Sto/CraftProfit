@@ -746,6 +746,28 @@ H.test("the leveling data ranks the known recipes by cost per point, hides grey 
     H.eq(data.items[#data.items].recipe.recipeID, 3)
 end)
 
+H.test("a grey learned recipe is stored when the profession is read, hidden by default and listed on request", function()
+    local T = boot()
+    local C = T.ns.Controller
+    mockProfession(T)
+    T.env.C_TradeSkillUI.GetBaseProfessionInfo = function() return { professionID = 164, professionName = "Forge" } end
+    T.env.C_TradeSkillUI.GetAllRecipeIDs = function() return { 5, 6 } end
+    T.env.C_TradeSkillUI.GetRecipeInfo = function(id)
+        return { recipeID = id, name = "R" .. id, learned = true, relativeDifficulty = id == 5 and 3 or 1 }
+    end
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    T.run()
+    H.eq(#T.env.CraftProfitCharDB.known[1].recipes, 2)
+    local data = C.levelData()
+    H.eq(data.hiddenGrey, 1)
+    H.eq(#data.items, 1)
+    H.eq(data.items[1].recipe.recipeID, 6)
+    C.setLevelShowGrey(true)
+    data = C.levelData()
+    H.eq(#data.items, 2)
+    H.eq(data.hiddenGrey, 0)
+end)
+
 H.test("the leveling window lists the recipes, opens with /cp level and selecting one shows it", function()
     local T = boot()
     local C = T.ns.Controller

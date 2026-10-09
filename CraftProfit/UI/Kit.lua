@@ -308,16 +308,19 @@ function Kit.panel(parent, title)
         f:SetHeight(Kit.panelHeight(rows, self.rowH, extra))
     end
     p.height = function() return f:GetHeight() end
-    -- A button covering the header, e.g. to fold the panel. Returns it (also p.headerHit).
+    -- A button covering the header, e.g. to fold the panel. Returns it (also p.headerHit);
+    -- calling it again replaces the handler of the same button.
     function p:onHeaderClick(fn)
-        local hit = CreateFrame("Button", nil, head)
-        hit:SetAllPoints(head)
-        -- A child of the header would sit above buttons parented to the panel frame
-        -- (a sort button, say) and swallow their clicks, so stay at the panel's level.
-        hit:SetFrameLevel(f:GetFrameLevel())
-        hit:SetScript("OnClick", fn)
-        self.headerHit = hit
-        return hit
+        if not self.headerHit then
+            local hit = CreateFrame("Button", nil, head)
+            hit:SetAllPoints(head)
+            -- A child of the header would sit above buttons parented to the panel frame
+            -- (a sort button, say) and swallow their clicks, so stay at the panel's level.
+            hit:SetFrameLevel(f:GetFrameLevel())
+            self.headerHit = hit
+        end
+        self.headerHit:SetScript("OnClick", fn)
+        return self.headerHit
     end
     p:setTitle(title)
     return p
@@ -363,7 +366,7 @@ end
 
 -- A small card with a label and a large value that shrinks to fit its width.
 function Kit.tile(parent, width, height)
-    local tile = { best = false, muted = false }
+    local tile = { best = false, muted = false, width = width }
     local f = CreateFrame("Frame", nil, parent)
     f:SetSize(width or 110, height or 52)
     tile.frame = f
@@ -452,7 +455,13 @@ function Kit.check(parent, text)
         self:SetChecked(not self.checked)
         if self.onToggle then self.onToggle(self.checked) end
     end)
-    b.setText = function(self, value) self.label:SetText(value or "") end
+    -- The label is part of the click area: a negative right inset widens the hit
+    -- rectangle, so clicking the words toggles the box like clicking the square.
+    b.setText = function(self, value)
+        self.label:SetText(value or "")
+        local width = Kit.naturalWidth(self.label)
+        self:SetHitRectInsets(0, -(type(width) == "number" and width + 6 or 0), 0, 0)
+    end
     b:SetChecked(false)
     b:setText(text)
     return b
@@ -479,4 +488,82 @@ function Kit.input(parent, width, maxLetters)
     box:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
     box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     return box
+end
+
+-- Scroll bar ------------------------------------------------------------------
+
+Kit.SCROLL_W = 8
+Kit.SCROLL_MIN_THUMB = 16
+
+-- Thumb height and its distance from the top of the track, for a list of `total` rows
+-- of which `visible` show from row `offset` (0-based). nil when everything fits.
+function Kit.scrollThumb(total, visible, offset, trackH)
+    if type(total) ~= "number" or type(visible) ~= "number" or type(trackH) ~= "number" then return nil end
+    if visible <= 0 or total <= visible or trackH <= 0 then return nil end
+    local thumbH = math.max(Kit.SCROLL_MIN_THUMB, math.floor(trackH * visible / total + 0.5))
+    thumbH = math.min(thumbH, trackH)
+    local range = total - visible
+    local at = math.max(0, math.min(offset or 0, range))
+    return thumbH, math.floor((trackH - thumbH) * at / range + 0.5)
+end
+
+-- Row offset for a pointer `y` pixels below the top of the track, the thumb centred on
+-- it; always inside 0 .. total - visible.
+function Kit.scrollOffsetAt(total, visible, trackH, y)
+    local thumbH = Kit.scrollThumb(total, visible, 0, trackH)
+    if not thumbH or type(y) ~= "number" then return 0 end
+    local free = trackH - thumbH
+    if free <= 0 then return 0 end
+    local fraction = math.max(0, math.min(1, (y - thumbH / 2) / free))
+    return math.floor(fraction * (total - visible) + 0.5)
+end
+
+-- A slim scroll bar for a list that shows `visible` of `total` rows. The track takes
+-- clicks and drags; `bar.onScroll(offset)` is asked for the matching row offset and
+-- the owner calls `bar:update(total, visible, offset)` after it has scrolled. Hidden
+-- while the whole list fits.
+function Kit.scrollbar(parent, trackH)
+    local bar = { trackH = trackH, total = 0, visible = 0, offset = 0 }
+    local f = CreateFrame("Button", nil, parent)
+    f:SetSize(Kit.SCROLL_W, trackH)
+    bar.frame = f
+    local track = f:CreateTexture(nil, "BACKGROUND")
+    track:SetAllPoints(f)
+    bar.thumb = f:CreateTexture(nil, "ARTWORK")
+    register(function()
+        paintTexture(track, "inputBg")
+        paintTexture(bar.thumb, "frameInner")
+    end)
+
+    function bar:update(total, visible, offset)
+        self.total, self.visible, self.offset = total, visible, offset
+        local thumbH, top = Kit.scrollThumb(total, visible, offset, self.trackH)
+        if not thumbH then
+            f:Hide()
+            return false
+        end
+        self.thumb:ClearAllPoints()
+        self.thumb:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -top)
+        self.thumb:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -top)
+        self.thumb:SetHeight(thumbH)
+        f:Show()
+        return true
+    end
+
+    local dragging = false
+    local function follow()
+        local _, cursorY = GetCursorPosition()
+        local top, scale = f:GetTop(), f:GetEffectiveScale()
+        if type(cursorY) ~= "number" or type(top) ~= "number" or type(scale) ~= "number" or scale <= 0 then
+            return
+        end
+        local offset = Kit.scrollOffsetAt(bar.total, bar.visible, bar.trackH, top - cursorY / scale)
+        if offset ~= bar.offset and bar.onScroll then bar.onScroll(offset) end
+    end
+    f:SetScript("OnMouseDown", function() dragging = true; follow() end)
+    f:SetScript("OnMouseUp", function() dragging = false end)
+    f:SetScript("OnHide", function() dragging = false end)
+    f:SetScript("OnUpdate", function() if dragging then follow() end end)
+    f:Hide()
+    return bar
 end

@@ -226,3 +226,215 @@ H.test("the pins list refreshes in both sort modes without errors", function()
     T.ns.Controller.toggleSort()
     T.ns.PinsUI.refresh()
 end)
+
+local function openList(T)
+    T.ns.AH.isOpen = true
+    T.ns.Controller.onAHOpen(true)
+    return T.ns.PinsUI.parts
+end
+
+H.test("pinned names take the colour of their difficulty, a missing difficulty keeps the text colour", function()
+    local T = boot()
+    local Theme = T.ns.Theme
+    local pins = T.env.CraftProfitCharDB.pins
+    pins[1].difficulty = "optimal"
+    pins[2].difficulty = nil
+    local parts = openList(T)
+    local colours = {}
+    for i = 1, 2 do
+        parts.rows[i].name.SetTextColor = function(_, r, g, b, a) colours[i] = { r, g, b, a } end
+    end
+    T.ns.PinsUI.refresh()
+    local byID = {}
+    for i = 1, 2 do byID[parts.rows[i].recipeID] = colours[i] end
+    H.eq(byID[1], Theme.FIXED.optimal)
+    H.eq(byID[2], T.ns.Kit.current.textMain)
+end)
+
+H.test("each difficulty has its colour in the pinned list", function()
+    local T = boot()
+    local Theme = T.ns.Theme
+    local pins = T.env.CraftProfitCharDB.pins
+    local parts = openList(T)
+    local last
+    parts.rows[1].name.SetTextColor = function(_, r, g, b, a) last = { r, g, b, a } end
+    for _, name in ipairs({ "optimal", "medium", "easy", "trivial" }) do
+        for _, pin in ipairs(pins) do pin.difficulty = name end
+        T.ns.PinsUI.refresh()
+        H.eq(last, Theme.FIXED[name])
+    end
+end)
+
+H.test("the scroll bar shows only when there are more pins than rows and follows the offset", function()
+    local T = boot()
+    local parts = openList(T)
+    H.falsy(parts.bar.frame.shown)
+    for i = 3, 12 do
+        T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(i, 100, { { itemID = 1, qty = 1 } }))
+    end
+    T.ns.PinsUI.refresh()
+    H.truthy(parts.bar.frame.shown)
+    H.eq(parts.bar.total, 12)
+    H.eq(parts.bar.visible, 6)
+    H.eq(parts.bar.offset, 0)
+    parts.bar.onScroll(4)
+    H.eq(parts.bar.offset, 4)
+    parts.bar.onScroll(99)
+    H.eq(parts.bar.offset, 6)
+end)
+
+H.test("the mouse wheel scrolls the list and the bar, and removing pins clamps the offset", function()
+    local T = boot()
+    local parts = openList(T)
+    for i = 3, 12 do
+        T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(i, 100, { { itemID = 1, qty = 1 } }))
+    end
+    T.ns.PinsUI.refresh()
+    local host = T.ns.Window.pinsHost()
+    host.scripts.OnMouseWheel(host, -1)
+    host.scripts.OnMouseWheel(host, -1)
+    H.eq(parts.bar.offset, 2)
+    host.scripts.OnMouseWheel(host, 1)
+    H.eq(parts.bar.offset, 1)
+    for _ = 1, 7 do table.remove(T.env.CraftProfitCharDB.pins) end
+    T.ns.PinsUI.refresh()
+    H.eq(parts.bar.offset, 0)
+    H.falsy(parts.bar.frame.shown)
+end)
+
+H.test("the panel height follows the number of pinned rows shown and the host height follows the panel", function()
+    local T = boot()
+    local Kit = T.ns.Kit
+    local parts = openList(T)
+    H.eq(parts.panel.frame.height, Kit.panelHeight(2, 18))
+    for i = 3, 12 do
+        T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(i, 100, { { itemID = 1, qty = 1 } }))
+    end
+    T.ns.PinsUI.refresh()
+    H.eq(parts.panel.frame.height, Kit.panelHeight(6, 18))
+    local host = T.ns.Window.pinsHost()
+    H.eq(host.height, Kit.panelHeight(6, 18) + Kit.GAP + T.ns.PinsUI.FOOTER_H)
+end)
+
+H.test("the host is the panel, a gap and a footer with two lines of status, and the window grows by it", function()
+    local T = boot()
+    local Kit, P = T.ns.Kit, T.ns.PinsUI
+    -- Two 24 px buttons with their 6 px gaps, then two lines of the small font.
+    H.truthy(P.FOOTER_H >= 24 * 2 + 12 + 28)
+    openList(T)
+    local host = T.ns.Window.pinsHost()
+    H.eq(host.height, Kit.panelHeight(2, 18) + Kit.GAP + P.FOOTER_H)
+    local frame = T.ns.Window.frame()
+    H.truthy(host:IsShown())
+    local shownHeight = frame.height
+    P.onAHOpen(false)
+    H.falsy(host:IsShown())
+    local hiddenHeight = frame.height
+    H.eq(shownHeight - hiddenHeight, Kit.GAP + host.height)
+end)
+
+H.test("the sort button reads the sort mode and toggles it", function()
+    local T = boot()
+    local parts = openList(T)
+    H.eq(parts.sort.label.text, "Sort: profit")
+    parts.sort.scripts.OnClick(parts.sort)
+    H.eq(parts.sort.label.text, "Sort: cost/point")
+end)
+
+H.test("the three buttons read their text and keep their actions", function()
+    local T = boot()
+    local parts = openList(T)
+    H.eq(parts.search.label.text, "Search prices")
+    H.eq(parts.scan.label.text, "Scan AH")
+    H.eq(parts.level.label.text, "Leveling")
+    parts.search.scripts.OnClick(parts.search)
+    H.eq(T.ns.PinsUI.state, "running")
+    parts.level.scripts.OnClick(parts.level)
+    H.truthy(T.ns.LevelingUI.isShown())
+end)
+
+H.test("clicking a pinned row selects that recipe", function()
+    local T = boot()
+    local parts = openList(T)
+    local id2
+    for i = 1, 2 do if parts.rows[i].recipeID == 2 then id2 = parts.rows[i] end end
+    id2.scripts.OnClick(id2)
+    H.eq(T.ns.Controller.currentRecipeID(), 2)
+end)
+
+H.test("a theme switch repaints the pinned names and values in the new theme", function()
+    local T = boot()
+    local Theme = T.ns.Theme
+    for _, pin in ipairs(T.env.CraftProfitCharDB.pins) do pin.difficulty = nil end
+    local parts = openList(T)
+    local row = parts.rows[1]
+    -- No listing was recorded, so the value is unknown and drawn muted.
+    H.eq(row.value.text, "?")
+    local name, value
+    row.name.SetTextColor = function(_, r, g, b, a) name = { r, g, b, a } end
+    row.value.SetTextColor = function(_, r, g, b, a) value = { r, g, b, a } end
+    local gold, steel = Theme.get("gold"), Theme.get("steel")
+    H.truthy(steel.textMain[1] ~= gold.textMain[1] or steel.textMain[3] ~= gold.textMain[3])
+    H.truthy(steel.textMuted[1] ~= gold.textMuted[1] or steel.textMuted[3] ~= gold.textMuted[3])
+    T.ns.Kit.applyTheme("steel")
+    H.eq(name, steel.textMain)
+    H.eq(value, steel.textMuted)
+    for _, theme in ipairs({ "copper", "steel", "gold" }) do T.ns.Kit.applyTheme(theme) end
+    H.eq(name, gold.textMain)
+    H.eq(value, gold.textMuted)
+end)
+
+-- A boot whose character already has a pin when the addon loads, as in the game.
+local function bootWithSavedPin()
+    local T = W.boot(H, { items = ITEMS })
+    T.env.CraftProfitCharDB = {}
+    T.ns.DB.initChar(T.env.CraftProfitCharDB)
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(1, 100, { { itemID = 1, qty = 2 } }))
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    return T
+end
+
+H.test("loading the addon with a pin does not touch the market until the AH opens", function()
+    local T = bootWithSavedPin()
+    -- Never refreshed: the row has no recipe yet (rawget, fake frames answer any field).
+    H.eq(rawget(T.ns.PinsUI.parts.rows[1], "recipeID"), nil)
+    H.eq(next(T.env.CraftProfitDB.markets), nil)
+    openList(T)
+    H.eq(T.ns.PinsUI.parts.rows[1].recipeID, 1)
+    H.truthy(next(T.env.CraftProfitDB.markets) ~= nil)
+end)
+
+H.test("a theme switch evaluates the pins only while the pinned list is shown", function()
+    local T = boot()
+    local Controller = T.ns.Controller
+    local evaluate, calls = Controller.evaluate, 0
+    Controller.evaluate = function(...) calls = calls + 1; return evaluate(...) end
+    T.ns.Kit.applyTheme("steel")
+    H.eq(calls, 0)
+    openList(T)
+    calls = 0
+    T.ns.Kit.applyTheme("copper")
+    H.truthy(calls > 0)
+end)
+
+H.test("the pinned panel title is the capitalised panel key", function()
+    local T = boot()
+    local parts = openList(T)
+    H.eq(parts.panel.title.text, "PINNED RECIPES")
+    local F = W.boot(H, { items = ITEMS, locale = "frFR" })
+    F.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(F.ns.PinsUI.parts.panel.title.text, "RECETTES ÉPINGLÉES")
+end)
+
+H.test("the sort button sits two levels above the pinned panel frame", function()
+    local T = W.boot(H, { items = ITEMS })
+    local made = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = made(...)
+        f.GetFrameLevel = function() return 5 end
+        f.SetFrameLevel = function(self, level) self.level = level end
+        return f
+    end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(T.ns.PinsUI.parts.sort.level, 7)
+end)

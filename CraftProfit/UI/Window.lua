@@ -39,6 +39,7 @@ local contentHeight = 80
 local parts = { frames = {}, tiles = {}, rows = {} }
 
 Window.WIDTH = WIDTH
+Window.INNER_WIDTH = WIDTH - Kit.CONTENT_SIDE * 2
 Window.parts = parts
 Window.lastModel = nil
 Window.lastHandlers = nil
@@ -170,11 +171,15 @@ end
 
 local function buildTiles()
     local f = newSection("tiles", TILE_H)
-    local width = math.floor((WIDTH - Kit.CONTENT_SIDE * 2 - Kit.GAP * 2) / 3)
+    local width = math.floor((Window.INNER_WIDTH - Kit.GAP * 2) / 3)
+    local x = 0
     for i = 1, 3 do
-        local tile = Kit.tile(f, width, TILE_H)
-        tile.frame:SetPoint("TOPLEFT", f, "TOPLEFT", (i - 1) * (width + Kit.GAP), 0)
+        -- The last tile takes the remainder, so the row fills the content width.
+        local w = i < 3 and width or Window.INNER_WIDTH - x
+        local tile = Kit.tile(f, w, TILE_H)
+        tile.frame:SetPoint("TOPLEFT", f, "TOPLEFT", x, 0)
         parts.tiles[i] = tile
+        x = x + w + Kit.GAP
     end
 end
 
@@ -324,9 +329,10 @@ function Window.create(h)
 
     parts.empty = content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
     parts.empty:SetPoint("TOP", content, "TOP", 0, -4)
+    themed(parts.empty, "textMuted")
 
     pinsHost = CreateFrame("Frame", nil, frame)
-    pinsHost:SetWidth(WIDTH)
+    pinsHost:SetWidth(Window.INNER_WIDTH)
     pinsHost:SetHeight(0)
     pinsHost:Hide()
 
@@ -339,12 +345,13 @@ function Window.setTitle(text)
     if frame then frame:setTitle(text) end
 end
 
--- Frame height = recipe sections + pinned-recipes section (when shown).
+-- Frame height = recipe sections + a gap and the pinned-recipes section (when shown).
+-- The host sits inside the content margin, a gap below the last section.
 function Window.relayout()
     if not frame then return end
     pinsHost:ClearAllPoints()
-    pinsHost:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -contentHeight)
-    local extra = pinsHost:IsShown() and pinsHost:GetHeight() or 0
+    pinsHost:SetPoint("TOPLEFT", frame, "TOPLEFT", Kit.CONTENT_SIDE, -(contentHeight - Kit.CONTENT_BOTTOM + Kit.GAP))
+    local extra = pinsHost:IsShown() and (Kit.GAP + pinsHost:GetHeight()) or 0
     frame:SetHeight(contentHeight + extra)
 end
 

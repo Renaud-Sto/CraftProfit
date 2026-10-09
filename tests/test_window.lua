@@ -251,7 +251,7 @@ H.test("the frame height is the sum of the visible sections plus the insets, and
     Window.pinsHost():Show()
     Window.pinsHost():SetHeight(100)
     Window.relayout()
-    H.eq(Window.frame().height, expected + 100)
+    H.eq(Window.frame().height, expected + Kit.GAP + 100)
 end)
 
 H.test("an empty window shows the message and hides every section", function()
@@ -388,4 +388,58 @@ H.test("the banner label stops before the value and does not wrap", function()
     H.truthy(found)
     H.eq(b.label.wordWrap, false)
     H.eq(b.label.justify, "LEFT")
+end)
+
+H.test("the pinned host is as wide as the content and hangs a gap below the last section", function()
+    local T, Window = boot()
+    local Kit = T.ns.Kit
+    H.eq(Window.INNER_WIDTH, 372 - Kit.CONTENT_SIDE * 2)
+    local widths = {}
+    local points = {}
+    local host = Window.pinsHost()
+    host.SetWidth = function(_, w) widths[#widths + 1] = w end
+    host.SetPoint = function(_, ...) points[#points + 1] = { ... } end
+    Window.render(model())
+    host:Show()
+    host:SetHeight(100)
+    Window.relayout()
+    local list = Window.sections({ hasLikely = false, expanded = true, reagents = 2 })
+    local top = Window.contentHeightOf(list) - Kit.CONTENT_BOTTOM + Kit.GAP
+    local last = points[#points]
+    H.eq(last[1], "TOPLEFT")
+    H.eq(last[3], "TOPLEFT")
+    H.eq(last[4], Kit.CONTENT_SIDE)
+    H.eq(last[5], -top)
+end)
+
+H.test("the pinned host is created INNER_WIDTH wide", function()
+    local T = W.boot(H)
+    local widths = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.SetWidth = function(_, w) widths[#widths + 1] = w end
+        return f
+    end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    local found = false
+    for _, w in ipairs(widths) do if w == T.ns.Window.INNER_WIDTH then found = true end end
+    H.truthy(found)
+end)
+
+H.test("the tiles together fill the content width exactly", function()
+    local T, Window = boot()
+    local Kit = T.ns.Kit
+    local sizes = {}
+    -- the tile frames are created before the test can wrap them: read their widths back
+    for i, tile in ipairs(Window.parts.tiles) do sizes[i] = tile.width end
+    H.eq(sizes[1] + sizes[2] + sizes[3] + Kit.GAP * 2, Window.INNER_WIDTH)
+end)
+
+H.test("the empty-state text follows the theme", function()
+    local T, Window = boot()
+    local colour
+    Window.parts.empty.SetTextColor = function(_, r, g, b, a) colour = { r, g, b, a } end
+    T.ns.Kit.applyTheme("steel")
+    H.eq(colour, T.ns.Theme.get("steel").textMuted)
 end)

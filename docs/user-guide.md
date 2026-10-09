@@ -43,14 +43,20 @@ The **Track history** box (next to Crafts) makes CraftProfit keep the prices of 
 
 ## At the auction house
 
-When the auction house opens, the window shows the **Pinned recipes** list under the recipe, with two buttons.
+When the auction house opens, the window shows the **Pinned recipes** panel under the recipe, with three buttons: **Search prices** (the main one), **Scan AH** and **Leveling**, and a status line below them.
 
 - **Search prices** prices every reagent and every output of the pinned recipes, one item at a time, with a progress count. Prices are saved with their date. If you close the auction house meanwhile, the search is cancelled and the prices already received are kept.
 - **Scan AH** reads the entire auction house in one go (the game allows one full scan per 15 minutes per account). It prices thousands of items, so every recipe can be evaluated afterwards. If another addon starts a scan, CraftProfit uses its result without a second request. If the server does not answer, the status says so: the 15 minute cooldown is probably running.
 
+### The pinned list
+
+The list shows 6 recipes at a time. With more pins, a thin scroll bar appears at its right edge: use the mouse wheel (over the rows, the bar or the empty space of the list), drag the bar, or click on it to jump. With 6 pins or fewer there is no bar.
+
+Each recipe name is coloured by its difficulty: orange (optimal), yellow (medium), green (easy) or grey (trivial). The colour is the one known the last time the profession window was open, so after gaining skill points open the profession window to refresh it; with the profession closed it can lag. A pin whose difficulty is not known yet shows in the plain text colour. The value on the right is green for a gain, red for a loss and grey when unknown. The selected recipe has a gold tint; the row under the mouse is highlighted.
+
 ### Sorting the pinned list
 
-The button at the top right of the list switches between:
+The small button in the header of the panel switches between:
 
 - **Sort: profit**: the most profitable craft first (the least lossy first when all lose money); recipes without a price last.
 - **Sort: cost/point**: the cheapest skill point first. A recipe whose crafts pay for themselves comes first (green `+…/pt`), then costs in red (`…/pt`), then grey recipes (`n/a`, no point possible), then unpriced ones (`?`). This mode switches the cost per point option on, and unticking that option brings the sort back to profit.
@@ -59,11 +65,12 @@ Click a recipe in the list to show it in the window above.
 
 ### The leveling window
 
-**Leveling** (button under the pinned list, or `/cp level`) opens a separate, movable window with **every recipe you know** in a profession, cheapest skill point first, so you can see at a glance what to craft next to level at the smallest loss.
+**Leveling** (button under the pinned list, or `/cp level`) opens a separate, movable window beside the main window, with the same look and colour theme. Its position is remembered, and the x closes it. It shows **every recipe you know** in a profession, cheapest skill point first, so you can see at a glance what to craft next to level at the smallest loss.
 
 - Each row shows the recipe (coloured by difficulty), then the cost per point, with the same wording as the pinned list: `21g 29s/pt` in red, `+9s 33c/pt` in green when the crafts pay for themselves, `?` when a price is missing (those stay at the bottom).
 - The small grey figure before the amount, such as `x4`, is how many crafts a point takes on average (100 % = `x1`, 75 % = `x1.3`, 25 % = `x4`). The amount is the loss (or gain) of one craft times that figure, which makes it easy to read: a craft that loses 5s and needs 4 crafts per point shows about `20s/pt`.
-- The button at the top right switches the order: **Sort: cost/point** (cheapest point first, the default) or **Sort: speed** (the likeliest point first, the fewest crafts; among equal chances the cheapest first). Use speed when you need the last points quickly, cost when you want to spend the least. The choice is saved.
+- The list is titled **NEXT POINT** and shows 12 recipes at a time. With more recipes it has the same scroll bar as the pinned list (mouse wheel, drag the bar or click it). The window keeps its height, and a long recipe name is cut with `...` instead of wrapping.
+- The sort button, next to the profession button at the top, switches the order: **Sort: cost/point** (cheapest point first, the default) or **Sort: speed** (the likeliest point first, the fewest crafts; among equal chances the cheapest first). Use speed when you need the last points quickly, cost when you want to spend the least. The choice is saved.
 - **Grey recipes** cannot give a skill point any more, so they are hidden by default; tick *Show grey recipes* to see them.
 - The profession button cycles through the professions CraftProfit has read for this character. The list is saved when you open a profession window, so it is available at the auction house with the profession window closed. It is read again whenever the profession window updates, so the colours follow your skill.
 - The age of the prices (the last scan) is shown at the top: the whole list depends on it, so run **Scan AH** first.
@@ -110,7 +117,7 @@ The chance of a point depends on the colour of the recipe and is an **estimate**
 | Cost per skill point | Check box in the Options panel | Off |
 | Material detail folded or unfolded | Click the Materials header | Unfolded |
 | Window position | Drag it; `/cp reset` to undo | Beside the profession or auction house window |
-| Sort of the pinned list | Button above the list | Profit |
+| Sort of the pinned list | Button in the header of the Pinned recipes panel | Profit |
 
 Commands: `/cp` (or `/craftprofit`) with `show`, `hide`, `reset`, `scan`, `history`, `market`, `level`, `locale <code>` and `selftest`. See the [README](../README.md#commands).
 

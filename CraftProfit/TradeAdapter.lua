@@ -194,9 +194,9 @@ function Trade.professionInfo()
     return id and tostring(id) or name, name or tostring(id)
 end
 
--- Reads every learned recipe that can still give a skill point (not grey) of the open
--- profession, a chunk per frame so the client never hitches. Calls onDone(list) with
--- raw recipes for Recipes.normalize. A newer scan abandons the one in progress.
+-- Reads every learned recipe of the open profession (grey ones included, so the leveling
+-- window can show them on request), a chunk per frame so the client never hitches. Calls
+-- onDone(list) with raw recipes for Recipes.normalize. A newer scan abandons the one in progress.
 local knownToken = 0
 Trade.KNOWN_CHUNK = 40
 
@@ -222,7 +222,7 @@ function Trade.scanKnown(onDone, onAbort)
             local okInfo, info = pcall(api.GetRecipeInfo, id)
             if id and okInfo and type(info) == "table" and info.learned == true then
                 local difficulty = info.relativeDifficulty
-                if not isSecret(difficulty) and ns.Data.Skillup.name(difficulty) ~= "trivial" then
+                if not isSecret(difficulty) then
                     local raw = readA(id)
                     if raw then found[#found + 1] = raw end
                 end

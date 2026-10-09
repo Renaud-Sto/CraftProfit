@@ -227,7 +227,7 @@ local function openProfession(T, api)
     end
 end
 
-H.test("scanKnown reads the learned, not grey recipes in chunks and reports them", function()
+H.test("scanKnown reads every learned recipe, grey ones included, in chunks and reports them", function()
     local T = setup()
     local api = mainlineApi({
         GetAllRecipeIDs = function() return { 10, 11, 12, 13, 14 } end,
@@ -245,7 +245,9 @@ H.test("scanKnown reads the learned, not grey recipes in chunks and reports them
     T.drain()
     local ids = {}
     for i, raw in ipairs(got) do ids[i] = raw.recipeID end
-    H.eq(ids, { 10, 13, 14 })
+    H.eq(ids, { 10, 12, 13, 14 })
+    H.eq(got[2].difficulty, 3)
+    H.eq(T.Trade.difficultyOf(12), "trivial")
     H.eq(got[1].reagents[1], { itemID = 2840, qty = 6 })
 end)
 

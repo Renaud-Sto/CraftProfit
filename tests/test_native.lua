@@ -58,6 +58,7 @@ H.test("a window does not raise when the template helpers and internals are miss
     local _, Native, env = boot()
     H.eq(env.ButtonFrameTemplate_HidePortrait, nil)
     H.eq(env.ButtonFrameTemplate_HideButtonBar, nil)
+    H.eq(env.ButtonFrameTemplate_HideAttic, nil)
     local win = Native.window("NativeTestBare", "Title")
     -- No real Inset: the frame itself is the content area, with its own title string.
     H.eq(win.content, win)
@@ -68,6 +69,7 @@ end)
 H.test("a window hides the portrait and the button bar and uses the inset when the client has them", function()
     local _, Native, env = boot()
     local calls = {}
+    env.ButtonFrameTemplate_HideAttic = function(f) calls[#calls + 1] = { "attic", f } end
     env.ButtonFrameTemplate_HidePortrait = function(f) calls[#calls + 1] = { "portrait", f } end
     env.ButtonFrameTemplate_HideButtonBar = function(f) calls[#calls + 1] = { "bar", f } end
     local inset = W.frame()
@@ -85,7 +87,8 @@ H.test("a window hides the portrait and the button bar and uses the inset when t
         return f
     end
     local win = Native.window("NativeTestFull", "Hello")
-    H.eq(calls, { { "portrait", win }, { "bar", win } })
+    -- The attic goes first: HideAttic resets the inset's x, HidePortrait then sets it.
+    H.eq(calls, { { "attic", win }, { "portrait", win }, { "bar", win } })
     H.eq(win.content, inset)
     H.eq(titleText.text, "Hello")
     win:setTitle("Changed")

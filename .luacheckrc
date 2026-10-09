@@ -55,7 +55,7 @@ read_globals = {
     "GetTradeSkillInfo", "GetTradeSkillItemLink", "GetTradeSkillNumReagents", "GetTradeSkillLine",
     "GetTradeSkillReagentInfo", "GetTradeSkillReagentItemLink",
     "GetTradeSkillNumMade",
-    "ButtonFrameTemplate_HidePortrait", "ButtonFrameTemplate_HideButtonBar",
+    "ButtonFrameTemplate_HidePortrait", "ButtonFrameTemplate_HideButtonBar", "ButtonFrameTemplate_HideAttic",
     "PlaySound", "SOUNDKIT", "NORMAL_FONT_COLOR", "HIGHLIGHT_FONT_COLOR",
     SlashCmdList = {
         other_fields = true,

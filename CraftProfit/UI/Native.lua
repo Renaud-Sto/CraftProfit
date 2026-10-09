@@ -127,7 +127,11 @@ function Native.window(name, title, opts)
     f:EnableMouse(true)
     f:RegisterForDrag("LeftButton")
 
-    -- Inset after these two: TOPLEFT (9, -60), BOTTOMRIGHT (-6, 4) (the attic above it stays).
+    -- No portrait, no attic (the 36 px band under the title bar meant for tabs or a search
+    -- box), no button bar. HideAttic puts the inset's left edge back to x = 4, so it runs
+    -- before HidePortrait, which moves it to x = 9 and keeps the y. Inset after the three:
+    -- TOPLEFT (9, -24), BOTTOMRIGHT (-6, 4).
+    try(ButtonFrameTemplate_HideAttic, f)
     try(ButtonFrameTemplate_HidePortrait, f)
     try(ButtonFrameTemplate_HideButtonBar, f)
 

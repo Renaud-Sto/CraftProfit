@@ -455,7 +455,13 @@ function Kit.check(parent, text)
         self:SetChecked(not self.checked)
         if self.onToggle then self.onToggle(self.checked) end
     end)
-    b.setText = function(self, value) self.label:SetText(value or "") end
+    -- The label is part of the click area: a negative right inset widens the hit
+    -- rectangle, so clicking the words toggles the box like clicking the square.
+    b.setText = function(self, value)
+        self.label:SetText(value or "")
+        local width = Kit.naturalWidth(self.label)
+        self:SetHitRectInsets(0, -(type(width) == "number" and width + 6 or 0), 0, 0)
+    end
     b:SetChecked(false)
     b:setText(text)
     return b

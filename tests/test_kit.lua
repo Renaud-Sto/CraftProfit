@@ -669,3 +669,18 @@ H.test("onHeaderClick called twice reuses the hit button and replaces its handle
     first.scripts.OnClick(first)
     H.eq(hits, { "b" })
 end)
+
+H.test("the label of a check box is part of its click area", function()
+    local _, Kit = boot()
+    local check = Kit.check(nil, "")
+    local insets
+    check.SetHitRectInsets = function(_, l, r, t, b) insets = { l, r, t, b } end
+    check.label.GetUnboundedStringWidth = function() return 100 end
+    check:setText("Show grey recipes")
+    H.eq(insets, { 0, -106, 0, 0 })
+    -- a width that cannot be measured leaves only the square clickable
+    check.label.GetUnboundedStringWidth = function() return nil end
+    check.label.GetStringWidth = function() return nil end
+    check:setText("x")
+    H.eq(insets, { 0, 0, 0, 0 })
+end)

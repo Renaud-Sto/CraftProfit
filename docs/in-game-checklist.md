@@ -82,7 +82,7 @@ Pinned list (open the AH with pinned recipes):
 
 Leveling window (`/cp level`):
 - [ ] It opens beside the main window, with the kit look; the profession button cycles through the professions read; the sort button toggles cost/point and speed.
-- [ ] The grey-recipes check box shows or hides grey recipes, and the hidden count follows.
+- [ ] The grey-recipes check box shows or hides grey recipes, and the hidden count follows. Clicking the words next to the square toggles it too (every kit check box: the label is part of the click area), and the scroll bar and the row count change when the grey recipes appear.
 - [ ] With more than 12 recipes the scroll bar appears and the wheel and the bar scroll. With 12 or fewer there is no bar. The window height never changes.
 - [ ] A long French recipe name is cut with "..." and does not wrap; no text runs under the scroll bar.
 - [ ] With no profession read, the French empty message stays inside the panel and wraps.

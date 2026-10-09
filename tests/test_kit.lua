@@ -83,6 +83,18 @@ H.test("gradient falls back to the six-number signature, then to a flat colour",
     _G.CreateColor = saved
 end)
 
+H.test("gradient gives the texture a white base before tinting it", function()
+    local Kit = load()
+    local calls = {}
+    local tex = {
+        SetColorTexture = function(_, r, g, b, a) calls[#calls + 1] = { "base", r, g, b, a } end,
+        SetGradient = function() calls[#calls + 1] = { "gradient" } end,
+    }
+    Kit.gradient(tex, TOP, BOTTOM)
+    H.eq(calls[1], { "base", 1, 1, 1, 1 })
+    H.eq(calls[2], { "gradient" })
+end)
+
 H.test("the kit file is loaded by the fake game environment", function()
     local T = W.boot(H)
     H.truthy(T.ns.Kit)
@@ -123,14 +135,33 @@ H.test("every widget survives every theme being applied after it was built", fun
     H.eq(panel:height(), 84)
 end)
 
+H.test("applying a theme repaints existing widgets with that theme's colours", function()
+    local T, Kit = boot()
+    local panel = Kit.panel(nil, "MATERIALS")
+    local last
+    panel.title.SetTextColor = function(_, r, g, b, a) last = { r, g, b, a } end
+    Kit.applyTheme("steel")
+    local steel = T.ns.Theme.get("steel").headText
+    local gold = T.ns.Theme.get("gold").headText
+    H.eq(last, { steel[1], steel[2], steel[3], steel[4] })
+    H.truthy(steel[1] ~= gold[1] or steel[2] ~= gold[2] or steel[3] ~= gold[3])
+end)
+
 H.test("the window reports where it was dropped and sizes its plaque to the title", function()
     local _, Kit = boot()
     local moved
     local win = Kit.window("KitTestWindow2", "A title", { onMoved = function(...) moved = { ... } end })
     win.scripts.OnDragStop(win)
     H.eq(moved, { "TOPLEFT", 100, 700 })
+    local plaqueWidth
+    win.plaque.SetWidth = function(_, w) plaqueWidth = w end
+    local measured = 300
+    win.titleText.GetStringWidth = function() return measured end
     win:setTitle("Another title")
-    H.truthy(win.plaque)
+    H.eq(plaqueWidth, 344)
+    measured = 50
+    win:setTitle("X")
+    H.eq(plaqueWidth, 210)
 end)
 
 H.test("a panel keeps its title and right-hand text", function()
@@ -157,6 +188,23 @@ H.test("a tile shows its label, tag and value, and remembers whether it is the b
     H.falsy(tile.best)
     tile:set({})
     H.eq(tile.value.text, "")
+end)
+
+H.test("a tile steps its value font down until the text fits, and keeps the big size when it does", function()
+    local _, Kit = boot()
+    local tile = Kit.tile(nil, 110, 52)
+    local sizes = {}
+    local measured = 200
+    tile.value.SetFont = function(_, _, size) sizes[#sizes + 1] = size end
+    tile.value.GetStringWidth = function() return measured end
+    tile:set({ label = "AH", value = "123456g 12s" })
+    local expected = Kit.fitSize(200, 19, 90, Kit.TILE_SIZES)
+    H.truthy(expected < Kit.TILE_SIZES[1])
+    H.eq(sizes[#sizes], expected)
+    sizes = {}
+    measured = 60
+    tile:set({ label = "AH", value = "1g" })
+    H.eq(sizes[#sizes], 19)
 end)
 
 H.test("a button keeps the text it is given and runs its click handler", function()

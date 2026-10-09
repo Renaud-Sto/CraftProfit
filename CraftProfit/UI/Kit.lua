@@ -50,6 +50,8 @@ end
 -- call takes the bottom colour first. Returns which form worked: "color" (colour
 -- objects), "rgb" (six numbers) or "flat" (the middle colour, when neither does).
 function Kit.gradient(tex, top, bottom)
+    -- SetGradient only tints an existing image, so give the texture a white base first.
+    if tex.SetColorTexture then tex:SetColorTexture(1, 1, 1, 1) end
     if type(CreateColor) == "function" then
         local ok = pcall(tex.SetGradient, tex, "VERTICAL",
             CreateColor(bottom[1], bottom[2], bottom[3], bottom[4]),

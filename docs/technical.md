@@ -40,6 +40,9 @@ Files load in the order of `CraftProfit/CraftProfit.toc`. Each file receives the
 | `UI/Window.lua` | `ns.Window` | The floating window | frames |
 | `UI/LevelingUI.lua` | `ns.LevelingUI` | The leveling window | frames |
 | `UI/PinsUI.lua` | `ns.PinsUI` | Pinned list, sort button, Search prices and Scan AH buttons | frames |
+| `Theme.lua` | `ns.Theme` | Colour themes (gold, copper, steel blue) as pure data: `get`, `exists`, `list`, `validate`, and the fixed colours shared by all themes | no |
+| `UI/Kit.lua` | `ns.Kit` | Shared layout helpers (`panelHeight`, `stack`, `fitSize`, `gradient`) and widgets (`window`, `panel`, `button`, `tile`); `applyTheme` repaints every widget without `/reload`. `gradient` gives the texture a white base, then tries the colour-object form, the six-number form, then a flat colour | frames |
+| `UI/KitDemo.lua` | `ns.KitDemo` | Developer demo window, `/cp kitdemo [theme]` (not in the user help) | frames |
 | `Boot.lua` | `ns.Controller` | Wires everything, owns the selection state, slash commands, self-test | events, slash commands |
 
 Dependencies point one way: `Core`, `Data`, `Util`, `Format` know nothing of the rest; `Evaluate` and `Present` use them; adapters and UI use everything; `Boot` is the only file that connects the adapters to the UI.
@@ -159,7 +162,7 @@ The suite covers the pure modules, the adapters with faked game APIs, saved vari
 
 ## Probe addon
 
-`probe/CraftProfitProbe` is a throwaway addon (not shipped) that prints what the real client returns: `/cpp api | locale | item | deposit | search | replicate | trade | prof | ahui | qty | log | clear`. It mirrors its output, CraftProfit's chat lines and Lua errors into the `CraftProfitProbeLog` saved variable, written on `/reload`, so results can be read from `WTF/Account/<id>/SavedVariables/CraftProfitProbe.lua`. Use it to settle an API question before coding against it.
+`probe/CraftProfitProbe` is a throwaway addon (not shipped) that prints what the real client returns: `/cpp api | locale | item | deposit | search | replicate | trade | prof | ahui | qty | skin | log | clear`. It mirrors its output, CraftProfit's chat lines and Lua errors into the `CraftProfitProbeLog` saved variable, written on `/reload`, so results can be read from `WTF/Account/<id>/SavedVariables/CraftProfitProbe.lua`. `/cpp skin` reports what the UI kit depends on: which gradient form works (`color`, `rgb` or neither), the real font path, and the pixel widths of the widest amounts. Use it to settle an API question before coding against it.
 
 ## Packaging
 

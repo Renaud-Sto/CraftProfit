@@ -34,6 +34,12 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] A scan started by another addon (if installed) is picked up (prices refresh) without pressing Scan.
 - [ ] After a scan, a recipe unpriced by the targeted search gets its price from the scan.
 
+## UI kit (PR 1)
+- [ ] `/cp kitdemo` opens a framed window with a title plaque, three tiles (the first outlined in gold, the last with a long amount that shrinks to fit), two panels with a header bar, and three buttons. Running it again toggles the window.
+- [ ] `/cp kitdemo copper` and `/cp kitdemo steel` recolour it without `/reload` (and show it); `/cp kitdemo gold` restores it. An unknown name prints the valid names and changes nothing. The theme is not saved.
+- [ ] The close button hides the window; the window can be dragged.
+- [ ] Run `/cpp skin`, then `/reload` and read the `skin` lines in the probe log: gradient form, font path, widest amount widths.
+
 ## Several crafts
 - [ ] The "Crafts : [ 1 ]" box under the age line takes a number from 1 to 9999. Type 5 and press Enter (or click elsewhere): reagent quantities, the Materials total, the AH / vendor / disenchant values and the verdict all become five times larger, and the Materials line reads "Composants x5 (estimation)". Cost or gain per point is unchanged.
 - [ ] 0, an empty box or text goes back to 1. Selecting another recipe resets the box to 1; the pinned list always shows one craft.

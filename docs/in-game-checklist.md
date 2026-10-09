@@ -35,22 +35,22 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] After a scan, a recipe unpriced by the targeted search gets its price from the scan.
 
 ## UI kit (PR 1)
-- [ ] `/cp kitdemo` opens a framed window with a title plaque, three tiles (the first outlined in gold, the last with a long amount that shrinks to fit), two panels with a header bar, and three buttons. Running it again toggles the window.
-- [ ] `/cp kitdemo copper` and `/cp kitdemo steel` recolour it without `/reload` (and show it); `/cp kitdemo gold` restores it. An unknown name prints the valid names and changes nothing. The theme is not saved.
+- [ ] `/cp kitdemo old` opens a framed window with a title plaque, three tiles (the first outlined in gold, the last with a long amount that shrinks to fit), two panels with a header bar, and three buttons. Running it again toggles the window.
+- [ ] `/cp kitdemo old copper` and `/cp kitdemo old steel` recolour it without `/reload` (and show it); `/cp kitdemo old gold` restores it. An unknown name prints the valid names and changes nothing. The theme is not saved.
 - [ ] The close button hides the window; the window can be dragged.
 - [ ] Run `/cpp skin`, then `/reload` and read the `skin` lines in the probe log: gradient form, font path, widest amount widths.
 - [ ] In all three themes the panel header bars show a visible vertical gradient (lighter at the top is expected); they are not white, invisible or flat.
-- [ ] `/cpp skin` passes if at least one SetGradient line reports success and the font path is not nil. The probe only proves the call is accepted; `/cp kitdemo` proves it renders.
+- [ ] `/cpp skin` passes if at least one SetGradient line reports success and the font path is not nil. The probe only proves the call is accepted; `/cp kitdemo old` proves it renders.
 - [ ] The 1-pixel frame rings are continuous and of even thickness at the current UI scale; repeat at one other UI scale.
 - [ ] The amount `999g 99s 99c` in the third tile stays inside its border.
 - [ ] Hovering a normal button changes its background; moving off restores it.
-- [ ] Switching theme (`/cp kitdemo copper`) repaints everything, including a button that was being hovered.
+- [ ] Switching theme (`/cp kitdemo old copper`) repaints everything, including a button that was being hovered.
 - [ ] Dragging the window by its body works. Author to report: does dragging by the upper half of the title plaque work (known gap), is the bright gold ring at the outer edge or inside it, and does the close button touch the third tile.
 
 ## Main window (PR 2)
 Use a recipe with at least 5 reagents; `/console scriptErrors 1` on.
 - [ ] Selecting a recipe shows the result banner, the three tiles (Auction house, Vendor, Disenchant with its beta tag), the Materials panel, the prices age line and the Options panel.
-- [ ] A recipe that makes money tints the banner green; one that loses money tints it red (value shown with a minus sign); a recipe with an unpriced reagent shows the amber *Incomplete* banner. The tint stays the same through `/cp kitdemo copper`, `steel` and `gold` (it follows the result, not the theme).
+- [ ] A recipe that makes money tints the banner green; one that loses money tints it red (value shown with a minus sign); a recipe with an unpriced reagent shows the amber *Incomplete* banner. The tint stays the same through `/cp kitdemo old copper`, `steel` and `gold` (it follows the result, not the theme).
 - [ ] The best tile has a 2 px bright gold outline and a faint gold tint (clearly different from the other tiles, in each theme); an impossible way shows `n/a` muted, an unknown price `?`.
 - [ ] Amounts: `999g 99s 99c` (use a stack of expensive reagents, or a pin with huge prices) shrinks in the banner and the tiles without running into the verdict text or leaving its box; the "RÉSULTAT" label does not touch the value.
 - [ ] French client: a partial result shows "RÉSULTAT · PRIX MANQUANTS" (warning in amber) on the label line and "Meilleur connu : Hôtel des ventes" on the main line; neither is cut off or drawn over the value, including with a very large value.
@@ -66,7 +66,7 @@ Use a recipe with at least 5 reagents; `/console scriptErrors 1` on.
 - [ ] `/cp level` opens the leveling window beside the main window, not over it.
 - [ ] At the AH with pinned recipes, the window grows by the pinned list and the list starts just below the Options panel. The pinned list now follows the same rules as the other panels (see *Pinned list and leveling window (PR 3)*).
 - [ ] Closing the profession window hides the window (outside the AH); closing the AH hides it when it was opened from there.
-- [ ] `/cp kitdemo`: the check box and the input box look right (box, mark, label; the input is centred, takes focus on click) in all three themes.
+- [ ] `/cp kitdemo old`: the check box and the input box look right (box, mark, label; the input is centred, takes focus on click) in all three themes.
 
 ## Pinned list and leveling window (PR 3)
 Pinned list (open the AH with pinned recipes):
@@ -78,7 +78,7 @@ Pinned list (open the AH with pinned recipes):
 - [ ] The Sort button in the panel header takes clicks (profit and cost/point alternate) and does not overlap the title "RECETTES ÉPINGLÉES" under `/cp locale frFR`.
 - [ ] Search prices, Scan AH and Leveling work. The status line below them: the longest French and Spanish messages (for example the "no reply from the server ... 15 minute cooldown" one) stay inside the window. Known: a status wrapping to three lines still overruns the bottom margin by about 14 px.
 - [ ] The pinned block sits inside the 12 px margin like the other panels and nothing overlaps the frame border. The window grows when the AH opens and shrinks when it closes.
-- [ ] `/cp kitdemo copper`, `steel`, `gold`: the pinned list, its scroll bar and its buttons repaint at once.
+- [ ] `/cp kitdemo old copper`, `steel`, `gold`: the pinned list, its scroll bar and its buttons repaint at once.
 
 Leveling window (`/cp level`):
 - [ ] It opens beside the main window, with the kit look; the profession button cycles through the professions read; the sort button toggles cost/point and speed.
@@ -87,7 +87,7 @@ Leveling window (`/cp level`):
 - [ ] A long French recipe name is cut with "..." and does not wrap; no text runs under the scroll bar.
 - [ ] With no profession read, the French empty message stays inside the panel and wraps.
 - [ ] Drag the window, `/reload`: the position is remembered. The x closes it. Clicking a row shows that recipe in the main window.
-- [ ] `/cp kitdemo copper` (then `steel`, `gold`) repaints the leveling window.
+- [ ] `/cp kitdemo old copper` (then `steel`, `gold`) repaints the leveling window.
 - [ ] Known small limits of the scroll bar, not to be reported: grabbing the thumb off-centre makes it jump to centre on the pointer; any mouse button can scroll it; a lost mouse-up (alt-tab while dragging) is not recovered.
 
 ## Several crafts
@@ -130,7 +130,7 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Drag the window by the title and by the AH tile (press and move), once with the AH open and once with it closed: the window moves, NOTHING is searched and no chat line appears. A plain click searches. A sloppy click that moves a few pixels drags instead of searching: expected.
 - [ ] AH closed: clicking the tile or the title prints "Open the auction house first".
 - [ ] A recipe whose product is bind on pickup: clicking prints "This item cannot be sold at the auction house" and the search box is unchanged.
-- [ ] After `/cp kitdemo copper` (then `steel`, `gold`): no Lua error and the AH tile's tint still shows on hover.
+- [ ] After `/cp kitdemo old copper` (then `steel`, `gold`): no Lua error and the AH tile's tint still shows on hover.
 - [ ] If no magnifier appears, report the `/cpp icon` lines. Known: the icon is optional, the click works without it.
 
 ## Themes (PR 4)
@@ -144,6 +144,18 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Scroll bar (pinned list with more than 6 pins, leveling list with more than 12 rows): grabbing the thumb off-centre does not make it jump; clicking the track outside the thumb still centres it on the pointer; releasing the button outside the window or after alt-tab while dragging ends the drag (the thumb no longer follows the mouse); a right or middle click on the bar does not scroll.
 - [ ] Pinned list and leveling list rows still show the hover tint and, in the pinned list, the gold selected row; clicking selects. Rows stay clear of the scroll bar. Materials rows still highlight on hover and a click searches the reagent.
 - [ ] Known small limits: nothing new beyond those listed under the windows above.
+
+## Native foundations (PR 5)
+- [ ] `/cp kitdemo` opens a window that looks like the game's own panels (rock background, metal border, title bar, red close button, dark inset): three tiles (the first marked as best, the third greyed with a long amount that shrinks to fit), a MATERIALS panel with 3 rows and a right-hand total, an OPTIONS panel with a crafts box, a check box, two buttons (the second disabled) and a Sort button in its header, and a money line with coin icons. Chat prints the header and tile variants in use. Running it again hides it.
+- [ ] Clicking the title prints `title clicked`; hovering it lights the title up. Clicking the first tile prints `tile clicked`.
+- [ ] The window drags from the title bar and from the body (also from the first tile); a drag that ends on the title or the tile prints nothing.
+- [ ] The red cross closes it, and so does Escape (a second Escape does not touch other windows). With the cursor in the crafts box, Escape or Enter first releases the box.
+- [ ] Clicking the words of the check box toggles it like the box itself, with the game's click sound; the disabled button does nothing.
+- [ ] The content starts right under the title bar (no empty band of rock between the title and the inset) and nothing covers the close button.
+- [ ] `/cp kitdemo b a` and `/cp kitdemo c b` rebuild the window with another header strip and tile background, without `/reload`; `/cp kitdemo` alone reopens the last choice; `/cp kitdemo x` prints one line and changes nothing.
+- [ ] `/cp kitdemo old` still shows the themed demo; the main window, the pinned list and the leveling window are unchanged.
+- [ ] No Lua error with any variant (`/console scriptErrors 1`).
+- [ ] Send a screenshot of each variant (`a a`, `b a`, `c b`, and `a b`) next to the game's character panel (`C`), so the header strip and the tile can be picked.
 
 ## Numbers
 - [ ] For one recipe, compare each reagent price with the AH listing prices: the stored price is the median of the 5 cheapest units (not the minimum).

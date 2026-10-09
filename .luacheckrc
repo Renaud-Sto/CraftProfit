@@ -54,7 +54,7 @@ read_globals = {
     "GetTradeSkillSelectionIndex", "GetTradeSkillRecipeLink",
     "GetTradeSkillInfo", "GetTradeSkillItemLink", "GetTradeSkillNumReagents", "GetTradeSkillLine",
     "GetTradeSkillReagentInfo", "GetTradeSkillReagentItemLink",
-    "GetTradeSkillNumMade",
+    "GetTradeSkillNumMade", "GetMoneyString", "UISpecialFrames",
     "ButtonFrameTemplate_HidePortrait", "ButtonFrameTemplate_HideButtonBar", "ButtonFrameTemplate_HideAttic",
     "PlaySound", "SOUNDKIT", "NORMAL_FONT_COLOR", "HIGHLIGHT_FONT_COLOR", "DISABLED_FONT_COLOR",
     SlashCmdList = {

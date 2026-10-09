@@ -635,7 +635,7 @@ local function slash(msg)
     elseif cmd == "theme" then
         Controller.themeCommand(arg:lower():match("^(.-)%s*$"))
     elseif cmd == "kitdemo" then
-        if ns.KitDemo then ns.KitDemo.toggle(arg) end
+        if ns.KitDemo then ns.KitDemo.command(arg) end
     elseif cmd == "market" then
         local name = type(GetRealmName) == "function" and GetRealmName() or "?"
         say(string.format(L.MARKET_INFO, tostring(name), Controller.marketKey()))

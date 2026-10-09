@@ -577,7 +577,7 @@ function Native.tile(parent, width, height)
         local label = spec.label or ""
         if spec.tag then
             local tag = spec.tag
-            local color = HIGHLIGHT_FONT_COLOR
+            local color = NORMAL_FONT_COLOR
             if type(color) == "table" and type(color.WrapTextInColorCode) == "function" then
                 local ok, wrapped = pcall(color.WrapTextInColorCode, color, tag)
                 if ok and type(wrapped) == "string" then tag = wrapped end

@@ -455,11 +455,12 @@ end)
 
 H.test("a tile shows its label, tag and value, and remembers whether it is the best one", function()
     local _, Native, env = boot()
-    env.HIGHLIGHT_FONT_COLOR = color(1, 1, 1)
+    env.NORMAL_FONT_COLOR = color(1, 0.82, 0)
     local tile = Native.tile(nil, 110, 52)
     tile:set({ label = "DISENCH.", tag = "beta", value = "2g 2s" })
     H.truthy(tile.label.text:find("DISENCH.", 1, true))
-    H.truthy(tile.label.text:find("beta", 1, true))
+    -- The tag in the game's gold, like the Kit's.
+    H.truthy(tile.label.text:find("|c10.820beta|r", 1, true))
     H.eq(tile.value.text, "2g 2s")
     H.falsy(tile.best)
     tile:set({ label = "AH", value = "3g 24s", best = true })
@@ -585,4 +586,135 @@ H.test("a tile hover lights it up and showIcon shows the magnifier only when one
     H.eq(tile.icon.shown, true)
     tile:showIcon(false)
     H.eq(tile.icon.shown, false)
+end)
+
+-- Native demo (/cp kitdemo) ------------------------------------------------------
+
+-- Boots the addon, makes frames start shown as on the client and records the named ones.
+local function demoBoot()
+    local T = W.boot(H)
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    local named = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        f.shown = true
+        if name then named[name] = f end
+        return f
+    end
+    T.env.UISpecialFrames = {}
+    return T, named, T.env.SlashCmdList.CRAFTPROFIT
+end
+
+local function lastChat(T) return T.chat[#T.chat] end
+
+H.test("kitdemo opens the native demo with the default variants, closes it, and Escape can close it", function()
+    local T, named, slash = demoBoot()
+    slash("kitdemo")
+    local demo = named.CraftProfitNativeDemo
+    H.truthy(demo)
+    H.eq(demo.shown, true)
+    H.eq(T.env.UISpecialFrames, { "CraftProfitNativeDemo" })
+    H.truthy(lastChat(T):find("header a (questlog-reward-header-top), tile a (looting_itemcard_bg)", 1, true))
+    slash("kitdemo")
+    H.eq(demo.shown, false)
+    slash("kitdemo")
+    H.eq(demo.shown, true)
+    H.eq(named.CraftProfitKitDemo, nil)
+    -- Registered for Escape once, however often it is shown.
+    H.eq(#T.env.UISpecialFrames, 1)
+end)
+
+H.test("kitdemo b a rebuilds the demo with those variants and keeps them for the next call", function()
+    local T, named, slash = demoBoot()
+    slash("kitdemo b a")
+    local demo = named.CraftProfitNativeDemo
+    H.eq(demo.shown, true)
+    H.eq(T.ns.Native.headerVariant, "b")
+    H.eq(T.ns.Native.tileVariant, "a")
+    H.truthy(lastChat(T):find("header b (friends-frame-toptexbg), tile a", 1, true))
+    -- Asked again while shown: it stays shown with the new choice.
+    slash("kitdemo C B")
+    H.eq(demo.shown, true)
+    H.eq(T.ns.KitDemo.header, "c")
+    H.eq(T.ns.KitDemo.tile, "b")
+    slash("kitdemo")
+    H.eq(demo.shown, false)
+    slash("kitdemo")
+    H.eq(demo.shown, true)
+    H.eq(T.ns.Native.headerVariant, "c")
+    H.eq(T.ns.Native.tileVariant, "b")
+    -- One word changes the header and keeps the tile.
+    slash("kitdemo a")
+    H.eq(T.ns.KitDemo.header, "a")
+    H.eq(T.ns.KitDemo.tile, "b")
+end)
+
+H.test("kitdemo with an unknown variant prints one line and changes nothing", function()
+    local T, named, slash = demoBoot()
+    for _, arg in ipairs({ "kitdemo z", "kitdemo a q", "kitdemo a a a" }) do
+        local before = #T.chat
+        slash(arg)
+        H.eq(#T.chat, before + 1)
+        H.truthy(lastChat(T):find("unknown variant", 1, true))
+    end
+    H.eq(named.CraftProfitNativeDemo, nil)
+    H.eq(T.ns.KitDemo.header, "a")
+    H.eq(T.ns.KitDemo.tile, "a")
+end)
+
+H.test("kitdemo old still shows the themed demo", function()
+    local T, named, slash = demoBoot()
+    slash("kitdemo old steel")
+    H.truthy(named.CraftProfitKitDemo)
+    H.eq(named.CraftProfitKitDemo.shown, true)
+    H.eq(T.ns.Kit.themeName, "steel")
+    H.eq(named.CraftProfitNativeDemo, nil)
+end)
+
+H.test("the demo title click and the money line work, with plain money when the client gives none", function()
+    local T, named, slash = demoBoot()
+    local lines = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.CreateFontString = function()
+            local fs = W.frame()
+            lines[#lines + 1] = fs
+            return fs
+        end
+        return f
+    end
+    T.env.GetCoinTextureString = function() return nil end
+    T.env.GetMoneyString = function() return {} end
+    slash("kitdemo")
+    local demo = named.CraftProfitNativeDemo
+    demo.titleHit.scripts.OnClick(demo.titleHit)
+    H.truthy(lastChat(T):find("title clicked", 1, true))
+    local found
+    for _, fs in ipairs(lines) do
+        if type(rawget(fs, "text")) == "string" and fs.text:find("Best price", 1, true) then found = fs.text end
+    end
+    H.eq(found, "Best price: 21g 29s")
+end)
+
+H.test("the demo money line uses the client's coin string when it has one", function()
+    local T, _, slash = demoBoot()
+    local texts = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.CreateFontString = function()
+            local fs = W.frame()
+            texts[#texts + 1] = fs
+            return fs
+        end
+        return f
+    end
+    slash("kitdemo")
+    local found
+    for _, fs in ipairs(texts) do
+        if type(rawget(fs, "text")) == "string" and fs.text:find("Best price", 1, true) then found = fs.text end
+    end
+    H.eq(found, "Best price: <212900>")
 end)

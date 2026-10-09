@@ -5,6 +5,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 ## [Unreleased]
 
 ### Added
+- Native UI foundations and `/cp kitdemo` variants (developer tool): widgets built on the game's own frame templates, shown by `/cp kitdemo [header [tile]]` with a choice of header strip and tile background; the previous themed demo moved to `/cp kitdemo old [theme]`.
 - Choose the colour theme: `/cp theme` lists Gold, Copper and Steel blue and `/cp theme copper` switches at once, with no `/reload`, for the main window, the pinned list, the leveling window and the scroll bars. A small coloured square in the header of the main window, left of the close button, cycles the themes. The choice is saved for the account. Colours with a meaning (gain, loss, recipe difficulty, banner tint) do not change.
 - Click the AH (NET) tile or the recipe title of the main window to search the crafted item at the auction house, to see how many are for sale next to its price. A small magnifier icon marks both while the auction house is open. With the auction house closed it says to open it, and an item bound when picked up says it cannot be sold there.
 - Developer groundwork for the UI rework: colour themes (gold, copper, steel blue) and a shared widget kit, with a `/cp kitdemo` window.

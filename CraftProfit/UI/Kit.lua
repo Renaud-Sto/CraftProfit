@@ -18,6 +18,13 @@ Kit.CONTENT_TOP = 34
 Kit.CONTENT_SIDE = 12
 Kit.CONTENT_BOTTOM = 12
 Kit.TILE_SIZES = { 19, 17, 15, 13, 11 }
+Kit.PLAQUE_MIN = 210
+Kit.PLAQUE_PAD = 44
+Kit.TILE_PAD = 10
+-- Room kept on each side of the title plaque for the close button: its 8 px inset,
+-- its 18 px width and a 4 px gap.
+Kit.CLOSE_ROOM = 8 + 18 + 4
+Kit.FOLDED_H = Kit.HEAD_H + 2
 
 -- Height of a panel holding `rows` rows of `rowH` pixels (plus `extra`).
 function Kit.panelHeight(rows, rowH, extra)
@@ -70,6 +77,29 @@ function Kit.gradient(tex, top, bottom)
     return "flat"
 end
 
+-- Colour `a` moved toward colour `b` by the fraction `t` (0..1), channel by channel.
+function Kit.mix(a, b, t)
+    return {
+        a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t,
+        a[3] + (b[3] - a[3]) * t, a[4] + (b[4] - a[4]) * t,
+    }
+end
+
+-- "|cffRRGGBB" chat colour escape for a colour (alpha is ignored).
+function Kit.colorEscape(c)
+    local function byte(v) return math.floor(math.max(0, math.min(1, v)) * 255 + 0.5) end
+    return string.format("|cff%02x%02x%02x", byte(c[1]), byte(c[2]), byte(c[3]))
+end
+
+-- Width of a title plaque: wide enough for the text, never below the minimum, never
+-- above `maxWidth`; the minimum when the text cannot be measured.
+function Kit.plaqueWidth(textWidth, maxWidth)
+    local width = Kit.PLAQUE_MIN
+    if type(textWidth) == "number" then width = math.max(width, textWidth + Kit.PLAQUE_PAD) end
+    if type(maxWidth) == "number" then width = math.min(width, maxWidth) end
+    return width
+end
+
 Kit.themeName = Theme.DEFAULT
 Kit.current = Theme.get(Theme.DEFAULT)
 
@@ -91,9 +121,14 @@ function Kit.applyTheme(name)
     return Kit.current
 end
 
--- A token name, a function returning one, or "black".
+-- For code outside the kit that paints itself from the theme: `paint(theme)` is called
+-- now and on every theme switch.
+function Kit.onTheme(paint) register(paint) end
+
+-- A token name, a colour table, a function returning either, or "black".
 local function colorOf(token)
     if type(token) == "function" then token = token() end
+    if type(token) == "table" then return token end
     if token == "black" then return { 0, 0, 0, 1 } end
     return Kit.current[token]
 end
@@ -135,10 +170,19 @@ function Kit.rings(frame, tokens, layer)
     return refresh
 end
 
+-- Width of a string at its natural size: GetStringWidth can be capped by a width or
+-- by two anchors, so prefer the unbounded measure when the client has it.
+local function naturalWidth(fs)
+    local width
+    if fs.GetUnboundedStringWidth then width = fs:GetUnboundedStringWidth() end
+    if type(width) ~= "number" then width = fs:GetStringWidth() end
+    return width
+end
+Kit.naturalWidth = naturalWidth
+
 -- Window ----------------------------------------------------------------------
 
 local WINDOW_RINGS = { "black", "frameInner", "frameInner", "frameShade", "frameOuter", "black" }
-local PLAQUE_MIN_WIDTH = 210
 
 -- A movable framed window with a title plaque straddling its top edge and a close
 -- button. `frame.content` is the area to fill. opts: width, height, onMoved(point, x, y).
@@ -157,8 +201,7 @@ function Kit.window(name, title, opts)
     register(function(t) bg:SetColorTexture(t.windowBg[1], t.windowBg[2], t.windowBg[3], t.windowBg[4]) end)
     Kit.rings(f, WINDOW_RINGS)
 
-    f:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    f:SetScript("OnDragStop", function(self)
+    local function stopDrag(self)
         self:StopMovingOrSizing()
         -- Re-anchor to the screen's bottom-left corner so saved offsets are absolute.
         local left, top = self:GetLeft(), self:GetTop()
@@ -167,11 +210,17 @@ function Kit.window(name, title, opts)
             self:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
             if opts.onMoved then opts.onMoved("TOPLEFT", left, top) end
         end
-    end)
+    end
+    f:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    f:SetScript("OnDragStop", stopDrag)
 
     local plaque = CreateFrame("Frame", nil, f)
     plaque:SetPoint("TOP", f, "TOP", 0, 14)
-    plaque:SetSize(PLAQUE_MIN_WIDTH, 26)
+    plaque:SetSize(Kit.PLAQUE_MIN, 26)
+    plaque:EnableMouse(true)
+    plaque:RegisterForDrag("LeftButton")
+    plaque:SetScript("OnDragStart", function() f:StartMoving() end)
+    plaque:SetScript("OnDragStop", function() stopDrag(f) end)
     local plaqueBg = plaque:CreateTexture(nil, "BACKGROUND")
     plaqueBg:SetAllPoints(plaque)
     register(function(t) plaqueBg:SetColorTexture(t.plaqueBg[1], t.plaqueBg[2], t.plaqueBg[3], t.plaqueBg[4]) end)
@@ -182,10 +231,23 @@ function Kit.window(name, title, opts)
     f.plaque = plaque
     f.titleText = text
 
+    text:SetWordWrap(false)
     f.setTitle = function(_, value)
+        text:SetWidth(0)  -- drop the previous constraint before measuring
+        text:SetFontObject("GameFontNormal")
         text:SetText(value or "")
-        local width = text:GetStringWidth()
-        if type(width) == "number" then plaque:SetWidth(math.max(PLAQUE_MIN_WIDTH, width + 44)) end
+        local frameWidth = f:GetWidth()
+        local maxWidth = type(frameWidth) == "number" and frameWidth - Kit.CLOSE_ROOM * 2 or nil
+        local width = naturalWidth(text)
+        if maxWidth and type(width) == "number" and width + Kit.PLAQUE_PAD > maxWidth then
+            text:SetFontObject("GameFontNormalSmall")
+            width = naturalWidth(text)
+        end
+        local plaqueW = Kit.plaqueWidth(width, maxWidth)
+        plaque:SetWidth(plaqueW)
+        text:SetWidth(plaqueW - 16)
+        -- SetFontObject resets the colour to the font object's own.
+        setTextColor(text, "plaqueText")
     end
     f:setTitle(title)
 
@@ -232,6 +294,7 @@ function Kit.panel(parent, title)
         Kit.gradient(headBg, t.headBgTop, t.headBgBottom)
         paintTexture(rule, "headRule")
         setTextColor(p.title, "headText")
+        setTextColor(p.right, "textMain")
     end)
 
     p.body = CreateFrame("Frame", nil, f)
@@ -245,6 +308,17 @@ function Kit.panel(parent, title)
         f:SetHeight(Kit.panelHeight(rows, self.rowH, extra))
     end
     p.height = function() return f:GetHeight() end
+    -- A button covering the header, e.g. to fold the panel. Returns it (also p.headerHit).
+    function p:onHeaderClick(fn)
+        local hit = CreateFrame("Button", nil, head)
+        hit:SetAllPoints(head)
+        -- A child of the header would sit above buttons parented to the panel frame
+        -- (a sort button, say) and swallow their clicks, so stay at the panel's level.
+        hit:SetFrameLevel(f:GetFrameLevel())
+        hit:SetScript("OnClick", fn)
+        self.headerHit = hit
+        return hit
+    end
     p:setTitle(title)
     return p
 end
@@ -263,15 +337,22 @@ function Kit.button(parent, kind, text)
     b.label:SetPoint("CENTER", b, "CENTER", 0, 0)
     Kit.rings(b, { primary and "primaryEdge" or "buttonEdge" })
 
+    -- Callers adding a tooltip or any other OnEnter/OnLeave behaviour must use
+    -- HookScript for those two scripts, never SetScript: it would replace the hover.
     local hover = false
     local function paint(t)
-        local c = (primary or hover) and t.primaryBg or t.buttonBg
+        local c
+        if primary then
+            c = hover and Kit.mix(t.primaryBg, t.primaryEdge, 0.35) or t.primaryBg
+        else
+            c = hover and t.primaryBg or t.buttonBg
+        end
         bg:SetColorTexture(c[1], c[2], c[3], c[4])
         setTextColor(b.label, primary and "primaryText" or "buttonText")
     end
     register(paint)
-    b:SetScript("OnEnter", function() hover = true; paint(Kit.current) end)
-    b:SetScript("OnLeave", function() hover = false; paint(Kit.current) end)
+    b:HookScript("OnEnter", function() hover = true; paint(Kit.current) end)
+    b:HookScript("OnLeave", function() hover = false; paint(Kit.current) end)
 
     function b:setText(value) self.label:SetText(value or "") end
     b:setText(text)
@@ -289,16 +370,35 @@ function Kit.tile(parent, width, height)
     local bg = f:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints(f)
     register(function() paintTexture(bg, "panelBg") end)
-    local refreshRings = Kit.rings(f, { function() return tile.best and "bestEdge" or "panelEdge" end })
+    -- Gold tint of the best tile, drawn under the rings and the text; clear otherwise.
+    local fill = f:CreateTexture(nil, "BORDER")
+    fill:SetAllPoints(f)
+    tile.fill = fill
+    local function paintFill()
+        paintTexture(fill, function() return tile.best and "bestFill" or { 0, 0, 0, 0 } end)
+    end
+    -- Two rings: the best tile gets a 2 px outline; the second ring blends into the
+    -- tile background when it is not the best one.
+    local refreshRings = Kit.rings(f, {
+        function() return tile.best and "bestEdge" or "panelEdge" end,
+        function() return tile.best and "bestEdge" or "panelBg" end,
+    })
 
     tile.label = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    tile.label:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -8)
+    tile.label:SetPoint("TOPLEFT", f, "TOPLEFT", Kit.TILE_PAD, -8)
+    tile.label:SetPoint("TOPRIGHT", f, "TOPRIGHT", -Kit.TILE_PAD, -8)
+    tile.label:SetJustifyH("LEFT")
+    tile.label:SetWordWrap(false)
     tile.value = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    tile.value:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -24)
+    tile.value:SetPoint("TOPLEFT", f, "TOPLEFT", Kit.TILE_PAD, -24)
+    tile.value:SetPoint("TOPRIGHT", f, "TOPRIGHT", -Kit.TILE_PAD, -24)
+    tile.value:SetJustifyH("LEFT")
+    tile.value:SetWordWrap(false)
 
     local function paint()
         setTextColor(tile.label, "headText")
         setTextColor(tile.value, tile.muted and "textMuted" or "textMain")
+        paintFill()
         refreshRings()
     end
     register(paint)
@@ -308,15 +408,75 @@ function Kit.tile(parent, width, height)
         self.best = spec.best and true or false
         self.muted = spec.muted and true or false
         local label = spec.label or ""
-        if spec.tag then label = label .. " |cffffd100" .. spec.tag .. "|r" end
+        if spec.tag then label = label .. " " .. Kit.colorEscape(Theme.FIXED.best) .. spec.tag .. "|r" end
         self.label:SetText(label)
         local big = Kit.TILE_SIZES[1]
         self.value:SetFont(STANDARD_TEXT_FONT, big, "")
         self.value:SetText(spec.value or "")
-        local room = (f:GetWidth() or width or 110) - 20
-        local size = Kit.fitSize(self.value:GetStringWidth(), big, room, Kit.TILE_SIZES)
+        local room = (f:GetWidth() or width or 110) - Kit.TILE_PAD * 2
+        local size = Kit.fitSize(naturalWidth(self.value), big, room, Kit.TILE_SIZES)
         if size ~= big then self.value:SetFont(STANDARD_TEXT_FONT, size, "") end
         paint()
     end
     return tile
+end
+
+-- Check box -------------------------------------------------------------------
+
+-- A themed check box with its label on the right. Same calls as a game check button:
+-- SetChecked / GetChecked; `onToggle(checked)` runs after a click.
+function Kit.check(parent, text)
+    local b = CreateFrame("Button", nil, parent)
+    b:SetSize(18, 18)
+    local bg = b:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints(b)
+    Kit.rings(b, { "inputEdge" })
+    b.mark = b:CreateTexture(nil, "OVERLAY")
+    b.mark:SetPoint("TOPLEFT", b, "TOPLEFT", 5, -5)
+    b.mark:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -5, 5)
+    b.label = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.label:SetPoint("LEFT", b, "RIGHT", 6, 0)
+    b.checked = false
+    register(function()
+        paintTexture(bg, "inputBg")
+        paintTexture(b.mark, "checkMark")
+        setTextColor(b.label, "textMain")
+    end)
+
+    b.SetChecked = function(self, value)
+        self.checked = value and true or false
+        self.mark:SetShown(self.checked)
+    end
+    b.GetChecked = function(self) return self.checked end
+    b:SetScript("OnClick", function(self)
+        self:SetChecked(not self.checked)
+        if self.onToggle then self.onToggle(self.checked) end
+    end)
+    b.setText = function(self, value) self.label:SetText(value or "") end
+    b:SetChecked(false)
+    b:setText(text)
+    return b
+end
+
+-- Input box ---------------------------------------------------------------------
+
+-- A themed single-line edit box, 22 px high, text centred.
+function Kit.input(parent, width, maxLetters)
+    local box = CreateFrame("EditBox", nil, parent)
+    box:SetSize(width or 52, 22)
+    box:SetAutoFocus(false)
+    box:SetFontObject("GameFontHighlightSmall")
+    box:SetJustifyH("CENTER")
+    box:SetTextInsets(4, 4, 0, 0)
+    if maxLetters then box:SetMaxLetters(maxLetters) end
+    local bg = box:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints(box)
+    Kit.rings(box, { "inputEdge" })
+    register(function()
+        paintTexture(bg, "inputBg")
+        setTextColor(box, "textMain")
+    end)
+    box:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+    box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    return box
 end

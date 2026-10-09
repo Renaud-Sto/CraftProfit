@@ -10,20 +10,20 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] `/cp selftest` prints `Self-test passed (11 checks)`.
 
 ## Profession window
-- [ ] Selecting an orange recipe shows Materials, AH, Vendor, Disenchant (when the product is armor or a weapon of uncommon quality or better) and a verdict.
+- [ ] Selecting an orange recipe shows the result banner, the AH, Vendor and Disenchant tiles (Disenchant has a value when the product is armor or a weapon of uncommon quality or better) and the Materials panel.
 - [ ] When the disenchant has several possible results, a grey line below it shows the most probable one (`75%: 1-2x Soul Dust = 7s 30c`); a certain result shows no such line.
-- [ ] Selecting a recipe whose product cannot be sold on the AH (bind on pickup) shows `n/a` on the AH line.
+- [ ] Selecting a recipe whose product cannot be sold on the AH (bind on pickup) shows `n/a` on the AH tile.
 - [ ] A recipe you have not learned shows nothing (window hides or keeps the empty text).
 - [ ] The window opens on the right of the profession window; dragging it and `/reload` keeps the position; `/cp reset` puts it back.
 - [ ] Closing the profession window hides the window (outside the AH).
-- [ ] Ticking "Cost per skill point" adds a "Cost per point" line showing the chance used, marked `(75%, estimate)`; a grey recipe shows `n/a`.
+- [ ] Ticking "Cost per skill point" shows its value beside the box, with the chance used, marked `(75%, estimate)`; a grey recipe shows `n/a`.
 - [ ] The Pin button toggles to Unpin and back.
-- [ ] Clicking the Materials line folds the reagent detail in (`+`) and out (`-`); the choice survives `/reload`. With 5+ reagents the window grows and nothing overlaps.
+- [ ] Clicking the Materials header folds the reagent detail in (`+`) and out (`-`); the choice survives `/reload`. With 5+ reagents the window grows and nothing overlaps.
 
 ## Pinned recipes by cost per point
-- [ ] At the AH, the button at the top right of the pinned list reads "Tri : gain"; clicking it switches to "Tri : coût/point", ticks "Coût par point de compétence" and reorders the list, cheapest first. Rows show `21g 29s 84c/pt` (red), a recipe that pays for itself shows `+9s 33c/pt` (green), a grey recipe `n/d` and an unpriced one `?`, both at the bottom.
-- [ ] The cost per point line reads "Gain par point" (green) when each point pays for itself and "Coût par point" (red) otherwise; the best option line is gold with a ">" marker; "Tri : gain" lists the most profitable pin first.
-- [ ] Unticking "Coût par point de compétence" returns the sort to "Tri : gain". The choice survives `/reload`.
+- [ ] At the AH, the button at the top right of the pinned list reads "Tri : gain"; clicking it switches to "Tri : coût/point", ticks "Coût par point" and reorders the list, cheapest first. Rows show `21g 29s 84c/pt` (red), a recipe that pays for itself shows `+9s 33c/pt` (green), a grey recipe `n/d` and an unpriced one `?`, both at the bottom.
+- [ ] The value beside "Coût par point" is green with a `+` when each point pays for itself and red otherwise; the best tile is outlined in gold; "Tri : gain" lists the most profitable pin first.
+- [ ] Unticking "Coût par point" returns the sort to "Tri : gain". The choice survives `/reload`.
 - [ ] Level the skill until a pinned recipe changes colour: after the profession window is opened again, its cost per point follows the new colour (pins no longer keep the colour they had when pinned).
 
 ## Auction house
@@ -47,8 +47,30 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] Switching theme (`/cp kitdemo copper`) repaints everything, including a button that was being hovered.
 - [ ] Dragging the window by its body works. Author to report: does dragging by the upper half of the title plaque work (known gap), is the bright gold ring at the outer edge or inside it, and does the close button touch the third tile.
 
+## Main window (PR 2)
+Use a recipe with at least 5 reagents; `/console scriptErrors 1` on.
+- [ ] Selecting a recipe shows the result banner, the three tiles (Auction house, Vendor, Disenchant with its beta tag), the Materials panel, the prices age line and the Options panel.
+- [ ] A recipe that makes money tints the banner green; one that loses money tints it red (value shown with a minus sign); a recipe with an unpriced reagent shows the amber *Incomplete* banner. The tint stays the same through `/cp kitdemo copper`, `steel` and `gold` (it follows the result, not the theme).
+- [ ] The best tile has a 2 px bright gold outline and a faint gold tint (clearly different from the other tiles, in each theme); an impossible way shows `n/a` muted, an unknown price `?`.
+- [ ] Amounts: `999g 99s 99c` (use a stack of expensive reagents, or a pin with huge prices) shrinks in the banner and the tiles without running into the verdict text or leaving its box; the "RÉSULTAT" label does not touch the value.
+- [ ] French client: a partial result shows "RÉSULTAT · PRIX MANQUANTS" (warning in amber) on the label line and "Meilleur connu : Hôtel des ventes" on the main line; neither is cut off or drawn over the value, including with a very large value.
+- [ ] French client, "Coût par point" ticked and a gold-range cost: the label is not truncated and does not overlap the value.
+- [ ] Accents render in the French titles: RÉSULTAT, DÉSENCH., COMPOSANTS, OPTIONS.
+- [ ] Materials: clicking the header folds and unfolds the panel and flips the marker (`-` / `+`); the choice survives `/reload`. Unfolded with 12 reagents, the 12th row is not clipped.
+- [ ] Hovering a reagent row shows a highlight above the panel background and under the text; clicking a row starts the AH search with the quantity (see *Click a reagent* below). With the AH closed it prints "Open the auction house first".
+- [ ] Crafts box: type a number and wait for a price update (a search or scan) to re-render while the box still has focus: the text stays as typed. Enter, Escape or a click elsewhere applies it. 0, empty or text goes back to 1.
+- [ ] Track history and Cost per skill point: both check boxes toggle and the state survives `/reload`. The per-point value shows to the right of its box: red for a cost, green with a `+` for a gain.
+- [ ] Pin turns into Unpin and back; the pinned list (at the AH) follows.
+- [ ] A very long recipe title is set in a smaller font, cut off inside the plaque, and stays clear of the close button.
+- [ ] Drag the window by its body and by the title plaque; `/reload`; the position is restored. `/cp reset` puts it back beside the profession window.
+- [ ] `/cp level` opens the leveling window beside the main window, not over it.
+- [ ] At the AH with pinned recipes, the window grows by the pinned list and the list starts just below the Options panel. Known: the pinned list keeps its old look until the next release (PR 3), and its rows sit 10 px from the edge instead of 12.
+- [ ] Closing the profession window hides the window (outside the AH); closing the AH hides it when it was opened from there.
+- [ ] `/cp kitdemo`: the check box and the input box look right (box, mark, label; the input is centred, takes focus on click) in all three themes.
+- [ ] Known small limits, not to be reported: the tiles leave 2 px on the right; the empty-state text (no recipe selected) ignores the theme.
+
 ## Several crafts
-- [ ] The "Crafts : [ 1 ]" box under the age line takes a number from 1 to 9999. Type 5 and press Enter (or click elsewhere): reagent quantities, the Materials total, the AH / vendor / disenchant values and the verdict all become five times larger, and the Materials line reads "Composants x5 (estimation)". Cost or gain per point is unchanged.
+- [ ] The "Crafts : [ 1 ]" box in the Options panel takes a number from 1 to 9999. Type 5 and press Enter (or click elsewhere): reagent quantities, the Materials total, the AH / vendor / disenchant values and the verdict all become five times larger, and the Materials header reads "COMPOSANTS x5 (ESTIMATION)". Cost or gain per point is unchanged.
 - [ ] 0, an empty box or text goes back to 1. Selecting another recipe resets the box to 1; the pinned list always shows one craft.
 - [ ] With 5 crafts, clicking "Barre de bronze" searches the AH and presets the multiplied quantity (for example 100 instead of 20), and the buy view shows the matching total.
 
@@ -64,7 +86,7 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] Leveling up until a recipe changes colour: after the profession window updates, the ranking and the colour follow.
 
 ## Price history
-- [ ] The "Suivre l'historique" box sits to the right of the Crafts box. Ticking it on a recipe, then pressing **Scan AH** (or **Search prices** with that recipe or one sharing its reagents pinned) and `/reload`, leaves `series` entries for its items in `CraftProfit.lua` under `markets`.
+- [ ] The "Suivre l'historique" box sits to the right of the Crafts box in the Options panel. Ticking it on a recipe, then pressing **Scan AH** (or **Search prices** with that recipe or one sharing its reagents pinned) and `/reload`, leaves `series` entries for its items in `CraftProfit.lua` under `markets`.
 - [ ] A recipe whose output is bind-on-pickup still records (its output is never priced).
 - [ ] Unticking pauses recording; `/cp history` lists it as paused; `/cp history remove 1` deletes it and its series.
 - [ ] A 16th tracked recipe is refused with "Trop de recettes suivies (15 maximum)".

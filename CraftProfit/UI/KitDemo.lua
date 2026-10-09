@@ -60,8 +60,19 @@ local function build()
     sort:SetWidth(50)
     sort:SetPoint("TOPRIGHT", options.frame, "TOPRIGHT", -6, -3)
 
-    local offsets, total = Kit.stack({ TILE_H, materials:height(), options:height() }, Kit.GAP, 0)
-    for i, panel in ipairs({ materials, options }) do
+    local controls = Kit.panel(content, "CONTROLS")
+    controls:setRows(1, 26)
+    local box = Kit.input(controls.body, 52, 4)
+    box:SetPoint("TOPLEFT", controls.body, "TOPLEFT", 8, -2)
+    box:SetText("1")
+    local checkA = Kit.check(controls.body, "Track history")
+    checkA:SetPoint("TOPLEFT", controls.body, "TOPLEFT", 90, -4)
+    checkA:SetChecked(true)
+    local checkB = Kit.check(controls.body, "Per point")
+    checkB:SetPoint("TOPLEFT", controls.body, "TOPLEFT", 230, -4)
+
+    local offsets, total = Kit.stack({ TILE_H, materials:height(), options:height(), controls:height() }, Kit.GAP, 0)
+    for i, panel in ipairs({ materials, options, controls }) do
         panel.frame:SetPoint("TOPLEFT", content, "TOPLEFT", 0, offsets[i + 1])
         panel.frame:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, offsets[i + 1])
     end

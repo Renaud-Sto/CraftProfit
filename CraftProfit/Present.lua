@@ -10,6 +10,7 @@ ns.Present = Present
 local LIKELY_MIN = 0.999
 local LINE_KEYS = { ah = "LINE_AH", vendor = "LINE_VENDOR", disenchant = "LINE_DISENCHANT" }
 local NAME_KEYS = { ah = "NAME_AH", vendor = "NAME_VENDOR", disenchant = "NAME_DISENCHANT" }
+local TILE_KEYS = { ah = "TILE_AH", vendor = "TILE_VENDOR", disenchant = "TILE_DISENCHANT" }
 local UNIT_KEYS = { sec = "AGE_SEC", min = "AGE_MIN", hour = "AGE_HOUR", day = "AGE_DAY" }
 
 local DEFAULT_STALE = 3600
@@ -71,6 +72,11 @@ local function perPointLine(L, fmt, perPoint)
     return line
 end
 
+-- The partial case: a best way to sell is known but some price is missing.
+local function isPartial(result)
+    return result.net ~= nil and result.incomplete and true or false
+end
+
 local function verdictFor(result, L, fmt)
     if result.net == nil and result.best == nil and not result.incomplete then
         return { kind = "none", text = L.VERDICT_NONE, value = "" }
@@ -105,6 +111,16 @@ local function likelyLine(likely, fmt, itemName)
     }
 end
 
+-- Text shown for an option amount: the price, "n/a" or "?".
+local function optionText(option, L, fmt)
+    if option.status == "ok" then
+        return fmt(option.value)
+    elseif option.status == "na" then
+        return L.NA
+    end
+    return L.UNKNOWN
+end
+
 function Present.build(result, L, fmt, opts)
     local staleAfter = opts and opts.staleAfter or DEFAULT_STALE
     local lines = {}
@@ -113,14 +129,7 @@ function Present.build(result, L, fmt, opts)
     lines[1] = { label = materials, value = fmt(result.cost.total), key = "cost", best = false }
     for _, key in ipairs(Core.OPTION_ORDER) do
         local option = result.options[key]
-        local text
-        if option.status == "ok" then
-            text = fmt(option.value)
-        elseif option.status == "na" then
-            text = L.NA
-        else
-            text = L.UNKNOWN
-        end
+        local text = optionText(option, L, fmt)
         lines[#lines + 1] = { label = L[LINE_KEYS[key]], value = text, key = key, best = result.best == key }
         if key == "disenchant" and option.status == "ok" and option.likely and option.likely.chance < LIKELY_MIN then
             lines[#lines + 1] = likelyLine(option.likely, fmt, opts and opts.itemName)
@@ -134,11 +143,35 @@ function Present.build(result, L, fmt, opts)
             unitText = fmt(line.unit), subtotalText = fmt(line.subtotal),
         }
     end
+    local verdict = verdictFor(result, L, fmt)
+    local tiles = {}
+    for _, key in ipairs(Core.OPTION_ORDER) do
+        local option = result.options[key]
+        local text = optionText(option, L, fmt)
+        tiles[#tiles + 1] = {
+            key = key, label = L[TILE_KEYS[key]], value = text,
+            best = result.best == key, muted = option.status ~= "ok",
+            tag = key == "disenchant" and L.BETA_TAG or nil,
+        }
+    end
+    -- The partial verdict is too long beside the large value, so its warning moves to
+    -- the label line and the main line keeps only the best way to sell.
+    local banner = { label = L.RESULT, text = verdict.text, value = verdict.value, kind = verdict.kind }
+    if isPartial(result) then
+        banner.text = string.format(L.VERDICT_KNOWN, L[NAME_KEYS[result.best]])
+        banner.warning = L.WARN_PRICES
+    end
     return {
         lines = lines,
         crafts = crafts,
         costLines = costLines,
-        verdict = verdictFor(result, L, fmt),
+        verdict = verdict,
+        banner = banner,
+        tiles = tiles,
+        materials = {
+            title = crafts > 1 and string.format(L.PANEL_MATERIALS_MULTI, crafts) or L.PANEL_MATERIALS,
+            total = fmt(result.cost.total),
+        },
         ageText = Present.ageText(L, result.oldestAge),
         stale = not Util.isFinite(result.oldestAge) or result.oldestAge > staleAfter,
     }

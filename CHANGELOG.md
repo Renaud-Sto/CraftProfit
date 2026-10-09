@@ -13,6 +13,11 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - Price history: the *Track history* box records the prices of up to 15 recipes after every scan and price search (retention: all points for 14 days, then daily, then weekly averages up to a year); `/cp history` lists and removes tracked recipes. Recording only, the graphs are planned.
 - Project documentation: README (English and French), user guide (English and French), technical documentation, contributing guide, CurseForge page text and submission checklist, issue and pull request templates, continuous integration.
 
+### Changed
+- The main window has a new look: a result banner with the best way to sell and the net result, three tiles for the auction house, vendor and disenchant values, and separate Materials and Options panels. Its functions are unchanged; what you see differs: the best option is outlined on its tile instead of marked with ">", the per-point result is a coloured value beside its option instead of a "Gain per point" line, and the banner shows the verdict on one line. The pinned list and the leveling window follow in the next versions.
+- The best tile of the main window now has a 2 px bright gold outline and a faint gold tint, so it stands out from the other tiles.
+- The partial-result warning ("PRICES MISSING") now sits in amber on the banner label line so it is never cut off; the French and Spanish "cost per point" option labels are shorter.
+
 ## [0.1.0] - not yet released
 
 First version, developed against the WoW: Forever beta (build 1.60.1, Interface 16001).

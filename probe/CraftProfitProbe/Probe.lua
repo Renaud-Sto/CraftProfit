@@ -1,6 +1,6 @@
 -- CraftProfitProbe: THROWAWAY addon measuring what the Forever client exposes.
 -- Every output line starts with the version so a stale install is obvious.
-local VERSION = "0.4.0"
+local VERSION = "0.4.1"
 local TAG = "|cff66ccff[CPP " .. VERSION .. "]|r "
 
 local function isSecret(v)
@@ -269,6 +269,24 @@ cmds.ruleset = function()
     out("UnitFactionGroup(player):", try(UnitFactionGroup, "player"))
     out("GetBuildInfo:", try(GetBuildInfo))
     out("WOW_PROJECT_ID:", show(WOW_PROJECT_ID))
+    -- The game mode API found by the first run (C_GameRules, Enum.GameMode).
+    local rules = C_GameRules
+    if type(rules) == "table" then
+        out("GetActiveGameMode:", try(rules.GetActiveGameMode))
+        out("GetCurrentGameModeRecordID:", try(rules.GetCurrentGameModeRecordID))
+        out("IsHardcoreActive:", try(rules.IsHardcoreActive))
+        local info = rules.GetCurrentGameModeDisplayInfo and select(2, pcall(rules.GetCurrentGameModeDisplayInfo))
+        dumpTable("GetCurrentGameModeDisplayInfo", info)
+        local record = select(2, pcall(rules.GetCurrentGameModeRecordID))
+        if record ~= nil then
+            out("GetGameModeGlueScreenName(record):", try(rules.GetGameModeGlueScreenName, record))
+            dumpTable("GetGameModeDisplayInfoByRecordID", select(2, pcall(rules.GetGameModeDisplayInfoByRecordID, record)))
+        end
+        out("GetNumDisplayedGameModes:", try(rules.GetNumDisplayedGameModes))
+    end
+    dumpTable("Enum.GameMode", Enum and Enum.GameMode)
+    out("GetRealmID:", try(GetRealmID), "GetNativeRealmID:", try(GetNativeRealmID),
+        "UnitRealmRelationship:", try(UnitRealmRelationship, "player"))
     local patterns = { "[Rr]uleset", "[Gg]ameMode", "[Gg]ameRule", "[Hh]ardcore", "[Ss]eason", "[Rr]ealm", "[Ww]orldType" }
     local function matches(name)
         for _, pat in ipairs(patterns) do if name:find(pat) then return true end end

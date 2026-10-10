@@ -106,12 +106,15 @@ end
 -- Native demo ---------------------------------------------------------------------
 
 local NATIVE_NAME = "CraftProfitNativeDemo"
-local SORT_H = 20
+local SORT_H = 18
 local LINE_H = 16
 local DEMO_MONEY = 21 * 10000 + 29 * 100
 local MAX_DEMO_MONEY = 999 * 10000 + 99 * 100 + 99 -- 999g 99s 99c, more than any price in the beta
--- The variants the native demo was last asked for.
+-- The variants the native demo was last asked for. The demo draws its own panels and tiles
+-- with them (fixed, unregistered widgets): the real windows keep the player's saved look.
 KitDemo.header, KitDemo.tile = "b", "b"
+-- The widgets of the current page, for tests: panels, tiles.
+KitDemo.parts = { panels = {}, tiles = {} }
 
 local native      -- the window, built once
 local page        -- the frame holding the current widgets, rebuilt for each variant
@@ -156,8 +159,8 @@ end
 -- destroyed: the previous page is only hidden.
 local function buildPage()
     if page then page:Hide() end
-    Native.setHeaderVariant(KitDemo.header)
-    Native.setTileVariant(KitDemo.tile)
+    local headerOpts, tileOpts = { variant = KitDemo.header }, { variant = KitDemo.tile }
+    KitDemo.parts = { panels = {}, tiles = {} }
     local content = native.content
     local pad = Native.CONTENT_PAD
     page = CreateFrame("Frame", nil, content)
@@ -174,7 +177,8 @@ local function buildPage()
         { label = "DISENCH.", tag = "beta", value = moneyText(MAX_DEMO_MONEY), muted = true },
     }
     for i, spec in ipairs(specs) do
-        local tile = Native.tile(page, tileW, TILE_H)
+        local tile = Native.tile(page, tileW, TILE_H, tileOpts)
+        KitDemo.parts.tiles[i] = tile
         tile.frame:SetPoint("TOPLEFT", page, "TOPLEFT", (i - 1) * (tileW + 8), 0)
         tile:set(spec)
         if i == 1 then
@@ -184,7 +188,7 @@ local function buildPage()
         end
     end
 
-    local materials = Native.panel(page, "MATERIALS")
+    local materials = Native.panel(page, "MATERIALS", headerOpts)
     materials:setRows(3, 18)
     materials.right:SetText("2g 33s")
     nativeRow(materials, 1, "3x Bronze Bar", "2g 25s")
@@ -193,7 +197,8 @@ local function buildPage()
 
     -- Row 1: the crafts input and a check box; row 2: two buttons, the second disabled.
     -- The sort button sits in the header, 20 px high, centred in its 22 px.
-    local options = Native.panel(page, "OPTIONS")
+    local options = Native.panel(page, "OPTIONS", headerOpts)
+    KitDemo.parts.panels = { materials, options }
     options:setRows(2, 28)
     local crafts = Native.input(options.body, 40, 4)
     -- The input's border reaches 5 px left of the box.
@@ -212,7 +217,7 @@ local function buildPage()
     scan:Disable()
     local sort = Native.button(options.frame, "Sort", { width = 50 })
     sort:SetHeight(SORT_H)
-    sort:SetPoint("TOPRIGHT", options.frame, "TOPRIGHT", -4, -3)
+    sort:SetPoint("TOPRIGHT", options.frame, "TOPRIGHT", -10, -4)
 
     local line = page:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     line:SetText("Best price: " .. moneyText(DEMO_MONEY))

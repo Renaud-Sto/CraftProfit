@@ -437,10 +437,183 @@ H.test("the header strip uses the variant chosen before the panel was built", fu
     H.eq(Native.headerVariant, "b")
     Native.setHeaderVariant("c")
     H.eq(Native.panel(nil, "C").headerAtlas, "_UI-Frame-TopTileStreaks")
-    -- The panel built earlier keeps its strip.
-    H.eq(a.headerAtlas, "questlog-reward-header-top")
+    -- The panel built earlier follows the switch.
+    H.eq(a.headerAtlas, "_UI-Frame-TopTileStreaks")
     H.truthy(a.divider)
     H.eq(a.divider.atlas, "perks-divider-short")
+end)
+
+H.test("switching the header variant repaints the panels already built, hidden ones too, and later ones", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    recordTextures(env)
+    local first = Native.panel(nil, "A")
+    local hidden = Native.panel(nil, "B")
+    hidden.frame:Hide()
+    H.eq(first.headerAtlas, "friends-frame-toptexbg")
+    H.eq(Native.setHeaderVariant("a"), "a")
+    for _, p in ipairs({ first, hidden }) do
+        H.eq(p.headerAtlas, "questlog-reward-header-top")
+        H.eq(p.headerBg.atlas, "questlog-reward-header-top")
+        H.eq(p.divider.atlas, "perks-divider-short")
+    end
+    H.eq(Native.panel(nil, "C").headerAtlas, "questlog-reward-header-top")
+    Native.setHeaderVariant("c")
+    H.eq(first.headerAtlas, "_UI-Frame-TopTileStreaks")
+    H.eq(hidden.headerBg.atlas, "_UI-Frame-TopTileStreaks")
+end)
+
+H.test("an unknown header key repaints nothing and keeps the variant", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    recordTextures(env)
+    local p = Native.panel(nil, "A")
+    local applied = 0
+    local set = p.headerBg.SetAtlas
+    p.headerBg.SetAtlas = function(self, name)
+        applied = applied + 1
+        set(self, name)
+    end
+    for _, key in ipairs({ "zz", "", 1, false }) do
+        H.eq(Native.setHeaderVariant(key), "b")
+    end
+    H.eq(Native.setHeaderVariant(nil), "b")
+    H.eq(applied, 0)
+    H.eq(p.headerAtlas, "friends-frame-toptexbg")
+end)
+
+H.test("each header variant has its own texture, its atlas set once; a switch only shows another", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    recordTextures(env)
+    local p = Native.panel(nil, "A")
+    local hidden = Native.panel(nil, "B")
+    hidden.frame:Hide()
+    local atlasCalls = {}
+    for _, panel in ipairs({ p, hidden }) do
+        for key, tex in pairs(panel.headerTextures) do
+            H.eq(tex.atlas, Native.HEADER_VARIANTS[key])
+            local set = tex.SetAtlas
+            tex.SetAtlas = function(self, name)
+                atlasCalls[#atlasCalls + 1] = name
+                set(self, name)
+            end
+        end
+    end
+    local tiled = p.headerTextures.c
+    for _, key in ipairs({ "a", "c", "b", "a" }) do
+        Native.setHeaderVariant(key)
+        for _, panel in ipairs({ p, hidden }) do
+            for k, tex in pairs(panel.headerTextures) do H.eq(tex.shown, k == key) end
+            H.eq(panel.headerBg, panel.headerTextures[key])
+            H.eq(panel.headerAtlas, Native.HEADER_VARIANTS[key])
+        end
+    end
+    -- No texture ever got a second atlas.
+    H.eq(atlasCalls, {})
+    H.eq(rawget(tiled, "atlas"), "_UI-Frame-TopTileStreaks")
+end)
+
+H.test("the quest bar is cropped to its wood so a 22 px header is filled by it", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    recordTextures(env)
+    local coords = {}
+    local create = env.CreateFrame
+    local wrapped = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = wrapped(kind, name, parent, template)
+        local make = f.CreateTexture
+        f.CreateTexture = function(...)
+            local tex = make(...)
+            tex.SetTexCoord = function(self, l, r, t, b) coords[self] = { l, r, t, b } end
+            return tex
+        end
+        return f
+    end
+    local p = Native.panel(nil, "A")
+    H.eq(coords[p.headerTextures.a], Native.HEADER_CROP.a)
+    H.eq(coords[p.headerTextures.a], { 0, 1, 0.2, 0.97 })
+    H.eq(coords[p.headerTextures.b], nil)
+    H.eq(coords[p.headerTextures.c], nil)
+    H.truthy(create)
+end)
+
+H.test("only the underscore atlas tiles, on its own texture", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    local create = env.CreateFrame
+    env.CreateFrame = function(...)
+        local f = create(...)
+        f.CreateTexture = function()
+            local tex = W.frame()
+            tex.SetHorizTile = function(self, on) self.horizTile = on end
+            return tex
+        end
+        return f
+    end
+    local p = Native.panel(nil, "A")
+    H.eq(rawget(p.headerTextures.c, "horizTile"), true)
+    H.eq(rawget(p.headerTextures.a, "horizTile"), nil)
+    H.eq(rawget(p.headerTextures.b, "horizTile"), nil)
+end)
+
+H.test("a panel is registered once, whatever is done with it", function()
+    local _, Native = boot()
+    H.eq(#Native.registry.panels, 0)
+    local p = Native.panel(nil, "A")
+    p:setRows(3, 18)
+    p:setTitle("B")
+    p:onHeaderClick(function() end)
+    Native.setHeaderVariant("a")
+    Native.setHeaderVariant("b")
+    H.eq(#Native.registry.panels, 1)
+    H.eq(Native.registry.panels[1], p)
+    Native.tile(nil, 110, 52)
+    H.eq(#Native.registry.panels, 1)
+    H.eq(#Native.registry.tiles, 1)
+end)
+
+H.test("appearance reports the header and tile variants in use", function()
+    local _, Native = boot()
+    local header, tile = Native.appearance()
+    H.eq(header, "b")
+    H.eq(tile, "b")
+    Native.setHeaderVariant("c")
+    Native.setTileVariant("a")
+    header, tile = Native.appearance()
+    H.eq(header, "c")
+    H.eq(tile, "a")
+end)
+
+H.test("switching either variant with no atlas known falls back without raising", function()
+    local _, Native, env = boot()
+    env.C_Texture = nil
+    env.NORMAL_FONT_COLOR = color(1, 0.82, 0)
+    recordTextures(env)
+    local p = Native.panel(nil, "X")
+    local tile = Native.tile(nil, 110, 52)
+    tile:set({ label = "AH", value = "1g", best = true })
+    for _, key in ipairs({ "a", "c", "b" }) do
+        H.eq(Native.setHeaderVariant(key), key)
+        H.eq(p.headerAtlas, nil)
+        H.eq(p.divider, nil)
+        H.eq(p.headerBg.color, { 1, 0.82, 0, 0.15 })
+    end
+    for _, key in ipairs({ "a", "b" }) do
+        H.eq(Native.setTileVariant(key), key)
+        H.eq(tile.variant, key)
+        H.eq(tile.bgAtlas, nil)
+        H.eq(tile.inset.shown, true)
+        H.eq(#tile.outline, 4)
+        for _, line in ipairs(tile.outline) do H.eq(line.shown, true) end
+    end
+    -- No colour object either.
+    env.NORMAL_FONT_COLOR = nil
+    Native.setHeaderVariant("a")
+    Native.setTileVariant("a")
+    H.truthy(Native.panel(nil, "Y").frame)
+    H.truthy(Native.tile(nil, 110, 52).frame)
 end)
 
 H.test("a panel without the header and divider atlases draws a faint gold strip and does not raise", function()
@@ -530,6 +703,94 @@ H.test("variant b, or a missing card atlas, draws a nested inset with a 2 px gol
     for _, line in ipairs(tile.outline) do H.eq(line.shown, true) end
     tile:set({ label = "AH", value = "1g" })
     for _, line in ipairs(tile.outline) do H.eq(line.shown, false) end
+end)
+
+H.test("a tile builds both cards and switching shows one, keeping the best outline and the muted colour", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    env.NORMAL_FONT_COLOR = color(1, 0.82, 0)
+    env.DISABLED_FONT_COLOR = color(0.5, 0.5, 0.5)
+    env.HIGHLIGHT_FONT_COLOR = color(1, 1, 1)
+    local textures = recordTextures(env)
+    local tile = Native.tile(nil, 110, 52)
+    local last
+    tile.value.SetTextColor = function(_, r, g, b) last = { r, g, b } end
+    tile:set({ label = "AH", value = "n/a", best = true, muted = true })
+    H.eq(tile.variant, "b")
+    H.eq(tile.inset.template, "InsetFrameTemplate")
+    H.eq(tile.inset.shown, true)
+    H.eq(tile.cardBg.shown, false)
+    local stroke = tile.cardStroke
+    H.eq(stroke.shown, false)
+    H.eq(tile.outline, tile.goldOutline)
+    for _, line in ipairs(tile.outline) do H.eq(line.shown, true) end
+
+    last = nil
+    H.eq(Native.setTileVariant("a"), "a")
+    H.eq(withAtlas(textures, "looting_itemcard_stroke_normal"), stroke)
+    H.eq(tile.cardBg.atlas, "looting_itemcard_bg")
+    H.eq(tile.variant, "a")
+    H.eq(tile.bgAtlas, "looting_itemcard_bg")
+    H.eq(tile.cardBg.shown, true)
+    H.eq(tile.inset.shown, false)
+    H.eq(tile.outline, { stroke })
+    H.eq(stroke.shown, true)
+    for _, line in ipairs(tile.goldOutline) do H.eq(line.shown, false) end
+    H.eq(last, { 0.5, 0.5, 0.5 })
+
+    tile:set({ label = "AH", value = "1g" })
+    H.eq(stroke.shown, false)
+    H.eq(last, { 1, 1, 1 })
+
+    tile:set({ label = "AH", value = "n/a", best = true, muted = true })
+    last = nil
+    Native.setTileVariant("b")
+    H.eq(tile.variant, "b")
+    H.eq(tile.bgAtlas, nil)
+    H.eq(tile.cardBg.shown, false)
+    H.eq(tile.inset.shown, true)
+    H.eq(stroke.shown, false)
+    H.eq(tile.outline, tile.goldOutline)
+    for _, line in ipairs(tile.outline) do H.eq(line.shown, true) end
+    H.eq(last, { 0.5, 0.5, 0.5 })
+    -- An unknown key changes nothing.
+    H.eq(Native.setTileVariant("zz"), "b")
+    H.eq(tile.variant, "b")
+end)
+
+H.test("a tile keeps its click, hover and magnifier across a variant switch", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    local tile = Native.tile(nil, 110, 52)
+    local clicks = 0
+    local hit = tile:onClick(function() clicks = clicks + 1 end)
+    tile:showIcon(true)
+    for _, key in ipairs({ "a", "b", "a" }) do
+        Native.setTileVariant(key)
+        H.eq(tile.hit, hit)
+        hit.scripts.OnClick(hit)
+        hit.scripts.OnEnter(hit)
+        H.eq(tile.hover.shown, true)
+        hit.scripts.OnLeave(hit)
+        H.eq(tile.hover.shown, false)
+        H.eq(tile.icon.shown, true)
+    end
+    H.eq(clicks, 3)
+end)
+
+H.test("a tile built with the card atlas missing shows the card once the client knows it", function()
+    local _, Native, env = boot()
+    env.C_Texture = nil
+    recordTextures(env)
+    local tile = Native.tile(nil, 110, 52)
+    Native.setTileVariant("a")
+    H.eq(tile.bgAtlas, nil)
+    H.eq(tile.inset.shown, true)
+    knownAtlases(env)
+    Native.setTileVariant("b")
+    Native.setTileVariant("a")
+    H.eq(tile.bgAtlas, "looting_itemcard_bg")
+    H.eq(tile.inset.shown, false)
 end)
 
 H.test("a tile steps its value down the game fonts until it fits, measured unbounded", function()
@@ -636,8 +897,9 @@ H.test("kitdemo b a rebuilds the demo with those variants and keeps them for the
     slash("kitdemo b a")
     local demo = named.CraftProfitNativeDemo
     H.eq(demo.shown, true)
-    H.eq(T.ns.Native.headerVariant, "b")
-    H.eq(T.ns.Native.tileVariant, "a")
+    -- The demo draws its own widgets with the variants; the live look is untouched.
+    H.eq(T.ns.KitDemo.parts.tiles[1].variant, "a")
+    H.eq({ T.ns.Native.appearance() }, { "b", "b" })
     H.truthy(lastChat(T):find("header b (friends-frame-toptexbg), tile a", 1, true))
     -- Asked again while shown: it stays shown with the new choice.
     slash("kitdemo C B")
@@ -648,12 +910,57 @@ H.test("kitdemo b a rebuilds the demo with those variants and keeps them for the
     H.eq(demo.shown, false)
     slash("kitdemo")
     H.eq(demo.shown, true)
-    H.eq(T.ns.Native.headerVariant, "c")
-    H.eq(T.ns.Native.tileVariant, "b")
+    H.eq(T.ns.KitDemo.parts.tiles[1].variant, "b")
+    H.eq({ T.ns.Native.appearance() }, { "b", "b" })
     -- One word changes the header and keeps the tile.
     slash("kitdemo a")
     H.eq(T.ns.KitDemo.header, "a")
     H.eq(T.ns.KitDemo.tile, "b")
+end)
+
+H.test("kitdemo leaves the live windows and the saved look alone, and its rebuilds do not grow the registry", function()
+    local T, _, slash = demoBoot()
+    local Native, C = T.ns.Native, T.ns.Controller
+    knownAtlases(T.env)
+    local mainTile = T.ns.Window.parts.tiles[1]
+    local panels, tiles = #Native.registry.panels, #Native.registry.tiles
+    slash("kitdemo c a")
+    H.eq(mainTile.variant, "b")
+    H.eq({ Native.appearance() }, { "b", "b" })
+    -- The demo's own widgets do show the asked variants.
+    H.eq(T.ns.KitDemo.parts.panels[1].headerAtlas, Native.HEADER_VARIANTS.c)
+    H.eq(T.ns.KitDemo.parts.tiles[1].bgAtlas, Native.TILE_VARIANTS.a)
+    slash("kitdemo a b")
+    slash("kitdemo b a")
+    H.eq(#Native.registry.panels, panels)
+    H.eq(#Native.registry.tiles, tiles)
+    -- A live switch does not repaint the demo's fixed widgets.
+    local demoTile = T.ns.KitDemo.parts.tiles[1]
+    C.setAppearance("c", nil)
+    H.eq(demoTile.variant, "a")
+    -- And the save merges into the saved choice: the demo's tile never leaks into it.
+    H.eq(T.env.CraftProfitDB.settings.appearance, { header = "c", tile = "b" })
+    H.eq({ Native.appearance() }, { "c", "b" })
+end)
+
+H.test("a widget fixed to a variant is drawn with it, unregistered, and an unknown fixed key is ignored", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    recordTextures(env)
+    local p = Native.panel(nil, "X", { variant = "c" })
+    local t = Native.tile(nil, 110, 52, { variant = "a" })
+    H.eq(p.headerAtlas, Native.HEADER_VARIANTS.c)
+    H.eq(t.variant, "a")
+    H.eq(#Native.registry.panels, 0)
+    H.eq(#Native.registry.tiles, 0)
+    Native.setHeaderVariant("a")
+    Native.setTileVariant("a")
+    Native.setTileVariant("b")
+    H.eq(p.headerAtlas, Native.HEADER_VARIANTS.c)
+    H.eq(t.variant, "a")
+    local loose = Native.panel(nil, "Y", { variant = "zz" })
+    H.eq(#Native.registry.panels, 1)
+    H.eq(loose.headerAtlas, Native.HEADER_VARIANTS.a)
 end)
 
 H.test("kitdemo with an unknown variant prints one line and changes nothing", function()

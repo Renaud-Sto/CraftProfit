@@ -264,7 +264,9 @@ H.test("the controls panel and the window heights follow the line count", functi
     slash("options")
     local O, Layout, Native = T.ns.OptionsUI, T.ns.Layout, T.ns.Native
     local p = O.parts.panels
-    H.eq(p.controls.frame.height, Layout.panelHeight(O.LINE_COUNT, 14))
+    -- 8 px of air under the last line.
+    H.eq(O.LIST_BOTTOM, 8)
+    H.eq(p.controls.frame.height, Layout.panelHeight(O.LINE_COUNT, 14, 8))
     local heights = p.appearance.frame.height + p.minimap.frame.height + p.windows.frame.height
         + p.controls.frame.height
     H.eq(O.frame():GetHeight(), Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + heights + 8 * 3)

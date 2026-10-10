@@ -36,6 +36,8 @@ local LINE_ROW_H = 26
 local CHAR_W = 7
 -- The controls list: one line per click or command, in the small font.
 local LINE_H = 14
+-- Air under the last line, so it does not touch the panel's bottom edge.
+local LIST_BOTTOM = 8
 -- Width of one letter of the small font (GameFontHighlightSmall, 10 px), estimated; the tests
 -- keep every line of every language within the panel with it.
 local SMALL_CHAR_W = 6
@@ -73,6 +75,7 @@ OptionsUI.ROOM = ROOM
 OptionsUI.CHAR_W = CHAR_W
 OptionsUI.SMALL_CHAR_W = SMALL_CHAR_W
 OptionsUI.LINE_COUNT = #CONTROL_LINES
+OptionsUI.LIST_BOTTOM = LIST_BOTTOM
 
 -- Lights `button` (the chosen segment) or puts it out; `button.lit` mirrors the state.
 local function setLit(button, lit)
@@ -111,7 +114,7 @@ local function layout()
     p.appearance:setRows(2, CHOICE_ROW_H)
     p.minimap:setRows(1, LINE_ROW_H)
     p.windows:setRows(2, LINE_ROW_H)
-    p.controls:setRows(#CONTROL_LINES, LINE_H)
+    p.controls:setRows(#CONTROL_LINES, LINE_H, LIST_BOTTOM)
     local order = { p.appearance, p.minimap, p.windows, p.controls }
     local heights = {}
     for i, panel in ipairs(order) do heights[i] = panel:height() end

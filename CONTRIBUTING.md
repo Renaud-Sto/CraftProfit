@@ -78,7 +78,7 @@ Short imperative subject with a type prefix: `feat:`, `fix:`, `docs:`, `test:`, 
 
 ## Disenchant data
 
-`CraftProfit/Data/Disenchant.lua` holds the result tables, currently taken from the Classic tables and marked `UNVERIFIED IN FOREVER` in the source. To verify a bracket, disenchant several items of that level range and compare the materials with the table. The *beta* tag in the window is removed (in the three `LINE_DISENCHANT` strings) once this has been checked.
+`CraftProfit/Data/Disenchant.lua` holds the result tables, currently taken from the Classic tables and marked `UNVERIFIED IN FOREVER` in the source. To verify a bracket, disenchant several items of that level range and compare the materials with the table. The *beta* tag in the window is removed (the `BETA_TAG` and `LINE_DISENCHANT` strings of each language) once this has been checked.
 
 ## Releasing
 

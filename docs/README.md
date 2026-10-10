@@ -7,6 +7,6 @@
 | [In-game checklist](in-game-checklist.md) | What to verify in the client before a release |
 | [Probe findings](probe-findings.md) | What the in-game probe measured on the beta |
 | [CurseForge material](curseforge/) | [Project page text](curseforge/project-page.md) and [submission checklist](curseforge/submission-checklist.md) |
-| [Design history](superpowers/) | [Design spec](superpowers/specs/2026-10-08-craftprofit-design.md) (French) and [implementation plan](superpowers/plans/2026-10-08-craftprofit.md) |
+| [Design history](superpowers/) | First [design spec](superpowers/specs/2026-10-08-craftprofit-design.md) (French) and [implementation plan](superpowers/plans/2026-10-08-craftprofit.md), then the specs and plans of the later steps |
 
 Project-level files: [README](../README.md) · [Contributing](../CONTRIBUTING.md) · [Changelog](../CHANGELOG.md) · [Security](../SECURITY.md)

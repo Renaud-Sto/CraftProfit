@@ -328,6 +328,8 @@ function Native.check(parent, text, onToggle, maxWidth)
     end
     c.label = label
     c.onToggle = onToggle
+    -- A font string with a set width centres its text: keep the label against the box.
+    label:SetJustifyH("LEFT")
     local function capLabel()
         if type(maxWidth) == "number" then
             label:SetWidth(maxWidth)

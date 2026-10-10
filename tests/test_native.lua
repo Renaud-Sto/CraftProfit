@@ -725,6 +725,21 @@ H.test("the demo money line uses the client's coin string when it has one", func
     H.eq(found, "Best price: <212900>")
 end)
 
+H.test("a check box label is left-justified so a capped width does not centre it", function()
+    local _, Native, env = boot()
+    local label = W.frame()
+    local justify
+    label.SetJustifyH = function(_, v) justify = v end
+    local create = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        if template == "UICheckButtonTemplate" then f.Text = label end
+        return f
+    end
+    Native.check(nil, "Track", nil, 120)
+    H.eq(justify, "LEFT")
+end)
+
 H.test("a check box with maxWidth caps its label and its hit area", function()
     local _, Native, env = boot()
     local label = W.frame()

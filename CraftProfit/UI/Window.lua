@@ -47,7 +47,6 @@ local contentHeight = 80
 -- The widgets, exposed for tests: `frames` maps a section key to its frame.
 local parts = { frames = {}, tiles = {}, rows = {} }
 
-Window.WIDTH = WIDTH
 Window.GAP = GAP
 Window.FOLDED_H = FOLDED_H
 Window.INNER_WIDTH = WIDTH - Native.INSET_LEFT - Native.INSET_RIGHT - PAD * 2
@@ -317,10 +316,6 @@ function Window.create(h)
     -- A new frame starts shown: the controller decides when the window appears.
     frame:Hide()
     return frame
-end
-
-function Window.setTitle(text)
-    if frame then frame:setTitle(text) end
 end
 
 -- Frame height = title bar + recipe sections (with the content margin) + bottom border,

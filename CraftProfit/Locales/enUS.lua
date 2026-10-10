@@ -39,7 +39,6 @@ ns.Locale.register("enUS", {
     AGE_DAY = "%dd",
     PIN = "Pin",
     UNPIN = "Unpin",
-    PINS_TITLE = "Pinned recipes",
     PINS_EMPTY = "No pinned recipe yet",
     PINS_FULL = "Too many pinned recipes",
     SEARCH_PRICES = "Search prices",

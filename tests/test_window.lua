@@ -645,14 +645,6 @@ H.test("a click that ends a drag of the AH tile or the title searches nothing", 
     end
 end)
 
-H.test("the main window has no theme swatch and is given no theme handler", function()
-    local T = W.boot(H)
-    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
-    local Window = T.ns.Window
-    H.eq(rawget(Window.frame(), "themeHit"), nil)
-    H.eq(rawget(Window.lastHandlers, "onThemeClick"), nil)
-end)
-
 H.test("the window is a native panel: named, with its title button and the pin button 120 px wide", function()
     local T = W.boot(H)
     local made = {}

@@ -39,7 +39,6 @@ ns.Locale.register("esES", {
     AGE_DAY = "%dd",
     PIN = "Fijar",
     UNPIN = "Quitar",
-    PINS_TITLE = "Recetas fijadas",
     PINS_EMPTY = "Ninguna receta fijada",
     PINS_FULL = "Demasiadas recetas fijadas",
     SEARCH_PRICES = "Buscar precios",

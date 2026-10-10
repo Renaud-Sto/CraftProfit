@@ -164,12 +164,6 @@ function Trade.readSelected()
     return nil
 end
 
--- Raw data of any recipe of the open profession (strategy A only), or nil.
-function Trade.readRecipe(recipeID)
-    if not Trade.isShown() then return nil end
-    return readA(recipeID)
-end
-
 -- Which profession the open window is about: key (a stable id when the client gives
 -- one, else the name) and display name, or nil. Tries the usual info table fields
 -- and the classic trade skill line.

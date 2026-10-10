@@ -39,7 +39,6 @@ ns.Locale.register("frFR", {
     AGE_DAY = "%dj",
     PIN = "Épingler",
     UNPIN = "Désépingler",
-    PINS_TITLE = "Recettes épinglées",
     PINS_EMPTY = "Aucune recette épinglée",
     PINS_FULL = "Trop de recettes épinglées",
     SEARCH_PRICES = "Rechercher les prix",

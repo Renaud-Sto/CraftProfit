@@ -1,7 +1,7 @@
 -- The options window: the look (header strip and tile card, applied at once to every
 -- window), the minimap button, shortcuts to the other windows and a recap of the controls.
--- Built on first open, never at login. Opened by /cp options (and, later, the minimap
--- button and the addon compartment). Escape closes it.
+-- Built on first open, never at login. Opened by /cp options, the minimap button and the
+-- addon compartment. Escape closes it.
 --
 -- Choices are rows of native buttons, the chosen one lit (LockHighlight): never a dropdown
 -- or the Menu API, which crash or taint the Forever client.
@@ -34,10 +34,6 @@ local RECAP_FALLBACK_H = 64
 -- The variants in button order, with their label keys (the order of the rulings).
 local HEADER_CHOICES = { { "a", "OPTIONS_HEADER_A" }, { "b", "OPTIONS_HEADER_B" }, { "c", "OPTIONS_HEADER_C" } }
 local TILE_CHOICES = { { "a", "OPTIONS_TILE_A" }, { "b", "OPTIONS_TILE_B" } }
-
-OptionsUI.NAME = NAME
-OptionsUI.WIDTH = WIDTH
-OptionsUI.INNER_WIDTH = INNER_WIDTH
 
 local ctl
 local frame, content, savedPosition

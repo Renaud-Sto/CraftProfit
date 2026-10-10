@@ -379,7 +379,7 @@ Native.HEADER_VARIANTS = {
     b = "friends-frame-toptexbg",
     c = "_UI-Frame-TopTileStreaks",
 }
-Native.headerVariant = "a"
+Native.headerVariant = "b"
 Native.DIVIDER_ATLAS = "perks-divider-short"
 -- The header sits this far inside the panel's inset border, on every side but the bottom;
 -- the body keeps the same margin at the bottom. 2 + 22 + 4 + rows + 2 = Kit.panelHeight.
@@ -481,7 +481,7 @@ end
 -- afterwards. "a": the loot card atlas, its stroke as the best-tile outline. "b": a nested
 -- game inset with a 2 px gold outline for the best tile.
 Native.TILE_VARIANTS = { a = "looting_itemcard_bg", b = "inset" }
-Native.tileVariant = "a"
+Native.tileVariant = "b"
 Native.TILE_STROKE_ATLAS = "looting_itemcard_stroke_normal"
 Native.TILE_PAD = 10
 Native.TILE_ICON = 12

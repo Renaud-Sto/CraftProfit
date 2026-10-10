@@ -110,7 +110,7 @@ local SORT_H = 20
 local LINE_H = 16
 local DEMO_MONEY = 21 * 10000 + 29 * 100
 -- The variants the native demo was last asked for.
-KitDemo.header, KitDemo.tile = "a", "a"
+KitDemo.header, KitDemo.tile = "b", "b"
 
 local native      -- the window, built once
 local page        -- the frame holding the current widgets, rebuilt for each variant

@@ -144,7 +144,7 @@ Prévu ensuite : une fenêtre autonome des recettes épinglées, utilisable loin
 | Détail des composants replié ou déplié | Clic sur l'en-tête Composants | Déplié |
 | Position de la fenêtre | La déplacer ; `/cp reset` pour annuler | À côté de la fenêtre de métier ou de l'hôtel des ventes |
 | Tri de la liste des épingles | Bouton dans l'en-tête du panneau des épingles | Gain |
-| Bandeau des sections et cases de prix | [Fenêtre d'options](#fenêtre-doptions) ; enregistré pour le compte | Bois, Encart |
+| Bandeau des sections et cases de prix | [Fenêtre d'options](#fenêtre-doptions) ; enregistré pour le compte | Ombre, Encart |
 | Bouton de la minicarte affiché, et sa place | Fenêtre d'options ou `/cp minimap` ; le faire glisser | Affiché, en bas à gauche |
 
 Commandes : `/cp` (ou `/craftprofit`) avec `show`, `hide`, `reset`, `options`, `minimap`, `scan`, `history`, `market`, `level`, `locale <code>` et `selftest`. Voir le [README](../README.fr.md#commandes).

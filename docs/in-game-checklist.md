@@ -134,6 +134,7 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] If no magnifier appears, report the `/cpp icon` lines. Known: the icon is optional, the click works without it.
 
 ## Themes (PR 4)
+Since PR 6 the main window is native: it no longer follows the themes and has no coloured square. The lines below about the main window or its square no longer apply; check them on the pinned list and the leveling window.
 - [ ] `/cp theme` prints the current theme and the list (`gold, copper, steel`).
 - [ ] `/cp theme copper`, `/cp theme steel` and `/cp theme gold` (also in capitals) repaint at once, with the windows open and no `/reload`: the main window, the pinned list, the leveling window and the scroll bars. A button that was being hovered is repainted too. Each prints `Theme set: ...`.
 - [ ] The choice survives `/reload` and a relog, and another character of the account opens in the same theme.
@@ -157,6 +158,20 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] `/cp kitdemo old` still shows the themed demo; the main window, the pinned list and the leveling window are unchanged.
 - [ ] No Lua error with any variant (`/console scriptErrors 1`).
 - [ ] Send a screenshot of each variant (`a a`, `b a`, `c b`, and `a b`) next to the game's character panel (`C`), so the header strip and the tile can be picked.
+
+## Native main window (PR 6)
+- [ ] Open a recipe and compare the main window with `/cp kitdemo` and with the game's own panels (`C`, the profession window): rock background, metal border, title bar, red close button, dark inset, native header strips and tiles. Send a screenshot to the controller.
+- [ ] Banner tint follows the result: green for a profit, red for a loss, amber for an incomplete result (prices missing, with the amber warning after a dot on the label line). A long warning or a long "Best: ..." text never runs under the value. The value is at most 20 px (one step smaller than before) and shrinks for a long amount.
+- [ ] The best tile is outlined in gold. A long amount on a tile shrinks and never overflows its tile. With the AH open, the magnifier shows on the AH tile and after the title; with it closed, neither shows.
+- [ ] Materials: the header folds and unfolds the detail (folded, the panel is just its header strip, nothing sticks out under it). Reagent rows highlight on hover over the panel body, and a click searches the reagent at the AH.
+- [ ] Crafts box: type a number, then press Enter, Escape or click elsewhere: the value applies (on focus lost) and the window recomputes. It is not overwritten while you type.
+- [ ] Track history and Cost per skill point check boxes toggle from the box and from their label, with the game's click sound; the per-point value shows beside its label, which is cut before it in every language. The Pin button reads Pin / Unpin and works.
+- [ ] Pinned list under the window (at the AH): it still works, scrolls, and sits inside the window with the same margin; the window grows to hold it and shrinks back when it hides. The window height is right with Materials folded, with and without the "likely" line.
+- [ ] Drag the window from the title bar, the body, the AH tile, a reagent row and the Materials header: it moves, and the click that ends a drag neither searches nor folds.
+- [ ] With no recipe selected the window shows the empty text and nothing else.
+- [ ] `/cp theme copper` no longer changes the main window (expected; the pinned list and the leveling window still change) and the header has no colour square.
+- [ ] Close the window with the red cross. (Escape does not close it, as before.)
+- [ ] No Lua error (`/console scriptErrors 1`), no `ADDON_ACTION_BLOCKED`, with the profession window and with the AH.
 
 ## Numbers
 - [ ] For one recipe, compare each reagent price with the AH listing prices: the stored price is the median of the 5 cheapest units (not the minimum).

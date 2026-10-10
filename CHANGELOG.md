@@ -18,6 +18,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - Project documentation: README (English and French), user guide (English and French), technical documentation, contributing guide, CurseForge page text and submission checklist, issue and pull request templates, continuous integration.
 
 ### Changed
+- The main window now uses the game's own frame, panels, buttons and fonts. The header colour swatch is gone from it.
 - Scroll bars: grabbing the thumb off-centre no longer makes it jump, only the left mouse button scrolls, and a drag stops when the button is no longer down (for example after alt-tab). The pinned list, the leveling list and the Materials rows share one row widget, and the window title is measured only when it changes.
 - The pinned list and the leveling window have the new look, like the main window: a Pinned recipes panel with the sort button in its header, a Next point panel, themed buttons, and both follow the colour themes.
 - Pinned recipe names are coloured by difficulty (orange, yellow, green, grey), as in the profession window.

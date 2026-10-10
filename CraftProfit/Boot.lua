@@ -203,23 +203,44 @@ end
 -- BOTTOMLEFT: absolute, so no window is ever anchored to another that depends on it), or
 -- nil when no such window is shown and measured: the caller keeps its own default.
 local BESIDE_GAP = 6
+
+-- A number the frame answers through `method`, or nil (missing method, no answer).
+local function ask(f, method)
+    local fn = f[method]
+    if type(fn) ~= "function" then return nil end
+    local v = fn(f)
+    return Util.isFinite(v) and v or nil
+end
+
+-- The right edge and top of `f` on screen; from the left edge and width (bottom and height)
+-- when the client does not answer them directly. nil when it cannot be measured.
+local function edges(f)
+    local right, top = ask(f, "GetRight"), ask(f, "GetTop")
+    if not right then
+        local left, width = ask(f, "GetLeft"), ask(f, "GetWidth")
+        right = left and width and left + width or nil
+    end
+    if not top then
+        local bottom, height = ask(f, "GetBottom"), ask(f, "GetHeight")
+        top = bottom and height and bottom + height or nil
+    end
+    return right, top
+end
+
 function Controller.besidePosition(except)
-    local frames, entries = {}, {}
+    local tops, entries = {}, {}
     for _, mod in ipairs({ ns.Window, ns.LevelingUI, ns.PinnedWindow, ns.OptionsUI }) do
         local f = type(mod) == "table" and type(mod.frame) == "function" and mod.frame() or nil
         if f and f ~= except then
-            frames[#frames + 1] = f
-            entries[#entries + 1] = {
-                shown = f:IsShown() == true,
-                right = type(f.GetRight) == "function" and f:GetRight() or nil,
-            }
+            local right, top = edges(f)
+            -- A window whose top cannot be measured cannot be sat beside.
+            entries[#entries + 1] = { shown = f:IsShown() == true and top ~= nil, right = right }
+            tops[#entries] = top
         end
     end
     local index = ns.Layout.rightmost(entries)
     if not index then return nil end
-    local top = frames[index]:GetTop()
-    if not Util.isFinite(top) then return nil end
-    return entries[index].right + BESIDE_GAP, top
+    return entries[index].right + BESIDE_GAP, tops[index]
 end
 
 -- The main window's position: the saved one, else beside a shown CraftProfit window, else

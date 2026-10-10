@@ -1265,3 +1265,36 @@ H.test("every window keeps the least height the border needs", function()
     C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
     H.eq(T.ns.Window.frame().height, 2000)
 end)
+
+H.test("besidePosition measures a window from its left edge and width when the client gives no right edge", function()
+    local T = boot()
+    local C = T.ns.Controller
+    T.ns.PinnedWindow.show()
+    local pinned = T.ns.PinnedWindow.frame()
+    pinned.GetRight = function() return nil end
+    pinned.GetLeft = function() return 200 end
+    pinned.GetWidth = function() return 396 end
+    pinned.GetTop = function() return nil end
+    pinned.GetBottom = function() return 300 end
+    pinned.GetHeight = function() return 400 end
+    H.eq({ C.besidePosition(nil) }, { 602, 700 })
+    -- Nothing measurable at all: no position, the caller keeps its default.
+    pinned.GetLeft = function() return nil end
+    H.eq(C.besidePosition(nil), nil)
+end)
+
+H.test("the main window opens beside a shown CraftProfit window even with the trade window open, else beside the trade window", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local main = T.ns.Window.frame()
+    recordPoints(main)
+    local trade = W.frame()
+    T.ns.Trade.frame = function() return trade end
+    C.showMainWindow()
+    H.eq(lastPoint(main), { "TOPLEFT", trade, "TOPRIGHT", 6, 0 })
+    T.ns.Window.hide()
+    T.ns.PinnedWindow.show()
+    measure(T.ns.PinnedWindow.frame(), 200, 700, 396)
+    C.showMainWindow()
+    H.eq(lastPoint(main), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 602, 700 })
+end)

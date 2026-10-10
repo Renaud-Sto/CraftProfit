@@ -190,19 +190,22 @@ H.test("a button is a UIPanelButtonTemplate 22 px high that fires onClick, not w
     H.eq(b.text, "Search")
 end)
 
-H.test("a button label never wraps", function()
+H.test("a button label never wraps and spans the button minus 8 px on each side", function()
     local _, Native, env = boot()
     local label = W.frame()
     local wrap
+    local points = {}
     label.SetWordWrap = function(_, v) wrap = v end
+    label.SetPoint = function(_, point, rel, relPoint, x, y) points[#points + 1] = { point, rel, relPoint, x, y } end
     local create = env.CreateFrame
     env.CreateFrame = function(kind, name, parent, template)
         local f = create(kind, name, parent, template)
         if template == "UIPanelButtonTemplate" then f.Text = label end
         return f
     end
-    Native.button(nil, "A label far too long for a small button", { width = 40 })
+    local b = Native.button(nil, "A label far too long for a small button", { width = 40 })
     H.eq(wrap, false)
+    H.eq(points, { { "LEFT", b, "LEFT", 8, 0 }, { "RIGHT", b, "RIGHT", -8, 0 } })
 end)
 
 H.test("a check box is a UICheckButtonTemplate whose click reports the state the client set", function()
@@ -393,7 +396,7 @@ end)
 
 H.test("a panel header can be made clickable with one Button at the panel's level", function()
     local _, Native, env = boot()
-    local made = recordFrames(env)
+    recordFrames(env)
     local create = env.CreateFrame
     env.CreateFrame = function(...)
         local f = create(...)
@@ -413,7 +416,7 @@ H.test("a panel header can be made clickable with one Button at the panel's leve
     H.eq(again, hit)
     hit.scripts.OnClick(hit)
     H.eq(clicks, 11)
-    H.truthy(#made > 0)
+    H.eq(hit.createParent, p.head)
 end)
 
 H.test("the header strip uses the variant chosen before the panel was built", function()
@@ -550,7 +553,7 @@ end)
 
 H.test("a clickable tile is a Button that fires, not on the click that ends a drag", function()
     local _, Native, env = boot()
-    local made = recordFrames(env)
+    recordFrames(env)
     local tile = Native.tile(nil, 110, 52)
     H.eq(tile.hit, nil)
     local clicks = 0
@@ -566,7 +569,7 @@ H.test("a clickable tile is a Button that fires, not on the click that ends a dr
     hit.scripts.OnDragStop(hit)
     hit.scripts.OnClick(hit)
     H.eq(clicks, 1)
-    H.truthy(#made > 0)
+    H.eq(hit.createParent, tile.frame)
 end)
 
 H.test("a tile hover lights it up and showIcon shows the magnifier only when one was found", function()
@@ -717,4 +720,60 @@ H.test("the demo money line uses the client's coin string when it has one", func
         if type(rawget(fs, "text")) == "string" and fs.text:find("Best price", 1, true) then found = fs.text end
     end
     H.eq(found, "Best price: <212900>")
+end)
+
+H.test("a check box with maxWidth caps its label and its hit area", function()
+    local _, Native, env = boot()
+    local label = W.frame()
+    label.GetStringWidth = function() return 300 end
+    local width, wrap, insets
+    label.SetWidth = function(_, w) width = w end
+    label.SetWordWrap = function(_, v) wrap = v end
+    local create = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        if template == "UICheckButtonTemplate" then
+            f.Text = label
+            f.SetHitRectInsets = function(_, l, r, t, b) insets = { l, r, t, b } end
+        end
+        return f
+    end
+    Native.check(nil, "A very long label that would run off the panel", nil, 120)
+    H.eq(width, 120)
+    H.eq(wrap, false)
+    H.truthy(insets[2] <= -120)
+    H.truthy(insets[2] > -300)
+    -- Without maxWidth the label keeps its natural width.
+    width = nil
+    Native.check(nil, "x")
+    H.eq(width, nil)
+end)
+
+H.test("the tile magnifier sits above the texts and the label stops short of it while shown", function()
+    local _, Native, env = boot()
+    local levels = 0
+    local create = env.CreateFrame
+    env.CreateFrame = function(...)
+        local f = create(...)
+        levels = levels + 1
+        f.level = 10 + levels
+        f.GetFrameLevel = function(self) return rawget(self, "level") end
+        f.SetFrameLevel = function(self, l) self.level = l end
+        return f
+    end
+    local tile = Native.tile(nil, 110, 52)
+    local rights = {}
+    tile.label.SetPoint = function(_, point, _, _, x) if point == "TOPRIGHT" then rights[#rights + 1] = x end end
+    local hit = tile:onClick(function() end)
+    H.eq(hit:GetFrameLevel(), tile.face:GetFrameLevel() + 1)
+    knownAtlases(env)
+    tile:showIcon(true)
+    H.eq(rights[#rights], -(6 + Native.TILE_ICON + 4))
+    tile:showIcon(false)
+    H.eq(rights[#rights], -Native.TILE_PAD)
+end)
+
+H.test("the window inset constants match the template anchors once everything is hidden", function()
+    local _, Native = boot()
+    H.eq({ Native.INSET_LEFT, Native.INSET_TOP, Native.INSET_RIGHT, Native.INSET_BOTTOM }, { 9, 24, 6, 4 })
 end)

@@ -164,8 +164,7 @@ local function buildPage()
     page:SetPoint("BOTTOMRIGHT", content, "BOTTOMRIGHT", -pad, pad)
     builtWith = KitDemo.header .. " " .. KitDemo.tile
 
-    -- The inset spans the window but for its left (9) and right (6) borders.
-    local inner = WIDTH - 9 - 6 - pad * 2
+    local inner = WIDTH - Native.INSET_LEFT - Native.INSET_RIGHT - pad * 2
     local tileW = math.floor((inner - 16) / 3)
     local specs = {
         { label = "AH (NET)", value = "3g 24s", best = true },
@@ -222,8 +221,8 @@ local function buildPage()
         panel.frame:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, offsets[i + 1])
     end
     line:SetPoint("TOPLEFT", page, "TOPLEFT", 4, offsets[4])
-    -- Window = title bar and attic (24) + page + its padding + the inset's bottom (4).
-    native:SetHeight(24 + total + pad * 2 + 4)
+    -- Window = what lies above the inset + page + its padding + what lies below the inset.
+    native:SetHeight(Native.INSET_TOP + total + pad * 2 + Native.INSET_BOTTOM)
 end
 
 local function describe()

@@ -150,6 +150,7 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Clicking the title prints `title clicked`; hovering it lights the title up. Clicking the first tile prints `tile clicked`.
 - [ ] The window drags from the title bar and from the body (also from the first tile); a drag that ends on the title or the tile prints nothing.
 - [ ] The red cross closes it, and so does Escape (a second Escape does not touch other windows). With the cursor in the crafts box, Escape or Enter first releases the box.
+- [ ] In combat, click the red cross of the demo window and note what happens (it may do nothing in combat; report it either way, and whether Escape works then).
 - [ ] Clicking the words of the check box toggles it like the box itself, with the game's click sound; the disabled button does nothing.
 - [ ] The content starts right under the title bar (no empty band of rock between the title and the inset) and nothing covers the close button.
 - [ ] `/cp kitdemo b a` and `/cp kitdemo c b` rebuild the window with another header strip and tile background, without `/reload`; `/cp kitdemo` alone reopens the last choice; `/cp kitdemo x` prints one line and changes nothing.

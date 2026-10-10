@@ -4,8 +4,11 @@
 -- ns.Kit until the windows move over (see docs/superpowers/specs/2026-10-10-native-ui-design.md).
 --
 -- Rules every function here keeps:
--- * Templated frames are created with a nil parent, then SetParent: the gamepad navigation
---   hooks CreateFrame and would run tainted when the parent sits under an open Blizzard panel.
+-- * A templated frame that could sit under a Blizzard panel (the window, buttons, check
+--   boxes, inputs: callers may parent them anywhere) is created with a nil parent, then
+--   SetParent: the gamepad navigation hooks CreateFrame and would run tainted when the
+--   parent sits under an open Blizzard panel. The insets of panels and tiles are created
+--   with their own frame as parent, which is never a Blizzard panel.
 -- * Frames made from a template start shown and unanchored: the window is hidden here and
 --   every caller anchors what it gets.
 -- * Template internals (Inset, TitleContainer, CloseButton, Text, the ButtonFrameTemplate_*
@@ -31,6 +34,12 @@ Native.TITLE_H = 20
 -- Room kept on each side of the title: the close button is 24 px wide at TOPRIGHT (-2, 1)
 -- (Camelot override), plus a 2 px gap. Kept on both sides so the title stays centred.
 Native.CLOSE_ROOM = 28
+-- Edges of the window's inset (`window.content`) once attic, portrait and button bar are
+-- hidden: TOPLEFT (INSET_LEFT, -INSET_TOP), BOTTOMRIGHT (-INSET_RIGHT, INSET_BOTTOM).
+Native.INSET_LEFT = 9
+Native.INSET_RIGHT = 6
+Native.INSET_TOP = 24
+Native.INSET_BOTTOM = 4
 Native.TITLE_ICON = 14
 Native.SEARCH_ATLAS = "common-search-magnifyingglass"
 -- Space between a button's edge and its label, so a long label is cut before the border.
@@ -305,7 +314,8 @@ end
 -- The game's check box with its label on the right. Clicking the label toggles it (the hit
 -- area is widened over the label, as the game's own options do). `onToggle(checked)` (also
 -- settable later as `check.onToggle`) runs after a player's click, with the game's sound.
-function Native.check(parent, text, onToggle)
+-- `maxWidth` (optional): the label never gets wider (cut, not wrapped), nor does the hit area.
+function Native.check(parent, text, onToggle, maxWidth)
     local c = CreateFrame("CheckButton", nil, nil, "UICheckButtonTemplate")
     c:SetParent(parent)
     c:SetSize(Native.CHECK_SIZE, Native.CHECK_SIZE)
@@ -316,6 +326,10 @@ function Native.check(parent, text, onToggle)
     end
     c.label = label
     c.onToggle = onToggle
+    if type(maxWidth) == "number" then
+        label:SetWidth(maxWidth)
+        label:SetWordWrap(false)
+    end
     -- A CheckButton flips its own state before OnClick: read it, never flip it again.
     c:SetScript("OnClick", function(self)
         local checked = self:GetChecked() and true or false
@@ -329,6 +343,7 @@ function Native.check(parent, text, onToggle)
         label:SetText(value or "")
         local width = naturalWidth(label)
         width = type(width) == "number" and width or 0
+        if type(maxWidth) == "number" then width = math.min(width, maxWidth) end
         self:SetHitRectInsets(0, -(width + CHECK_LABEL_GAP), 0, 0)
     end
     c:SetChecked(false)
@@ -553,7 +568,8 @@ function Native.tile(parent, width, height)
         tile.outline = goldOutline(face)
     end
 
-    tile.label = face:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    -- White, so a gold tag ("beta") stands out from it.
+    tile.label = face:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     tile.label:SetPoint("TOPLEFT", f, "TOPLEFT", Native.TILE_PAD, -8)
     tile.label:SetPoint("TOPRIGHT", f, "TOPRIGHT", -Native.TILE_PAD, -8)
     tile.label:SetJustifyH("LEFT")
@@ -608,6 +624,9 @@ function Native.tile(parent, width, height)
         if not self.hit then
             local hit = CreateFrame("Button", nil, f)
             hit:SetAllPoints(f)
+            -- Above `face`, so the magnifier draws over the texts, never under them.
+            local level = face:GetFrameLevel()
+            if type(level) == "number" then hit:SetFrameLevel(level + 1) end
             local hover = face:CreateTexture(nil, "BACKGROUND")
             hover:SetAllPoints(face)
             hover:SetTexture(HOVER_FILE)
@@ -633,7 +652,11 @@ function Native.tile(parent, width, height)
 
     function tile:showIcon(show)
         if not self.icon then return end
-        if show and Native.searchIcon(self.icon) then self.icon:Show() else self.icon:Hide() end
+        local shown = show and Native.searchIcon(self.icon)
+        self.icon:SetShown(shown and true or false)
+        -- While the magnifier shows, the label stops short of it (cut, not drawn under it).
+        local right = shown and (6 + Native.TILE_ICON + 4) or Native.TILE_PAD
+        self.label:SetPoint("TOPRIGHT", f, "TOPRIGHT", -right, -8)
     end
     return tile
 end

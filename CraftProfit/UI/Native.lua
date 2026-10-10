@@ -151,6 +151,23 @@ function Native.searchIcon(texture)
     return ok and applied == true
 end
 
+-- Front -----------------------------------------------------------------------------
+
+-- Brings the Native.window holding `widget` (or `widget` itself) to the front of its strata,
+-- children included. Walks up the parents; does nothing outside one of our windows.
+function Native.raiseWindow(widget)
+    local f = widget
+    for _ = 1, 30 do
+        if type(f) ~= "table" then return end
+        if rawget(f, "isNativeWindow") == true then
+            if type(f.Raise) == "function" then f:Raise() end
+            return
+        end
+        if type(f.GetParent) ~= "function" then return end
+        f = f:GetParent()
+    end
+end
+
 -- Drag ----------------------------------------------------------------------------
 
 -- A button takes the mouse, so a press on it no longer reaches the window under it: make a
@@ -159,7 +176,10 @@ end
 -- of a drag to the next press, and click handlers return early while it is.
 function Native.forwardDrag(button, window)
     button:RegisterForDrag("LeftButton")
-    button:HookScript("OnMouseDown", function() button.dragged = false end)
+    button:HookScript("OnMouseDown", function()
+        button.dragged = false
+        Native.raiseWindow(window)
+    end)
     button:SetScript("OnDragStart", function()
         button.dragged = true
         window:StartMoving()
@@ -220,7 +240,14 @@ function Native.window(name, title, opts)
     f:SetParent(UIParent)
     f:Hide()
     f:SetSize(opts.width or 372, Native.windowHeight(opts.height or 200))
-    f:SetFrameStrata("MEDIUM")
+    -- HIGH: above the game's HUD panels (the Cooldown Manager sits in MEDIUM). Toplevel and
+    -- raised on show and on any press inside it, so the window clicked last is drawn whole
+    -- above the others (the template's border pieces use high fixed frame levels).
+    f:SetFrameStrata("HIGH")
+    if type(f.SetToplevel) == "function" then f:SetToplevel(true) end
+    f.isNativeWindow = true
+    f:HookScript("OnShow", function(self) Native.raiseWindow(self) end)
+    f:HookScript("OnMouseDown", function(self) Native.raiseWindow(self) end)
     f:SetClampedToScreen(true)
     f:SetMovable(true)
     f:EnableMouse(true)
@@ -363,6 +390,7 @@ function Native.button(parent, text, opts)
         label:SetWordWrap(false)
     end
     b.onClick = opts.onClick
+    b:HookScript("OnMouseDown", function(self) Native.raiseWindow(self) end)
     -- The template has no OnClick of its own, so SetScript replaces nothing of Blizzard's.
     b:SetScript("OnClick", function(self, ...)
         if type(self.IsEnabled) == "function" and self:IsEnabled() == false then return end

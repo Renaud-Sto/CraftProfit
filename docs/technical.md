@@ -2,7 +2,7 @@
 
 [Back to the README](../README.md) · [User guide](user-guide.md) · [Contributing](../CONTRIBUTING.md)
 
-Target: **World of Warcraft: Forever** beta, build 1.60.1, `## Interface: 16001`. The client uses the Mainline (Midnight-style) UI and API set on a Classic base, Lua 5.1, and the *secret values* restrictions. The addon is about 3,000 lines of Lua and has no library dependency.
+Target: **World of Warcraft: Forever** beta, build 1.60.1, `## Interface: 16001`. The client uses the Mainline (Midnight-style) UI and API set on a Classic base, Lua 5.1, and the *secret values* restrictions. The addon is about 7,000 lines of Lua (locales and data tables included) and has no library dependency.
 
 Contents: [Design principles](#design-principles) · [Architecture](#architecture) · [Data flow](#data-flow) · [Price model](#price-model) · [Price history](#price-history) · [Evaluation](#evaluation) · [Saved variables](#saved-variables) · [Game API used](#game-api-used) · [Measured behaviour of the beta](#measured-behaviour-of-the-beta) · [Constraints that shape the code](#constraints-that-shape-the-code) · [Localization](#localization) · [Testing](#testing) · [Probe addon](#probe-addon) · [Packaging](#packaging)
 
@@ -38,12 +38,12 @@ Files load in the order of `CraftProfit/CraftProfit.toc`. Each file receives the
 | `Present.lua` | `ns.Present` | Turns a result into display text only: the `banner`, the three `tiles`, the `materials` panel, the cost lines and the older `lines`/`verdict` | no |
 | `AHAdapter.lua` | `ns.AH` | Auction house: scan, targeted search, search box helper | `C_AuctionHouse`, auction house frame |
 | `TradeAdapter.lua` | `ns.Trade` | Profession window: selected recipe, raw recipe data, difficulty, known professions | `C_TradeSkillUI`, professions API |
-| `UI/Window.lua` | `ns.Window` | The main window, on the native kit (`ns.Native`): banner, tiles, Materials and Options panels, and the host of the pinned list | frames |
-| `UI/LevelingUI.lua` | `ns.LevelingUI` | The leveling window, on the native kit (`Native.window`, 396 px): strip (profession and sort buttons), prices age line, a `NEXT POINT` panel of 12 `Native.listRow` rows with a `Native.scrollbar`, grey-recipes `Native.check` | frames |
-| `UI/PinnedWindow.lua` | `ns.PinnedWindow` | The pinned recipes window (`CraftProfitPinnedWindow`, `Native.window`, 396 px like the leveling window, in `UISpecialFrames`), built on first open: full-width sort button, age line, a `PINNED RECIPES` panel of 12 `Native.listRow` rows with a `Native.scrollbar` and an unpin "x" (plain `Button` 16x16) per row, empty text. Fed by `Controller.pinsData()`; values from `PinsUI.rowValue`. `refresh` does nothing while hidden or unbuilt | frames, `GameTooltip` |
-| `UI/PinsUI.lua` | `ns.PinsUI` | Pinned list, on the native kit: a `Native.panel` `Pinned recipes` with the sort button (`Native.button`, 20 px) in its header, 6 visible `Native.listRow` rows with a `Native.scrollbar`, the Search prices, Scan AH and Leveling buttons (`Native.button`) and the status line. Exports `orderedPins` and `rowValue(item, byPoint)` (value text and colour), shared with the pinned window | frames |
 | `UI/Layout.lua` | `ns.Layout` | Pure layout maths shared by the native windows: `panelHeight`, `stack`, `fitSize`, `scrollThumb`, `scrollOffsetAt`, `scrollGrab`, and the constants `HEAD_H` (22), `BODY_PAD` (4), `GAP` (8), `SCROLL_MIN_THUMB` (16). Loaded before `UI/Native.lua` | no |
 | `UI/Native.lua` | `ns.Native` | Widgets on Blizzard's own templates and atlases: `window` (`ButtonFrameTemplate`), `panel`, `tile`, `button`, `check`, `input`, `searchIcon`, `forwardDrag`, `banner` (result banner tinted by the result kind), `listRow` (clickable list row), `scrollbar` (the game's thin scroll bar atlases), with switchable header strip and tile variants: `Native.registry` holds every panel and tile built, and `setHeaderVariant` / `setTileVariant` repaint them live (a tile builds both cards and shows one); `appearance()` gives the keys in use. Every window is on it (main window, pinned list, leveling window) | frames |
+| `UI/Window.lua` | `ns.Window` | The main window, on the native kit (`ns.Native`): banner, tiles, Materials and Options panels, and the host of the pinned list | frames |
+| `UI/PinsUI.lua` | `ns.PinsUI` | Pinned list, on the native kit: a `Native.panel` `Pinned recipes` with the sort button (`Native.button`, 20 px) in its header, 6 visible `Native.listRow` rows with a `Native.scrollbar`, the Search prices, Scan AH and Leveling buttons (`Native.button`) and the status line. Exports `orderedPins` and `rowValue(item, byPoint)` (value text and colour), shared with the pinned window | frames |
+| `UI/LevelingUI.lua` | `ns.LevelingUI` | The leveling window, on the native kit (`Native.window`, 396 px): strip (profession and sort buttons), prices age line, a `NEXT POINT` panel of 12 `Native.listRow` rows with a `Native.scrollbar`, grey-recipes `Native.check` | frames |
+| `UI/PinnedWindow.lua` | `ns.PinnedWindow` | The pinned recipes window (`CraftProfitPinnedWindow`, `Native.window`, 396 px like the leveling window, in `UISpecialFrames`), built on first open: full-width sort button, age line, a `PINNED RECIPES` panel of 12 `Native.listRow` rows with a `Native.scrollbar` and an unpin "x" (plain `Button` 16x16) per row, empty text. Fed by `Controller.pinsData()`; values from `PinsUI.rowValue`. `refresh` does nothing while hidden or unbuilt | frames, `GameTooltip` |
 | `UI/OptionsUI.lua` | `ns.OptionsUI` | The options window (`CraftProfitOptionsWindow`, 420 px so the segmented header buttons fit their Spanish and French labels, in `UISpecialFrames`), built on first open: APPEARANCE (segmented `Native.button` rows, the chosen one lit with `LockHighlight`, calling `Controller.setAppearance`), MINIMAP (`Native.check`, `Controller.setMinimapHidden`), WINDOWS (two rows of half-width `Native.button`s: main and leveling, then pinned recipes centred), CONTROLS (`OptionsUI.LINE_COUNT` = 14 lines, then `LIST_BOTTOM` = 8 px of air of `GameFontHighlightSmall`, 14 px each, never wrapped: the two minimap clicks and each command, gold head and white description via `Colors.escape`, locale keys `OPTIONS_CLICK_*` and `CMD_*`; the panel is `Layout.panelHeight(14, 14, 8)`). Labels are checked in the tests against `Layout.textWidth` at `OptionsUI.CHAR_W` = 7 px per letter for buttons (calibrated in game: "Montée de métier" did not fit 107 px) and `SMALL_CHAR_W` = 6 px for the list. No dropdown, `Menu` or `Settings` API | frames |
 | `UI/MinimapButton.lua` | `ns.MinimapButton` | The minimap button without a library (LibDBIcon convention: 31x31, MEDIUM, level 8, nil parent then `SetParent(Minimap)`): pure `angleFromCursor`, `offset` (round and square minimaps), `radius`; `create` (never while hidden), `apply`; `OnUpdate` only during a drag; left click toggles the options window, right click the pinned recipes window | frames, `Minimap`, `GetCursorPosition`, `GameTooltip` |
 | `UI/KitDemo.lua` | `ns.KitDemo` | Developer demo window (not in the user help): `/cp kitdemo [header [tile]]` shows the native widgets with a choice of header strip and tile card | frames |
@@ -91,7 +91,7 @@ Dependencies point one way: `Core`, `Data`, `Util`, `Format` know nothing of the
 
 - A listing becomes `{ unit, qty }`. A stack row of the scan has its stack price divided by the stack size (`AH.PER_UNIT_REPLICATE = false`, measured).
 - `Prices.summarize(listings, n)` sorts by unit price and takes the **median unit price of the n cheapest units** (`n = 5` by default, `settings.medianN`), plus the total volume. Quantities are handled arithmetically, so a listing of one billion units costs the same as one of one unit.
-- `Prices.store` and `Prices.merge` write compact rows `{ unit, volume, time }` into `CraftProfitDB.prices`; `Prices.get` returns the unit price and its age, and `nil` for the age when the clock cannot be trusted.
+- `Prices.store` and `Prices.merge` write compact rows `{ unit, volume, time }` into the current market's price table (`CraftProfitDB.markets[key].prices`, see [Saved variables](#saved-variables)); `Prices.get` returns the unit price and its age, and `nil` for the age when the clock cannot be trusted.
 - `DB.prune` removes prices older than 14 days at load.
 - Selling uses a commission of 5 % (`settings.cut`, measured). The deposit is ignored: it is refunded when an item sells.
 
@@ -128,8 +128,10 @@ Retention (`History.compact`): all points for 14 days, then one point per day up
 | `settings.cut` | AH commission, 0 to 0.5 (0.05) |
 | `settings.medianN` | Units in the median, 1 to 20 (5) |
 | `settings.staleAfter` | Seconds before prices show as old (3600) |
-| `settings.showPerPoint` | Cost per point enabled |
-| `settings.costExpanded` | Material detail unfolded |
+| `settings.showPerPoint` | Cost per point enabled (false) |
+| `settings.costExpanded` | Material detail unfolded (true) |
+| `settings.levelShowGrey` | Grey recipes shown in the leveling window (false) |
+| `settings.levelSort` | Leveling order, `"cost"` (default) or `"speed"` |
 | `settings.theme` | Removed with the colour themes: `DB.initAccount` deletes it from old saves |
 | `settings.window` | `{ point, x, y }` once dragged |
 | `settings.levelWindow`, `settings.optionsWindow`, `settings.pinsWindow` | `{ x, y }` of the leveling, options and pinned recipes windows once dragged; anything but two finite numbers is dropped |
@@ -137,12 +139,14 @@ Retention (`History.compact`): all points for 14 days, then one point per day up
 | `settings.minimap` | `{ hide = false, angle = 225 }`; `angle` in degrees, wrapped into [0, 360) by `DB.angle`, anything not finite becomes 225 |
 | `markets["<realm>-<faction>"]` | One price table per market (see below) |
 | `tracked` | Up to 15 tracked recipes `{ recipe, active }` |
+| `prices`, `snapshotTime` | Prices saved before markets existed; moved into the first market used, then empty |
 
 `CraftProfitCharDB` (per character), repaired by `DB.initChar`:
 
 | Key | Content |
 | --- | --- |
-| `known` | Learned recipes per profession for the leveling list |
+| `known` | Learned recipes per profession for the leveling list (8 professions, 400 recipes each at most) |
+| `knownCurrent` | Key of the profession the leveling window shows |
 | `pins` | Up to 12 normalised recipes `{ recipeID, name, difficulty, outputItemID, outputQty, reagents = { { itemID, qty } } }` |
 | `sortMode` | `"net"` or `"point"` |
 
@@ -157,7 +161,9 @@ Every field is validated on load (finite numbers, ranges, anchor names, array ho
 | Auction house | `C_AuctionHouse.ReplicateItems`, `GetNumReplicateItems`, `GetReplicateItemInfo`, `SendSearchQuery`, `MakeItemKey`, `GetNumCommoditySearchResults`, `GetCommoditySearchResultInfo`, `GetNumItemSearchResults`, `GetItemSearchResultInfo`, `IsThrottledMessageSystemReady`; `Enum.AuctionHouseSortOrder`; `AuctionHouseFrame` (`SearchBar`, `CommoditiesBuyFrame`, `SetDisplayMode`) and `AuctionHouseFrameDisplayMode` |
 | Professions | `C_TradeSkillUI.GetRecipeInfo`, `GetRecipeSchematic`; `ProfessionsFrame.CraftingPage.SchematicForm:GetRecipeInfo`; `GetProfessions`, `GetProfessionInfo`, `IsPlayerSpell`; classic fallbacks `GetTradeSkill*` |
 | Items | `C_Item.GetItemInfo`, `C_Item.RequestLoadItemDataByID` |
-| Misc | `GetLocale`, `GetTime`, `time`, `GetCoinTextureString`, `issecretvalue`, `C_Timer` |
+| Market | `GetRealmID`, `GetNormalizedRealmName`, `GetRealmName`, `UnitFactionGroup`, `C_GameRules.IsHardcoreActive` |
+| Windows and minimap | `CreateFrame` with Blizzard templates, `UISpecialFrames`, `ButtonFrameTemplate_*`, `C_Texture.GetAtlasInfo`, `GameTooltip`, `Minimap`, `GetMinimapShape`, `GetCursorPosition`, `IsMouseButtonDown`, `GetFileIDFromPath`; TOC `AddonCompartmentFunc` |
+| Misc | `GetLocale`, `GetTime`, `time`, `GetMoneyString` (Forever has no `GetCoinTextureString`), `issecretvalue`, `C_Timer` |
 
 Events: `ADDON_LOADED`, `ITEM_DATA_LOAD_RESULT`, `TRADE_SKILL_LIST_UPDATE`, `ADDON_ACTION_BLOCKED`, `ADDON_ACTION_FORBIDDEN`, `AUCTION_HOUSE_SHOW`, `AUCTION_HOUSE_CLOSED`, `COMMODITY_SEARCH_RESULTS_UPDATED`, `ITEM_SEARCH_RESULTS_UPDATED`, `REPLICATE_ITEM_LIST_UPDATE`.
 
@@ -194,10 +200,10 @@ The suite covers the pure modules, the adapters with faked game APIs, saved vari
 
 ## Probe addon
 
-`probe/CraftProfitProbe` is a throwaway addon (not shipped) that prints what the real client returns: `/cpp api | locale | item | deposit | search | replicate | trade | prof | ahui | qty | skin | icon | log | clear`. It mirrors its output, CraftProfit's chat lines and Lua errors into the `CraftProfitProbeLog` saved variable, written on `/reload`, so results can be read from `WTF/Account/<id>/SavedVariables/CraftProfitProbe.lua`. `/cpp skin` reports what the first, hand-painted UI kit (since removed) depended on: which gradient form works (`color`, `rgb` or neither), the real font path, and the pixel widths of the widest amounts. `/cpp icon` reports where the game's search magnifier comes from: the keys of the AH search box that mention an icon, the `GetAtlas`, `GetTexture` and `GetTexCoord` of `searchIcon` / `SearchIcon`, and `C_Texture.GetAtlasInfo` for `common-search-magnifyingglass`, `search-icon` and `auctionhouse-icon-search` (open the AH once first). Use it to settle an API question before coding against it.
+`probe/CraftProfitProbe` is a throwaway addon (not shipped) that prints what the real client returns: `/cpp api | locale | item | deposit | search | replicate | trade | prof | ahui | qty | ruleset | known | skin | icon | log | clear`, and `/cppn` (`probe/CraftProfitProbe/Native.lua`), which shows Blizzard's own templates and atlases in one window and measures them (`/cppn list | btn | atlas | money`). It mirrors its output, CraftProfit's chat lines and Lua errors into the `CraftProfitProbeLog` saved variable, written on `/reload`, so results can be read from `WTF/Account/<id>/SavedVariables/CraftProfitProbe.lua`. `/cpp skin` reports what the first, hand-painted UI kit (since removed) depended on: which gradient form works (`color`, `rgb` or neither), the real font path, and the pixel widths of the widest amounts. `/cpp icon` reports where the game's search magnifier comes from: the keys of the AH search box that mention an icon, the `GetAtlas`, `GetTexture` and `GetTexCoord` of `searchIcon` / `SearchIcon`, and `C_Texture.GetAtlasInfo` for `common-search-magnifyingglass`, `search-icon` and `auctionhouse-icon-search` (open the AH once first). Use it to settle an API question before coding against it.
 
 ## Packaging
 
 The repository contains the addon in `CraftProfit/`, so release tooling must treat that folder as the top level. `CraftProfit/.pkgmeta` configures the BigWigs packager. See [curseforge/submission-checklist.md](curseforge/submission-checklist.md) for the release procedure.
 
-The design history is in [superpowers/](superpowers/): the [design spec](superpowers/specs/2026-10-08-craftprofit-design.md) (in French) and the [implementation plan](superpowers/plans/2026-10-08-craftprofit.md).
+The design history is in [superpowers/](superpowers/): the first [design spec](superpowers/specs/2026-10-08-craftprofit-design.md) (in French) and [implementation plan](superpowers/plans/2026-10-08-craftprofit.md), then the specs and plans of the later steps (native UI, pinned window, options window).

@@ -1,6 +1,6 @@
-# CurseForge project page (first draft)
+# CurseForge project page
 
-Text to paste into the CurseForge project, in the order CurseForge shows it. CurseForge requires **English** for the name, summary and description; translations go *after* the English text. Replace the bracketed items before publishing.
+Text to paste into the CurseForge project, in the order CurseForge shows it. CurseForge requires **English** for the name, summary and description; translations go *after* the English text.
 
 ## Name
 
@@ -32,8 +32,11 @@ Select a recipe you know and a small window appears next to your profession wind
 - **Auction house, vendor and disenchant compared**, best option highlighted, net result of the craft.
 - **Cost per skill point** (optional): what each point really costs, from the recipe colour; shown as a gain when the crafts pay for themselves.
 - **Several crafts at once**: multiply a recipe by 1 to 9999.
-- **Pinned recipes** (12 per character), sorted by profit or by cost per point, to decide what to craft next.
-- **Auction house tools**: *Search prices* prices every pinned recipe; *Scan AH* reads the whole auction house; click a reagent to search it with the quantity already filled in. CraftProfit never buys anything for you.
+- **Leveling window**: every recipe you know in a profession, ranked by the cost of the next skill point (or by speed).
+- **Pinned recipes** (12 per character), sorted by profit or by cost per point, to decide what to craft next; at the auction house and anywhere in their own window, with the last known prices.
+- **Auction house tools**: *Search prices* prices every pinned recipe; *Scan AH* reads the whole auction house; click a reagent to search it with the quantity already filled in, or the crafted item to see how many are for sale. CraftProfit never buys anything for you.
+- **Price history** (recording): tick *Track history* on up to 15 recipes to keep their prices scan after scan. Graphs are planned.
+- **Options window and minimap button**: pick the look of the windows, open the other windows, see every command.
 - **Standalone**: no Auctionator or other addon needed.
 - **English, French and Spanish**, following the game language.
 
@@ -45,7 +48,7 @@ Select a recipe you know and a small window appears next to your profession wind
 
 ### Slash commands
 
-`/cp` or `/craftprofit`: `show`, `hide`, `reset`, `scan`, `history`, `market`, `level`, `locale <code>`, `selftest`.
+`/cp` or `/craftprofit`: `show`, `hide`, `reset`, `options`, `pins`, `level`, `minimap`, `scan`, `history`, `market`, `locale <code>`, `selftest`. The minimap button opens the options (left click) and the pinned recipes (right click).
 
 ### Compatibility
 
@@ -75,7 +78,7 @@ Made for **World of Warcraft: Forever** (beta build 1.60.1, Interface 16001). No
 
 ## Gallery (needed before submission)
 
-Prepare 3 to 5 screenshots of the real client, after the interface rework:
+Prepare 3 to 5 screenshots of the real client:
 
 1. A recipe selected in the profession window with the CraftProfit window beside it.
 2. The material detail unfolded and the best option highlighted.

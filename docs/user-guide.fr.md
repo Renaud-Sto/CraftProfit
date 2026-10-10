@@ -4,7 +4,7 @@
 
 CraftProfit vous dit ce que coûte vraiment une recette de métier à l'hôtel des ventes, et ce qu'il faut faire de l'objet obtenu. Ce guide explique chaque partie de la fenêtre, comment chaque chiffre est calculé, et ce que l'addon ne peut pas savoir.
 
-Sommaire : [La fenêtre](#la-fenêtre) · [À l'hôtel des ventes](#à-lhôtel-des-ventes) · [Comment les chiffres sont calculés](#comment-les-chiffres-sont-calculés) · [Options et commandes](#options-et-commandes) · [Langues](#langues) · [Limites connues](#limites-connues) · [FAQ et dépannage](#faq-et-dépannage)
+Sommaire : [La fenêtre](#la-fenêtre) · [À l'hôtel des ventes](#à-lhôtel-des-ventes) · [Comment les chiffres sont calculés](#comment-les-chiffres-sont-calculés) · [Fenêtre d'options](#fenêtre-doptions) · [Options et commandes](#options-et-commandes) · [Langues](#langues) · [Limites connues](#limites-connues) · [FAQ et dépannage](#faq-et-dépannage)
 
 ## La fenêtre
 
@@ -35,7 +35,7 @@ Pour de grandes quantités, le total est une estimation : le prix d'un composant
 
 ### Suivre l'historique
 
-La case **Suivre l'historique** (à côté de Crafts) fait garder à CraftProfit les prix des composants et du résultat de cette recette au fil du temps. Jusqu'à 15 recettes peuvent être suivies, indépendamment de la liste des épingles. Un point est enregistré après chaque scan et chaque recherche de prix qui touche un objet de la recette, tant que tous les prix nécessaires sont connus. Décocher la case met l'enregistrement en pause et garde ce qui a été enregistré. `/cp history` liste les recettes suivies et `/cp history remove <n>` en supprime une avec son historique. Les prix sont gardés par ruleset (le « royaume » de la bêta) et par faction : l'historique d'un marché ne se mélange jamais avec un autre. Une vue de l'historique (graphiques, « moins cher que d'habitude ») est prévue ; pour l'instant, les données sont seulement collectées.
+La case **Suivre l'historique** (à côté de Crafts) fait garder à CraftProfit les prix des composants et du résultat de cette recette au fil du temps. Jusqu'à 15 recettes peuvent être suivies, indépendamment de la liste des épingles. Un point est enregistré après chaque scan et chaque recherche de prix qui touche un objet de la recette, tant que tous les prix nécessaires sont connus. Décocher la case met l'enregistrement en pause et garde ce qui a été enregistré. `/cp history` liste les recettes suivies et `/cp history remove <n>` en supprime une avec son historique. Les prix sont gardés par jeu de règles (le « royaume » de la bêta) et par faction : l'historique d'un marché ne se mélange jamais avec un autre. Une vue de l'historique (graphiques, « moins cher que d'habitude ») est prévue ; pour l'instant, les données sont seulement collectées.
 
 ### Bouton Épingler
 

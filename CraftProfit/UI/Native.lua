@@ -1,7 +1,7 @@
 -- Native widget kit: the window, buttons, check boxes and inputs drawn by Blizzard's own
 -- templates (ButtonFrameTemplate, UIPanelButtonTemplate, UICheckButtonTemplate,
--- InputBoxTemplate), so CraftProfit looks like a panel of the game. Lives beside the old
--- ns.Kit until the windows move over (see docs/superpowers/specs/2026-10-10-native-ui-design.md).
+-- InputBoxTemplate), so CraftProfit looks like a panel of the game (see
+-- docs/superpowers/specs/2026-10-10-native-ui-design.md). Layout maths: UI/Layout.lua.
 --
 -- Rules every function here keeps:
 -- * A templated frame that could sit under a Blizzard panel (the window, buttons, check
@@ -112,9 +112,18 @@ end
 
 -- Magnifier ---------------------------------------------------------------------
 
--- Gives `texture` the game's magnifier: the atlas when the client knows it, else whatever
--- Kit.searchIcon finds (the AH search box's own icon). Never guesses a file path (a missing
--- file draws a green square). Returns true when an icon was applied.
+-- The icon texture of the AH search box, when the auction house frame has one.
+local function searchBoxIcon()
+    local frame = AuctionHouseFrame
+    local bar = type(frame) == "table" and frame.SearchBar
+    local box = type(bar) == "table" and bar.SearchBox
+    if type(box) ~= "table" then return nil end
+    return box.searchIcon or box.SearchIcon
+end
+
+-- Gives `texture` the game's magnifier: the atlas when the client knows it, else the icon of
+-- the AH search box (its atlas, or its texture and coordinates). Never guesses a file path
+-- (a missing file draws a green square). Returns true when an icon was applied.
 function Native.searchIcon(texture)
     local ok, applied = pcall(function()
         local api = C_Texture
@@ -123,9 +132,19 @@ function Native.searchIcon(texture)
             texture:SetAtlas(Native.SEARCH_ATLAS)
             return true
         end
-        local Kit = ns.Kit
-        if type(Kit) == "table" and type(Kit.searchIcon) == "function" then
-            return Kit.searchIcon(texture) == true
+        local source = searchBoxIcon()
+        if type(source) == "table" then
+            local atlas = type(source.GetAtlas) == "function" and source:GetAtlas()
+            if type(atlas) == "string" and atlas ~= "" then
+                texture:SetAtlas(atlas)
+                return true
+            end
+            local file = type(source.GetTexture) == "function" and source:GetTexture()
+            if file and file ~= "" then
+                texture:SetTexture(file)
+                if type(source.GetTexCoord) == "function" then texture:SetTexCoord(source:GetTexCoord()) end
+                return true
+            end
         end
         return false
     end)
@@ -270,7 +289,7 @@ function Native.window(name, title, opts)
             icon:SetPoint("LEFT", hit, "CENTER", half + 4, 0)
         end
         -- Hidden until asked: the magnifier promises a search, which only works with the
-        -- auction house open (same contract as Kit.window).
+        -- auction house open.
         f.showTitleIcon = function(_, show)
             if show and Native.searchIcon(icon) then
                 placeIcon()
@@ -405,7 +424,7 @@ Native.HEADER_CROP = { a = { 0, 1, 0.2, 0.97 } }
 Native.headerVariant = "b"
 Native.DIVIDER_ATLAS = "perks-divider-short"
 -- The header sits this far inside the panel's inset border, on every side but the bottom;
--- the body keeps the same margin at the bottom. 2 + 22 + 4 + rows + 2 = Kit.panelHeight.
+-- the body keeps the same margin at the bottom. 2 + 22 + 4 + rows + 2 = Layout.panelHeight.
 Native.PANEL_EDGE = 2
 local PANEL_EDGE = Native.PANEL_EDGE
 local PANEL_SIDE = PANEL_EDGE + 2
@@ -462,7 +481,7 @@ end
 
 -- A section of a window: the game's dark inset as background, a header strip with a title
 -- (and an optional right-hand text in p.right), a divider under it, and a body to fill.
--- Same fields and methods as Kit.panel: frame, body, title, right, setTitle, setRows,
+-- Fields and methods: frame, body, title, right, setTitle, setRows,
 -- height, onHeaderClick. Also: inset, head, headerTextures (one per variant, each with its
 -- own atlas for good), headerBg (the one shown), headerAtlas (nil when the fallback is
 -- drawn), divider (nil when its atlas is missing). Registered for
@@ -470,7 +489,7 @@ end
 -- HEADER_VARIANTS) fixes its strip: then it is drawn once with that one and never
 -- registered (the /cp kitdemo previews, which must not repaint or outlive the real look).
 function Native.panel(parent, title, opts)
-    local Kit = ns.Kit
+    local Layout = ns.Layout
     local p = {}
     if type(opts) == "table" and opts.variant ~= nil and Native.HEADER_VARIANTS[opts.variant] then
         p.fixedVariant = opts.variant
@@ -524,14 +543,14 @@ function Native.panel(parent, title, opts)
     p.title:SetWordWrap(false)
 
     p.body = CreateFrame("Frame", nil, f)
-    p.body:SetPoint("TOPLEFT", head, "BOTTOMLEFT", 0, -Kit.BODY_PAD)
+    p.body:SetPoint("TOPLEFT", head, "BOTTOMLEFT", 0, -Layout.BODY_PAD)
     p.body:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -PANEL_EDGE, PANEL_EDGE)
 
     p.rowH = 18
     function p:setTitle(text) self.title:SetText(text or "") end
     function p:setRows(rows, rowH, extra)
         self.rowH = rowH or self.rowH
-        f:SetHeight(Kit.panelHeight(rows, self.rowH, extra))
+        f:SetHeight(Layout.panelHeight(rows, self.rowH, extra))
     end
     p.height = function() return f:GetHeight() end
     -- A button covering the header, e.g. to fold the panel. Returns it (also p.headerHit);
@@ -564,7 +583,7 @@ Native.TILE_STROKE_ATLAS = "looting_itemcard_stroke_normal"
 Native.TILE_PAD = 10
 Native.TILE_ICON = 12
 -- The value font steps down this ladder of game fonts (never SetFont with a file) until it
--- fits; the sizes are the fonts' heights, for Kit.fitSize.
+-- fits; the sizes are the fonts' heights, for Layout.fitSize.
 Native.TILE_FONTS = {
     { "GameFontNormalHuge", 20 },
     { "GameFontNormalLarge2", 18 },
@@ -615,8 +634,8 @@ local function goldOutline(frame)
     return lines
 end
 
--- A small card with a label and a large value that shrinks to fit its width. Same fields
--- and methods as Kit.tile: frame, label, value, set(spec), onClick(fn), showIcon(show),
+-- A small card with a label and a large value that shrinks to fit its width. Fields
+-- and methods: frame, label, value, set(spec), onClick(fn), showIcon(show),
 -- hit, icon, best, muted. Also: variant (the one asked for), bgAtlas (nil when the inset is
 -- drawn: variant b, or the card atlas missing), outline (the best-tile marks in use), and
 -- both structures: cardBg and cardStroke (the loot card textures), inset and goldOutline
@@ -624,7 +643,7 @@ end
 -- Native.setTileVariant calls it on every registered tile. `opts.variant` (a key of
 -- TILE_VARIANTS) fixes the card instead: drawn once with it, never registered (as panels).
 function Native.tile(parent, width, height, opts)
-    local Kit = ns.Kit
+    local Layout = ns.Layout
     local tile = { best = false, muted = false, width = width }
     if type(opts) == "table" and opts.variant ~= nil and Native.TILE_VARIANTS[opts.variant] then
         tile.fixedVariant = opts.variant
@@ -713,7 +732,7 @@ function Native.tile(parent, width, height, opts)
         self.value:SetFontObject(fonts[1][1])
         self.value:SetText(spec.value or "")
         local room = (f:GetWidth() or width or 110) - Native.TILE_PAD * 2
-        local size = Kit.fitSize(naturalWidth(self.value), sizes[1], room, sizes)
+        local size = Layout.fitSize(naturalWidth(self.value), sizes[1], room, sizes)
         if size ~= sizes[1] then
             for _, font in ipairs(fonts) do
                 if font[2] == size then self.value:SetFontObject(font[1]) end
@@ -794,7 +813,7 @@ local BANNER_TONES = { profit = "profit", loss = "loss", incomplete = "incomplet
 -- has one). Fields: frame, inset, face, label, text, value, fillTexture, edges (4 lines),
 -- fill and edge (the { r, g, b, a } applied), set(spec).
 function Native.banner(parent, height, width)
-    local Kit, Colors = ns.Kit, ns.Colors
+    local Layout, Colors = ns.Layout, ns.Colors
     local banner = { width = width }
     local f = CreateFrame("Frame", nil, parent)
     f:SetHeight(height or 52)
@@ -858,7 +877,7 @@ function Native.banner(parent, height, width)
         for i, font in ipairs(fonts) do sizes[i] = font[2] end
         self.value:SetFontObject(fonts[1][1])
         self.value:SetText(spec.value or "")
-        local size = Kit.fitSize(naturalWidth(self.value), sizes[1], Native.BANNER_VALUE_ROOM, sizes)
+        local size = Layout.fitSize(naturalWidth(self.value), sizes[1], Native.BANNER_VALUE_ROOM, sizes)
         if size ~= sizes[1] then
             for _, font in ipairs(fonts) do
                 if font[2] == size then self.value:SetFontObject(font[1]) end
@@ -890,7 +909,7 @@ end
 
 Native.ROW_SELECTED_ALPHA = 0.16
 
--- A clickable list row, same contract as Kit.listRow: a Button of `rowH` pixels in slot
+-- A clickable list row: a Button of `rowH` pixels in slot
 -- `index` of `body`, with a hidden gold "selected" tint (`row.selected`) and the game's
 -- quest highlight on hover (`row.hover`), both under whatever the caller adds. `rightInset`
 -- keeps the row clear of a scroll bar. The caller sets OnClick, and forwards drags to its
@@ -922,8 +941,8 @@ end
 
 -- The game's thin scroll bar (MinimalScrollBar, Blizzard_SharedXML): 8 px wide, track and
 -- thumb each a top cap, a middle and a bottom cap. The template itself needs a ScrollBox;
--- our lists are a few fixed rows, so we draw its atlases on our own bar and keep the kit's
--- thumb maths (Kit.scrollThumb / scrollOffsetAt / scrollGrab). No arrows: the wheel and the
+-- our lists are a few fixed rows, so we draw its atlases on our own bar and use the layout
+-- thumb maths (Layout.scrollThumb / scrollOffsetAt / scrollGrab). No arrows: the wheel and the
 -- track do the stepping.
 Native.SCROLL_W = 8
 Native.SCROLL_TRACK_ATLASES = {
@@ -992,15 +1011,15 @@ local function flatFill(frame, layer, color, alpha)
     return tex
 end
 
--- A slim scroll bar for a list that shows `visible` of `total` rows, same contract as
--- Kit.scrollbar: `bar.frame` (a Button, the track, hidden while the list fits), `bar.thumb`,
+-- A slim scroll bar for a list that shows `visible` of `total` rows:
+-- `bar.frame` (a Button, the track, hidden while the list fits), `bar.thumb`,
 -- `bar:update(total, visible, offset)` -> shown, `bar.onScroll(offset)` asked for the offset
 -- a click or a drag wants (the owner scrolls, then calls update). The owner handles the
 -- wheel. Also: trackAtlases / thumbAtlases (true when drawn from the game's atlases),
 -- trackPieces / thumbPieces ({ top, middle, bottom } textures) or trackFill / thumbFill (the
 -- flat fallback).
 function Native.scrollbar(parent, trackH)
-    local Kit, Colors = ns.Kit, ns.Colors
+    local Layout, Colors = ns.Layout, ns.Colors
     local bar = { trackH = trackH, total = 0, visible = 0, offset = 0 }
     local f = CreateFrame("Button", nil, parent)
     f:SetSize(Native.SCROLL_W, trackH)
@@ -1045,7 +1064,7 @@ function Native.scrollbar(parent, trackH)
 
     function bar:update(total, visible, offset)
         self.total, self.visible, self.offset = total, visible, offset
-        local thumbH, top = Kit.scrollThumb(total, visible, offset, self.trackH)
+        local thumbH, top = Layout.scrollThumb(total, visible, offset, self.trackH)
         if not thumbH then
             f:Hide()
             return false
@@ -1074,9 +1093,9 @@ function Native.scrollbar(parent, trackH)
     local function follow()
         local y = pointerY()
         if not y then return end
-        local thumbH = Kit.scrollThumb(bar.total, bar.visible, bar.offset, bar.trackH)
+        local thumbH = Layout.scrollThumb(bar.total, bar.visible, bar.offset, bar.trackH)
         if not thumbH then return end
-        local offset = Kit.scrollOffsetAt(bar.total, bar.visible, bar.trackH, y - grab + thumbH / 2)
+        local offset = Layout.scrollOffsetAt(bar.total, bar.visible, bar.trackH, y - grab + thumbH / 2)
         if offset ~= bar.offset and bar.onScroll then bar.onScroll(offset) end
     end
     -- OnUpdate exists only while a drag runs: no per-frame work while the bar is idle.
@@ -1099,7 +1118,7 @@ function Native.scrollbar(parent, trackH)
         if button ~= nil and button ~= "LeftButton" then return end
         local y = pointerY()
         if not y then return end
-        grab = Kit.scrollGrab(bar.total, bar.visible, bar.offset, bar.trackH, y) or 0
+        grab = Layout.scrollGrab(bar.total, bar.visible, bar.offset, bar.trackH, y) or 0
         dragging = true
         f:SetScript("OnUpdate", onUpdate)
         paintThumb()

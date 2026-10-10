@@ -8,8 +8,8 @@
 local _, ns = ...
 local L = ns.L
 local Native = ns.Native
--- Only the kit's pure layout maths (panelHeight, stack) until it moves out of Kit.
-local Kit = ns.Kit
+-- Pure layout maths (stack).
+local Layout = ns.Layout
 
 local OptionsUI = {}
 ns.OptionsUI = OptionsUI
@@ -96,7 +96,7 @@ local function layout()
     local order = { p.appearance, p.minimap, p.windows, p.controls }
     local heights = {}
     for i, panel in ipairs(order) do heights[i] = panel:height() end
-    local offsets, total = Kit.stack(heights, GAP, PAD)
+    local offsets, total = Layout.stack(heights, GAP, PAD)
     for i, panel in ipairs(order) do
         local f = panel.frame
         f:ClearAllPoints()

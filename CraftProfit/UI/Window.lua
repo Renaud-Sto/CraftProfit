@@ -1,13 +1,12 @@
 -- The main window, built on the native kit (UI/Native.lua): a game panel with a result
 -- banner, three tiles for the ways to sell the item, a Materials panel and an Options
--- panel inside its dark inset; at the auction house the pinned list (UI/PinsUI.lua, still
--- on the old Kit) hangs below. Parented to UIParent (never to a Blizzard frame, to avoid
--- taint); anchored beside the profession or AH window until the user drags it, after
--- which the saved position wins. Colours are meaning colours (ns.Colors) or the game's
--- own text colours: no colour theme applies to this window.
+-- panel inside its dark inset; at the auction house the pinned list (UI/PinsUI.lua) hangs
+-- below. Parented to UIParent (never to a Blizzard frame, to avoid taint); anchored beside
+-- the profession or AH window until the user drags it, after which the saved position wins.
+-- Colours are meaning colours (ns.Colors) or the game's own text colours.
 local _, ns = ...
 local L = ns.L
-local Kit, Native, Colors = ns.Kit, ns.Native, ns.Colors
+local Layout, Native, Colors = ns.Layout, ns.Native, ns.Colors
 
 local Window = {}
 ns.Window = Window
@@ -56,11 +55,10 @@ Window.parts = parts
 Window.lastModel = nil
 Window.lastHandlers = nil
 
--- Height of a panel with `rows` rows of `rowH`: Native's when it has its own helper,
--- else the Kit's pure one (same geometry: edge, header, body pad, rows, edge).
+-- Height of a panel with `rows` rows of `rowH` (Native.panel's geometry: edge, header,
+-- body pad, rows, edge).
 local function panelHeight(rows, rowH)
-    if type(Native.panelHeight) == "function" then return Native.panelHeight(rows, rowH) end
-    return Kit.panelHeight(rows, rowH)
+    return Layout.panelHeight(rows, rowH)
 end
 
 -- Blocks of the recipe view, top to bottom, with their heights. Pure.
@@ -86,7 +84,7 @@ end
 -- Height of the window's inset needed for these sections (without the pinned list): the
 -- stacked sections and the content margin above and below them.
 function Window.contentHeightOf(list)
-    local _, total = Kit.stack(heightsOf(list), GAP, 0)
+    local _, total = Layout.stack(heightsOf(list), GAP, 0)
     return total + PAD * 2
 end
 
@@ -357,7 +355,7 @@ end
 -- the frame.
 local function layout(list)
     hideSections()
-    local offsets = Kit.stack(heightsOf(list), GAP, PAD)
+    local offsets = Layout.stack(heightsOf(list), GAP, PAD)
     for i, section in ipairs(list) do
         local f = parts.frames[section.key]
         f:ClearAllPoints()

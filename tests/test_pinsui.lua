@@ -305,27 +305,27 @@ end)
 
 H.test("the panel height follows the number of pinned rows shown and the host height follows the panel", function()
     local T = boot()
-    local Kit, Window = T.ns.Kit, T.ns.Window
+    local Layout, Window = T.ns.Layout, T.ns.Window
     local parts = openList(T)
-    H.eq(parts.panel.frame.height, Kit.panelHeight(2, 18))
+    H.eq(parts.panel.frame.height, Layout.panelHeight(2, 18))
     for i = 3, 12 do
         T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(i, 100, { { itemID = 1, qty = 1 } }))
     end
     T.ns.PinsUI.refresh()
-    H.eq(parts.panel.frame.height, Kit.panelHeight(6, 18))
+    H.eq(parts.panel.frame.height, Layout.panelHeight(6, 18))
     local host = T.ns.Window.pinsHost()
-    H.eq(host.height, Kit.panelHeight(6, 18) + Window.GAP + T.ns.PinsUI.FOOTER_H)
+    H.eq(host.height, Layout.panelHeight(6, 18) + Window.GAP + T.ns.PinsUI.FOOTER_H)
 end)
 
 H.test("the host is the panel, a gap and a footer with two lines of status, and the window grows by it", function()
     local T = boot()
-    local Kit, P, Window = T.ns.Kit, T.ns.PinsUI, T.ns.Window
+    local Layout, P, Window = T.ns.Layout, T.ns.PinsUI, T.ns.Window
     -- Two native buttons with their 6 px gaps, then two lines of the small font.
     H.eq(T.ns.Native.BUTTON_H, 22)
     H.eq(P.FOOTER_H, 22 * 2 + 6 * 2 + 28)
     openList(T)
     local host = T.ns.Window.pinsHost()
-    H.eq(host.height, Kit.panelHeight(2, 18) + Window.GAP + P.FOOTER_H)
+    H.eq(host.height, Layout.panelHeight(2, 18) + Window.GAP + P.FOOTER_H)
     local frame = T.ns.Window.frame()
     H.truthy(host:IsShown())
     local shownHeight = frame.height
@@ -401,7 +401,7 @@ H.test("loading the addon with a pin does not touch the market until the AH open
     H.truthy(next(T.env.CraftProfitDB.markets) ~= nil)
 end)
 
-H.test("pins are not evaluated while the list is hidden, nor by a theme switch", function()
+H.test("pins are not evaluated while the list is hidden", function()
     -- Pins stored before the addon loads, as in the game: nothing evaluates them (which
     -- would open the market too early) until the AH shows the list.
     local T = W.boot(H, { items = ITEMS })
@@ -413,13 +413,8 @@ H.test("pins are not evaluated while the list is hidden, nor by a theme switch",
     Controller.evaluate = function(...) calls = calls + 1; return evaluate(...) end
     Controller.onEvent("ADDON_LOADED", "CraftProfit")
     H.eq(calls, 0)
-    T.ns.Kit.applyTheme("steel")
-    H.eq(calls, 0)
     openList(T)
     H.truthy(calls > 0)
-    calls = 0
-    T.ns.Kit.applyTheme("copper")
-    H.eq(calls, 0)
 end)
 
 H.test("the pinned panel title is the capitalised panel key", function()

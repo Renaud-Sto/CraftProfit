@@ -12,7 +12,7 @@ local function colour(r, g, b, a)
     return { GetRGBA = function() return r, g, b, a end }
 end
 
-H.test("the meaning colours are exactly the ones the themed kit used", function()
+H.test("the meaning colours keep their values", function()
     local Colors = load()
     H.eq(Colors.FIXED, {
         profit = { 0.35, 0.90, 0.45, 1 },
@@ -25,11 +25,6 @@ H.test("the meaning colours are exactly the ones the themed kit used", function(
         easy = { 0.25, 0.75, 0.25, 1 },
         trivial = { 0.55, 0.55, 0.55, 1 },
     })
-end)
-
-H.test("Theme.FIXED is the Colors table itself, not a copy", function()
-    local ns = H.newNS("Colors", "Theme")
-    H.truthy(rawequal(ns.Theme.FIXED, ns.Colors.FIXED))
 end)
 
 H.test("text colours fall back to white, grey and gold without the game's globals", function()
@@ -71,10 +66,11 @@ H.test("text colours read the game's colour objects at each call, alpha 1 when n
     H.eq(Colors.text("muted")[1], 0.4)
 end)
 
-H.test("escape gives the same code as the kit's colour escape", function()
-    local ns = H.newNS("Colors", "Theme", "UI/Kit")
-    for _, c in pairs(ns.Colors.FIXED) do
-        H.eq(ns.Colors.escape(c), ns.Kit.colorEscape(c))
-    end
-    H.eq(ns.Colors.escape({ 2, -1, 0.5 }), "|cffff0080")
+H.test("escape turns a colour into a chat colour escape and clamps out-of-range channels", function()
+    local Colors = load()
+    H.eq(Colors.escape({ 1, 0.82, 0, 1 }), "|cffffd100")
+    H.eq(Colors.escape({ 0, 0, 0, 1 }), "|cff000000")
+    H.eq(Colors.escape({ 2, -1, 0.5, 1 }), "|cffff0080")
+    H.eq(Colors.escape({ 2, -1, 0.5 }), "|cffff0080")
+    H.eq(Colors.escape(Colors.FIXED.best), "|cffffd100")
 end)

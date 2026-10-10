@@ -1,7 +1,6 @@
 -- Colours that carry a meaning (gain, loss, recipe difficulty, best, stale, incomplete) and
 -- the game's text colours. The meaning colours never follow an appearance choice; the text
 -- colours come from the game's own colour objects so native frames match Blizzard's.
--- Loaded before Theme.lua, which shares FIXED with the old themed kit.
 local _, ns = ...
 
 local Colors = {}

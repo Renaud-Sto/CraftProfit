@@ -1,107 +1,14 @@
 -- Developer tool: /cp kitdemo [header [tile]] shows the native widgets (UI/Native.lua) with
--- a choice of header strip (a|b|c) and tile background (a|b), to pick them in the game;
--- /cp kitdemo old [theme] shows the themed Kit widgets as before. English only, not part of
--- the user-facing help.
+-- a choice of header strip (a|b|c) and tile background (a|b), to pick them in the game.
+-- English only, not part of the user-facing help.
 local _, ns = ...
-local Kit, Theme, Native = ns.Kit, ns.Theme, ns.Native
+local Layout, Native = ns.Layout, ns.Native
 
 local KitDemo = {}
 ns.KitDemo = KitDemo
 
 local WIDTH = 372
 local TILE_H = 52
--- The themed demo (/cp kitdemo old).
-local frame
-
-local function addRow(panel, index, left, right)
-    local y = -(index - 1) * 18
-    local a = panel.body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    a:SetPoint("TOPLEFT", panel.body, "TOPLEFT", 8, y)
-    a:SetText(left)
-    local b = panel.body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    b:SetPoint("TOPRIGHT", panel.body, "TOPRIGHT", -8, y)
-    b:SetText(right)
-end
-
-local function build()
-    frame = Kit.window("CraftProfitKitDemo", "Kit demo", { width = WIDTH })
-    frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-    local content = frame.content
-
-    local tileW = math.floor((WIDTH - Kit.CONTENT_SIDE * 2 - 16) / 3)
-    local specs = {
-        { label = "AH (NET)", value = "3g 24s", best = true },
-        { label = "VENDOR", value = "1g 12s" },
-        { label = "DISENCH.", tag = "beta", value = "999g 99s 99c" },
-    }
-    for i, spec in ipairs(specs) do
-        local tile = Kit.tile(content, tileW, TILE_H)
-        tile.frame:SetPoint("TOPLEFT", content, "TOPLEFT", (i - 1) * (tileW + 8), 0)
-        tile:set(spec)
-    end
-
-    local materials = Kit.panel(content, "MATERIALS")
-    materials:setRows(3, 18)
-    materials.right:SetText("2g 33s")
-    addRow(materials, 1, "3x Bronze Bar", "2g 25s")
-    addRow(materials, 2, "1x Coarse Weightstone", "8s")
-    addRow(materials, 3, "1x Heavy Leather", "10s")
-
-    -- Three buttons of one size, centred in the body; the small kind lives in the
-    -- header, where a sort button belongs.
-    local options = Kit.panel(content, "OPTIONS")
-    options:setRows(1, 24, 12)
-    local x = 8
-    for _, spec in ipairs({ { "primary", "Search prices" }, { "normal", "Scan AH" }, { "normal", "Reset" } }) do
-        local button = Kit.button(options.body, spec[1], spec[2])
-        button:SetWidth(104)
-        button:SetPoint("TOPLEFT", options.body, "TOPLEFT", x, -6)
-        x = x + 112
-    end
-    local sort = Kit.button(options.frame, "small", "Sort")
-    sort:SetWidth(50)
-    sort:SetPoint("TOPRIGHT", options.frame, "TOPRIGHT", -6, -3)
-
-    local controls = Kit.panel(content, "CONTROLS")
-    controls:setRows(1, 26)
-    local box = Kit.input(controls.body, 52, 4)
-    box:SetPoint("TOPLEFT", controls.body, "TOPLEFT", 8, -2)
-    box:SetText("1")
-    local checkA = Kit.check(controls.body, "Track history")
-    checkA:SetPoint("TOPLEFT", controls.body, "TOPLEFT", 90, -4)
-    checkA:SetChecked(true)
-    local checkB = Kit.check(controls.body, "Per point")
-    checkB:SetPoint("TOPLEFT", controls.body, "TOPLEFT", 230, -4)
-
-    local offsets, total = Kit.stack({ TILE_H, materials:height(), options:height(), controls:height() }, Kit.GAP, 0)
-    for i, panel in ipairs({ materials, options, controls }) do
-        panel.frame:SetPoint("TOPLEFT", content, "TOPLEFT", 0, offsets[i + 1])
-        panel.frame:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, offsets[i + 1])
-    end
-    frame:SetHeight(total + Kit.CONTENT_TOP + Kit.CONTENT_BOTTOM)
-end
-
--- The themed demo. With a theme name: apply it and show the window. Without: show or hide it.
-function KitDemo.showOld(name)
-    name = (name or ""):lower()
-    if name ~= "" then
-        if not Theme.exists(name) then
-            DEFAULT_CHAT_FRAME:AddMessage("CraftProfit: unknown theme '" .. name .. "' ("
-                .. table.concat(Theme.list(), ", ") .. ")")
-            return
-        end
-        Kit.applyTheme(name)
-        if not frame then build() end
-        frame:Show()
-        return
-    end
-    if not frame then
-        build()
-        frame:Show() -- a new client frame is already shown, but do not rely on it
-        return
-    end
-    if frame:IsShown() then frame:Hide() else frame:Show() end
-end
 
 -- Native demo ---------------------------------------------------------------------
 
@@ -231,7 +138,7 @@ local function buildPage()
     local perPointLabel = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     perPointLabel:SetText("Leveling value column:")
 
-    local offsets, total = Kit.stack({ TILE_H, materials:height(), options:height(), LINE_H, LINE_H }, Kit.GAP, 0)
+    local offsets, total = Layout.stack({ TILE_H, materials:height(), options:height(), LINE_H, LINE_H }, Layout.GAP, 0)
     for i, panel in ipairs({ materials, options }) do
         panel.frame:SetPoint("TOPLEFT", page, "TOPLEFT", 0, offsets[i + 1])
         panel.frame:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, offsets[i + 1])
@@ -261,14 +168,10 @@ function KitDemo.showNative(force)
     describe()
 end
 
--- /cp kitdemo [header [tile]] | /cp kitdemo old [theme]
+-- /cp kitdemo [header [tile]]
 function KitDemo.command(arg)
     local words = {}
     for word in (arg or ""):lower():gmatch("%S+") do words[#words + 1] = word end
-    if words[1] == "old" then
-        KitDemo.showOld(words[2])
-        return
-    end
     if #words == 0 then
         KitDemo.showNative(false)
         return
@@ -276,7 +179,7 @@ function KitDemo.command(arg)
     local header, tile = words[1], words[2] or KitDemo.tile
     if #words > 2 or not Native.HEADER_VARIANTS[header] or not Native.TILE_VARIANTS[tile] then
         say("kitdemo: unknown variant '" .. table.concat(words, " ")
-            .. "' (header a|b|c, tile a|b, or old [theme])")
+            .. "' (header a|b|c, tile a|b)")
         return
     end
     KitDemo.header, KitDemo.tile = header, tile

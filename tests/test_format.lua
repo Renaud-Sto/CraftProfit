@@ -10,6 +10,18 @@ H.test("money prints gold, silver and copper", function()
     H.eq(ns.Format.money(0), "0c")
 end)
 
+H.test("money drops the copper from 100 gold up, rounding to the nearest silver", function()
+    local ns = load()
+    H.eq(ns.Format.money(999 * 10000 + 99 * 100 + 99), "1000g")
+    H.eq(ns.Format.money(100 * 10000 + 150), "100g 2s")
+    H.eq(ns.Format.money(100 * 10000 + 49), "100g")
+    H.eq(ns.Format.money(100 * 10000 - 1), "99g 99s 99c")
+    H.eq(ns.Format.money(-(150 * 10000 + 5050)), "-150g 51s")
+    local seen
+    ns.Format.money(250 * 10000 + 99, function(c) seen = c return "x" end)
+    H.eq(seen, 250 * 10000 + 100)
+end)
+
 H.test("money shows ? for anything that is not a finite number", function()
     local ns = load()
     H.eq(ns.Format.money(nil), "?")

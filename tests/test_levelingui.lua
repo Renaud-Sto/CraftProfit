@@ -51,12 +51,12 @@ end)
 
 H.test("showing it lists the recipes with their difficulty colours, crafts per point and cost", function()
     local T, UI = boot()
-    local Theme = T.ns.Theme
+    local Colors = T.ns.Colors
     feed(T, data())
     UI.show()
     H.truthy(UI.isShown())
     local p = UI.parts
-    H.eq(p.profession.label.text, "Forge")
+    H.eq(p.profession.text, "Forge")
     H.eq(p.age.text, "Prices: 5m ago")
     H.eq(p.rows[1].name.text, "Bronze Sword")
     H.eq(p.rows[1].crafts.text, "x1")
@@ -67,16 +67,18 @@ H.test("showing it lists the recipes with their difficulty colours, crafts per p
     local colour
     p.rows[1].name.SetTextColor = function(_, r, g, b, a) colour = { r, g, b, a } end
     UI.refresh()
-    H.eq(colour, Theme.FIXED.optimal)
+    H.eq(colour, Colors.FIXED.optimal)
 end)
 
 H.test("the sort button reads the sort mode and the controls call the controller", function()
     local T, UI, calls = boot()
     feed(T, data({ sort = "speed" }))
     UI.show()
-    H.eq(UI.parts.sort.label.text, "Sort: speed")
+    H.eq(UI.parts.sort.text, "Sort: speed")
     UI.parts.sort.scripts.OnClick(UI.parts.sort)
     UI.parts.profession.scripts.OnClick(UI.parts.profession)
+    -- A CheckButton flips its own state before OnClick; the fake does not, so flip it here.
+    UI.parts.grey:SetChecked(true)
     UI.parts.grey.scripts.OnClick(UI.parts.grey)
     H.eq(calls[1], { "sort" })
     H.eq(calls[2], { "next" })
@@ -105,7 +107,7 @@ H.test("the hidden grey count and the empty messages", function()
     none.profession = nil
     feed(T, none)
     UI.refresh()
-    H.eq(UI.parts.profession.label.text, "-")
+    H.eq(UI.parts.profession.text, "-")
     H.truthy(UI.parts.empty.shown)
     for i = 1, 12 do H.falsy(UI.parts.rows[i].shown) end
 end)
@@ -178,17 +180,19 @@ H.test("the empty message wraps, centred, inside the panel body", function()
             return fs
         end
     end)
-    local Kit = T.ns.Kit
-    H.eq(UI.EMPTY_WIDTH, UI.WIDTH - Kit.CONTENT_SIDE * 2 - 2 - 16)
+    local Native = T.ns.Native
+    -- The native inset, the content pad, the panel's edges, then 8 px of air each side.
+    H.eq(UI.INNER_WIDTH, UI.WIDTH - Native.INSET_LEFT - Native.INSET_RIGHT - Native.CONTENT_PAD * 2)
+    H.eq(UI.EMPTY_WIDTH, UI.INNER_WIDTH - Native.PANEL_EDGE * 2 - 16)
     H.eq(UI.parts.empty.widths, { UI.EMPTY_WIDTH })
     H.eq(UI.parts.empty.justify, "CENTER")
 end)
 
-H.test("toggle and hide work and a theme switch repaints the rows", function()
+H.test("toggle and hide work; a plain name and an unknown value take the game's text colours", function()
     local T, UI = boot()
-    local Theme = T.ns.Theme
-    -- No difficulty: the name takes the theme's main text colour; no cost: the value
-    -- is "?" in the muted colour. Both come from the theme, not from Theme.FIXED.
+    local Colors = T.ns.Colors
+    -- No difficulty: the name takes the game's plain text colour; no cost: the value is
+    -- "?" in the muted colour.
     feed(T, data({ items = { item(1, "Plain", nil, 1, nil) } }))
     UI.toggle()
     H.truthy(UI.isShown())
@@ -197,14 +201,100 @@ H.test("toggle and hide work and a theme switch repaints the rows", function()
     local nameColour, valueColour
     p.rows[1].name.SetTextColor = function(_, r, g, b, a) nameColour = { r, g, b, a } end
     p.rows[1].value.SetTextColor = function(_, r, g, b, a) valueColour = { r, g, b, a } end
-    local gold, steel = Theme.get("gold"), Theme.get("steel")
-    H.truthy(gold.textMain[3] ~= steel.textMain[3])
-    H.truthy(gold.textMuted[1] ~= steel.textMuted[1])
+    UI.refresh()
+    H.eq(nameColour, Colors.text("main"))
+    H.eq(valueColour, Colors.text("muted"))
+    -- A theme switch no longer repaints anything here.
+    nameColour = nil
     T.ns.Kit.applyTheme("steel")
-    H.eq(nameColour, steel.textMain)
-    H.eq(valueColour, steel.textMuted)
-    for _, name in ipairs({ "copper", "steel", "gold" }) do T.ns.Kit.applyTheme(name) end
+    H.eq(nameColour, nil)
     UI.toggle()
     H.falsy(UI.isShown())
     UI.hide()
+end)
+
+H.test("the age line is muted, or in the stale colour when prices are old", function()
+    local T, UI = boot()
+    local Colors = T.ns.Colors
+    local colour
+    UI.parts.age.SetTextColor = function(_, r, g, b, a) colour = { r, g, b, a } end
+    feed(T, data())
+    UI.show()
+    H.eq(colour, Colors.text("muted"))
+    feed(T, data({ stale = true }))
+    UI.refresh()
+    H.eq(colour, Colors.FIXED.stale)
+end)
+
+H.test("the leveling window is built from the native kit", function()
+    local made = {}
+    local _, UI = boot(function(f) made[#made + 1] = f end)
+    local p = UI.parts
+    -- Native.window made it (its drag and title helpers), with a native bar, check and rows.
+    H.eq(type(rawget(UI.frame(), "setTitle")), "function")
+    H.eq(type(rawget(UI.frame(), "stopDrag")), "function")
+    H.truthy(rawget(p.bar, "trackAtlases") ~= nil)
+    H.eq(p.bar.frame.scripts.OnUpdate, nil)
+    H.eq(type(rawget(p.grey, "setMaxWidth")), "function")
+    H.eq(type(p.rows[1].scripts.OnDragStart), "function")
+    H.truthy(#made > 0)
+end)
+
+H.test("the window height is the native chrome, the pads and the four sections", function()
+    local T, UI = boot()
+    local Native, Kit = T.ns.Native, T.ns.Kit
+    local sections = Native.BUTTON_H + 14 + Kit.panelHeight(12, 18) + Native.CHECK_SIZE + 8 * 3
+    H.eq(UI.frame().height,
+        Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + sections)
+end)
+
+H.test("the grey-recipes label stops before the hidden count", function()
+    local T, UI = boot()
+    local Native = T.ns.Native
+    local caps = {}
+    UI.parts.grey.setMaxWidth = function(_, w) caps[#caps + 1] = w end
+    UI.parts.hidden.GetUnboundedStringWidth = function(self) return self.text == "" and 0 or 60 end
+    local full = UI.INNER_WIDTH - (Native.CHECK_SIZE + Native.CHECK_LABEL_X) - 4
+    feed(T, data())
+    UI.show()
+    H.eq(caps[#caps], full)
+    feed(T, data({ hiddenGrey = 3 }))
+    UI.refresh()
+    H.eq(caps[#caps], full - 60 - 8)
+end)
+
+H.test("dragging a leveling row moves the window and the click that ends it selects nothing", function()
+    local T, UI, calls = boot()
+    feed(T, data())
+    UI.show()
+    local moved = false
+    UI.frame().StartMoving = function() moved = true end
+    local row = UI.parts.rows[2]
+    row.scripts.OnMouseDown(row, "LeftButton")
+    row.scripts.OnDragStart(row)
+    H.truthy(moved)
+    row.scripts.OnClick(row)
+    H.eq(#calls, 0)
+    row.scripts.OnMouseDown(row, "LeftButton")
+    row.scripts.OnClick(row)
+    H.eq(calls[#calls], { "select", 2 })
+end)
+
+H.test("the value column is wide enough for an amount with coin icons, the crafts column sits before it", function()
+    local _, UI = boot(function(f)
+        f.CreateFontString = function()
+            local fs = W.frame()
+            fs.SetWidth = function(self, w) self.width = w end
+            fs.points = {}
+            fs.SetPoint = function(self, ...) self.points[#self.points + 1] = { ... } end
+            return fs
+        end
+    end)
+    H.eq(UI.VALUE_W, 130)
+    local row = UI.parts.rows[1]
+    H.eq(row.value.width, UI.VALUE_W)
+    H.eq(row.crafts.width, UI.CRAFTS_W)
+    H.eq(row.crafts.points[1], { "RIGHT", row, "RIGHT", -(8 + UI.VALUE_W + 8), 0 })
+    -- The name runs from the left edge to the crafts column and gives up the extra room.
+    H.eq(row.name.points[2], { "RIGHT", row.crafts, "LEFT", -8, 0 })
 end)

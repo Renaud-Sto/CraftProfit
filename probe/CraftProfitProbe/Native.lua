@@ -173,6 +173,31 @@ SlashCmdList.CPPN = function(msg)
         out("clients:", tostring(WOW_PROJECT_ID), tostring(WOW_PROJECT_CAMELOT), select(4, GetBuildInfo()))
         return
     end
+    if msg == "money" then
+        -- What the game's own money helpers return on this build (21g 29s 5c), and how it renders.
+        local copper = 21 * 10000 + 29 * 100 + 5
+        for _, name in ipairs({ "GetCoinTextureString", "GetMoneyString", "GetCoinText" }) do
+            local fn = _G[name]
+            if type(fn) == "function" then
+                local ok, res = pcall(fn, copper)
+                out(name, ok and ("[" .. tostring(res):gsub("|", "||") .. "]") or ("ERROR " .. tostring(res)))
+                if ok and type(res) == "string" then DEFAULT_CHAT_FRAME:AddMessage(TAG .. name .. " renders: " .. res) end
+            else
+                out(name, "MISSING")
+            end
+        end
+        for _, size in ipairs({ 0, 12, 16 }) do
+            local ok, res = pcall(GetCoinTextureString, copper, size)
+            if ok and type(res) == "string" then DEFAULT_CHAT_FRAME:AddMessage(TAG .. "size " .. size .. ": " .. res) end
+        end
+        local fs = UIParent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        fs:SetPoint("CENTER", UIParent, "CENTER", 0, 200)
+        local ok, res = pcall(GetCoinTextureString, copper)
+        fs:SetText(ok and res or "?")
+        out("font string width of the coin string:", fs:GetStringWidth(), "(hides in 8 s)")
+        C_Timer.After(8, function() fs:Hide() end)
+        return
+    end
     if not win then
         local ok, res = pcall(build)
         if not ok then out("build failed:", res) return end

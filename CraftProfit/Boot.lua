@@ -18,8 +18,16 @@ function Controller.say(text)
 end
 local say = Controller.say
 
+-- Forever has no GetCoinTextureString: GetMoneyString draws the gold, silver and copper
+-- icons (measured with /cppn money). Anything else it answers falls back to plain text.
+local function coinString(copper)
+    if type(GetMoneyString) ~= "function" then return nil end
+    local ok, text = pcall(GetMoneyString, copper)
+    return ok and text or nil
+end
+
 function Controller.fmt(copper)
-    return Format.money(copper, GetCoinTextureString)
+    return Format.money(copper, coinString)
 end
 
 -- Item facts, or nil while the game has not loaded the item yet. The request is
@@ -473,7 +481,7 @@ function Controller.selftest()
         check(Util.isFinite(math.huge) == false, "infinity is not finite")
         check(Format.money(nil) == "?", "Format.money(nil)")
         check(Format.money(math.huge - math.huge) == "?", "Format.money(NaN)")
-        check(Format.money(12345, GetCoinTextureString) ~= "?", "coin string")
+        check(Format.money(12345, coinString) ~= "?", "coin string")
         check(string.format("%d", 5) == "5", "string.format")
         check(L.MATERIALS ~= "MATERIALS", "locale strings")
         check(Recipes.normalize({ recipeID = 1, outputItemID = 2, reagents = { { itemID = 3, qty = 1 } } }) ~= nil,

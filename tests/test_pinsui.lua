@@ -235,7 +235,7 @@ end
 
 H.test("pinned names take the colour of their difficulty, a missing difficulty keeps the text colour", function()
     local T = boot()
-    local Theme = T.ns.Theme
+    local Colors = T.ns.Colors
     local pins = T.env.CraftProfitCharDB.pins
     pins[1].difficulty = "optimal"
     pins[2].difficulty = nil
@@ -247,13 +247,14 @@ H.test("pinned names take the colour of their difficulty, a missing difficulty k
     T.ns.PinsUI.refresh()
     local byID = {}
     for i = 1, 2 do byID[parts.rows[i].recipeID] = colours[i] end
-    H.eq(byID[1], Theme.FIXED.optimal)
-    H.eq(byID[2], T.ns.Kit.current.textMain)
+    H.eq(byID[1], Colors.FIXED.optimal)
+    -- The game's plain text colour (white in the fake, which has no colour objects).
+    H.eq(byID[2], Colors.text("main"))
 end)
 
 H.test("each difficulty has its colour in the pinned list", function()
     local T = boot()
-    local Theme = T.ns.Theme
+    local Colors = T.ns.Colors
     local pins = T.env.CraftProfitCharDB.pins
     local parts = openList(T)
     local last
@@ -261,7 +262,7 @@ H.test("each difficulty has its colour in the pinned list", function()
     for _, name in ipairs({ "optimal", "medium", "easy", "trivial" }) do
         for _, pin in ipairs(pins) do pin.difficulty = name end
         T.ns.PinsUI.refresh()
-        H.eq(last, Theme.FIXED[name])
+        H.eq(last, Colors.FIXED[name])
     end
 end)
 
@@ -304,7 +305,7 @@ end)
 
 H.test("the panel height follows the number of pinned rows shown and the host height follows the panel", function()
     local T = boot()
-    local Kit = T.ns.Kit
+    local Kit, Window = T.ns.Kit, T.ns.Window
     local parts = openList(T)
     H.eq(parts.panel.frame.height, Kit.panelHeight(2, 18))
     for i = 3, 12 do
@@ -313,40 +314,41 @@ H.test("the panel height follows the number of pinned rows shown and the host he
     T.ns.PinsUI.refresh()
     H.eq(parts.panel.frame.height, Kit.panelHeight(6, 18))
     local host = T.ns.Window.pinsHost()
-    H.eq(host.height, Kit.panelHeight(6, 18) + Kit.GAP + T.ns.PinsUI.FOOTER_H)
+    H.eq(host.height, Kit.panelHeight(6, 18) + Window.GAP + T.ns.PinsUI.FOOTER_H)
 end)
 
 H.test("the host is the panel, a gap and a footer with two lines of status, and the window grows by it", function()
     local T = boot()
-    local Kit, P = T.ns.Kit, T.ns.PinsUI
-    -- Two 24 px buttons with their 6 px gaps, then two lines of the small font.
-    H.truthy(P.FOOTER_H >= 24 * 2 + 12 + 28)
+    local Kit, P, Window = T.ns.Kit, T.ns.PinsUI, T.ns.Window
+    -- Two native buttons with their 6 px gaps, then two lines of the small font.
+    H.eq(T.ns.Native.BUTTON_H, 22)
+    H.eq(P.FOOTER_H, 22 * 2 + 6 * 2 + 28)
     openList(T)
     local host = T.ns.Window.pinsHost()
-    H.eq(host.height, Kit.panelHeight(2, 18) + Kit.GAP + P.FOOTER_H)
+    H.eq(host.height, Kit.panelHeight(2, 18) + Window.GAP + P.FOOTER_H)
     local frame = T.ns.Window.frame()
     H.truthy(host:IsShown())
     local shownHeight = frame.height
     P.onAHOpen(false)
     H.falsy(host:IsShown())
     local hiddenHeight = frame.height
-    H.eq(shownHeight - hiddenHeight, Kit.GAP + host.height)
+    H.eq(shownHeight - hiddenHeight, Window.GAP + host.height)
 end)
 
 H.test("the sort button reads the sort mode and toggles it", function()
     local T = boot()
     local parts = openList(T)
-    H.eq(parts.sort.label.text, "Sort: profit")
+    H.eq(parts.sort.text, "Sort: profit")
     parts.sort.scripts.OnClick(parts.sort)
-    H.eq(parts.sort.label.text, "Sort: cost/point")
+    H.eq(parts.sort.text, "Sort: cost/point")
 end)
 
 H.test("the three buttons read their text and keep their actions", function()
     local T = boot()
     local parts = openList(T)
-    H.eq(parts.search.label.text, "Search prices")
-    H.eq(parts.scan.label.text, "Scan AH")
-    H.eq(parts.level.label.text, "Leveling")
+    H.eq(parts.search.text, "Search prices")
+    H.eq(parts.scan.text, "Scan AH")
+    H.eq(parts.level.text, "Leveling")
     parts.search.scripts.OnClick(parts.search)
     H.eq(T.ns.PinsUI.state, "running")
     parts.level.scripts.OnClick(parts.level)
@@ -362,26 +364,21 @@ H.test("clicking a pinned row selects that recipe", function()
     H.eq(T.ns.Controller.currentRecipeID(), 2)
 end)
 
-H.test("a theme switch repaints the pinned names and values in the new theme", function()
+H.test("an unknown value is drawn in the game's muted colour, a gain and a loss in theirs", function()
     local T = boot()
-    local Theme = T.ns.Theme
+    local Colors = T.ns.Colors
     for _, pin in ipairs(T.env.CraftProfitCharDB.pins) do pin.difficulty = nil end
     local parts = openList(T)
     local row = parts.rows[1]
-    -- No listing was recorded, so the value is unknown and drawn muted.
+    -- No listing was recorded, so the value is unknown.
     H.eq(row.value.text, "?")
-    local name, value
-    row.name.SetTextColor = function(_, r, g, b, a) name = { r, g, b, a } end
+    local value
     row.value.SetTextColor = function(_, r, g, b, a) value = { r, g, b, a } end
-    local gold, steel = Theme.get("gold"), Theme.get("steel")
-    H.truthy(steel.textMain[1] ~= gold.textMain[1] or steel.textMain[3] ~= gold.textMain[3])
-    H.truthy(steel.textMuted[1] ~= gold.textMuted[1] or steel.textMuted[3] ~= gold.textMuted[3])
-    T.ns.Kit.applyTheme("steel")
-    H.eq(name, steel.textMain)
-    H.eq(value, steel.textMuted)
-    for _, theme in ipairs({ "copper", "steel", "gold" }) do T.ns.Kit.applyTheme(theme) end
-    H.eq(name, gold.textMain)
-    H.eq(value, gold.textMuted)
+    T.ns.PinsUI.refresh()
+    H.eq(value, Colors.text("muted"))
+    T.env.DISABLED_FONT_COLOR = { GetRGBA = function() return 0.4, 0.4, 0.4, 1 end }
+    T.ns.PinsUI.refresh()
+    H.eq(value, { 0.4, 0.4, 0.4, 1 })
 end)
 
 -- A boot whose character already has a pin when the addon loads, as in the game.
@@ -404,17 +401,25 @@ H.test("loading the addon with a pin does not touch the market until the AH open
     H.truthy(next(T.env.CraftProfitDB.markets) ~= nil)
 end)
 
-H.test("a theme switch evaluates the pins only while the pinned list is shown", function()
-    local T = boot()
+H.test("pins are not evaluated while the list is hidden, nor by a theme switch", function()
+    -- Pins stored before the addon loads, as in the game: nothing evaluates them (which
+    -- would open the market too early) until the AH shows the list.
+    local T = W.boot(H, { items = ITEMS })
+    T.env.CraftProfitCharDB = {}
+    T.ns.DB.initChar(T.env.CraftProfitCharDB)
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(1, 100, { { itemID = 1, qty = 2 } }))
     local Controller = T.ns.Controller
     local evaluate, calls = Controller.evaluate, 0
     Controller.evaluate = function(...) calls = calls + 1; return evaluate(...) end
+    Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(calls, 0)
     T.ns.Kit.applyTheme("steel")
     H.eq(calls, 0)
     openList(T)
+    H.truthy(calls > 0)
     calls = 0
     T.ns.Kit.applyTheme("copper")
-    H.truthy(calls > 0)
+    H.eq(calls, 0)
 end)
 
 H.test("the pinned panel title is the capitalised panel key", function()
@@ -437,4 +442,48 @@ H.test("the sort button sits two levels above the pinned panel frame", function(
     end
     T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
     H.eq(T.ns.PinsUI.parts.sort.level, 7)
+end)
+
+H.test("the pinned list is built from the native kit", function()
+    local T = W.boot(H, { items = ITEMS })
+    local made = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        f.kind, f.template = kind, template
+        made[#made + 1] = f
+        return f
+    end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    local parts = T.ns.PinsUI.parts
+    -- Native panel (a game inset), game buttons, native rows and scroll bar.
+    H.eq(parts.panel.inset.template, "InsetFrameTemplate")
+    for _, key in ipairs({ "sort", "search", "scan", "level" }) do
+        H.eq(parts[key].template, "UIPanelButtonTemplate")
+    end
+    H.eq(parts.sort.height, 20)
+    H.eq(parts.rows[1].kind, "Button")
+    -- Native rows keep the window's drag (Native.forwardDrag registers it).
+    H.eq(type(parts.rows[1].scripts.OnDragStart), "function")
+    H.truthy(rawget(parts.bar, "trackAtlases") ~= nil)
+    -- No per-frame work while nobody drags the bar.
+    H.eq(parts.bar.frame.scripts.OnUpdate, nil)
+end)
+
+H.test("dragging a pinned row moves the window and the click that ends it selects nothing", function()
+    local T = boot()
+    local parts = openList(T)
+    local frame = T.ns.Window.frame()
+    local moved = false
+    frame.StartMoving = function() moved = true end
+    local row
+    for i = 1, 2 do if parts.rows[i].recipeID == 2 then row = parts.rows[i] end end
+    row.scripts.OnMouseDown(row, "LeftButton")
+    row.scripts.OnDragStart(row)
+    H.truthy(moved)
+    row.scripts.OnClick(row)
+    H.eq(T.ns.Controller.currentRecipeID(), 1)
+    row.scripts.OnMouseDown(row, "LeftButton")
+    row.scripts.OnClick(row)
+    H.eq(T.ns.Controller.currentRecipeID(), 2)
 end)

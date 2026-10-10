@@ -10,7 +10,7 @@ ns.Format = Format
 Format.MAX_COPPER = 1e13
 
 -- "12g 3s 4c": fallback for tests and chat. The window passes
--- GetCoinTextureString instead, which draws coin icons in any language.
+-- GetMoneyString instead, which draws coin icons in any language.
 local function plainCoins(copper)
     local g = math.floor(copper / 10000)
     local s = math.floor(copper % 10000 / 100)
@@ -22,13 +22,21 @@ local function plainCoins(copper)
     return table.concat(parts, " ")
 end
 
+-- From 100 gold up the copper is dropped (rounded to the nearest silver): the coin icons
+-- make a full amount too wide for a tile or a column, and a cut-off "9..." reads as a
+-- wrong number. The error is under 1 silver in 100 gold.
+Format.ROUND_FROM = 100 * 10000
+
 -- Unknown or invalid amounts give "?", never "0".
 function Format.money(copper, coinFn)
     if not Util.isFinite(copper) then return "?" end
     local whole = Util.round(Util.clamp(math.abs(copper), 0, Format.MAX_COPPER))
+    if whole >= Format.ROUND_FROM then whole = Util.round(whole / 100) * 100 end
     local sign = (copper < 0 and whole > 0) and "-" or ""
     local text
-    if coinFn then text = coinFn(whole) else text = plainCoins(whole) end
+    if coinFn then text = coinFn(whole) end
+    -- A coin function that answers nothing (or not a string) falls back to the plain text.
+    if type(text) ~= "string" then text = plainCoins(whole) end
     return sign .. text
 end
 

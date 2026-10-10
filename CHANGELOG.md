@@ -18,9 +18,12 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - Project documentation: README (English and French), user guide (English and French), technical documentation, contributing guide, CurseForge page text and submission checklist, issue and pull request templates, continuous integration.
 
 ### Changed
+- The pinned list and the leveling window now use the game's own frames, rows and scroll bar, like the main window. The colour themes (`/cp theme`) no longer change any window.
+- Amounts now show the game's gold, silver and copper icons (the old text letters were a fallback that was always taken on Forever).
+- From 100 gold up, amounts no longer show copper (rounded to the nearest silver), so a large amount fits its tile instead of being cut off.
 - The main window now uses the game's own frame, panels, buttons and fonts. The header colour swatch is gone from it.
 - Scroll bars: grabbing the thumb off-centre no longer makes it jump, only the left mouse button scrolls, and a drag stops when the button is no longer down (for example after alt-tab). The pinned list, the leveling list and the Materials rows share one row widget, and the window title is measured only when it changes.
-- The pinned list and the leveling window have the new look: a Pinned recipes panel with the sort button in its header, a Next point panel, themed buttons, and both follow the colour themes.
+- The pinned list and the leveling window have the new look: a Pinned recipes panel with the sort button in its header and a Next point panel.
 - Pinned recipe names are coloured by difficulty (orange, yellow, green, grey), as in the profession window.
 - The main window has a new look: a result banner with the best way to sell and the net result, three tiles for the auction house, vendor and disenchant values, and separate Materials and Options panels. Its functions are unchanged; what you see differs: the best option is outlined on its tile instead of marked with ">", the per-point result is a coloured value beside its option instead of a "Gain per point" line, and the banner shows the verdict on one line.
 - The best tile of the main window is outlined in the game's gold (2 px), so it stands out from the other tiles.

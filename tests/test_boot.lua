@@ -14,9 +14,20 @@ local RAW = {
 
 local function boot(opts)
     local T = W.boot(H, opts or { items = ITEMS })
+    -- Forever draws coin icons with GetMoneyString (there is no GetCoinTextureString).
+    T.env.GetMoneyString = function(c) return "<" .. c .. ">" end
     T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
     return T
 end
+
+H.test("amounts use GetMoneyString and fall back to plain text when it answers nothing", function()
+    local T = boot()
+    H.eq(T.ns.Controller.fmt(250), "<250>")
+    T.env.GetMoneyString = function() return nil end
+    H.eq(T.ns.Controller.fmt(250), "2s 50c")
+    T.env.GetMoneyString = function() error("boom") end
+    H.eq(T.ns.Controller.fmt(250), "2s 50c")
+end)
 
 local function stock(T)
     local P, db = T.ns.Prices, T.ns.Controller.market()

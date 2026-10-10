@@ -109,6 +109,7 @@ local NATIVE_NAME = "CraftProfitNativeDemo"
 local SORT_H = 20
 local LINE_H = 16
 local DEMO_MONEY = 21 * 10000 + 29 * 100
+local MAX_DEMO_MONEY = 999 * 10000 + 99 * 100 + 99 -- 999g 99s 99c, more than any price in the beta
 -- The variants the native demo was last asked for.
 KitDemo.header, KitDemo.tile = "b", "b"
 
@@ -120,13 +121,13 @@ local function say(text)
     DEFAULT_CHAT_FRAME:AddMessage("CraftProfit: " .. text)
 end
 
--- An amount with the game's coin icons when the client formats it, else plain text.
+-- An amount as the windows show it (Controller.fmt: the game's coin icons through
+-- GetMoneyString on Forever, plain text otherwise), so the demo matches them.
 local function moneyText(copper)
-    for _, format in ipairs({ GetCoinTextureString, GetMoneyString }) do
-        if type(format) == "function" then
-            local ok, text = pcall(format, copper)
-            if ok and type(text) == "string" then return text end
-        end
+    local Controller = ns.Controller
+    if type(Controller) == "table" and type(Controller.fmt) == "function" then
+        local ok, text = pcall(Controller.fmt, copper)
+        if ok and type(text) == "string" then return text end
     end
     return "21g 29s"
 end
@@ -167,9 +168,10 @@ local function buildPage()
     local inner = WIDTH - Native.INSET_LEFT - Native.INSET_RIGHT - pad * 2
     local tileW = math.floor((inner - 16) / 3)
     local specs = {
-        { label = "AH (NET)", value = "3g 24s", best = true },
-        { label = "VENDOR", value = "1g 12s" },
-        { label = "DISENCH.", tag = "beta", value = "999g 99s 99c", muted = true },
+        { label = "AH (NET)", value = moneyText(32400), best = true },
+        { label = "VENDOR", value = moneyText(11200) },
+        -- The largest amount the game shows: icons make it wider than the letters did.
+        { label = "DISENCH.", tag = "beta", value = moneyText(MAX_DEMO_MONEY), muted = true },
     }
     for i, spec in ipairs(specs) do
         local tile = Native.tile(page, tileW, TILE_H)
@@ -214,13 +216,24 @@ local function buildPage()
 
     local line = page:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     line:SetText("Best price: " .. moneyText(DEMO_MONEY))
+    -- A cost per point as the leveling window shows it: the value gets its fixed column
+    -- (LevelingUI.VALUE_W) and is cut when it does not fit.
+    local perPoint = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    perPoint:SetWidth(ns.LevelingUI and ns.LevelingUI.VALUE_W or 130)
+    perPoint:SetJustifyH("LEFT")
+    perPoint:SetWordWrap(false)
+    perPoint:SetText(moneyText(MAX_DEMO_MONEY) .. "/pt")
+    local perPointLabel = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    perPointLabel:SetText("Leveling value column:")
 
-    local offsets, total = Kit.stack({ TILE_H, materials:height(), options:height(), LINE_H }, Kit.GAP, 0)
+    local offsets, total = Kit.stack({ TILE_H, materials:height(), options:height(), LINE_H, LINE_H }, Kit.GAP, 0)
     for i, panel in ipairs({ materials, options }) do
         panel.frame:SetPoint("TOPLEFT", page, "TOPLEFT", 0, offsets[i + 1])
         panel.frame:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, offsets[i + 1])
     end
     line:SetPoint("TOPLEFT", page, "TOPLEFT", 4, offsets[4])
+    perPointLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 4, offsets[5])
+    perPoint:SetPoint("LEFT", perPointLabel, "RIGHT", 6, 0)
     -- Window = what lies above the inset + page + its padding + what lies below the inset.
     native:SetHeight(Native.INSET_TOP + total + pad * 2 + Native.INSET_BOTTOM)
 end

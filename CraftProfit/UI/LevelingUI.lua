@@ -1,9 +1,11 @@
 -- The leveling window: the known recipes of one profession, cheapest skill point first,
--- on the shared UI kit. A separate, movable window opened by /cp level or the Leveling
+-- on the native kit. A separate, movable window opened by /cp level or the Leveling
 -- button; it sits beside the main window until it has been dragged.
 local _, ns = ...
 local L = ns.L
-local Kit, Theme = ns.Kit, ns.Theme
+local Native, Colors = ns.Native, ns.Colors
+-- Only the kit's pure layout maths (panelHeight, stack) until it moves out of Kit.
+local Kit = ns.Kit
 
 local LevelingUI = {}
 ns.LevelingUI = LevelingUI
@@ -11,31 +13,59 @@ ns.LevelingUI = LevelingUI
 local WIDTH = 396
 local ROW_H = 18
 local VISIBLE = 12
-local STRIP_H = 24
+local STRIP_H = Native.BUTTON_H
 local AGE_H = 14
-local CHECK_H = 18
-local VALUE_W = 112
+local CHECK_H = Native.CHECK_SIZE
+local GAP = 8
+local PAD = Native.CONTENT_PAD
+-- The window's own chrome above and below its inset (title bar, bottom border).
+local CHROME_H = Native.INSET_TOP + Native.INSET_BOTTOM
+-- Width the sections get inside the native inset.
+local INNER_WIDTH = WIDTH - Native.INSET_LEFT - Native.INSET_RIGHT - PAD * 2
+-- The grey-recipes label starts this far from the footer's left edge (box, then the
+-- template's label offset); the hidden-count text keeps HIDDEN_RIGHT px from the right.
+local GREY_LABEL_X = Native.CHECK_SIZE + Native.CHECK_LABEL_X
+local HIDDEN_RIGHT = 4
+local HIDDEN_GAP = 8
+-- Room for the per-point value with the game's coin icons (wider than letters): a large
+-- amount such as 999g 99s 99c/pt fits; the name column gives up the difference.
+local VALUE_W = 130
 local CRAFTS_W = 36
 
 local ctl, handlers
 local frame, content, savedPosition
+-- Where the sections start inside `content`: 0 inside the native inset; the inset's own
+-- edges when a build has no inset and `content` is the frame itself.
+local origin = { left = 0, right = 0, top = 0 }
 local offset = 0
 -- The widgets, exposed for tests.
 local parts = { rows = {}, frames = {} }
 
--- The empty-list message wraps inside the panel body (content width less the panel's
--- 1 px edges) with 8 px of air on each side.
-local EMPTY_WIDTH = WIDTH - Kit.CONTENT_SIDE * 2 - 2 - 16
+-- The empty-list message wraps inside the panel body (inner width less the panel's
+-- edges) with 8 px of air on each side.
+local EMPTY_WIDTH = INNER_WIDTH - Native.PANEL_EDGE * 2 - 16
 
 LevelingUI.parts = parts
 LevelingUI.WIDTH = WIDTH
+LevelingUI.INNER_WIDTH = INNER_WIDTH
 LevelingUI.EMPTY_WIDTH = EMPTY_WIDTH
+LevelingUI.VALUE_W = VALUE_W
+LevelingUI.CRAFTS_W = CRAFTS_W
 
-local function themed(fontString, token)
-    Kit.onTheme(function(t)
-        local c = t[token]
-        fontString:SetTextColor(c[1], c[2], c[3], c[4])
-    end)
+-- Width of a string at its natural size; 0 when it cannot be measured.
+local function textWidth(fs)
+    local width
+    if type(fs.GetUnboundedStringWidth) == "function" then width = fs:GetUnboundedStringWidth() end
+    if type(width) ~= "number" then width = fs:GetStringWidth() end
+    return type(width) == "number" and width or 0
+end
+
+-- The grey-recipes label stops before the hidden count beside it: cut, never under it.
+local function fitGreyLabel()
+    local hiddenW = textWidth(parts.hidden)
+    local room = INNER_WIDTH - GREY_LABEL_X - HIDDEN_RIGHT
+    if hiddenW > 0 then room = room - hiddenW - HIDDEN_GAP end
+    parts.grey:setMaxWidth(room)
 end
 
 function LevelingUI.isShown()
@@ -62,6 +92,7 @@ function LevelingUI.refresh()
         parts.profession:setText("-")
         parts.age:SetText("")
         parts.hidden:SetText("")
+        fitGreyLabel()
         parts.empty:SetText(L.LEVEL_EMPTY)
         parts.empty:Show()
         parts.bar:update(0, VISIBLE, 0)
@@ -76,6 +107,7 @@ function LevelingUI.refresh()
     parts.ageStale = data.stale and true or false
     parts.paintAge()
     parts.hidden:SetText(data.hiddenGrey > 0 and string.format(L.LEVEL_HIDDEN, data.hiddenGrey) or "")
+    fitGreyLabel()
     local items = data.items
     parts.empty:SetText(L.LEVEL_NONE)
     parts.empty:SetShown(#items == 0)
@@ -87,14 +119,14 @@ function LevelingUI.refresh()
             local recipe = item.recipe
             row.recipeID, row.recipe = recipe.recipeID, recipe
             row.name:SetText(name(recipe))
-            local c = Theme.FIXED[recipe.difficulty] or Kit.current.textMain
+            local c = Colors.FIXED[recipe.difficulty] or Colors.text("main")
             row.name:SetTextColor(c[1], c[2], c[3], c[4])
             local perPoint = item.result.perPoint
             row.crafts:SetText(ns.Present.craftsPerPoint(perPoint and perPoint.chance) or "")
             local text, tone = ns.Present.pointRow(L, ctl.fmt, perPoint)
             row.value:SetText(text)
-            local tc = tone == "profit" and Theme.FIXED.profit or tone == "loss" and Theme.FIXED.loss
-                or Kit.current.textMuted
+            local tc = tone == "profit" and Colors.FIXED.profit or tone == "loss" and Colors.FIXED.loss
+                or Colors.text("muted")
             row.value:SetTextColor(tc[1], tc[2], tc[3], tc[4])
             row.selected:SetShown(recipe.recipeID == currentID)
             row:Show()
@@ -127,7 +159,7 @@ local function section(key, height)
 end
 
 local function buildRow(body, i)
-    local row = Kit.listRow(body, i, ROW_H, Kit.SCROLL_W + 6)
+    local row = Native.listRow(body, i, ROW_H, Native.SCROLL_W + 6)
     row.value = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     row.value:SetPoint("RIGHT", row, "RIGHT", -8, 0)
     row.value:SetWidth(VALUE_W)
@@ -138,13 +170,16 @@ local function buildRow(body, i)
     row.crafts:SetPoint("RIGHT", row, "RIGHT", -(8 + VALUE_W + 8), 0)
     row.crafts:SetWidth(CRAFTS_W)
     row.crafts:SetJustifyH("RIGHT")
-    themed(row.crafts, "textMuted")
     row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     row.name:SetPoint("LEFT", row, "LEFT", 8, 0)
     row.name:SetPoint("RIGHT", row.crafts, "LEFT", -8, 0)
     row.name:SetJustifyH("LEFT")
     row.name:SetWordWrap(false)
+    -- The rows cover the window's body: a drag on them still moves the window, and the
+    -- click that ends it selects nothing.
+    Native.forwardDrag(row, frame)
     row:SetScript("OnClick", function(self)
+        if self.dragged == true then return end
         if self.recipe then ctl.selectKnown(self.recipe) end
     end)
     return row
@@ -155,16 +190,20 @@ function LevelingUI.init(controller, h)
     ctl, handlers = controller, h or {}
     local panelH = Kit.panelHeight(VISIBLE, ROW_H)
     local heights = { STRIP_H, AGE_H, panelH, CHECK_H }
-    local offsets, total = Kit.stack(heights, Kit.GAP, 0)
+    local offsets, total = Kit.stack(heights, GAP, PAD)
 
-    frame = Kit.window("CraftProfitLevelWindow", L.LEVEL_TITLE, {
+    -- Escape does not close it (not in UISpecialFrames), as before.
+    frame = Native.window("CraftProfitLevelWindow", L.LEVEL_TITLE, {
         width = WIDTH,
-        height = total + Kit.CONTENT_TOP + Kit.CONTENT_BOTTOM,
+        height = CHROME_H + PAD + total + PAD,
         onMoved = function(point, x, y)
             if handlers.onMoved then handlers.onMoved(point, x, y) end
         end,
     })
     content = frame.content
+    if content == frame then
+        origin = { left = Native.INSET_LEFT, right = Native.INSET_RIGHT, top = Native.INSET_TOP }
+    end
     frame:EnableMouseWheel(true)
     frame:SetScript("OnMouseWheel", function(_, delta)
         offset = math.max(0, offset - delta)
@@ -173,31 +212,26 @@ function LevelingUI.init(controller, h)
 
     -- Strip: the profession (click to cycle) and the sort order.
     local strip = section("strip", STRIP_H)
-    parts.profession = Kit.button(strip, "normal", "")
-    parts.profession:SetWidth(150)
+    parts.profession = Native.button(strip, "", { width = 150, onClick = function() ctl.nextLevelProfession() end })
     parts.profession:SetPoint("TOPLEFT", strip, "TOPLEFT", 0, 0)
-    parts.profession:SetScript("OnClick", function() ctl.nextLevelProfession() end)
-    parts.sort = Kit.button(strip, "normal", "")
-    parts.sort:SetWidth(160)
+    parts.sort = Native.button(strip, "", { width = 160, onClick = function() ctl.toggleLevelSort() end })
     parts.sort:SetPoint("TOPRIGHT", strip, "TOPRIGHT", 0, 0)
-    parts.sort:SetScript("OnClick", function() ctl.toggleLevelSort() end)
 
     local ageRow = section("age", AGE_H)
     parts.age = ageRow:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     parts.age:SetPoint("LEFT", ageRow, "LEFT", 4, 0)
     parts.ageStale = false
     parts.paintAge = function()
-        local c = parts.ageStale and Theme.FIXED.stale or Kit.current.textMuted
+        local c = parts.ageStale and Colors.FIXED.stale or Colors.text("muted")
         parts.age:SetTextColor(c[1], c[2], c[3], c[4])
     end
-    Kit.onTheme(function() parts.paintAge() end)
 
-    parts.panel = Kit.panel(content, L.LEVEL_PANEL)
+    parts.panel = Native.panel(content, L.LEVEL_PANEL)
     parts.frames.panel = parts.panel.frame
     -- Fixed list height: the window keeps its size whatever the number of recipes.
     parts.panel.frame:SetHeight(panelH)
     for i = 1, VISIBLE do parts.rows[i] = buildRow(parts.panel.body, i) end
-    parts.bar = Kit.scrollbar(parts.panel.body, VISIBLE * ROW_H)
+    parts.bar = Native.scrollbar(parts.panel.body, VISIBLE * ROW_H)
     parts.bar.frame:SetPoint("TOPRIGHT", parts.panel.body, "TOPRIGHT", -2, 0)
     parts.bar.onScroll = function(newOffset)
         offset = newOffset
@@ -209,29 +243,25 @@ function LevelingUI.init(controller, h)
     parts.empty:SetWidth(EMPTY_WIDTH)
     parts.empty:SetJustifyH("CENTER")
     parts.empty:SetWordWrap(true)
-    themed(parts.empty, "textMuted")
 
     local footer = section("footer", CHECK_H)
-    parts.grey = Kit.check(footer, "")
+    parts.grey = Native.check(footer, "", function(checked) ctl.setLevelShowGrey(checked and true or false) end,
+        INNER_WIDTH - GREY_LABEL_X - HIDDEN_RIGHT)
     parts.grey:SetPoint("TOPLEFT", footer, "TOPLEFT", 0, 0)
-    parts.grey.onToggle = function(checked) ctl.setLevelShowGrey(checked and true or false) end
     parts.hidden = footer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    parts.hidden:SetPoint("RIGHT", footer, "RIGHT", -4, 0)
+    parts.hidden:SetPoint("RIGHT", footer, "RIGHT", -HIDDEN_RIGHT, 0)
     parts.hidden:SetJustifyH("RIGHT")
-    themed(parts.hidden, "textMuted")
+    parts.hidden:SetWordWrap(false)
 
     local order = { "strip", "age", "panel", "footer" }
     for i, key in ipairs(order) do
         local f = parts.frames[key]
-        f:SetPoint("TOPLEFT", content, "TOPLEFT", 0, offsets[i])
-        f:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, offsets[i])
+        f:SetPoint("TOPLEFT", content, "TOPLEFT", origin.left + PAD, offsets[i] - origin.top)
+        f:SetPoint("TOPRIGHT", content, "TOPRIGHT", -origin.right - PAD, offsets[i] - origin.top)
     end
     LevelingUI.attach(nil)
-    -- A new frame starts shown: the controller decides when the window appears.
+    -- Native.window returns it hidden; kept explicit: the controller decides when it shows.
     frame:Hide()
-    -- The plain name colour and the muted values come from the theme: redraw on a switch.
-    -- Registered once hidden, so the immediate call does nothing.
-    Kit.onTheme(function() LevelingUI.refresh() end)
     return frame
 end
 

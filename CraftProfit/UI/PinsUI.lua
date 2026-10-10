@@ -1,18 +1,24 @@
--- The pinned-recipes section of the window, on the shared UI kit, shown while the
--- AH is open, with the "Search prices", "Scan AH" and "Leveling" buttons.
+-- The pinned-recipes section of the window, on the native kit, shown while the AH is
+-- open, with the "Search prices", "Scan AH" and "Leveling" buttons.
 local _, ns = ...
 local L = ns.L
-local Kit, Theme = ns.Kit, ns.Theme
+local Native, Colors = ns.Native, ns.Colors
+-- Only the kit's pure layout maths (panelHeight) until it moves out of Kit.
+local Kit = ns.Kit
 
 local PinsUI = {}
 ns.PinsUI = PinsUI
 
 local ROW_H = 18
 local VISIBLE = 6
-local BUTTON_H = 24
+local BUTTON_H = Native.BUTTON_H
+local BUTTON_GAP = 6
+-- The game's small button height, for the sort button in the panel header.
+local SORT_H = 20
+local SORT_W = 120
 -- Two lines of the small font: a long translated status wraps rather than being cut.
 local STATUS_H = 28
-local FOOTER_H = BUTTON_H + 6 + BUTTON_H + 6 + STATUS_H
+local FOOTER_H = BUTTON_H + BUTTON_GAP + BUTTON_H + BUTTON_GAP + STATUS_H
 local SEARCH_TIMEOUT = 6
 local TICK_SECONDS = 0.2
 local SCAN_REPLY_TIMEOUT = 15
@@ -71,8 +77,8 @@ end
 -- Text and colour of a row's value in the cost-per-point view.
 local function pointValue(perPoint)
     local text, tone = ns.Present.pointRow(L, ctl.fmt, perPoint)
-    local colour = tone == "profit" and Theme.FIXED.profit or tone == "loss" and Theme.FIXED.loss
-        or Kit.current.textMuted
+    local colour = tone == "profit" and Colors.FIXED.profit or tone == "loss" and Colors.FIXED.loss
+        or Colors.text("muted")
     return text, colour
 end
 
@@ -100,16 +106,16 @@ function PinsUI.refresh()
             row.name:SetText(recipe.name ~= "" and recipe.name or ("#" .. recipe.recipeID))
             -- The difficulty stored with the pin, kept up to date while the profession
             -- window is open; a pin without one keeps the plain text colour.
-            local nc = Theme.FIXED[recipe.difficulty] or Kit.current.textMain
+            local nc = Colors.FIXED[recipe.difficulty] or Colors.text("main")
             row.name:SetTextColor(nc[1], nc[2], nc[3], nc[4])
             local text, c
             if byPoint then
                 text, c = pointValue(result.perPoint)
             elseif result.net ~= nil then
                 text = ctl.fmt(result.net)
-                c = result.net >= 0 and Theme.FIXED.profit or Theme.FIXED.loss
+                c = result.net >= 0 and Colors.FIXED.profit or Colors.FIXED.loss
             else
-                text, c = L.UNKNOWN, Kit.current.textMuted
+                text, c = L.UNKNOWN, Colors.text("muted")
             end
             row.value:SetText(text)
             row.value:SetTextColor(c[1], c[2], c[3], c[4])
@@ -125,15 +131,15 @@ function PinsUI.refresh()
     local panelH = Kit.panelHeight(shownRows, ROW_H)
     panel.frame:SetHeight(panelH)
     parts.bar:update(#pins, VISIBLE, offset)
-    local top = panelH + Kit.GAP
+    local top = panelH + ns.Window.GAP
     parts.search:ClearAllPoints()
     parts.search:SetPoint("TOPLEFT", host, "TOPLEFT", 0, -top)
     parts.scan:ClearAllPoints()
     parts.scan:SetPoint("TOPRIGHT", host, "TOPRIGHT", 0, -top)
     parts.level:ClearAllPoints()
-    parts.level:SetPoint("TOPLEFT", host, "TOPLEFT", 0, -top - BUTTON_H - 6)
+    parts.level:SetPoint("TOPLEFT", host, "TOPLEFT", 0, -top - BUTTON_H - BUTTON_GAP)
     statusText:ClearAllPoints()
-    statusText:SetPoint("TOPLEFT", host, "TOPLEFT", 0, -top - (BUTTON_H + 6) * 2)
+    statusText:SetPoint("TOPLEFT", host, "TOPLEFT", 0, -top - (BUTTON_H + BUTTON_GAP) * 2)
     host:SetHeight(top + FOOTER_H)
     ns.Window.relayout()
 end
@@ -222,35 +228,36 @@ end
 function PinsUI.init(controller)
     ctl = controller
     host = ns.Window.pinsHost()
+    local window = ns.Window.frame()
     local inner = ns.Window.INNER_WIDTH
-    local half = math.floor((inner - Kit.GAP) / 2)
+    local half = math.floor((inner - ns.Window.GAP) / 2)
 
-    panel = Kit.panel(host, L.PANEL_PINS)
+    panel = Native.panel(host, L.PANEL_PINS)
     parts.panel = panel
     panel.frame:SetPoint("TOPLEFT", host, "TOPLEFT", 0, 0)
     panel.frame:SetPoint("TOPRIGHT", host, "TOPRIGHT", 0, 0)
     panel.frame:SetHeight(Kit.panelHeight(1, ROW_H))
 
-    -- The sort button lives in the panel header, above the header's own hit area.
-    parts.sort = Kit.button(panel.frame, "small", "")
-    parts.sort:SetWidth(120)
-    parts.sort:SetPoint("TOPRIGHT", panel.frame, "TOPRIGHT", -6, -3)
-    -- The header frame is a sibling at the same level, so lift the button above it (a
-    -- header hit area, if any, stays at the panel frame's level).
+    -- The sort button lives in the panel header: the game's button at its small height,
+    -- centred on the header strip (PANEL_EDGE + (HEAD_H - SORT_H) / 2 from the top).
+    parts.sort = Native.button(panel.frame, "", { width = SORT_W, onClick = function() ctl.toggleSort() end })
+    parts.sort:SetHeight(SORT_H)
+    parts.sort:SetPoint("TOPRIGHT", panel.frame, "TOPRIGHT", -(Native.PANEL_EDGE + 4),
+        -(Native.PANEL_EDGE + (Native.HEAD_H - SORT_H) / 2))
+    -- The header frame is a child of the panel frame, one level up: lift the button above
+    -- it (a header hit area, if any, stays at the panel frame's level).
     local level = panel.frame:GetFrameLevel()
     if type(level) == "number" then parts.sort:SetFrameLevel(level + 2) end
-    parts.sort:SetScript("OnClick", function() ctl.toggleSort() end)
+    -- A long (translated) title stops before the button instead of running under it.
+    panel.title:SetPoint("RIGHT", parts.sort, "LEFT", -8, 0)
 
     local body = panel.body
+    -- The game's grey small font: the muted colour without painting it.
     parts.empty = body:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     parts.empty:SetPoint("TOPLEFT", body, "TOPLEFT", 8, -2)
-    Kit.onTheme(function(t)
-        local c = t.textMuted
-        parts.empty:SetTextColor(c[1], c[2], c[3], c[4])
-    end)
 
     for i = 1, VISIBLE do
-        local row = Kit.listRow(body, i, ROW_H, Kit.SCROLL_W + 6)
+        local row = Native.listRow(body, i, ROW_H, Native.SCROLL_W + 6)
         row.value = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         row.value:SetPoint("RIGHT", row, "RIGHT", -8, 0)
         row.value:SetJustifyH("RIGHT")
@@ -259,48 +266,41 @@ function PinsUI.init(controller)
         row.name:SetPoint("RIGHT", row.value, "LEFT", -8, 0)
         row.name:SetJustifyH("LEFT")
         row.name:SetWordWrap(false)
+        -- The rows cover the window's body: a drag on them still moves the window, and the
+        -- click that ends it selects nothing.
+        if window then Native.forwardDrag(row, window) end
         row:SetScript("OnClick", function(self)
+            if self.dragged == true then return end
             if self.recipeID then ctl.selectPin(self.recipeID) end
         end)
         rows[i] = row
     end
 
-    parts.bar = Kit.scrollbar(body, VISIBLE * ROW_H)
+    parts.bar = Native.scrollbar(body, VISIBLE * ROW_H)
     parts.bar.frame:SetPoint("TOPRIGHT", body, "TOPRIGHT", -2, 0)
     parts.bar.onScroll = function(newOffset)
         offset = newOffset
         PinsUI.refresh()
     end
 
-    parts.search = Kit.button(host, "primary", "")
-    parts.search:SetWidth(half)
-    parts.search:SetScript("OnClick", PinsUI.startSearch)
-    parts.scan = Kit.button(host, "normal", "")
-    parts.scan:SetWidth(half)
-    parts.scan:SetScript("OnClick", PinsUI.scan)
-    parts.level = Kit.button(host, "normal", "")
-    parts.level:SetWidth(half)
-    parts.level:SetScript("OnClick", function() if ns.LevelingUI then ns.LevelingUI.toggle() end end)
+    -- UIPanelButtonTemplate is the game's red panel button: search keeps the primary
+    -- place (first, top left), all three keep their half-width.
+    parts.search = Native.button(host, "", { width = half, onClick = PinsUI.startSearch })
+    parts.scan = Native.button(host, "", { width = half, onClick = PinsUI.scan })
+    parts.level = Native.button(host, "", { width = half, onClick = function()
+        if ns.LevelingUI then ns.LevelingUI.toggle() end
+    end })
     statusText = host:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     statusText:SetWidth(inner)
     statusText:SetJustifyH("LEFT")
     statusText:SetJustifyV("TOP")
-    Kit.onTheme(function(t)
-        local c = t.textMuted
-        statusText:SetTextColor(c[1], c[2], c[3], c[4])
-    end)
 
     host:EnableMouseWheel(true)
     host:SetScript("OnMouseWheel", function(_, delta)
         offset = math.max(0, offset - delta)
         PinsUI.refresh()
     end)
-    -- Muted values and the plain name colour come from the theme: redraw on a switch.
-    -- Only while shown: registering calls this at once, during ADDON_LOADED, and a
-    -- refresh evaluates every pin, which opens the market before the faction and
-    -- hardcore state can be trusted. onAHOpen shows the host and refreshes it anyway.
-    Kit.onTheme(function()
-        if host and host:IsShown() then PinsUI.refresh() end
-    end)
+    -- No refresh here: it evaluates every pin, which opens the market before the faction
+    -- and hardcore state can be trusted (ADDON_LOADED). onAHOpen shows and refreshes it.
     host:Hide()
 end

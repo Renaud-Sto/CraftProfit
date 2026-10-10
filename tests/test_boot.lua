@@ -1035,7 +1035,7 @@ local function pinRaw(id, output)
         reagents = { { itemID = 1, qty = 2 }, { itemID = 2, qty = 1 } } }
 end
 
-H.test("pinsData lists the pins in the pinned list's order with the scan age", function()
+H.test("pinsData lists the pins in the pinned list's order", function()
     local T = boot({ items = { [100] = ITEMS[100], [101] = { quality = 1, ilvl = 1, sellPrice = 10, classID = 0, bindType = 2 } } })
     local C, DB = T.ns.Controller, T.ns.DB
     stock(T)
@@ -1050,16 +1050,42 @@ H.test("pinsData lists the pins in the pinned list's order with the scan age", f
     H.truthy(data.items[1].result.net > 0)
     local expected = T.ns.PinsUI.orderedPins(T.env.CraftProfitCharDB.pins, "net", C.evaluate)
     H.eq(data.items[1].recipe, expected[1].recipe)
-    H.eq(data.ageText, "Prices: never scanned")
-    H.eq(data.stale, true)
-    C.market().snapshotTime = 1700000000 - 120
-    data = C.pinsData()
-    H.eq(data.ageText, "Prices: 2m ago")
-    H.eq(data.stale, false)
-    C.market().snapshotTime = 1700000000 - 7200
-    H.eq(C.pinsData().stale, true)
     C.toggleSort()
     H.eq(C.pinsData().byPoint, true)
+end)
+
+H.test("the pinned age is the oldest price the pins use, searched or scanned, never the scan time alone", function()
+    local T = boot()
+    local C, DB, P = T.ns.Controller, T.ns.DB, T.ns.Prices
+    -- No pin, no price: never priced, stale.
+    local data = C.pinsData()
+    H.eq(data.ageText, "Prices: never scanned")
+    H.eq(data.stale, true)
+    DB.pinAdd(T.env.CraftProfitCharDB, pinRaw(1, 100))
+    data = C.pinsData()
+    H.eq(data.ageText, "Prices: never scanned")
+    H.eq(data.stale, true)
+    -- Prices from "Search prices" only (no full scan): their age counts.
+    P.store(C.market(), 1, 100, 10, 1700000000 - 60)
+    P.store(C.market(), 100, 1000, 10, 1700000000 - 300)
+    H.eq(C.market().snapshotTime, nil)
+    data = C.pinsData()
+    H.eq(data.ageText, "Prices: 5m ago")
+    H.eq(data.stale, false)
+    -- The same text as the main window's line for that recipe.
+    C.selectPin(1)
+    H.eq(T.ns.Window.lastModel.ageText, data.ageText)
+    -- A recent full scan does not hide an old price of a pin.
+    C.market().snapshotTime = 1700000000 - 10
+    P.store(C.market(), 2, 50, 10, 1700000000 - 7200)
+    data = C.pinsData()
+    H.eq(data.ageText, "Prices: 2h ago")
+    H.eq(data.stale, true)
+    -- Oldest over every pin.
+    DB.pinAdd(T.env.CraftProfitCharDB, { recipeID = 2, name = "Q", outputItemID = 100,
+        reagents = { { itemID = 3, qty = 1 } } })
+    P.store(C.market(), 3, 10, 10, 1700000000 - 2 * 86400)
+    H.eq(C.pinsData().ageText, "Prices: 2d ago")
 end)
 
 H.test("pinsData is empty with no pin", function()

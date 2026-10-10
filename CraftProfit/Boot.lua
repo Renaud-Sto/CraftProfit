@@ -430,13 +430,20 @@ function Controller.unpin(recipeID)
 end
 
 -- What the pinned window shows: the pins in the pinned list's order with their
--- evaluation, the sort, and how old the last full scan's prices are (it never searches).
+-- evaluation, the sort, and how old their prices are (it never searches). The age is the
+-- main window's: the oldest price the evaluations used (result.oldestAge, whether it came
+-- from a full scan or a "Search prices"), here over every pin; none -> never priced, stale.
 function Controller.pinsData()
     local settings = CraftProfitDB.settings
     local sortMode = CraftProfitCharDB.sortMode
-    local age = Prices.snapshotAge(Controller.market(), time())
+    local items = ns.PinsUI.orderedPins(CraftProfitCharDB.pins, sortMode, Controller.evaluate)
+    local age
+    for _, item in ipairs(items) do
+        local itemAge = item.result.oldestAge
+        if Util.isFinite(itemAge) and (age == nil or itemAge > age) then age = itemAge end
+    end
     return {
-        items = ns.PinsUI.orderedPins(CraftProfitCharDB.pins, sortMode, Controller.evaluate),
+        items = items,
         byPoint = sortMode == DB.SORT_POINT,
         ageText = Present.ageText(L, age),
         stale = age == nil or age > settings.staleAfter,

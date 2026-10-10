@@ -339,7 +339,7 @@ H.test("refresh does nothing while the window is hidden and follows pins changed
     H.eq(shownIDs(UI), { 1 })
 end)
 
-H.test("the age line is muted for fresh prices and stale when never scanned or old", function()
+H.test("the age line follows the prices of the pins: muted when fresh, stale when none or old", function()
     local T, UI = boot({ pins = { raw(1) } })
     local Colors = T.ns.Colors
     UI.show()
@@ -348,10 +348,18 @@ H.test("the age line is muted for fresh prices and stale when never scanned or o
     UI.refresh()
     H.eq(UI.parts.age.text, "Prices: never scanned")
     H.eq(colour, Colors.FIXED.stale)
-    T.ns.Controller.market().snapshotTime = 1700000000 - 300
+    -- Searched prices (no full scan): the oldest one the pin uses gives the age.
+    stock(T)
+    T.ns.Prices.store(T.ns.Controller.market(), 2, 50, 10, 1700000000 - 300)
     UI.refresh()
     H.eq(UI.parts.age.text, "Prices: 5m ago")
     H.eq(colour, Colors.text("muted"))
+    -- A recent full scan does not make an old price of the pin look fresh.
+    T.ns.Controller.market().snapshotTime = 1700000000 - 10
+    T.ns.Prices.store(T.ns.Controller.market(), 1, 100, 10, 1700000000 - 7200)
+    UI.refresh()
+    H.eq(UI.parts.age.text, "Prices: 2h ago")
+    H.eq(colour, Colors.FIXED.stale)
 end)
 
 H.test("long names are cut before the value, the value before the x", function()

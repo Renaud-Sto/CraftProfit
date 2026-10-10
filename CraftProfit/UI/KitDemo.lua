@@ -217,7 +217,7 @@ local function buildPage()
     scan:Disable()
     local sort = Native.button(options.frame, "Sort", { width = 50 })
     sort:SetHeight(SORT_H)
-    sort:SetPoint("TOPRIGHT", options.frame, "TOPRIGHT", -10, -2)
+    sort:SetPoint("TOPRIGHT", options.frame, "TOPRIGHT", -10, -2.5)
 
     local line = page:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     line:SetText("Best price: " .. moneyText(DEMO_MONEY))

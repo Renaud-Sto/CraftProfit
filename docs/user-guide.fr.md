@@ -123,7 +123,7 @@ La probabilité de point dépend de la couleur de la recette et c'est une **esti
 
 Ouvrez-la avec `/cp options`, un clic gauche sur le bouton de la minicarte, ou l'entrée CraftProfit du compartiment d'addons (le bouton de la liste des addons sur la minicarte, si votre client l'affiche). Échap la ferme ; déplacez-la où vous voulez, elle se rouvre au même endroit.
 
-- **Apparence** : choisissez le *Bandeau des sections* (Barre de quête, Bois ou Stries) et les *Cases de prix* (Carte de butin ou Encart). Les deux se combinent librement (6 apparences) ; le bouton allumé est votre choix. Il s'applique aussitôt à toutes les fenêtres, ouvertes ou non, et est enregistré pour le compte. Par défaut : Bois et Encart.
+- **Apparence** : choisissez le *Bandeau des sections* (Bois sculpté, Ombre ou Stries) et les *Cases de prix* (Carte de butin ou Encart). Les deux se combinent librement (6 apparences) ; le bouton allumé est votre choix. Il s'applique aussitôt à toutes les fenêtres, ouvertes ou non, et est enregistré pour le compte. Par défaut : Bois et Encart.
 - **Minicarte** : *Afficher le bouton de la minicarte*. Décochez pour masquer le bouton ; `/cp minimap` le masque ou le rétablit aussi.
 - **Fenêtres** : ouvre ou ferme la fenêtre principale et la fenêtre de montée de métier.
 - **Commandes** : un rappel des clics et des commandes ci-dessous.

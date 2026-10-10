@@ -408,6 +408,7 @@ Native.DIVIDER_ATLAS = "perks-divider-short"
 -- the body keeps the same margin at the bottom. 2 + 22 + 4 + rows + 2 = Kit.panelHeight.
 Native.PANEL_EDGE = 2
 local PANEL_EDGE = Native.PANEL_EDGE
+local PANEL_SIDE = PANEL_EDGE + 2
 
 -- Every panel and tile built by this module, in creation order, so a change of look
 -- reaches the live ones (shown or hidden). Each is added once, by its constructor; only
@@ -482,8 +483,10 @@ function Native.panel(parent, title, opts)
     p.inset:SetAllPoints(f)
 
     local head = CreateFrame("Frame", nil, f)
-    head:SetPoint("TOPLEFT", f, "TOPLEFT", PANEL_EDGE, -PANEL_EDGE)
-    head:SetPoint("TOPRIGHT", f, "TOPRIGHT", -PANEL_EDGE, -PANEL_EDGE)
+    -- The strip stops short of the inset's bevel on both sides (4 px, not PANEL_EDGE): the
+    -- wood reached over the border there.
+    head:SetPoint("TOPLEFT", f, "TOPLEFT", PANEL_SIDE, -PANEL_EDGE)
+    head:SetPoint("TOPRIGHT", f, "TOPRIGHT", -PANEL_SIDE, -PANEL_EDGE)
     head:SetHeight(Native.HEAD_H)
     p.head = head
     -- One texture per variant (only the fixed one for a fixed panel).

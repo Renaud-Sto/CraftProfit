@@ -123,7 +123,7 @@ The chance of a point depends on the colour of the recipe and is an **estimate**
 
 Open it with `/cp options`, a left click on the minimap button, or the CraftProfit entry of the addon compartment (the game's addon list button on the minimap, when your client shows it). Escape closes it; drag it anywhere, it reopens where you left it.
 
-- **Appearance**: pick the *Header strip* of every section (Quest bar, Wood or Streaks) and the *Tile card* of the price tiles (Loot card or Inset). The two mix freely (6 looks); the lit button is your choice. It applies at once to every window, open or not, and is saved for your account. Default: Wood and Inset.
+- **Appearance**: pick the *Header strip* of every section (Carved wood, Shade or Streaks) and the *Tile card* of the price tiles (Loot card or Inset). The two mix freely (6 looks); the lit button is your choice. It applies at once to every window, open or not, and is saved for your account. Default: Wood and Inset.
 - **Minimap**: *Show the minimap button*. Untick it to hide the button; `/cp minimap` hides it or brings it back too.
 - **Windows**: open or close the main window and the leveling window.
 - **Controls**: a recap of the clicks and commands below.
@@ -148,7 +148,7 @@ Colours that carry a meaning are fixed: gain in green, loss in red, the difficul
 | Material detail folded or unfolded | Click the Materials header | Unfolded |
 | Window position | Drag it; `/cp reset` to undo | Beside the profession or auction house window |
 | Sort of the pinned list | Button in the header of the Pinned recipes panel | Profit |
-| Header strip and tile card | [Options window](#options-window); saved for the account | Wood, Inset |
+| Header strip and tile card | [Options window](#options-window); saved for the account | Shade, Inset |
 | Minimap button shown, and its place | Options window or `/cp minimap`; drag it | Shown, bottom left |
 | Theme (no visible effect any more, see [Themes](#themes)) | `/cp theme [name]`; saved for the account | Gold |
 

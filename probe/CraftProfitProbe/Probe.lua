@@ -500,8 +500,16 @@ cmds.rname = function()
     out("profession window shown:", ProfessionsFrame and ProfessionsFrame:IsShown() or (TradeSkillFrame and TradeSkillFrame:IsShown()) or false)
     if type(db) ~= "table" or type(db.pins) ~= "table" then out("no pins") return end
     for i, pin in ipairs(db.pins) do
-        local info = try(C_TradeSkillUI.GetRecipeInfo, pin.recipeID)
-        local infoName = type(info) == "table" and info.name or info
+        -- Called directly: try() turns the returned table into its address string.
+        local ok, info = pcall(C_TradeSkillUI.GetRecipeInfo, pin.recipeID)
+        local infoName
+        if not ok then
+            infoName = "ERR: " .. tostring(info)
+        elseif type(info) == "table" then
+            infoName = "name=" .. show(info.name) .. " learned=" .. show(info.learned)
+        else
+            infoName = show(info)
+        end
         local itemName = try(C_Item.GetItemInfo, pin.outputItemID)
         out(i, "recipe", pin.recipeID, "stored:", pin.name, "| GetRecipeInfo:", infoName, "| item:", itemName)
         if i >= 12 then break end

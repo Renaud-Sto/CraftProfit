@@ -257,7 +257,8 @@ function Controller.setTheme(code)
     return true
 end
 
--- The swatch in the window header: the next theme of the list, back to the first after the last.
+-- The next theme of the list, back to the first after the last. No window calls it since
+-- the main window lost its swatch (native frame); kept with the themes until step 5.
 function Controller.cycleTheme()
     local list = ns.Theme.list()
     local nextCode = list[1]
@@ -501,7 +502,6 @@ function Controller.init()
         onPinClick = Controller.togglePin,
         onReagentClick = Controller.onReagentClick,
         onOutputClick = Controller.onOutputClick,
-        onThemeClick = Controller.cycleTheme,
         onCraftsChange = Controller.setCrafts,
         onTrackToggle = Controller.setTracking,
         onPerPointToggle = function(checked)

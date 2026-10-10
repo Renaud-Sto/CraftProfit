@@ -1,35 +1,38 @@
--- The main window, built on the shared UI kit (UI/Kit.lua): a result banner, three
--- tiles for the ways to sell the item, a Materials panel and an Options panel; at the
--- auction house the pinned list (UI/PinsUI.lua) hangs below. Parented to UIParent
--- (never to a Blizzard frame, to avoid taint); anchored beside the profession or AH
--- window until the user drags it, after which the saved position wins.
+-- The main window, built on the native kit (UI/Native.lua): a game panel with a result
+-- banner, three tiles for the ways to sell the item, a Materials panel and an Options
+-- panel inside its dark inset; at the auction house the pinned list (UI/PinsUI.lua, still
+-- on the old Kit) hangs below. Parented to UIParent (never to a Blizzard frame, to avoid
+-- taint); anchored beside the profession or AH window until the user drags it, after
+-- which the saved position wins. Colours are meaning colours (ns.Colors) or the game's
+-- own text colours: no colour theme applies to this window.
 local _, ns = ...
 local L = ns.L
-local Kit, Theme = ns.Kit, ns.Theme
+local Kit, Native, Colors = ns.Kit, ns.Native, ns.Colors
 
 local Window = {}
 ns.Window = Window
 
 local WIDTH = 372
+local GAP = 8
 local ROW_H = 18
 local BANNER_H = 52
 local TILE_H = 52
 local LIKELY_H = 16
 local AGE_H = 14
 local OPTION_ROWS = 3
-local OPTION_ROW_H = 26
+-- The tallest native widget of an option row (the 24 px check box; the button and the
+-- input are 22) plus 2 px, so two rows never touch. The options body is exactly
+-- OPTION_ROWS of these.
+local OPTION_ROW_H = math.max(Native.CHECK_SIZE, Native.BUTTON_H, Native.INPUT_H) + 2
+local TRACK_X = 160
 local EMPTY_H = 24
 local MAX_DETAIL = 12 -- Recipes.MAX_REAGENTS
-local BANNER_SIZES = { 22, 19, 16, 13 }
-local BANNER_VALUE_ROOM = 120 -- widest the value may be before it shrinks
-local BANNER_FILL, BANNER_EDGE = 0.09, 0.45
-
-local TONES = {
-    profit = Theme.FIXED.profit,
-    loss = Theme.FIXED.loss,
-    incomplete = Theme.FIXED.incomplete,
-    none = Theme.FIXED.trivial,
-}
+-- A folded native panel: its header strip, 2 px inside the inset border at the top and
+-- at the bottom (Native.panel's edge).
+local FOLDED_H = Native.HEAD_H + 2 * 2
+local PAD = Native.CONTENT_PAD
+-- The window's own chrome above and below its inset (title bar, bottom border).
+local CHROME_H = Native.INSET_TOP + Native.INSET_BOTTOM
 
 local frame, content, pinsHost
 local handlers = {}
@@ -39,10 +42,19 @@ local contentHeight = 80
 local parts = { frames = {}, tiles = {}, rows = {} }
 
 Window.WIDTH = WIDTH
-Window.INNER_WIDTH = WIDTH - Kit.CONTENT_SIDE * 2
+Window.GAP = GAP
+Window.FOLDED_H = FOLDED_H
+Window.INNER_WIDTH = WIDTH - Native.INSET_LEFT - Native.INSET_RIGHT - PAD * 2
 Window.parts = parts
 Window.lastModel = nil
 Window.lastHandlers = nil
+
+-- Height of a panel with `rows` rows of `rowH`: Native's when it has its own helper,
+-- else the Kit's pure one (same geometry: edge, header, body pad, rows, edge).
+local function panelHeight(rows, rowH)
+    if type(Native.panelHeight) == "function" then return Native.panelHeight(rows, rowH) end
+    return Kit.panelHeight(rows, rowH)
+end
 
 -- Blocks of the recipe view, top to bottom, with their heights. Pure.
 -- opts: hasLikely (a "likely outcome" line), expanded (Materials unfolded), reagents.
@@ -51,10 +63,10 @@ function Window.sections(opts)
     if opts.hasLikely then list[#list + 1] = { key = "likely", height = LIKELY_H } end
     list[#list + 1] = {
         key = "materials",
-        height = opts.expanded and Kit.panelHeight(opts.reagents, ROW_H) or Kit.FOLDED_H,
+        height = opts.expanded and panelHeight(opts.reagents, ROW_H) or FOLDED_H,
     }
     list[#list + 1] = { key = "age", height = AGE_H }
-    list[#list + 1] = { key = "options", height = Kit.panelHeight(OPTION_ROWS, OPTION_ROW_H) }
+    list[#list + 1] = { key = "options", height = panelHeight(OPTION_ROWS, OPTION_ROW_H) }
     return list
 end
 
@@ -64,17 +76,15 @@ local function heightsOf(list)
     return heights
 end
 
--- Window height needed for these sections (without the pinned list).
+-- Height of the window's inset needed for these sections (without the pinned list): the
+-- stacked sections and the content margin above and below them.
 function Window.contentHeightOf(list)
-    local _, total = Kit.stack(heightsOf(list), Kit.GAP, 0)
-    return total + Kit.CONTENT_TOP + Kit.CONTENT_BOTTOM
+    local _, total = Kit.stack(heightsOf(list), GAP, 0)
+    return total + PAD * 2
 end
 
-local function themed(fontString, token)
-    Kit.onTheme(function(t)
-        local c = t[token]
-        fontString:SetTextColor(c[1], c[2], c[3], c[4])
-    end)
+local function paint(fontString, c)
+    fontString:SetTextColor(c[1], c[2], c[3], c[4])
 end
 
 -- Item name for the fold-out; "#id" while the game has not loaded it (or when
@@ -103,83 +113,25 @@ local function newSection(key, height)
 end
 
 -- Banner: the label, the best way to sell and the net result in large type; its tint
--- follows the kind of result (gain, loss, incomplete) and not the theme.
+-- follows the kind of result (gain, loss, incomplete), never an appearance choice.
+-- Given the content width, so it can measure its text before it is laid out.
 local function buildBanner()
-    local f = newSection("banner", BANNER_H)
-    local fill = { 0, 0, 0, 0 }
-    local edge = { 0, 0, 0, 0 }
-    local bg = f:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints(f)
-    local function paintFill() bg:SetColorTexture(fill[1], fill[2], fill[3], fill[4]) end
-    paintFill()
-    local refreshEdge = Kit.rings(f, { function() return edge end })
-
-    local label = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    label:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -10)
-    themed(label, "headText")
-    local value = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    value:SetPoint("RIGHT", f, "RIGHT", -12, 0)
-    value:SetJustifyH("RIGHT")
-    -- The label stops before the value too, so a long warning cannot run under it.
-    label:SetPoint("RIGHT", value, "LEFT", -8, 0)
-    label:SetJustifyH("LEFT")
-    label:SetWordWrap(false)
-    -- The text runs up to the value, so a short or empty value leaves it more room.
-    local text = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    text:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 12, 10)
-    text:SetPoint("RIGHT", value, "LEFT", -8, 0)
-    text:SetJustifyH("LEFT")
-    text:SetWordWrap(false)
-    local best = Theme.FIXED.best
-    text:SetTextColor(best[1], best[2], best[3], best[4])
-    parts.banner = {
-        label = label, text = text, value = value,
-        fill = fill, edge = edge, paintFill = paintFill, refreshEdge = refreshEdge,
-    }
-end
-
-local function setBanner(spec)
-    local b = parts.banner
-    local tone = TONES[spec.kind] or TONES.none
-    local label = spec.label or ""
-    if spec.warning then
-        label = label .. " \194\183 " .. Kit.colorEscape(Theme.FIXED.incomplete) .. spec.warning .. "|r"
-    end
-    b.label:SetText(label)
-    b.text:SetText(spec.text or "")
-    b.value:SetFont(STANDARD_TEXT_FONT, BANNER_SIZES[1], "")
-    b.value:SetText(spec.value or "")
-    local size = Kit.fitSize(Kit.naturalWidth(b.value), BANNER_SIZES[1], BANNER_VALUE_ROOM, BANNER_SIZES)
-    if size ~= BANNER_SIZES[1] then b.value:SetFont(STANDARD_TEXT_FONT, size, "") end
-    b.value:SetTextColor(tone[1], tone[2], tone[3], tone[4])
-    -- A text too long for the room left by the value (a partial result, say) drops to
-    -- the small font rather than losing its end; kept normal when it cannot be measured.
-    b.text:SetFontObject("GameFontNormal")
-    local valueWidth, textWidth = Kit.naturalWidth(b.value), Kit.naturalWidth(b.text)
-    if type(valueWidth) == "number" and type(textWidth) == "number"
-        and textWidth > WIDTH - Kit.CONTENT_SIDE * 2 - 24 - valueWidth - 8 then
-        b.text:SetFontObject("GameFontNormalSmall")
-    end
-    -- SetFontObject resets the colour to the font object's own.
-    local best = Theme.FIXED.best
-    b.text:SetTextColor(best[1], best[2], best[3], best[4])
-    b.fill[1], b.fill[2], b.fill[3], b.fill[4] = tone[1], tone[2], tone[3], BANNER_FILL
-    b.edge[1], b.edge[2], b.edge[3], b.edge[4] = tone[1], tone[2], tone[3], BANNER_EDGE
-    b.paintFill()
-    b.refreshEdge()
+    local banner = Native.banner(content, BANNER_H, Window.INNER_WIDTH)
+    parts.frames.banner = banner.frame
+    parts.banner = banner
 end
 
 local function buildTiles()
     local f = newSection("tiles", TILE_H)
-    local width = math.floor((Window.INNER_WIDTH - Kit.GAP * 2) / 3)
+    local width = math.floor((Window.INNER_WIDTH - GAP * 2) / 3)
     local x = 0
     for i = 1, 3 do
         -- The last tile takes the remainder, so the row fills the content width.
         local w = i < 3 and width or Window.INNER_WIDTH - x
-        local tile = Kit.tile(f, w, TILE_H)
+        local tile = Native.tile(f, w, TILE_H)
         tile.frame:SetPoint("TOPLEFT", f, "TOPLEFT", x, 0)
         parts.tiles[i] = tile
-        x = x + w + Kit.GAP
+        x = x + w + GAP
     end
 end
 
@@ -191,35 +143,42 @@ local function buildLikely()
     text:SetPoint("RIGHT", f, "RIGHT", -4, 0)
     text:SetJustifyH("LEFT")
     text:SetWordWrap(false)
-    themed(text, "textMuted")
+    paint(text, Colors.text("muted"))
     parts.likely = text
 end
 
 -- Materials: the header folds the detail; each row searches its reagent at the AH.
+-- Rows and header are buttons covering the window's body: they forward drags to it, and
+-- the click that ends a drag does nothing.
 local function buildMaterials()
-    local panel = Kit.panel(content, "")
+    local panel = Native.panel(content, "")
     parts.frames.materials = panel.frame
     parts.materials = panel
-    panel:onHeaderClick(function()
+    local header = panel:onHeaderClick(function(self)
+        if self and self.dragged == true then return end
         if handlers.onCostToggle then handlers.onCostToggle(not expanded) end
     end)
+    Native.forwardDrag(header, frame)
+    local main, muted = Colors.text("main"), Colors.text("muted")
     for i = 1, MAX_DETAIL do
         -- A reagent row is never selected: its selected tint stays hidden.
-        local hit = Kit.listRow(panel.body, i, ROW_H, 0)
+        local hit = Native.listRow(panel.body, i, ROW_H, 0)
         local name = hit:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         name:SetPoint("LEFT", hit, "LEFT", 8, 0)
         name:SetPoint("RIGHT", hit, "RIGHT", -80, 0)
         name:SetJustifyH("LEFT")
         name:SetWordWrap(false)
-        themed(name, "textMain")
+        paint(name, main)
         local value = hit:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         value:SetPoint("RIGHT", hit, "RIGHT", -8, 0)
         value:SetJustifyH("RIGHT")
-        themed(value, "textMuted")
+        paint(value, muted)
         local row = { hit = hit, name = name, value = value }
         hit:SetScript("OnClick", function()
+            if hit.dragged == true then return end
             if row.itemID and handlers.onReagentClick then handlers.onReagentClick(row.itemID, row.qty) end
         end)
+        Native.forwardDrag(hit, frame)
         parts.rows[i] = row
     end
 end
@@ -231,68 +190,75 @@ local function buildAge()
     parts.age = text
     parts.ageStale = false
     parts.paintAge = function()
-        local c = parts.ageStale and Theme.FIXED.stale or Kit.current.textMuted
-        text:SetTextColor(c[1], c[2], c[3], c[4])
+        paint(text, parts.ageStale and Colors.FIXED.stale or Colors.text("muted"))
     end
-    Kit.onTheme(function() parts.paintAge() end)
+    parts.paintAge()
+end
+
+-- Top offset that centres a widget of `height` in option row `row` (1-based).
+local function rowY(row, height)
+    return -((row - 1) * OPTION_ROW_H + math.floor((OPTION_ROW_H - height) / 2))
 end
 
 -- Options: the crafts multiplier, history tracking, the cost-per-point option and the
--- pin button.
+-- pin button, one row each but the first, which also holds the track box.
 local function buildOptions()
-    local panel = Kit.panel(content, L.PANEL_OPTIONS)
+    local panel = Native.panel(content, L.PANEL_OPTIONS)
     parts.frames.options = panel.frame
     parts.options = panel
     local body = panel.body
 
     parts.craftsLabel = body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    parts.craftsLabel:SetPoint("TOPLEFT", body, "TOPLEFT", 8, -6)
-    themed(parts.craftsLabel, "textMain")
-    local box = Kit.input(body, 52, 4)
+    parts.craftsLabel:SetPoint("LEFT", body, "TOPLEFT", 8, -OPTION_ROW_H / 2)
+    paint(parts.craftsLabel, Colors.text("main"))
+    -- x = 70 leaves the 5 px the input's border art draws left of its frame.
+    local box = Native.input(body, 52, 4)
     box:SetNumeric(true)
-    box:SetPoint("TOPLEFT", body, "TOPLEFT", 70, -2)
-    -- Applied when the box loses focus (Enter, Escape or a click elsewhere).
-    box:SetScript("OnEditFocusLost", function(self)
+    box:SetPoint("TOPLEFT", body, "TOPLEFT", 70, rowY(1, Native.INPUT_H))
+    -- Applied when the box loses focus (Enter, Escape or a click elsewhere). Hooked: the
+    -- template clears its highlight on focus loss.
+    box:HookScript("OnEditFocusLost", function(self)
         if handlers.onCraftsChange then handlers.onCraftsChange(self:GetText()) end
     end)
     parts.craftsBox = box
 
-    local track = Kit.check(body, "")
-    track:SetPoint("TOPLEFT", body, "TOPLEFT", 160, -4)
-    track.onToggle = function(checked)
+    -- The track label is cut before the body's right margin (a long translation).
+    local bodyWidth = Window.INNER_WIDTH - 2 * 2
+    local trackRoom = bodyWidth - TRACK_X - Native.CHECK_SIZE - 8
+    local track = Native.check(body, "", function(checked)
         if handlers.onTrackToggle then handlers.onTrackToggle(checked) end
-    end
+    end, trackRoom)
+    track:SetPoint("TOPLEFT", body, "TOPLEFT", TRACK_X, rowY(1, Native.CHECK_SIZE))
     parts.track = track
 
-    local perPoint = Kit.check(body, "")
-    perPoint:SetPoint("TOPLEFT", body, "TOPLEFT", 8, -OPTION_ROW_H - 4)
-    perPoint.onToggle = function(checked)
+    local perPoint = Native.check(body, "", function(checked)
         if handlers.onPerPointToggle then handlers.onPerPointToggle(checked) end
-    end
+    end)
+    perPoint:SetPoint("TOPLEFT", body, "TOPLEFT", 8, rowY(2, Native.CHECK_SIZE))
     parts.perPoint = perPoint
     parts.perPointValue = body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    parts.perPointValue:SetPoint("TOPRIGHT", body, "TOPRIGHT", -8, -OPTION_ROW_H - 7)
+    parts.perPointValue:SetPoint("RIGHT", body, "TOPRIGHT", -8, -OPTION_ROW_H * 1.5)
     parts.perPointValue:SetJustifyH("RIGHT")
     -- The value wins: a long (translated) label is cut short before it runs under it.
     perPoint.label:SetPoint("RIGHT", parts.perPointValue, "LEFT", -8, 0)
     perPoint.label:SetWordWrap(false)
     perPoint.label:SetJustifyH("LEFT")
     parts.perPointTone = nil
-    -- A gain or a cost keeps its fixed colour; a neutral value follows the theme.
+    -- A gain or a cost keeps its meaning colour; a neutral value is the game's white.
     parts.paintPerPoint = function()
         local tone = parts.perPointTone
-        local c = tone == "profit" and Theme.FIXED.profit or tone == "loss" and Theme.FIXED.loss
-            or Kit.current.textMain
-        parts.perPointValue:SetTextColor(c[1], c[2], c[3], c[4])
+        local c = tone == "profit" and Colors.FIXED.profit or tone == "loss" and Colors.FIXED.loss
+            or Colors.text("main")
+        paint(parts.perPointValue, c)
     end
-    Kit.onTheme(function() parts.paintPerPoint() end)
 
-    local pin = Kit.button(body, "normal", "")
-    pin:SetWidth(120)
-    pin:SetPoint("TOPLEFT", body, "TOPLEFT", 8, -OPTION_ROW_H * 2 - 2)
-    pin:SetScript("OnClick", function()
-        if handlers.onPinClick then handlers.onPinClick() end
-    end)
+    local pin = Native.button(body, "", {
+        width = 120,
+        onClick = function()
+            if handlers.onPinClick then handlers.onPinClick() end
+        end,
+    })
+    pin:SetPoint("TOPLEFT", body, "TOPLEFT", 8, rowY(3, Native.BUTTON_H))
     parts.pin = pin
 end
 
@@ -314,29 +280,26 @@ function Window.create(h)
     handlers = h or {}
     Window.lastHandlers = handlers
 
-    frame = Kit.window("CraftProfitWindow", L.TITLE, {
+    frame = Native.window("CraftProfitWindow", L.TITLE, {
         width = WIDTH,
         onMoved = function(point, x, y)
             if handlers.onMoved then handlers.onMoved(point, x, y) end
         end,
         onTitleClick = searchOutput,
-        onThemeClick = function()
-            if handlers.onThemeClick then handlers.onThemeClick() end
-        end,
     })
     content = frame.content
     buildBanner()
     buildTiles()
     parts.tiles[1]:onClick(searchOutput)
-    Kit.forwardDrag(parts.tiles[1].hit, frame)
+    Native.forwardDrag(parts.tiles[1].hit, frame)
     buildLikely()
     buildMaterials()
     buildAge()
     buildOptions()
 
     parts.empty = content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-    parts.empty:SetPoint("TOP", content, "TOP", 0, -4)
-    themed(parts.empty, "textMuted")
+    parts.empty:SetPoint("TOP", content, "TOP", 0, -PAD - 6)
+    paint(parts.empty, Colors.text("muted"))
 
     pinsHost = CreateFrame("Frame", nil, frame)
     pinsHost:SetWidth(Window.INNER_WIDTH)
@@ -352,14 +315,16 @@ function Window.setTitle(text)
     if frame then frame:setTitle(text) end
 end
 
--- Frame height = recipe sections + a gap and the pinned-recipes section (when shown).
--- The host sits inside the content margin, a gap below the last section.
+-- Frame height = title bar + recipe sections (with the content margin) + bottom border,
+-- plus a gap and the pinned-recipes section when shown. The host sits inside the inset,
+-- at the content margin, a gap below the last section; the inset grows with the frame.
 function Window.relayout()
     if not frame then return end
     pinsHost:ClearAllPoints()
-    pinsHost:SetPoint("TOPLEFT", frame, "TOPLEFT", Kit.CONTENT_SIDE, -(contentHeight - Kit.CONTENT_BOTTOM + Kit.GAP))
-    local extra = pinsHost:IsShown() and (Kit.GAP + pinsHost:GetHeight()) or 0
-    frame:SetHeight(contentHeight + extra)
+    pinsHost:SetPoint("TOPLEFT", frame, "TOPLEFT", Native.INSET_LEFT + PAD,
+        -(Native.INSET_TOP + contentHeight - PAD + GAP))
+    local extra = pinsHost:IsShown() and (GAP + pinsHost:GetHeight()) or 0
+    frame:SetHeight(CHROME_H + contentHeight + extra)
 end
 
 local function hideSections()
@@ -374,19 +339,20 @@ function Window.showEmpty(text)
     parts.empty:SetText(text)
     parts.empty:Show()
     showSearchIcons(false)
-    contentHeight = Kit.CONTENT_TOP + EMPTY_H + Kit.CONTENT_BOTTOM
+    contentHeight = PAD + EMPTY_H + PAD
     Window.relayout()
 end
 
--- Stacks the sections of `list` under each other and sizes the frame.
+-- Stacks the sections of `list` under each other, inside the content margin, and sizes
+-- the frame.
 local function layout(list)
     hideSections()
-    local offsets = Kit.stack(heightsOf(list), Kit.GAP, 0)
+    local offsets = Kit.stack(heightsOf(list), GAP, PAD)
     for i, section in ipairs(list) do
         local f = parts.frames[section.key]
         f:ClearAllPoints()
-        f:SetPoint("TOPLEFT", content, "TOPLEFT", 0, offsets[i])
-        f:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, offsets[i])
+        f:SetPoint("TOPLEFT", content, "TOPLEFT", PAD, offsets[i])
+        f:SetPoint("TOPRIGHT", content, "TOPRIGHT", -PAD, offsets[i])
         f:SetHeight(section.height)
         f:Show()
     end
@@ -416,7 +382,7 @@ function Window.render(model)
     frame:setTitle(model.title or L.TITLE)
     parts.empty:Hide()
 
-    setBanner(model.banner or { kind = "none", text = "", value = "" })
+    parts.banner:set(model.banner or { kind = "none", text = "", value = "" })
     for i, tile in ipairs(parts.tiles) do tile:set((model.tiles or {})[i] or {}) end
     showSearchIcons(ns.AH ~= nil and ns.AH.isOpen == true)
 

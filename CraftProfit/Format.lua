@@ -10,7 +10,7 @@ ns.Format = Format
 Format.MAX_COPPER = 1e13
 
 -- "12g 3s 4c": fallback for tests and chat. The window passes
--- GetCoinTextureString instead, which draws coin icons in any language.
+-- GetMoneyString instead, which draws coin icons in any language.
 local function plainCoins(copper)
     local g = math.floor(copper / 10000)
     local s = math.floor(copper % 10000 / 100)
@@ -28,7 +28,9 @@ function Format.money(copper, coinFn)
     local whole = Util.round(Util.clamp(math.abs(copper), 0, Format.MAX_COPPER))
     local sign = (copper < 0 and whole > 0) and "-" or ""
     local text
-    if coinFn then text = coinFn(whole) else text = plainCoins(whole) end
+    if coinFn then text = coinFn(whole) end
+    -- A coin function that answers nothing (or not a string) falls back to the plain text.
+    if type(text) ~= "string" then text = plainCoins(whole) end
     return sign .. text
 end
 

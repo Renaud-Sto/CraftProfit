@@ -173,6 +173,24 @@ Since PR 6 the main window is native: it no longer follows the themes and has no
 - [ ] Close the window with the red cross. (Escape does not close it, as before.)
 - [ ] No Lua error (`/console scriptErrors 1`), no `ADDON_ACTION_BLOCKED`, with the profession window and with the AH.
 
+## Native lists (PR 7)
+- [ ] Pinned list (at the AH): the Pinned recipes panel, its rows and buttons look like the game's own (dark inset, header strip, red panel buttons). Names take their difficulty colour (orange, yellow, green, grey; plain white without a known difficulty); values are green (gain), red (loss) or grey (`?`, `n/a`).
+- [ ] The row of the recipe shown in the main window has the gold selected tint; the row under the mouse lights up (the game's quest highlight), visible over the panel body, also over the selected row.
+- [ ] With more than 6 pins the thin game scroll bar shows at the right of the rows and never covers a value; with 6 or fewer it is hidden. The mouse wheel scrolls over the rows, over the bar and over the empty part of the list.
+- [ ] Scroll bar: click the track to jump; grab the thumb near its top or bottom edge: the list does not jump, then follows the pointer; a right click on the bar does nothing; start a drag, alt-tab out, release, come back: the drag has stopped (moving the mouse does not scroll). Hovering the bar lights the thumb, dragging darkens it.
+- [ ] The sort button in the panel header toggles Sort: profit / Sort: cost/point and the order changes; clicking the rest of the header does nothing else; the header has the same height as before; a long title (French) is cut before the button.
+- [ ] Search prices, Scan AH and Leveling work as before and the status line shows their messages (two lines for a long French message).
+- [ ] Drag the main window from a pinned row: it moves, and the click that ends the drag selects nothing.
+- [ ] Leveling window: opens from the Leveling button and with `/cp level`; native frame with its title and red close button (Escape does not close it, as before); the rows scroll with the wheel and the bar (more than 12 recipes); clicking a row shows the recipe in the main window; a row drag moves the window.
+- [ ] Leveling window: the grey-recipes check box toggles from the box and from its label (game click sound); with grey recipes hidden, the "N hidden" text at the right never sits under the label. The profession button cycles professions; the sort button switches cost/point and speed; long labels are cut, not overflowing.
+- [ ] Drag the leveling window, `/reload`, reopen it: it is where you left it. Without a saved position it opens beside the main window.
+- [ ] `/cp locale frFR`: no label of the pinned list or the leveling window overflows its button, panel or window.
+- [ ] `/cp theme copper` changes nothing visible any more (expected).
+- [ ] Amounts show gold, silver and copper coin icons in the tiles, the banner, the reagent rows, the pinned list and the leveling window.
+- [ ] A large amount (for example 999g 99s 99c, on a costly recipe or with `/cp kitdemo`) shrinks and does not overflow its tile.
+- [ ] No Lua error (`/console scriptErrors 1`), no `ADDON_ACTION_BLOCKED`, with the profession window and with the AH.
+- [ ] Screenshots of the pinned list and the leveling window next to the game's own panels (`C`, the profession window), sent to the controller.
+
 ## Numbers
 - [ ] For one recipe, compare each reagent price with the AH listing prices: the stored price is the median of the 5 cheapest units (not the minimum).
 - [ ] Sell one crafted item (or use `docs/probe-findings.md` F5): the mailed amount matches `price × (1 − cut)`. If not, change `DB.DEFAULTS.cut` and the test expectations.

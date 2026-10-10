@@ -65,7 +65,7 @@ Click a recipe in the list to show it in the window above.
 
 ### The leveling window
 
-**Leveling** (button under the pinned list, or `/cp level`) opens a separate, movable window beside the main window, with the same look and colour theme. Its position is remembered, and the x closes it. It shows **every recipe you know** in a profession, cheapest skill point first, so you can see at a glance what to craft next to level at the smallest loss.
+**Leveling** (button under the pinned list, or `/cp level`) opens a separate, movable window beside the main window, with the game's own look, like the main window. Its position is remembered, and the x closes it. It shows **every recipe you know** in a profession, cheapest skill point first, so you can see at a glance what to craft next to level at the smallest loss.
 
 - Each row shows the recipe (coloured by difficulty), then the cost per point, with the same wording as the pinned list: `21g 29s/pt` in red, `+9s 33c/pt` in green when the crafts pay for themselves, `?` when a price is missing (those stay at the bottom).
 - The small grey figure before the amount, such as `x4`, is how many crafts a point takes on average (100 % = `x1`, 75 % = `x1.3`, 25 % = `x4`). The amount is the loss (or gain) of one craft times that figure, which makes it easy to read: a craft that loses 5s and needs 4 crafts per point shows about `20s/pt`.
@@ -121,11 +121,9 @@ The chance of a point depends on the colour of the recipe and is an **estimate**
 
 ## Themes
 
-CraftProfit has three colour themes: **Gold** (the default), **Copper** and **Steel blue**. A theme changes the colours of the frames, panels and buttons of the pinned list and the leveling window, never the layout. The main window uses the game's own look and does not change with the theme.
+Every CraftProfit window (the main window, the pinned list and the leveling window) now uses the game's own frames, buttons, rows and scroll bars, so the colour themes no longer change anything you see. `/cp theme` still lists **Gold**, **Copper** and **Steel blue** and saves your choice, but it has no visible effect; it will be replaced by appearance options in a later version.
 
-- Type `/cp theme` to list the themes and see the one in use, or `/cp theme copper` (`gold`, `copper` or `steel`; capitals do not matter) to switch. An unknown name changes nothing and says so.
-- The change applies at once to the pinned list, the leveling window and their scroll bars, with no `/reload`. It is saved for the whole account, so every character uses it.
-- Colours that carry a meaning never change with the theme: gain in green, loss in red, the difficulty colours of recipes (orange, yellow, green, grey) and the tint of the result banner.
+Colours that carry a meaning are fixed: gain in green, loss in red, the difficulty colours of recipes (orange, yellow, green, grey) and the tint of the result banner.
 
 ## Options and commands
 
@@ -135,7 +133,7 @@ CraftProfit has three colour themes: **Gold** (the default), **Copper** and **St
 | Material detail folded or unfolded | Click the Materials header | Unfolded |
 | Window position | Drag it; `/cp reset` to undo | Beside the profession or auction house window |
 | Sort of the pinned list | Button in the header of the Pinned recipes panel | Profit |
-| Theme (pinned list and leveling window) | `/cp theme [name]`; saved for the account | Gold |
+| Theme (no visible effect any more, see [Themes](#themes)) | `/cp theme [name]`; saved for the account | Gold |
 
 Commands: `/cp` (or `/craftprofit`) with `show`, `hide`, `reset`, `scan`, `history`, `market`, `level`, `locale <code>`, `theme [name]` and `selftest`. See the [README](../README.md#commands).
 

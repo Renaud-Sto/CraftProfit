@@ -18,6 +18,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - Project documentation: README (English and French), user guide (English and French), technical documentation, contributing guide, CurseForge page text and submission checklist, issue and pull request templates, continuous integration.
 
 ### Changed
+- The pinned list and the leveling window now use the game's own frames, rows and scroll bar, like the main window. The colour themes (`/cp theme`) no longer change any window.
 - Amounts now show the game's gold, silver and copper icons (the old text letters were a fallback that was always taken on Forever).
 - The main window now uses the game's own frame, panels, buttons and fonts. The header colour swatch is gone from it.
 - Scroll bars: grabbing the thumb off-centre no longer makes it jump, only the left mouse button scrolls, and a drag stops when the button is no longer down (for example after alt-tab). The pinned list, the leveling list and the Materials rows share one row widget, and the window title is measured only when it changes.

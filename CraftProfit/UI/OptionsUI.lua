@@ -1,5 +1,5 @@
 -- The options window: the look (header strip and tile card, applied at once to every
--- window), the minimap button, shortcuts to the other windows and a recap of the controls.
+-- window), the minimap button, shortcuts to the other windows and the list of the controls.
 -- Built on first open, never at login. Opened by /cp options, the minimap button and the
 -- addon compartment. Escape closes it.
 --
@@ -7,7 +7,7 @@
 -- or the Menu API, which crash or taint the Forever client.
 local _, ns = ...
 local L = ns.L
-local Native = ns.Native
+local Native, Colors = ns.Native, ns.Colors
 -- Pure layout maths (stack).
 local Layout = ns.Layout
 
@@ -34,8 +34,29 @@ local LINE_ROW_H = 26
 -- client: "Montée de métier" (16 letters) did not fit a 107 px label. The tests check every
 -- button label of every language against it.
 local CHAR_W = 7
--- The controls recap's height when the client cannot measure the wrapped text.
-local RECAP_FALLBACK_H = 64
+-- The controls list: one line per click or command, in the small font.
+local LINE_H = 14
+-- Width of one letter of the small font (GameFontHighlightSmall, 10 px), estimated; the tests
+-- keep every line of every language within the panel with it.
+local SMALL_CHAR_W = 6
+-- Each line: the gesture or command in gold (a locale key, or the literal command), then the
+-- locale key of its description in white.
+local CONTROL_LINES = {
+    { "OPTIONS_CLICK_LEFT", "CMD_OPTIONS" },
+    { "OPTIONS_CLICK_RIGHT", "CMD_PINS" },
+    { "/cp show", "CMD_SHOW" },
+    { "/cp hide", "CMD_HIDE" },
+    { "/cp reset", "CMD_RESET" },
+    { "/cp options", "CMD_OPTIONS" },
+    { "/cp pins", "CMD_PINS" },
+    { "/cp level", "CMD_LEVEL" },
+    { "/cp minimap", "CMD_MINIMAP" },
+    { "/cp history", "CMD_HISTORY" },
+    { "/cp scan", "CMD_SCAN" },
+    { "/cp market", "CMD_MARKET" },
+    { "/cp locale <code>", "CMD_LOCALE" },
+    { "/cp selftest", "CMD_SELFTEST" },
+}
 
 -- The variants in button order, with their label keys (the order of the rulings).
 local HEADER_CHOICES = { { "a", "OPTIONS_HEADER_A" }, { "b", "OPTIONS_HEADER_B" }, { "c", "OPTIONS_HEADER_C" } }
@@ -45,11 +66,13 @@ local ctl
 local frame, content, savedPosition
 local origin = { left = 0, right = 0, top = 0 }
 -- The widgets, exposed for tests: panels, headerButtons / tileButtons (by key), minimap,
--- mainButton, levelButton, pinsButton, headerLabel, tileLabel, recap.
-local parts = { panels = {}, headerButtons = {}, tileButtons = {} }
+-- mainButton, levelButton, pinsButton, headerLabel, tileLabel, lines (the controls list).
+local parts = { panels = {}, headerButtons = {}, tileButtons = {}, lines = {} }
 OptionsUI.parts = parts
 OptionsUI.ROOM = ROOM
 OptionsUI.CHAR_W = CHAR_W
+OptionsUI.SMALL_CHAR_W = SMALL_CHAR_W
+OptionsUI.LINE_COUNT = #CONTROL_LINES
 
 -- Lights `button` (the chosen segment) or puts it out; `button.lit` mirrors the state.
 local function setLit(button, lit)
@@ -82,21 +105,13 @@ local function choiceRow(body, index, choices, buttons, onPick)
     return label
 end
 
--- Height of the wrapped recap text, measured when the client can.
-local function recapHeight()
-    local h = parts.recap:GetStringHeight()
-    if type(h) ~= "number" or h <= 0 then return RECAP_FALLBACK_H end
-    return math.ceil(h)
-end
-
--- Stacks the four panels and sizes the window: the recap's height changes with the
--- language.
+-- Stacks the four panels and sizes the window (the controls list has a fixed line count).
 local function layout()
     local p = parts.panels
     p.appearance:setRows(2, CHOICE_ROW_H)
     p.minimap:setRows(1, LINE_ROW_H)
     p.windows:setRows(2, LINE_ROW_H)
-    p.controls:setRows(0, 0, recapHeight())
+    p.controls:setRows(#CONTROL_LINES, LINE_H)
     local order = { p.appearance, p.minimap, p.windows, p.controls }
     local heights = {}
     for i, panel in ipairs(order) do heights[i] = panel:height() end
@@ -163,11 +178,16 @@ local function build()
     end
 
     panels.controls = Native.panel(content, L.OPTIONS_CONTROLS)
-    parts.recap = panels.controls.body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    parts.recap:SetPoint("TOPLEFT", panels.controls.body, "TOPLEFT", 8, 0)
-    parts.recap:SetWidth(ROOM)
-    parts.recap:SetJustifyH("LEFT")
-    parts.recap:SetWordWrap(true)
+    -- One line each, never wrapped: a line too long for the panel is cut with "...".
+    for i = 1, #CONTROL_LINES do
+        local line = panels.controls.body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        line:SetPoint("TOPLEFT", panels.controls.body, "TOPLEFT", 8, -(i - 1) * LINE_H)
+        line:SetWidth(ROOM)
+        line:SetHeight(LINE_H)
+        line:SetJustifyH("LEFT")
+        line:SetWordWrap(false)
+        parts.lines[i] = line
+    end
 
     -- Native.window returns it hidden; the caller shows it.
     frame:Hide()
@@ -199,7 +219,11 @@ function OptionsUI.refresh()
     parts.mainButton:setText(L.OPTIONS_MAIN_WINDOW)
     parts.levelButton:setText(L.LEVEL_BUTTON)
     parts.pinsButton:setText(L.PINNED_TITLE)
-    parts.recap:SetText(L.OPTIONS_RECAP)
+    local gold, white = Colors.escape(Colors.text("gold")), Colors.escape(Colors.text("main"))
+    for i, entry in ipairs(CONTROL_LINES) do
+        local head = entry[1]:sub(1, 1) == "/" and entry[1] or L[entry[1]]
+        parts.lines[i]:SetText(gold .. head .. "|r" .. white .. " - " .. L[entry[2]] .. "|r")
+    end
     layout()
 end
 

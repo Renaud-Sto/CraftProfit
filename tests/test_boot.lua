@@ -1138,15 +1138,15 @@ H.test("/cp pins toggles the pinned window, whatever the case, without touching 
     H.eq(#T.chat, 0)
 end)
 
-H.test("the recap and the tooltip are translated in French and Spanish", function()
-    for locale, words in pairs({ frFR = { "recettes épinglées", "pins" }, esES = { "recetas fijadas", "pins" } }) do
+H.test("the tooltip and the minimap click line are translated in French and Spanish", function()
+    for locale, words in pairs({ frFR = "recettes épinglées", esES = "recetas fijadas" }) do
         local T = boot({ locale = locale, items = ITEMS })
         local L = T.ns.L
-        H.truthy(L.MINIMAP_TIP_RIGHT:find(words[1], 1, true))
-        H.truthy(L.OPTIONS_RECAP:find(words[1], 1, true))
-        H.truthy(L.OPTIONS_RECAP:find("options, " .. words[2] .. ", level", 1, true))
+        H.truthy(L.MINIMAP_TIP_RIGHT:find(words, 1, true))
+        H.eq(L.CMD_PINS, words)
     end
 end)
+
 
 -- Default placement --------------------------------------------------------------------
 

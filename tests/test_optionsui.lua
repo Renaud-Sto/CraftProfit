@@ -193,15 +193,98 @@ H.test("every options button label fits its button in English, French and Spanis
     end
 end)
 
-H.test("the controls recap names the clicks and the commands, wrapped in the small font", function()
+-- A line's text without its colour escapes.
+local function plain(text)
+    return (text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+end
+
+local EXPECTED_LINES = {
+    "Minimap left click - this window",
+    "Minimap right click - pinned recipes",
+    "/cp show - open the main window",
+    "/cp hide - close the main window",
+    "/cp reset - put the main window back",
+    "/cp options - this window",
+    "/cp pins - pinned recipes",
+    "/cp level - leveling window",
+    "/cp minimap - show or hide the minimap button",
+    "/cp history - tracked recipes",
+    "/cp scan - scan the auction house",
+    "/cp market - which market is in use",
+    "/cp locale <code> - change the language",
+    "/cp selftest - run the self-test",
+}
+
+H.test("the controls panel lists the clicks and the commands, one per line, command in gold", function()
     local T, _, slash = boot()
     slash("options")
-    local recap = T.ns.OptionsUI.parts.recap
-    H.truthy(recap.text:find("left click options, right click pinned recipes", 1, true))
-    H.truthy(recap.text:find("/cp show, hide, options, pins, level, minimap", 1, true))
-    H.falsy(recap.text:find("main window", 1, true))
-    -- The window grows with the recap (measured by the client; a fallback here).
-    H.truthy(T.ns.OptionsUI.frame():GetHeight() > 200)
+    local O, Colors = T.ns.OptionsUI, T.ns.Colors
+    local lines = O.parts.lines
+    H.eq(#lines, #EXPECTED_LINES)
+    H.eq(O.LINE_COUNT, #EXPECTED_LINES)
+    for i, fs in ipairs(lines) do
+        H.eq(plain(fs.text), EXPECTED_LINES[i])
+        -- The command (or click) in the game's gold, the description in white.
+        local gold, white = Colors.escape(Colors.text("gold")), Colors.escape(Colors.text("main"))
+        H.eq(fs.text:sub(1, #gold), gold)
+        H.truthy(fs.text:find("|r" .. white .. " - ", 1, true))
+    end
+end)
+
+H.test("each command line is one line of 14 px across the panel, cut rather than wrapped", function()
+    local T = W.boot(H, {})
+    T.env.UISpecialFrames = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.CreateFontString = function()
+            local fs = W.frame()
+            fs.SetWidth = function(self, w) self.width = w end
+            fs.SetHeight = function(self, h) self.height = h end
+            fs.SetWordWrap = function(self, v) self.wrap = v end
+            fs.SetPoint = function(self, ...) self.point = { ... } end
+            return fs
+        end
+        return f
+    end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    T.env.SlashCmdList.CRAFTPROFIT("options")
+    local O = T.ns.OptionsUI
+    local body = O.parts.panels.controls.body
+    for i, fs in ipairs(O.parts.lines) do
+        H.eq(fs.width, O.ROOM)
+        H.eq(fs.height, 14)
+        H.eq(fs.wrap, false)
+        H.eq(fs.point, { "TOPLEFT", body, "TOPLEFT", 8, -(i - 1) * 14 })
+    end
+end)
+
+H.test("the controls panel and the window heights follow the line count", function()
+    local T, _, slash = boot()
+    slash("options")
+    local O, Layout, Native = T.ns.OptionsUI, T.ns.Layout, T.ns.Native
+    local p = O.parts.panels
+    H.eq(p.controls.frame.height, Layout.panelHeight(O.LINE_COUNT, 14))
+    local heights = p.appearance.frame.height + p.minimap.frame.height + p.windows.frame.height
+        + p.controls.frame.height
+    H.eq(O.frame():GetHeight(), Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + heights + 8 * 3)
+end)
+
+H.test("the command lines are translated and fit the panel in English, French and Spanish", function()
+    for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
+        local T, _, slash = boot(nil, locale)
+        slash("options")
+        local O, Layout = T.ns.OptionsUI, T.ns.Layout
+        for _, fs in ipairs(O.parts.lines) do
+            local text = plain(fs.text)
+            H.truthy(text ~= "" and not text:find("CMD_", 1, true))
+            local need = Layout.textWidth(text, O.SMALL_CHAR_W)
+            H.truthy(need <= O.ROOM or error(locale .. ": " .. text .. " needs " .. need .. " px"))
+        end
+        if locale == "frFR" then
+            H.eq(plain(O.parts.lines[7].text), "/cp pins - recettes épinglées")
+        end
+    end
 end)
 
 H.test("a drag saves the position and the next login opens it there", function()

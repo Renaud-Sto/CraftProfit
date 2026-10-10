@@ -17,7 +17,6 @@ DB.DEFAULTS = {
     showPerPoint = false,
     costExpanded = true, -- material detail shown under the Materials line
     staleAfter = 3600,  -- seconds before prices are shown as old
-    theme = "gold",
     -- The look chosen in the options window: header strip and tile card (UI/Native.lua).
     appearance = { header = "b", tile = "b" },
     -- The minimap button: hidden or not, and its place around the minimap in degrees.
@@ -89,9 +88,8 @@ local function sanitizeSettings(s)
     if type(s.costExpanded) ~= "boolean" then s.costExpanded = DB.DEFAULTS.costExpanded end
     if type(s.levelShowGrey) ~= "boolean" then s.levelShowGrey = false end
     if s.levelSort ~= "speed" then s.levelSort = "cost" end
-    if type(s.theme) ~= "string" or not (ns.Theme and ns.Theme.exists(s.theme)) then
-        s.theme = DB.DEFAULTS.theme
-    end
+    -- The colour themes are gone: an old save's choice is dropped.
+    s.theme = nil
     sanitizeAppearance(s)
     -- Saved positions of the leveling and options windows: { x, y } or nothing.
     for _, key in ipairs({ "levelWindow", "optionsWindow" }) do

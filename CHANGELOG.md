@@ -5,13 +5,11 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 ## [Unreleased]
 
 ### Added
-- Options window (`/cp options`, the minimap button or the addon compartment): choose the look of every window at once, the header strip (Quest bar, Wood, Streaks) and the tile card (Loot card, Inset), any mix of the two (default Wood and Inset), applied immediately and saved for the account. It also shows or hides the minimap button, opens the main and leveling windows, and recaps the clicks and commands.
+- Options window (`/cp options`, the minimap button or the addon compartment): choose the look of every window at once, the header strip (Carved wood, Shade, Streaks) and the tile card (Loot card, Inset), any mix of the two (default Shade and Inset), applied immediately and saved for the account. It also shows or hides the minimap button, opens the main and leveling windows, and recaps the clicks and commands.
 - Minimap button (shown by default): left click opens the options, right click opens or closes the main window, drag it with the left button to move it around the minimap (its place is saved). Hide it from the options window or with `/cp minimap`, which also brings it back.
 - Addon compartment entry (the game's addon list button on the minimap, when the client shows it): left click options, right click main window.
-- Native UI foundations and `/cp kitdemo` variants (developer tool): widgets built on the game's own frame templates, shown by `/cp kitdemo [header [tile]]` with a choice of header strip and tile background; the previous themed demo moved to `/cp kitdemo old [theme]`.
-- Choose the colour theme: `/cp theme` lists Gold, Copper and Steel blue and `/cp theme copper` switches at once, with no `/reload`, for the pinned list, the leveling window and the scroll bars. The choice is saved for the account. Colours with a meaning (gain, loss, recipe difficulty, banner tint) do not change.
+- Native UI foundations and `/cp kitdemo` variants (developer tool): widgets built on the game's own frame templates, shown by `/cp kitdemo [header [tile]]` with a choice of header strip and tile background.
 - Click the AH (NET) tile or the recipe title of the main window to search the crafted item at the auction house, to see how many are for sale next to its price. A small magnifier icon marks both while the auction house is open. With the auction house closed it says to open it, and an item bound when picked up says it cannot be sold there.
-- Developer groundwork for the UI rework: colour themes (gold, copper, steel blue) and a shared widget kit, with a `/cp kitdemo` window.
 - Leveling window (`/cp level`, or the Leveling button under the pinned list): every learned recipe of a profession (grey ones hidden unless asked) ranked by the cost of a skill point from the last scan, stored per character so it works at the auction house. Grey recipes are hidden unless asked.
 - The leveling window shows the crafts per point and can be sorted by cost per point or by speed (likeliest point first).
 - Scroll bars on the pinned list (6 rows visible) and on the leveling list (12 rows visible): mouse wheel, drag the bar or click it; hidden while everything fits.
@@ -21,16 +19,19 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - Project documentation: README (English and French), user guide (English and French), technical documentation, contributing guide, CurseForge page text and submission checklist, issue and pull request templates, continuous integration.
 
 ### Changed
-- The pinned list and the leveling window now use the game's own frames, rows and scroll bar, like the main window. The colour themes (`/cp theme`) no longer change any window.
+- The pinned list and the leveling window now use the game's own frames, rows and scroll bar, like the main window.
 - Amounts now show the game's gold, silver and copper icons (the old text letters were a fallback that was always taken on Forever).
 - From 100 gold up, amounts no longer show copper (rounded to the nearest silver), so a large amount fits its tile instead of being cut off.
-- The main window now uses the game's own frame, panels, buttons and fonts. The header colour swatch is gone from it.
+- The main window now uses the game's own frame, panels, buttons and fonts.
 - Scroll bars: grabbing the thumb off-centre no longer makes it jump, only the left mouse button scrolls, and a drag stops when the button is no longer down (for example after alt-tab). The pinned list, the leveling list and the Materials rows share one row widget, and the window title is measured only when it changes.
 - The pinned list and the leveling window have the new look: a Pinned recipes panel with the sort button in its header and a Next point panel.
 - Pinned recipe names are coloured by difficulty (orange, yellow, green, grey), as in the profession window.
 - The main window has a new look: a result banner with the best way to sell and the net result, three tiles for the auction house, vendor and disenchant values, and separate Materials and Options panels. Its functions are unchanged; what you see differs: the best option is outlined on its tile instead of marked with ">", the per-point result is a coloured value beside its option instead of a "Gain per point" line, and the banner shows the verdict on one line.
 - The best tile of the main window is outlined in the game's gold (2 px), so it stands out from the other tiles.
 - The partial-result warning ("PRICES MISSING") now sits in amber on the banner label line so it is never cut off; the French and Spanish "cost per point" option labels are shorter.
+
+### Removed
+- `/cp theme` and the colour themes (replaced by the options window's look choices).
 
 ### Fixed
 - Show grey recipes in the leveling window now works: grey recipes are stored when the profession window is read (open it once after updating).

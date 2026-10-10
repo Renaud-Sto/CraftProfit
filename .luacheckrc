@@ -45,9 +45,9 @@ globals = {
 -- WoW API the addon reads. SlashCmdList is read-only as a whole table; the
 -- only key the addon may assign is its own slash handler.
 read_globals = {
-    "CreateFrame", "GetCursorPosition", "IsMouseButtonDown", "GetLocale", "GetTime", "time", "GetCoinTextureString",
+    "CreateFrame", "GetCursorPosition", "IsMouseButtonDown", "GetLocale", "GetTime", "time",
     "issecretvalue", "C_Timer", "C_AuctionHouse", "C_TradeSkillUI", "C_Item",
-    "Enum", "UIParent", "DEFAULT_CHAT_FRAME", "STANDARD_TEXT_FONT", "CreateColor", "C_Texture",
+    "Enum", "UIParent", "DEFAULT_CHAT_FRAME", "C_Texture",
     "ProfessionsFrame", "TradeSkillFrame", "AuctionHouseFrame", "AuctionFrame",
     "AuctionHouseFrameDisplayMode",
     "GetProfessions", "GetProfessionInfo", "IsPlayerSpell",

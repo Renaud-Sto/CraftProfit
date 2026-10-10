@@ -50,7 +50,7 @@ Status marks: ✅ measured in game · ⚠️ not measured · ❌ unusable.
 - `AuctionHouseFrame.SearchBar.SearchBox.searchIcon` exists (the key is `searchIcon`; `SearchIcon` is nil).
 - `searchIcon:GetAtlas()`: `common-search-magnifyingglass`; `GetTexture()`: `6725697` (a file id); `GetTexCoord()`: `0,0,0,1,1,0,1,1`.
 - `C_Texture.GetAtlasInfo("common-search-magnifyingglass")`: found, 24 x 24 (file 6725697). `search-icon` and `auctionhouse-icon-search`: nil.
-- Used by `Kit.searchIcon` (`CraftProfit/UI/Kit.lua`): the first source it tries is the one measured here.
+- Used by `Native.searchIcon` (`CraftProfit/UI/Native.lua`): when the atlas is unknown, it falls back to the AH search box icon measured here.
 
 ## F10. Native templates and atlases (`/cppn`, `/cppn list`, 2026-10-09, build 1.60.1.70291)
 - Templates that create and render: `ButtonFrameTemplate`, `PortraitFrameTemplate`, `DefaultPanelTemplate`, `DefaultPanelFlatTemplate`, `BasicFrameTemplateWithInset`, `InsetFrameTemplate`, `NineSlicePanelTemplate`, `UIPanelButtonTemplate`, `UICheckButtonTemplate`, `InputBoxTemplate`, `SearchBoxTemplate`, `ScrollFrameTemplate`, `MinimalScrollBar`, `WowScrollBoxList`, `PanelTabButtonTemplate`, `MagicButtonTemplate`, `UIPanelCloseButton`, `TooltipBackdropTemplate`, `QuestLogBorderFrameTemplate`.

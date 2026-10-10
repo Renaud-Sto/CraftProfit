@@ -13,7 +13,6 @@
 Util.lua
 Format.lua
 Colors.lua
-Theme.lua
 Core.lua
 Data/Skillup.lua
 Data/Disenchant.lua
@@ -32,7 +31,7 @@ Present.lua
 Leveling.lua
 AHAdapter.lua
 TradeAdapter.lua
-UI/Kit.lua
+UI/Layout.lua
 UI/Native.lua
 UI/Window.lua
 UI/PinsUI.lua

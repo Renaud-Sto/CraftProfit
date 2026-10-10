@@ -27,16 +27,16 @@ local function recordFrames(env)
     return made
 end
 
-H.test("the native module loads beside the kit without game globals", function()
-    local ns = H.newNS("Colors", "Theme", "UI/Kit", "UI/Native")
+H.test("the native module loads beside the layout helpers without game globals", function()
+    local ns = H.newNS("Colors", "UI/Layout", "UI/Native")
     H.truthy(ns.Native)
     H.eq(ns.Native.CONTENT_PAD, 4)
 end)
 
-H.test("the native file is loaded by the fake game environment, after the kit", function()
+H.test("the native file is loaded by the fake game environment, after the layout helpers", function()
     local T = W.boot(H)
     H.truthy(T.ns.Native)
-    H.truthy(T.ns.Kit)
+    H.truthy(T.ns.Layout)
 end)
 
 H.test("a window is a ButtonFrameTemplate made without a parent, then put under UIParent, hidden", function()
@@ -311,7 +311,7 @@ H.test("searchIcon uses the game's magnifier atlas when the client knows it", fu
     H.eq(atlas, "common-search-magnifyingglass")
 end)
 
-H.test("searchIcon falls back to the kit's lookup and reports when nothing was found", function()
+H.test("searchIcon falls back to the AH search box icon and reports when nothing was found", function()
     local _, Native, env = boot()
     local tex = W.frame()
     env.C_Texture = nil
@@ -323,6 +323,50 @@ H.test("searchIcon falls back to the kit's lookup and reports when nothing was f
     } } } }
     H.eq(Native.searchIcon(tex), true)
     H.eq(file, 12345)
+end)
+
+local function fakeTexture()
+    local t = W.frame()
+    t.calls = {}
+    t.SetAtlas = function(_, a) t.calls[#t.calls + 1] = { "atlas", a } end
+    t.SetTexture = function(_, p) t.calls[#t.calls + 1] = { "texture", p } end
+    t.SetTexCoord = function(_, ...) t.calls[#t.calls + 1] = { "coord", ... } end
+    return t
+end
+
+H.test("searchIcon copies the AH search box icon (atlas first, then texture and coordinates)", function()
+    local _, Native, env = boot()
+    env.C_Texture = false
+    local source = { GetAtlas = function() return "common-search-magnifyingglass" end }
+    env.AuctionHouseFrame = { SearchBar = { SearchBox = { searchIcon = source } } }
+    local tex = fakeTexture()
+    H.truthy(Native.searchIcon(tex))
+    H.eq(tex.calls, { { "atlas", "common-search-magnifyingglass" } })
+    local plain = { GetAtlas = function() return nil end, GetTexture = function() return "Interface\\X" end,
+        GetTexCoord = function() return 0, 1, 0, 1 end }
+    env.AuctionHouseFrame = { SearchBar = { SearchBox = { SearchIcon = plain } } }
+    tex = fakeTexture()
+    H.truthy(Native.searchIcon(tex))
+    H.eq(tex.calls, { { "texture", "Interface\\X" }, { "coord", 0, 1, 0, 1 } })
+end)
+
+H.test("searchIcon uses a verified atlas and gives up without drawing anything", function()
+    local _, Native, env = boot()
+    env.AuctionHouseFrame = false
+    env.C_Texture = { GetAtlasInfo = function(name)
+        if name == "common-search-magnifyingglass" then return { width = 14 } end
+    end }
+    local tex = fakeTexture()
+    H.truthy(Native.searchIcon(tex))
+    H.eq(tex.calls, { { "atlas", "common-search-magnifyingglass" } })
+    env.C_Texture = { GetAtlasInfo = function() return nil end }
+    tex = fakeTexture()
+    H.falsy(Native.searchIcon(tex))
+    H.eq(tex.calls, {})
+    env.C_Texture = false
+    H.falsy(Native.searchIcon(fakeTexture()))
+    env.AuctionHouseFrame = { SearchBar = { SearchBox = { searchIcon = { GetAtlas = function() error("x") end } } } }
+    H.falsy(Native.searchIcon(fakeTexture()))
 end)
 
 -- Panel and tile ------------------------------------------------------------------
@@ -366,18 +410,18 @@ local function withAtlas(textures, atlas)
     return nil
 end
 
-H.test("a panel is as tall as a kit panel with the same rows", function()
+H.test("a panel is as tall as Layout.panelHeight with the same rows", function()
     local T, Native = boot()
-    local Kit = T.ns.Kit
+    local Layout = T.ns.Layout
     local p = Native.panel(nil, "MATERIALS")
     p:setRows(3, 18)
-    H.eq(p:height(), Kit.panelHeight(3, 18))
+    H.eq(p:height(), Layout.panelHeight(3, 18))
     p:setRows(2, 18, 10)
-    H.eq(p:height(), Kit.panelHeight(2, 18, 10))
+    H.eq(p:height(), Layout.panelHeight(2, 18, 10))
     -- rowH is kept when not given.
     p:setRows(4)
-    H.eq(p:height(), Kit.panelHeight(4, 18))
-    H.eq(Native.HEAD_H, Kit.HEAD_H)
+    H.eq(p:height(), Layout.panelHeight(4, 18))
+    H.eq(Native.HEAD_H, Layout.HEAD_H)
 end)
 
 H.test("a panel keeps its title and right-hand text and sits on a game inset", function()
@@ -636,7 +680,7 @@ H.test("a tile shows its label, tag and value, and remembers whether it is the b
     local tile = Native.tile(nil, 110, 52)
     tile:set({ label = "DISENCH.", tag = "beta", value = "2g 2s" })
     H.truthy(tile.label.text:find("DISENCH.", 1, true))
-    -- The tag in the game's gold, like the Kit's.
+    -- The tag in the game's gold.
     H.truthy(tile.label.text:find("|c10.820beta|r", 1, true))
     H.eq(tile.value.text, "2g 2s")
     H.falsy(tile.best)
@@ -795,7 +839,7 @@ end)
 
 H.test("a tile steps its value down the game fonts until it fits, measured unbounded", function()
     local T, Native = boot()
-    local Kit = T.ns.Kit
+    local Layout = T.ns.Layout
     local tile = Native.tile(nil, 110, 52)
     local fonts = {}
     tile.value.SetFontObject = function(_, name) fonts[#fonts + 1] = name end
@@ -804,7 +848,7 @@ H.test("a tile steps its value down the game fonts until it fits, measured unbou
     tile:set({ label = "AH", value = "123456g 12s" })
     local sizes = {}
     for i, font in ipairs(Native.TILE_FONTS) do sizes[i] = font[2] end
-    local want = Kit.fitSize(200, sizes[1], 110 - Native.TILE_PAD * 2, sizes)
+    local want = Layout.fitSize(200, sizes[1], 110 - Native.TILE_PAD * 2, sizes)
     H.truthy(want < sizes[1])
     local expected
     for _, font in ipairs(Native.TILE_FONTS) do if font[2] == want then expected = font[1] end end
@@ -965,7 +1009,8 @@ end)
 
 H.test("kitdemo with an unknown variant prints one line and changes nothing", function()
     local T, named, slash = demoBoot()
-    for _, arg in ipairs({ "kitdemo z", "kitdemo a q", "kitdemo a a a" }) do
+    -- "old" (the themed demo) is gone: it is an unknown variant now.
+    for _, arg in ipairs({ "kitdemo z", "kitdemo a q", "kitdemo a a a", "kitdemo old", "kitdemo old steel" }) do
         local before = #T.chat
         slash(arg)
         H.eq(#T.chat, before + 1)
@@ -974,15 +1019,6 @@ H.test("kitdemo with an unknown variant prints one line and changes nothing", fu
     H.eq(named.CraftProfitNativeDemo, nil)
     H.eq(T.ns.KitDemo.header, "b")
     H.eq(T.ns.KitDemo.tile, "b")
-end)
-
-H.test("kitdemo old still shows the themed demo", function()
-    local T, named, slash = demoBoot()
-    slash("kitdemo old steel")
-    H.truthy(named.CraftProfitKitDemo)
-    H.eq(named.CraftProfitKitDemo.shown, true)
-    H.eq(T.ns.Kit.themeName, "steel")
-    H.eq(named.CraftProfitNativeDemo, nil)
 end)
 
 H.test("the demo title click and the money line work, with plain money when the client gives none", function()
@@ -1222,13 +1258,13 @@ end)
 H.test("the banner value steps down the game fonts when wider than 120 px", function()
     local T, Native, env = boot()
     recordRegions(env)
-    local Kit = T.ns.Kit
+    local Layout = T.ns.Layout
     local banner = Native.banner(nil, 52, 354)
     banner.value.GetUnboundedStringWidth = function() return 200 end
     banner:set({ kind = "profit", label = "L", text = "t", value = "123456g 12s 12c" })
     local sizes = {}
     for i, font in ipairs(Native.BANNER_FONTS) do sizes[i] = font[2] end
-    local want = Kit.fitSize(200, sizes[1], 120, sizes)
+    local want = Layout.fitSize(200, sizes[1], 120, sizes)
     H.truthy(want < sizes[1])
     local expected
     for _, font in ipairs(Native.BANNER_FONTS) do if font[2] == want then expected = font[1] end end
@@ -1399,9 +1435,9 @@ H.test("the native scroll bar hides when the list fits and shows a thumb of the 
     -- Offset 3 of 6 on a 50 px free track: 25 px down.
     H.eq(points[1], { "TOPLEFT", bar.frame, "TOPLEFT", 0, -25 })
     H.eq(points[2], { "TOPRIGHT", bar.frame, "TOPRIGHT", 0, -25 })
-    -- Never shorter than the kit's minimum, however long the list.
+    -- Never shorter than the layout's minimum, however long the list.
     bar:update(1000, 6, 0)
-    H.eq(heights[#heights], T.ns.Kit.SCROLL_MIN_THUMB)
+    H.eq(heights[#heights], T.ns.Layout.SCROLL_MIN_THUMB)
     H.falsy(bar:update(4, 6, 0))
     H.falsy(bar.frame.shown)
 end)

@@ -3,8 +3,8 @@
 local _, ns = ...
 local L = ns.L
 local Native, Colors = ns.Native, ns.Colors
--- Only the kit's pure layout maths (panelHeight) until it moves out of Kit.
-local Kit = ns.Kit
+-- Pure layout maths (panelHeight).
+local Layout = ns.Layout
 
 local PinsUI = {}
 ns.PinsUI = PinsUI
@@ -131,7 +131,7 @@ function PinsUI.refresh()
     end
 
     local shownRows = math.max(1, math.min(#pins, VISIBLE))
-    local panelH = Kit.panelHeight(shownRows, ROW_H)
+    local panelH = Layout.panelHeight(shownRows, ROW_H)
     panel.frame:SetHeight(panelH)
     parts.bar:update(#pins, VISIBLE, offset)
     local top = panelH + ns.Window.GAP
@@ -239,7 +239,7 @@ function PinsUI.init(controller)
     parts.panel = panel
     panel.frame:SetPoint("TOPLEFT", host, "TOPLEFT", 0, 0)
     panel.frame:SetPoint("TOPRIGHT", host, "TOPRIGHT", 0, 0)
-    panel.frame:SetHeight(Kit.panelHeight(1, ROW_H))
+    panel.frame:SetHeight(Layout.panelHeight(1, ROW_H))
 
     -- The sort button lives in the panel header: the game's button at its small height,
     -- centred on the header strip (PANEL_EDGE + (HEAD_H - SORT_H) / 2 from the top).

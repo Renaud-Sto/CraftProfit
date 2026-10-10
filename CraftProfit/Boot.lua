@@ -244,39 +244,6 @@ function Controller.toggleSort()
     Controller.setSortMode(CraftProfitCharDB.sortMode == DB.SORT_POINT and DB.SORT_NET or DB.SORT_POINT)
 end
 
--- Themes -------------------------------------------------------------------------
-
--- Localized name of a theme; the code itself when no language has one (ns.L then
--- returns the key).
-function Controller.themeLabel(code)
-    if type(code) ~= "string" then return tostring(code) end
-    local key = "THEME_" .. code:upper()
-    local label = L[key]
-    if label == key then return code end
-    return label
-end
-
--- Repaints every window with the theme `code` and saves the choice. False, and
--- nothing changed, for an unknown theme.
-function Controller.setTheme(code)
-    if not ns.Theme.exists(code) then return false end
-    ns.Kit.applyTheme(code)
-    CraftProfitDB.settings.theme = code
-    Controller.refresh()
-    return true
-end
-
--- The next theme of the list, back to the first after the last. No window calls it since
--- the main window lost its swatch (native frame); kept with the themes until step 5.
-function Controller.cycleTheme()
-    local list = ns.Theme.list()
-    local nextCode = list[1]
-    for i, code in ipairs(list) do
-        if code == ns.Kit.themeName then nextCode = list[i % #list + 1] end
-    end
-    if Controller.setTheme(nextCode) then say(string.format(L.THEME_SET, Controller.themeLabel(nextCode))) end
-end
-
 -- Appearance ---------------------------------------------------------------------
 
 -- Picks the header strip and the tile card (either nil = keep), repaints every window at
@@ -586,8 +553,6 @@ function Controller.init()
     DB.prune(CraftProfitDB, time())
     DB.initChar(CraftProfitCharDB)
     ns.Locale.select(GetLocale())
-    -- Before any window is built, so every widget is painted once, in the saved theme.
-    ns.Kit.applyTheme(CraftProfitDB.settings.theme)
     -- The saved look, before any window is built (sanitised by DB.initAccount).
     local appearance = CraftProfitDB.settings.appearance
     ns.Native.setHeaderVariant(appearance.header)
@@ -694,18 +659,6 @@ function Controller.historyCommand(arg)
     end
 end
 
--- /cp theme: name the current theme and list them all; /cp theme <code>: switch to it.
-function Controller.themeCommand(code)
-    local available = table.concat(ns.Theme.list(), ", ")
-    if code == "" then
-        say(string.format(L.THEME_INFO, Controller.themeLabel(ns.Kit.themeName), available))
-    elseif Controller.setTheme(code) then
-        say(string.format(L.THEME_SET, Controller.themeLabel(code)))
-    else
-        say(string.format(L.THEME_UNKNOWN, code, available))
-    end
-end
-
 local function slash(msg)
     if not Controller.ready then return end
     local cmd, arg = (msg or ""):match("^(%S*)%s*(.-)$")
@@ -734,8 +687,6 @@ local function slash(msg)
         Controller.historyCommand(arg)
     elseif cmd == "level" then
         if ns.LevelingUI then ns.LevelingUI.toggle() end
-    elseif cmd == "theme" then
-        Controller.themeCommand(arg:lower():match("^(.-)%s*$"))
     elseif cmd == "kitdemo" then
         if ns.KitDemo then ns.KitDemo.command(arg) end
     elseif cmd == "market" then

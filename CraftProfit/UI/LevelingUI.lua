@@ -4,8 +4,8 @@
 local _, ns = ...
 local L = ns.L
 local Native, Colors = ns.Native, ns.Colors
--- Only the kit's pure layout maths (panelHeight, stack) until it moves out of Kit.
-local Kit = ns.Kit
+-- Pure layout maths (panelHeight, stack).
+local Layout = ns.Layout
 
 local LevelingUI = {}
 ns.LevelingUI = LevelingUI
@@ -188,9 +188,9 @@ end
 function LevelingUI.init(controller, h)
     if frame then return frame end
     ctl, handlers = controller, h or {}
-    local panelH = Kit.panelHeight(VISIBLE, ROW_H)
+    local panelH = Layout.panelHeight(VISIBLE, ROW_H)
     local heights = { STRIP_H, AGE_H, panelH, CHECK_H }
-    local offsets, total = Kit.stack(heights, GAP, PAD)
+    local offsets, total = Layout.stack(heights, GAP, PAD)
 
     -- Escape does not close it (not in UISpecialFrames), as before.
     frame = Native.window("CraftProfitLevelWindow", L.LEVEL_TITLE, {

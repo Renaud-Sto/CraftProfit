@@ -111,7 +111,7 @@ H.test("the banner is the native banner, built at the content width", function()
     H.eq(b.fill, { T.ns.Colors.FIXED.trivial[1], T.ns.Colors.FIXED.trivial[2], T.ns.Colors.FIXED.trivial[3], 0.09 })
 end)
 
-H.test("the banner tint follows the kind of result and not the theme", function()
+H.test("the banner tint follows the kind of result", function()
     local T, Window = boot()
     local FIXED = T.ns.Colors.FIXED
     local b = Window.parts.banner
@@ -125,9 +125,6 @@ H.test("the banner tint follows the kind of result and not the theme", function(
     check("incomplete", FIXED.incomplete)
     check("none", FIXED.trivial)
     check("loss", FIXED.loss)
-    -- An old-Kit theme switch (still used by the pinned list) leaves the tint alone.
-    T.ns.Kit.applyTheme("steel")
-    H.eq(b.edge, { FIXED.loss[1], FIXED.loss[2], FIXED.loss[3], 0.45 })
 end)
 
 H.test("an unfolded materials panel lists one row per cost line and hides the rest", function()
@@ -276,16 +273,16 @@ end)
 
 H.test("sections lists the visible blocks top to bottom with their heights", function()
     local T, Window = boot()
-    local Kit, Native = T.ns.Kit, T.ns.Native
+    local Layout, Native = T.ns.Layout, T.ns.Native
     local function keys(list) local k = {} for i, s in ipairs(list) do k[i] = s.key end return k end
     local list = Window.sections({ hasLikely = false, expanded = true, reagents = 2 })
     H.eq(keys(list), { "banner", "tiles", "materials", "age", "options" })
-    -- Native.panel: 2 px edge + header + body pad + rows + 2 px edge, as Kit.panelHeight.
-    H.eq(Native.HEAD_H, Kit.HEAD_H)
-    H.eq(list[3].height, Kit.panelHeight(2, 18))
+    -- Native.panel: 2 px edge + header + body pad + rows + 2 px edge, as Layout.panelHeight.
+    H.eq(Native.HEAD_H, Layout.HEAD_H)
+    H.eq(list[3].height, Layout.panelHeight(2, 18))
     -- An option row holds the 24 px check box (button and input are 22) and 2 px of air.
     H.eq(Native.CHECK_SIZE + 2, 26)
-    H.eq(list[5].height, Kit.panelHeight(3, 26))
+    H.eq(list[5].height, Layout.panelHeight(3, 26))
     H.eq(keys(Window.sections({ hasLikely = true, expanded = true, reagents = 0 })),
         { "banner", "tiles", "likely", "materials", "age", "options" })
     H.eq(Window.sections({ hasLikely = false, expanded = false, reagents = 9 })[3].height, Window.FOLDED_H)
@@ -294,8 +291,8 @@ end)
 H.test("the options body is exactly three option rows", function()
     local T, Window = boot()
     local list = Window.sections({ hasLikely = false, expanded = true, reagents = 0 })
-    -- Height of the panel minus its header, body pads and edges (Kit.panelHeight(0, x)).
-    H.eq(list[5].height - T.ns.Kit.panelHeight(0, 26), 3 * 26)
+    -- Height of the panel minus its header, body pads and edges (Layout.panelHeight(0, x)).
+    H.eq(list[5].height - T.ns.Layout.panelHeight(0, 26), 3 * 26)
 end)
 
 H.test("the frame height is the sum of the visible sections plus the insets, and the pinned list adds its own", function()
@@ -430,7 +427,7 @@ end)
 
 H.test("a neutral per-point value is the game's main text colour, a cost keeps its meaning colour", function()
     local T, Window = boot()
-    local Kit, Colors = T.ns.Kit, T.ns.Colors
+    local Colors = T.ns.Colors
     local p = Window.parts
     local colour
     p.perPointValue.SetTextColor = function(_, r, g, b) colour = { r, g, b } end
@@ -439,9 +436,6 @@ H.test("a neutral per-point value is the game's main text colour, a cost keeps i
     H.eq(colour, { main[1], main[2], main[3] })
     Window.render(model({ showPerPoint = true, lines = { { label = "Cost per point", value = "1s", key = "perpoint", tone = "loss" } } }))
     colour = nil
-    -- The old Kit's theme switch no longer repaints the main window.
-    Kit.applyTheme("steel")
-    H.eq(colour, nil)
     Window.render(model({ showPerPoint = true, lines = { { label = "Cost per point", value = "1s", key = "perpoint", tone = "loss" } } }))
     H.eq(colour, { Colors.FIXED.loss[1], Colors.FIXED.loss[2], Colors.FIXED.loss[3] })
 end)
@@ -586,9 +580,6 @@ H.test("the empty-state, likely and age texts are muted game grey, a stale age i
     H.eq(last(p.age), { "colour", muted[1], muted[2], muted[3] })
     Window.render(model({ stale = true }))
     H.eq(last(p.age), { "colour", stale[1], stale[2], stale[3] })
-    local count = #p.empty.log
-    T.ns.Kit.applyTheme("steel")
-    H.eq(#p.empty.log, count)
 end)
 
 H.test("clicking the AH tile or the title asks to search the crafted item", function()
@@ -652,14 +643,6 @@ H.test("a click that ends a drag of the AH tile or the title searches nothing", 
         H.eq(#calls, i)
         H.eq(calls[i], { "onOutputClick" })
     end
-end)
-
-H.test("the main window has no theme swatch and is given no theme handler", function()
-    local T = W.boot(H)
-    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
-    local Window = T.ns.Window
-    H.eq(rawget(Window.frame(), "themeHit"), nil)
-    H.eq(rawget(Window.lastHandlers, "onThemeClick"), nil)
 end)
 
 H.test("the window is a native panel: named, with its title button and the pin button 120 px wide", function()

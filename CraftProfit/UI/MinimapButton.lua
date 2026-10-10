@@ -220,5 +220,3 @@ function MinimapButton.apply()
     place(ctl.minimapAngle())
     button:Show()
 end
-
-function MinimapButton.frame() return button end

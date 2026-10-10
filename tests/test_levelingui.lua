@@ -204,10 +204,6 @@ H.test("toggle and hide work; a plain name and an unknown value take the game's 
     UI.refresh()
     H.eq(nameColour, Colors.text("main"))
     H.eq(valueColour, Colors.text("muted"))
-    -- A theme switch no longer repaints anything here.
-    nameColour = nil
-    T.ns.Kit.applyTheme("steel")
-    H.eq(nameColour, nil)
     UI.toggle()
     H.falsy(UI.isShown())
     UI.hide()
@@ -242,8 +238,8 @@ end)
 
 H.test("the window height is the native chrome, the pads and the four sections", function()
     local T, UI = boot()
-    local Native, Kit = T.ns.Native, T.ns.Kit
-    local sections = Native.BUTTON_H + 14 + Kit.panelHeight(12, 18) + Native.CHECK_SIZE + 8 * 3
+    local Native, Layout = T.ns.Native, T.ns.Layout
+    local sections = Native.BUTTON_H + 14 + Layout.panelHeight(12, 18) + Native.CHECK_SIZE + 8 * 3
     H.eq(UI.frame().height,
         Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + sections)
 end)

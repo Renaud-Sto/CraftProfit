@@ -14,7 +14,7 @@ body:
     attributes:
       label: Game build and addon version
       description: In game, run `/dump select(4, GetBuildInfo())`. The addon version is in the AddOns list.
-      placeholder: "16001, CraftProfit 0.1.0"
+      placeholder: "16001, CraftProfit 1.0.0"
     validations:
       required: true
   - type: dropdown

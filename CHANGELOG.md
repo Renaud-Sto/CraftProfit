@@ -4,44 +4,35 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-10
+
+First public release, for the WoW: Forever beta, build 1.60.1, Interface 16001. It contains everything listed under 0.1.0 (never published) plus the changes below.
+
 ### Added
-- Pinned recipes window (`/cp pins`, a right click on the minimap button or on the addon compartment entry, or the button in the options window): the pinned recipes (12 per character at most) with their last known prices, anywhere, without the auction house or the profession window. The age line shows how old the oldest price used is (from a scan or a price search). A sort button (profit or cost per point, shared with the list at the auction house), an "x" on each row to unpin it, and a click on a row opens the main window on that recipe. Escape closes it; its position is saved. It never searches prices.
-- Options window (`/cp options`, the minimap button or the addon compartment): choose the look of every window at once, the header strip (Carved wood, Shade, Streaks) and the tile card (Loot card, Inset), any mix of the two (default Shade and Inset), applied immediately and saved for the account. It also shows or hides the minimap button, opens the main, leveling and pinned recipes windows, and lists the minimap clicks and every command, one per line with a short description. Its buttons are sized so no label is cut in English, French or Spanish (420 px wide; the three window buttons on two rows).
-- Every window sits above the game's HUD panels and comes fully to the front when it opens or is clicked, so two windows never mix their borders and contents. The windows never get shorter than their metal border needs (the empty main window no longer shows corner pieces sticking out). The commands list has a little space under its last line.
-- Windows without a saved position open just right of the rightmost CraftProfit window already on screen (main, leveling, pinned recipes, options) instead of on top of each other, the main window included; with none shown they keep their usual place. A dragged window always reopens where it was left.
-- Minimap button (shown by default): left click opens the options, right click opens or closes the pinned recipes window, drag it with the left button to move it around the minimap (its place is saved). Hide it from the options window or with `/cp minimap`, which also brings it back.
-- Addon compartment entry (the game's addon list button on the minimap, when the client shows it): left click options, right click pinned recipes window.
-- Native UI foundations and `/cp kitdemo` variants (developer tool): widgets built on the game's own frame templates, shown by `/cp kitdemo [header [tile]]` with a choice of header strip and tile background.
-- Click the AH (NET) tile or the recipe title of the main window to search the crafted item at the auction house, to see how many are for sale next to its price. A small magnifier icon marks both while the auction house is open. With the auction house closed it says to open it, and an item bound when picked up says it cannot be sold there.
-- Leveling window (`/cp level`, or the Leveling button under the pinned list): every learned recipe of a profession (grey ones hidden unless asked) ranked by the cost of a skill point from the last scan, stored per character so it works at the auction house. Grey recipes are hidden unless asked.
-- The leveling window shows the crafts per point and can be sorted by cost per point or by speed (likeliest point first).
-- Scroll bars on the pinned list (6 rows visible) and on the leveling list (12 rows visible): mouse wheel, drag the bar or click it; hidden while everything fits.
-- `/cp market` shows the market the prices are saved under.
-- Prices are kept per ruleset (the game "realm" in the beta) and faction. Prices saved by earlier builds are adopted by the first market used.
-- Price history: the *Track history* box records the prices of up to 15 recipes after every scan and price search (retention: all points for 14 days, then daily, then weekly averages up to a year); `/cp history` lists and removes tracked recipes. Recording only, the graphs are planned.
+- Leveling window (`/cp level`, or the Leveling button under the pinned list): every learned recipe of a profession ranked by the cost of the next skill point from the last scan, with the crafts each point takes on average. Sort by cost per point or by speed (likeliest point first); grey recipes hidden unless asked. The recipes are stored per character, so the window works at the auction house with the profession window closed.
+- Pinned recipes window (`/cp pins`, a right click on the minimap button or the addon compartment entry, or the button in the options window): the pinned recipes with their last known prices, anywhere, without the auction house or the profession window. It shows how old the oldest price used is, shares the sort (profit or cost per point) with the list at the auction house, has an "x" on each row to unpin it, and a click on a row opens the main window on that recipe. It never searches prices. Escape closes it.
+- Options window (`/cp options`, a left click on the minimap button or the addon compartment entry): choose the look of every window at once, the header strip (Carved wood, Shade, Streaks) and the tile card (Loot card, Inset), default Shade and Inset, applied immediately and saved for the account. It also shows or hides the minimap button, opens the main, leveling and pinned recipes windows, and lists the minimap clicks and every command. No label is cut in English, French or Spanish. Escape closes it.
+- Minimap button (shown by default): left click opens the options, right click opens or closes the pinned recipes window, a left drag moves it around the minimap (round or square), and its place is saved. `/cp minimap` or the options window hides it or brings it back.
+- Addon compartment entry (when the client shows the addon list button): left click options, right click pinned recipes window.
+- Click the AH (NET) tile or the recipe title of the main window to search the crafted item at the auction house and see how many are for sale. A small magnifier marks both while the auction house is open. With the auction house closed it says to open it; an item bound when picked up says it cannot be sold there.
+- Price history: the *Track history* box records the prices of up to 15 recipes after every scan and price search (all points for 14 days, then daily, then weekly averages up to a year). `/cp history` lists the tracked recipes and `/cp history remove <n>` deletes one. Recording only: graphs are planned.
+- Prices are kept per market: ruleset (the game "realm" in the beta) and faction, hardcore apart. `/cp market` shows the market in use. Prices saved by earlier builds are adopted by the first market used.
+- Scroll bars on the pinned list (6 rows visible) and the leveling and pinned recipes windows (12 rows visible): mouse wheel, drag the bar or click it; hidden while everything fits.
+- Window placement: a window that was never dragged opens just right of the rightmost CraftProfit window on screen instead of on top of it; a dragged window always reopens where it was left. The window opened or clicked last comes to the front, above the game's HUD panels.
 - Project documentation: README (English and French), user guide (English and French), technical documentation, contributing guide, CurseForge page text and submission checklist, issue and pull request templates, continuous integration.
 
 ### Changed
-- The pinned list and the leveling window now use the game's own frames, rows and scroll bar, like the main window.
-- Amounts now show the game's gold, silver and copper icons (the old text letters were a fallback that was always taken on Forever).
-- From 100 gold up, amounts no longer show copper (rounded to the nearest silver), so a large amount fits its tile instead of being cut off.
-- The main window now uses the game's own frame, panels, buttons and fonts.
-- Scroll bars: grabbing the thumb off-centre no longer makes it jump, only the left mouse button scrolls, and a drag stops when the button is no longer down (for example after alt-tab). The pinned list, the leveling list and the Materials rows share one row widget, and the window title is measured only when it changes.
-- The pinned list and the leveling window have the new look: a Pinned recipes panel with the sort button in its header and a Next point panel.
+- Every window now uses the game's own frames, panels, buttons, check boxes, fonts and scroll bars. The main window shows a result banner (best way to sell and net result), three tiles for the auction house, vendor and disenchant values (the best one outlined in gold), and separate Materials and Options panels. When some prices are missing, the "PRICES MISSING" warning sits on the banner's label line so it is never cut off.
+- Amounts show the game's gold, silver and copper icons. From 100 gold up, copper is dropped (rounded to the nearest silver) so a large amount fits its tile.
 - Pinned recipe names are coloured by difficulty (orange, yellow, green, grey), as in the profession window.
-- The main window has a new look: a result banner with the best way to sell and the net result, three tiles for the auction house, vendor and disenchant values, and separate Materials and Options panels. Its functions are unchanged; what you see differs: the best option is outlined on its tile instead of marked with ">", the per-point result is a coloured value beside its option instead of a "Gain per point" line, and the banner shows the verdict on one line.
-- The best tile of the main window is outlined in the game's gold (2 px), so it stands out from the other tiles.
-- The partial-result warning ("PRICES MISSING") now sits in amber on the banner label line so it is never cut off; the French and Spanish "cost per point" option labels are shorter.
-
-### Removed
-- `/cp theme` and the colour themes (replaced by the options window's look choices).
+- The French and Spanish "cost per point" option labels are shorter.
 
 ### Fixed
-- Show grey recipes in the leveling window now works: grey recipes are stored when the profession window is read (open it once after updating).
+- *Show grey recipes* in the leveling window works: grey recipes are now stored when the profession window is read (open it once after updating).
 
-## [0.1.0] - not yet released
+## [0.1.0] - not released
 
-First version, developed against the WoW: Forever beta (build 1.60.1, Interface 16001).
+First version, developed against the WoW: Forever beta (build 1.60.1, Interface 16001). Never published: its content ships in 1.0.0.
 
 ### Added
 - Floating window next to the profession window: reagent cost with a foldable detail, auction house net value (5 % commission), vendor value, expected disenchant value, best option and net result, age of the prices.
@@ -59,4 +50,5 @@ First version, developed against the WoW: Forever beta (build 1.60.1, Interface 
 - Skill-up chances are estimates by recipe colour (100 / 75 / 25 / 0 %).
 - Known recipes only; no sales history.
 
-[Unreleased]: https://github.com/Renaud-Sto/CraftProfit/compare/main...HEAD
+[Unreleased]: https://github.com/Renaud-Sto/CraftProfit/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/Renaud-Sto/CraftProfit/releases/tag/v1.0.0

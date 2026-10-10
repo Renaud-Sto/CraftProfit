@@ -102,4 +102,9 @@ ns.Locale.register("esES", {
     OPTIONS_MAIN_WINDOW = "Ventana principal",
     OPTIONS_CONTROLS = "CONTROLES",
     OPTIONS_RECAP = "Botón del minimapa: clic izquierdo para las opciones, clic derecho para la ventana principal (la lista fijada aparece debajo en la casa de subastas).\nComandos: /cp show, hide, options, level, minimap, history, scan, market, locale <código>, selftest.",
+    MINIMAP_HIDDEN = "Botón del minimapa oculto. /cp minimap lo restablece",
+    MINIMAP_SHOWN = "Botón del minimapa visible",
+    MINIMAP_TIP_LEFT = "Clic izquierdo: opciones",
+    MINIMAP_TIP_RIGHT = "Clic derecho: ventana principal",
+    MINIMAP_TIP_DRAG = "Arrastrar: mover este botón",
 })

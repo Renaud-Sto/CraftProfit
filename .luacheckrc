@@ -39,6 +39,7 @@ globals = {
     "CraftProfitCharDB",
     "SLASH_CRAFTPROFIT1",
     "SLASH_CRAFTPROFIT2",
+    "CraftProfit_OnCompartmentClick",
 }
 
 -- WoW API the addon reads. SlashCmdList is read-only as a whole table; the
@@ -56,6 +57,8 @@ read_globals = {
     "GetTradeSkillReagentInfo", "GetTradeSkillReagentItemLink",
     "GetTradeSkillNumMade", "GetMoneyString", "UISpecialFrames",
     "ButtonFrameTemplate_HidePortrait", "ButtonFrameTemplate_HideButtonBar", "ButtonFrameTemplate_HideAttic",
+    "Minimap", "GetMinimapShape", "GetFileIDFromPath",
+    "GameTooltip", "GameTooltip_SetTitle", "GameTooltip_AddInstructionLine",
     "PlaySound", "SOUNDKIT", "NORMAL_FONT_COLOR", "HIGHLIGHT_FONT_COLOR", "DISABLED_FONT_COLOR",
     SlashCmdList = {
         other_fields = true,

@@ -102,4 +102,9 @@ ns.Locale.register("enUS", {
     OPTIONS_MAIN_WINDOW = "Main window",
     OPTIONS_CONTROLS = "CONTROLS",
     OPTIONS_RECAP = "Minimap button: left click options, right click main window (the pinned list shows below it at the auction house).\nCommands: /cp show, hide, options, level, minimap, history, scan, market, locale <code>, selftest.",
+    MINIMAP_HIDDEN = "Minimap button hidden. /cp minimap brings it back",
+    MINIMAP_SHOWN = "Minimap button shown",
+    MINIMAP_TIP_LEFT = "Left click: options",
+    MINIMAP_TIP_RIGHT = "Right click: main window",
+    MINIMAP_TIP_DRAG = "Drag: move this button",
 })

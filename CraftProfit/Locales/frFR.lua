@@ -102,4 +102,9 @@ ns.Locale.register("frFR", {
     OPTIONS_MAIN_WINDOW = "Fenêtre principale",
     OPTIONS_CONTROLS = "COMMANDES",
     OPTIONS_RECAP = "Bouton de la minicarte : clic gauche pour les options, clic droit pour la fenêtre principale (la liste épinglée s'affiche dessous à l'hôtel des ventes).\nCommandes : /cp show, hide, options, level, minimap, history, scan, market, locale <code>, selftest.",
+    MINIMAP_HIDDEN = "Bouton de la minicarte masqué. /cp minimap le rétablit",
+    MINIMAP_SHOWN = "Bouton de la minicarte affiché",
+    MINIMAP_TIP_LEFT = "Clic gauche : options",
+    MINIMAP_TIP_RIGHT = "Clic droit : fenêtre principale",
+    MINIMAP_TIP_DRAG = "Glisser : déplacer ce bouton",
 })

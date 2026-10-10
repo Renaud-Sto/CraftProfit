@@ -314,6 +314,23 @@ function Controller.setMinimapHidden(hidden)
     if type(button) == "table" and type(button.apply) == "function" then button.apply() end
 end
 
+function Controller.minimapAngle()
+    return CraftProfitDB.settings.minimap.angle
+end
+
+-- Saves where the minimap button was dragged; a bad angle is ignored.
+function Controller.setMinimapAngle(angle)
+    local clean = DB.angle(angle)
+    if clean then CraftProfitDB.settings.minimap.angle = clean end
+end
+
+-- /cp minimap: hides the button, or shows it again, and says which in one line.
+function Controller.minimapCommand()
+    local hidden = not Controller.minimapHidden()
+    Controller.setMinimapHidden(hidden)
+    say(hidden and L.MINIMAP_HIDDEN or L.MINIMAP_SHOWN)
+end
+
 function Controller.saveOptionsPosition(x, y)
     if Util.isFinite(x) and Util.isFinite(y) then
         CraftProfitDB.settings.optionsWindow = { x = x, y = y }
@@ -606,6 +623,8 @@ function Controller.init()
         ns.OptionsUI.init(Controller)
         ns.OptionsUI.attach(CraftProfitDB.settings.optionsWindow)
     end
+    -- After the windows exist; makes nothing while the player keeps the button hidden.
+    if ns.MinimapButton then ns.MinimapButton.apply() end
     ns.AH.setHandlers({
         onOpen = Controller.onAHOpen,
         onSearch = function(itemID, listings)
@@ -695,6 +714,8 @@ local function slash(msg)
         Controller.hideMainWindow()
     elseif cmd == "options" then
         if ns.OptionsUI then ns.OptionsUI.toggle() end
+    elseif cmd == "minimap" then
+        Controller.minimapCommand()
     elseif cmd == "reset" then
         CraftProfitDB.settings.window = nil
         window.attach(anchor, nil)
@@ -718,6 +739,17 @@ local function slash(msg)
         say(string.format(L.MARKET_INFO, tostring(name), Controller.marketKey()))
     else
         say(L.SLASH_HELP)
+    end
+end
+
+-- The addon compartment entry (TOC AddonCompartmentFunc): the game calls it with the
+-- addon's name and the mouse button. Left: options window; right: main window.
+function CraftProfit_OnCompartmentClick(_, mouseButton)
+    if not Controller.ready then return end
+    if mouseButton == "RightButton" then
+        Controller.toggleMainWindow()
+    elseif ns.OptionsUI then
+        ns.OptionsUI.toggle()
     end
 end
 

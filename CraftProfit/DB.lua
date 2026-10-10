@@ -58,7 +58,7 @@ end
 
 -- An angle in degrees brought into [0, 360); nil when it is not a finite number, or when
 -- it is too large for the modulo to stay exact.
-local function angleOf(v)
+function DB.angle(v)
     if not Util.isFinite(v) then return nil end
     v = v % 360
     if not (v >= 0 and v < 360) then return nil end
@@ -78,7 +78,7 @@ local function sanitizeAppearance(s)
     local mapDefaults = DB.DEFAULTS.minimap
     local hide = m.hide
     if type(hide) ~= "boolean" then hide = mapDefaults.hide end
-    s.minimap = { hide = hide, angle = angleOf(m.angle) or mapDefaults.angle }
+    s.minimap = { hide = hide, angle = DB.angle(m.angle) or mapDefaults.angle }
 end
 
 local function sanitizeSettings(s)

@@ -4,7 +4,7 @@
 
 CraftProfit vous dit ce que coûte vraiment une recette de métier à l'hôtel des ventes, et ce qu'il faut faire de l'objet obtenu. Ce guide explique chaque partie de la fenêtre, comment chaque chiffre est calculé, et ce que l'addon ne peut pas savoir.
 
-Sommaire : [La fenêtre](#la-fenêtre) · [À l'hôtel des ventes](#à-lhôtel-des-ventes) · [Comment les chiffres sont calculés](#comment-les-chiffres-sont-calculés) · [Thèmes](#thèmes) · [Options et commandes](#options-et-commandes) · [Langues](#langues) · [Limites connues](#limites-connues) · [FAQ et dépannage](#faq-et-dépannage)
+Sommaire : [La fenêtre](#la-fenêtre) · [À l'hôtel des ventes](#à-lhôtel-des-ventes) · [Comment les chiffres sont calculés](#comment-les-chiffres-sont-calculés) · [Options et commandes](#options-et-commandes) · [Langues](#langues) · [Limites connues](#limites-connues) · [FAQ et dépannage](#faq-et-dépannage)
 
 ## La fenêtre
 
@@ -128,17 +128,13 @@ Ouvrez-la avec `/cp options`, un clic gauche sur le bouton de la minicarte, ou l
 - **Fenêtres** : ouvre ou ferme la fenêtre principale et la fenêtre de montée de métier.
 - **Commandes** : un rappel des clics et des commandes ci-dessous.
 
+Les couleurs qui ont un sens ne changent jamais avec l'apparence : le gain en vert, la perte en rouge, les couleurs de difficulté des recettes (orange, jaune, vert, gris) et la teinte du bandeau de résultat.
+
 ### Bouton de la minicarte
 
 Clic gauche : fenêtre d'options. Clic droit : ouvre ou ferme la fenêtre principale (à l'hôtel des ventes, la liste des épingles s'affiche dessous). Glissez-le avec le bouton gauche pour le déplacer autour de la minicarte ; il garde sa place après `/reload`. Les minicartes carrées (d'un addon de minicarte) sont suivies le long de leurs bords.
 
 Prévu ensuite : une fenêtre autonome des recettes épinglées, utilisable loin de l'hôtel des ventes, ouverte par `/cp pins` et par le clic droit sur le bouton de la minicarte. D'ici là, le clic droit ouvre la fenêtre principale.
-
-## Thèmes
-
-`/cp theme` liste toujours **Or**, **Cuivre** et **Bleu acier** et enregistre votre choix, mais sans effet visible depuis que toutes les fenêtres utilisent les cadres du jeu ; changez l'apparence dans la [fenêtre d'options](#fenêtre-doptions). Il sera retiré dans une prochaine version.
-
-Les couleurs qui ont un sens sont fixes : le gain en vert, la perte en rouge, les couleurs de difficulté des recettes (orange, jaune, vert, gris) et la teinte du bandeau de résultat.
 
 ## Options et commandes
 
@@ -150,9 +146,8 @@ Les couleurs qui ont un sens sont fixes : le gain en vert, la perte en rouge, le
 | Tri de la liste des épingles | Bouton dans l'en-tête du panneau des épingles | Gain |
 | Bandeau des sections et cases de prix | [Fenêtre d'options](#fenêtre-doptions) ; enregistré pour le compte | Bois, Encart |
 | Bouton de la minicarte affiché, et sa place | Fenêtre d'options ou `/cp minimap` ; le faire glisser | Affiché, en bas à gauche |
-| Thème (plus d'effet visible, voir [Thèmes](#thèmes)) | `/cp theme [nom]` ; enregistré pour le compte | Or |
 
-Commandes : `/cp` (ou `/craftprofit`) avec `show`, `hide`, `reset`, `options`, `minimap`, `scan`, `history`, `market`, `level`, `locale <code>`, `theme [nom]` et `selftest`. Voir le [README](../README.fr.md#commandes).
+Commandes : `/cp` (ou `/craftprofit`) avec `show`, `hide`, `reset`, `options`, `minimap`, `scan`, `history`, `market`, `level`, `locale <code>` et `selftest`. Voir le [README](../README.fr.md#commandes).
 
 ## Langues
 

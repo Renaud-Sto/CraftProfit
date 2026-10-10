@@ -151,6 +151,23 @@ function Native.searchIcon(texture)
     return ok and applied == true
 end
 
+-- Front -----------------------------------------------------------------------------
+
+-- Brings the Native.window holding `widget` (or `widget` itself) to the front of its strata,
+-- children included. Walks up the parents; does nothing outside one of our windows.
+function Native.raiseWindow(widget)
+    local f = widget
+    for _ = 1, 30 do
+        if type(f) ~= "table" then return end
+        if rawget(f, "isNativeWindow") == true then
+            if type(f.Raise) == "function" then f:Raise() end
+            return
+        end
+        if type(f.GetParent) ~= "function" then return end
+        f = f:GetParent()
+    end
+end
+
 -- Drag ----------------------------------------------------------------------------
 
 -- A button takes the mouse, so a press on it no longer reaches the window under it: make a
@@ -159,7 +176,10 @@ end
 -- of a drag to the next press, and click handlers return early while it is.
 function Native.forwardDrag(button, window)
     button:RegisterForDrag("LeftButton")
-    button:HookScript("OnMouseDown", function() button.dragged = false end)
+    button:HookScript("OnMouseDown", function()
+        button.dragged = false
+        Native.raiseWindow(window)
+    end)
     button:SetScript("OnDragStart", function()
         button.dragged = true
         window:StartMoving()
@@ -168,6 +188,44 @@ function Native.forwardDrag(button, window)
 end
 
 -- Window --------------------------------------------------------------------------
+
+-- ButtonFrameTemplate's border is the NineSlice layout PortraitFrameTemplate
+-- (Blizzard_SharedXML/Mainline/NineSliceLayouts.lua): its top corners start 16 px above the
+-- frame, its bottom corners end 3 px below it (8 with the Camelot override; 3 is the larger
+-- need). The side edges fill the gap between them: a frame shorter than both corners less
+-- those overhangs has no room for them and the corners stick out above and below.
+Native.CORNER_TOP_ATLASES = { "UI-Frame-PortraitMetal-CornerTopLeft", "UI-Frame-Metal-CornerTopRight" }
+Native.CORNER_BOTTOM_ATLASES = { "UI-Frame-Metal-CornerBottomLeft", "UI-Frame-Metal-CornerBottomRight" }
+Native.CORNER_TOP_OVERHANG = 16
+Native.CORNER_BOTTOM_OVERHANG = 3
+-- Used when the client does not give the corner sizes.
+Native.MIN_WINDOW_H = 140
+
+local function tallest(names)
+    local best
+    for _, name in ipairs(names) do
+        local info = atlasInfo(name)
+        local h = info and info.height
+        if type(h) ~= "number" or h ~= h or h <= 0 then return nil end
+        if not best or h > best then best = h end
+    end
+    return best
+end
+
+-- The least height a Native.window may have: the corners' own need when the client knows
+-- their atlases, else Native.MIN_WINDOW_H.
+function Native.minWindowHeight()
+    local top, bottom = tallest(Native.CORNER_TOP_ATLASES), tallest(Native.CORNER_BOTTOM_ATLASES)
+    if not top or not bottom then return Native.MIN_WINDOW_H end
+    return math.max(0, top - Native.CORNER_TOP_OVERHANG) + math.max(0, bottom - Native.CORNER_BOTTOM_OVERHANG)
+end
+
+-- `h` raised to the least window height; every window height goes through it.
+function Native.windowHeight(h)
+    local least = Native.minWindowHeight()
+    if type(h) ~= "number" or h ~= h or h < least then return least end
+    return h
+end
 
 -- A movable game panel (ButtonFrameTemplate: rock background, metal border, title bar,
 -- close button) without portrait and without button bar. Returned hidden and unanchored;
@@ -181,8 +239,15 @@ function Native.window(name, title, opts)
     local f = CreateFrame("Frame", name, nil, "ButtonFrameTemplate")
     f:SetParent(UIParent)
     f:Hide()
-    f:SetSize(opts.width or 372, opts.height or 200)
-    f:SetFrameStrata("MEDIUM")
+    f:SetSize(opts.width or 372, Native.windowHeight(opts.height or 200))
+    -- HIGH: above the game's HUD panels (the Cooldown Manager sits in MEDIUM). Toplevel and
+    -- raised on show and on any press inside it, so the window clicked last is drawn whole
+    -- above the others (the template's border pieces use high fixed frame levels).
+    f:SetFrameStrata("HIGH")
+    if type(f.SetToplevel) == "function" then f:SetToplevel(true) end
+    f.isNativeWindow = true
+    f:HookScript("OnShow", function(self) Native.raiseWindow(self) end)
+    f:HookScript("OnMouseDown", function(self) Native.raiseWindow(self) end)
     f:SetClampedToScreen(true)
     f:SetMovable(true)
     f:EnableMouse(true)
@@ -325,6 +390,7 @@ function Native.button(parent, text, opts)
         label:SetWordWrap(false)
     end
     b.onClick = opts.onClick
+    b:HookScript("OnMouseDown", function(self) Native.raiseWindow(self) end)
     -- The template has no OnClick of its own, so SetScript replaces nothing of Blizzard's.
     b:SetScript("OnClick", function(self, ...)
         if type(self.IsEnabled) == "function" and self:IsEnabled() == false then return end

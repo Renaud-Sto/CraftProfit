@@ -88,3 +88,23 @@ H.test("scrollGrab keeps the place of a thumb grabbed anywhere and centres a poi
     H.eq(Layout.scrollGrab(6, 6, 0, 100, 10), nil)
     H.eq(Layout.scrollGrab(nil, 6, 0, 100, 10), nil)
 end)
+
+H.test("rightmost picks the shown entry with the largest right edge", function()
+    local Layout = load()
+    H.eq(Layout.rightmost({}), nil)
+    H.eq(Layout.rightmost({ { shown = false, right = 900 } }), nil)
+    H.eq(Layout.rightmost({ { shown = true, right = 300 }, { shown = true, right = 700 }, { shown = false, right = 900 } }), 2)
+    H.eq(Layout.rightmost({ { shown = true, right = 700 }, { shown = true, right = 700 } }), 1)
+    -- An edge that cannot be measured never wins: nothing to place beside.
+    H.eq(Layout.rightmost({ { shown = true, right = nil }, { shown = true, right = 0 / 0 } }), nil)
+    H.eq(Layout.rightmost({ { shown = true, right = math.huge }, { shown = true, right = "9" }, { shown = true, right = 5 } }), 3)
+    H.eq(Layout.rightmost({ { shown = 1, right = 5 } }), nil)
+end)
+
+H.test("textWidth estimates a label from its letters, accents counting once", function()
+    local Layout = load()
+    H.eq(Layout.textWidth("abc", 7), 21)
+    H.eq(Layout.textWidth("Montée de métier", 7), 16 * 7)
+    H.eq(Layout.textWidth("", 7), 0)
+    H.eq(Layout.textWidth(nil, 7), 0)
+end)

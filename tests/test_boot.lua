@@ -990,12 +990,13 @@ H.test("the saved keys and the native variants are the same sets", function()
     H.truthy(Native.TILE_VARIANTS[DB.DEFAULTS.appearance.tile])
 end)
 
-H.test("the slash help lists options and minimap in every language", function()
+H.test("the slash help lists options, pins and minimap in every language", function()
     for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
         local T = boot({ locale = locale, items = ITEMS })
         T.env.SlashCmdList.CRAFTPROFIT("nope")
         local help = T.chat[#T.chat]
         H.truthy(help:find("| options |", 1, true))
+        H.truthy(help:find("| pins |", 1, true))
         H.truthy(help:find("| minimap |", 1, true))
     end
 end)
@@ -1027,3 +1028,273 @@ H.test("setAppearance saves the saved choice merged with the new part, not what 
     H.eq({ Native.appearance() }, { "c", "b" })
 end)
 
+
+-- Pinned window data ---------------------------------------------------------------
+
+local function pinRaw(id, output)
+    return { recipeID = id, name = "P" .. id, difficulty = "easy", outputItemID = output, qtyMin = 1, qtyMax = 1,
+        reagents = { { itemID = 1, qty = 2 }, { itemID = 2, qty = 1 } } }
+end
+
+H.test("pinsData lists the pins in the pinned list's order", function()
+    local T = boot({ items = { [100] = ITEMS[100], [101] = { quality = 1, ilvl = 1, sellPrice = 10, classID = 0, bindType = 2 } } })
+    local C, DB = T.ns.Controller, T.ns.DB
+    stock(T)
+    DB.pinAdd(T.env.CraftProfitCharDB, pinRaw(1, 101))
+    DB.pinAdd(T.env.CraftProfitCharDB, pinRaw(2, 100))
+    local data = C.pinsData()
+    local ids = {}
+    for i, item in ipairs(data.items) do ids[i] = item.recipe.recipeID end
+    -- Recipe 2 sells at a profit, recipe 1 has no price for its output.
+    H.eq(ids, { 2, 1 })
+    H.eq(data.byPoint, false)
+    H.truthy(data.items[1].result.net > 0)
+    local expected = T.ns.PinsUI.orderedPins(T.env.CraftProfitCharDB.pins, "net", C.evaluate)
+    H.eq(data.items[1].recipe, expected[1].recipe)
+    C.toggleSort()
+    H.eq(C.pinsData().byPoint, true)
+end)
+
+H.test("the pinned age is the oldest price the pins use, searched or scanned, never the scan time alone", function()
+    local T = boot()
+    local C, DB, P = T.ns.Controller, T.ns.DB, T.ns.Prices
+    -- No pin, no price: never priced, stale.
+    local data = C.pinsData()
+    H.eq(data.ageText, "Prices: never scanned")
+    H.eq(data.stale, true)
+    DB.pinAdd(T.env.CraftProfitCharDB, pinRaw(1, 100))
+    data = C.pinsData()
+    H.eq(data.ageText, "Prices: never scanned")
+    H.eq(data.stale, true)
+    -- Prices from "Search prices" only (no full scan): their age counts.
+    P.store(C.market(), 1, 100, 10, 1700000000 - 60)
+    P.store(C.market(), 100, 1000, 10, 1700000000 - 300)
+    H.eq(C.market().snapshotTime, nil)
+    data = C.pinsData()
+    H.eq(data.ageText, "Prices: 5m ago")
+    H.eq(data.stale, false)
+    -- The same text as the main window's line for that recipe.
+    C.selectPin(1)
+    H.eq(T.ns.Window.lastModel.ageText, data.ageText)
+    -- A recent full scan does not hide an old price of a pin.
+    C.market().snapshotTime = 1700000000 - 10
+    P.store(C.market(), 2, 50, 10, 1700000000 - 7200)
+    data = C.pinsData()
+    H.eq(data.ageText, "Prices: 2h ago")
+    H.eq(data.stale, true)
+    -- Oldest over every pin.
+    DB.pinAdd(T.env.CraftProfitCharDB, { recipeID = 2, name = "Q", outputItemID = 100,
+        reagents = { { itemID = 3, qty = 1 } } })
+    P.store(C.market(), 3, 10, 10, 1700000000 - 2 * 86400)
+    H.eq(C.pinsData().ageText, "Prices: 2d ago")
+end)
+
+H.test("pinsData is empty with no pin", function()
+    local T = boot()
+    local data = T.ns.Controller.pinsData()
+    H.eq(data.items, {})
+    H.eq(data.byPoint, false)
+end)
+
+H.test("unpin removes the pin, refreshes and keeps the selection", function()
+    local T = boot()
+    local C, DB = T.ns.Controller, T.ns.DB
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    C.togglePin()
+    DB.pinAdd(T.env.CraftProfitCharDB, pinRaw(9, 100))
+    H.eq(T.ns.Window.lastModel.pinned, true)
+    C.unpin(5)
+    H.eq(DB.pinIndex(T.env.CraftProfitCharDB, 5), nil)
+    H.eq(#T.env.CraftProfitCharDB.pins, 1)
+    H.eq(T.ns.Window.lastModel.pinned, false)
+    H.eq(C.currentRecipeID(), 5)
+    -- An id that is not pinned: nothing changes, nothing raises.
+    C.unpin(12345)
+    H.eq(#T.env.CraftProfitCharDB.pins, 1)
+end)
+
+H.test("savePinsPosition keeps a finite position and ignores anything else", function()
+    local T = boot()
+    local C, settings = T.ns.Controller, T.env.CraftProfitDB.settings
+    C.savePinsPosition(10, 20)
+    H.eq(settings.pinsWindow, { x = 10, y = 20 })
+    C.savePinsPosition(0 / 0, 5)
+    C.savePinsPosition(5, math.huge)
+    C.savePinsPosition("1", 2)
+    C.savePinsPosition(nil, nil)
+    H.eq(settings.pinsWindow, { x = 10, y = 20 })
+end)
+
+H.test("/cp pins toggles the pinned window, whatever the case, without touching the main window", function()
+    local T = boot()
+    local slash = T.env.SlashCmdList.CRAFTPROFIT
+    H.falsy(T.ns.PinnedWindow.isShown())
+    slash("pins")
+    H.truthy(T.ns.PinnedWindow.isShown())
+    H.falsy(T.ns.Window.isShown())
+    slash("PINS")
+    H.falsy(T.ns.PinnedWindow.isShown())
+    -- No help line: it is a known command.
+    H.eq(#T.chat, 0)
+end)
+
+H.test("the tooltip and the minimap click line are translated in French and Spanish", function()
+    for locale, words in pairs({ frFR = "recettes épinglées", esES = "recetas fijadas" }) do
+        local T = boot({ locale = locale, items = ITEMS })
+        local L = T.ns.L
+        H.truthy(L.MINIMAP_TIP_RIGHT:find(words, 1, true))
+        H.eq(L.CMD_PINS, words)
+    end
+end)
+
+
+-- Default placement --------------------------------------------------------------------
+
+-- Gives a window a measured box (left edge and top in screen pixels).
+local function measure(f, left, top, width)
+    f.GetRight = function() return left + width end
+    f.GetTop = function() return top end
+end
+
+local function lastPoint(f) return f.points[#f.points] end
+
+local function recordPoints(f)
+    f.points = {}
+    f.SetPoint = function(self, ...) self.points[#self.points + 1] = { ... } end
+end
+
+H.test("besidePosition is just right of the rightmost shown CraftProfit window, never the window itself", function()
+    local T = boot()
+    local C = T.ns.Controller
+    H.eq(C.besidePosition(nil), nil)
+    local main = T.ns.Window.frame()
+    measure(main, 100, 800, 372)
+    T.ns.Window.show()
+    H.eq({ C.besidePosition(nil) }, { 478, 800 })
+    -- Its own box does not count.
+    H.eq(C.besidePosition(main), nil)
+    T.ns.LevelingUI.show()
+    local level = T.ns.LevelingUI.frame()
+    measure(level, 478, 790, 396)
+    H.eq({ C.besidePosition(nil) }, { 880, 790 })
+    H.eq({ C.besidePosition(level) }, { 478, 800 })
+    T.ns.LevelingUI.hide()
+    H.eq({ C.besidePosition(nil) }, { 478, 800 })
+end)
+
+H.test("without a saved place the pinned, leveling and options windows open beside the rightmost one", function()
+    local T = boot()
+    local main = T.ns.Window.frame()
+    measure(main, 100, 800, 372)
+    T.ns.Window.show()
+    T.ns.PinnedWindow.show()
+    local pinned = T.ns.PinnedWindow.frame()
+    recordPoints(pinned)
+    T.ns.PinnedWindow.place()
+    H.eq(lastPoint(pinned), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 478, 800 })
+    measure(pinned, 478, 800, 396)
+    local level = T.ns.LevelingUI.frame()
+    recordPoints(level)
+    T.ns.LevelingUI.show()
+    H.eq(lastPoint(level), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 880, 800 })
+    T.ns.OptionsUI.show()
+    local options = T.ns.OptionsUI.frame()
+    recordPoints(options)
+    T.ns.OptionsUI.place()
+    H.eq(lastPoint(options), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 880, 800 })
+    -- A saved position always wins.
+    T.ns.PinnedWindow.attach({ x = 5, y = 600 })
+    H.eq(lastPoint(pinned), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 5, 600 })
+    -- None shown (or none measured): today's defaults.
+    T.ns.Window.hide()
+    T.ns.LevelingUI.hide()
+    T.ns.OptionsUI.hide()
+    T.ns.PinnedWindow.attach(nil)
+    H.eq(lastPoint(pinned), { "CENTER", T.env.UIParent, "CENTER", -260, 0 })
+    T.ns.PinnedWindow.hide()
+    T.ns.OptionsUI.place()
+    H.eq(lastPoint(options), { "CENTER", T.env.UIParent, "CENTER", 0, 0 })
+end)
+
+H.test("the main window without a saved place opens beside a shown CraftProfit window, else beside the trade window", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local main = T.ns.Window.frame()
+    recordPoints(main)
+    T.ns.PinnedWindow.show()
+    measure(T.ns.PinnedWindow.frame(), 200, 700, 396)
+    C.showMainWindow()
+    H.eq(lastPoint(main), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 602, 700 })
+    T.ns.Window.hide()
+    T.ns.PinnedWindow.hide()
+    C.showMainWindow()
+    H.eq(lastPoint(main), { "CENTER", T.env.UIParent, "CENTER", 300, 0 })
+    -- A saved position wins.
+    T.ns.Window.hide()
+    T.ns.PinnedWindow.show()
+    T.env.CraftProfitDB.settings.window = { point = "TOPLEFT", x = 7, y = 500 }
+    C.showMainWindow()
+    H.eq(lastPoint(main), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 7, 500 })
+    -- Selecting a recipe from the profession window places it the same way.
+    T.ns.Window.hide()
+    T.env.CraftProfitDB.settings.window = nil
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    H.eq(lastPoint(main), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 602, 700 })
+end)
+
+H.test("every window keeps the least height the border needs", function()
+    local T = W.boot(H, { items = ITEMS })
+    T.ns.Native.MIN_WINDOW_H = 2000
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.SetSize = function(self, _, h) self.height = h end
+        return f
+    end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    local C = T.ns.Controller
+    C.showMainWindow()
+    H.eq(T.ns.Window.frame().height, 2000)
+    T.ns.LevelingUI.show()
+    H.eq(T.ns.LevelingUI.frame().height, 2000)
+    T.ns.PinnedWindow.show()
+    H.eq(T.ns.PinnedWindow.frame().height, 2000)
+    T.ns.OptionsUI.show()
+    H.eq(T.ns.OptionsUI.frame().height, 2000)
+    -- With a recipe the main window still never goes below it.
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    H.eq(T.ns.Window.frame().height, 2000)
+end)
+
+H.test("besidePosition measures a window from its left edge and width when the client gives no right edge", function()
+    local T = boot()
+    local C = T.ns.Controller
+    T.ns.PinnedWindow.show()
+    local pinned = T.ns.PinnedWindow.frame()
+    pinned.GetRight = function() return nil end
+    pinned.GetLeft = function() return 200 end
+    pinned.GetWidth = function() return 396 end
+    pinned.GetTop = function() return nil end
+    pinned.GetBottom = function() return 300 end
+    pinned.GetHeight = function() return 400 end
+    H.eq({ C.besidePosition(nil) }, { 602, 700 })
+    -- Nothing measurable at all: no position, the caller keeps its default.
+    pinned.GetLeft = function() return nil end
+    H.eq(C.besidePosition(nil), nil)
+end)
+
+H.test("the main window opens beside a shown CraftProfit window even with the trade window open, else beside the trade window", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local main = T.ns.Window.frame()
+    recordPoints(main)
+    local trade = W.frame()
+    T.ns.Trade.frame = function() return trade end
+    C.showMainWindow()
+    H.eq(lastPoint(main), { "TOPLEFT", trade, "TOPRIGHT", 6, 0 })
+    T.ns.Window.hide()
+    T.ns.PinnedWindow.show()
+    measure(T.ns.PinnedWindow.frame(), 200, 700, 396)
+    C.showMainWindow()
+    H.eq(lastPoint(main), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 602, 700 })
+end)

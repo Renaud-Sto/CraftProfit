@@ -183,6 +183,7 @@ function Controller.refresh()
     end
     if ns.PinsUI then ns.PinsUI.refresh() end
     if ns.LevelingUI then ns.LevelingUI.refresh() end
+    if ns.PinnedWindow then ns.PinnedWindow.refresh() end
     if ns.OptionsUI then ns.OptionsUI.refresh() end
 end
 
@@ -196,13 +197,69 @@ function Controller.requestRefresh()
     end)
 end
 
+-- Default placement: a window without a saved position opens with its top left corner
+-- 6 px right of the shown CraftProfit window that reaches furthest right (itself excluded),
+-- so the windows never open on top of each other. Returns x, y (TOPLEFT against UIParent's
+-- BOTTOMLEFT: absolute, so no window is ever anchored to another that depends on it), or
+-- nil when no such window is shown and measured: the caller keeps its own default.
+local BESIDE_GAP = 6
+
+-- A number the frame answers through `method`, or nil (missing method, no answer).
+local function ask(f, method)
+    local fn = f[method]
+    if type(fn) ~= "function" then return nil end
+    local v = fn(f)
+    return Util.isFinite(v) and v or nil
+end
+
+-- The right edge and top of `f` on screen; from the left edge and width (bottom and height)
+-- when the client does not answer them directly. nil when it cannot be measured.
+local function edges(f)
+    local right, top = ask(f, "GetRight"), ask(f, "GetTop")
+    if not right then
+        local left, width = ask(f, "GetLeft"), ask(f, "GetWidth")
+        right = left and width and left + width or nil
+    end
+    if not top then
+        local bottom, height = ask(f, "GetBottom"), ask(f, "GetHeight")
+        top = bottom and height and bottom + height or nil
+    end
+    return right, top
+end
+
+function Controller.besidePosition(except)
+    local tops, entries = {}, {}
+    for _, mod in ipairs({ ns.Window, ns.LevelingUI, ns.PinnedWindow, ns.OptionsUI }) do
+        local f = type(mod) == "table" and type(mod.frame) == "function" and mod.frame() or nil
+        if f and f ~= except then
+            local right, top = edges(f)
+            -- A window whose top cannot be measured cannot be sat beside.
+            entries[#entries + 1] = { shown = f:IsShown() == true and top ~= nil, right = right }
+            tops[#entries] = top
+        end
+    end
+    local index = ns.Layout.rightmost(entries)
+    if not index then return nil end
+    return entries[index].right + BESIDE_GAP, tops[index]
+end
+
+-- The main window's position: the saved one, else beside a shown CraftProfit window, else
+-- nil (Window.attach then places it beside `target`).
+local function mainPosition()
+    local saved = CraftProfitDB.settings.window
+    if saved then return saved end
+    local x, y = Controller.besidePosition(ns.Window.frame())
+    if x then return { point = "TOPLEFT", x = x, y = y } end
+    return nil
+end
+
 function Controller.setRecipe(recipe, source)
     choose(recipe, source)
     local window = ns.Window
     if not window.isShown() then
         local target = ns.Trade.frame()
         if source == "pin" and ns.AH.isOpen then target = AuctionHouseFrame or AuctionFrame end
-        window.attach(target, CraftProfitDB.settings.window)
+        window.attach(target, mainPosition())
         window.show()
     end
     Controller.refresh()
@@ -308,11 +365,17 @@ function Controller.saveOptionsPosition(x, y)
     end
 end
 
+function Controller.savePinsPosition(x, y)
+    if Util.isFinite(x) and Util.isFinite(y) then
+        CraftProfitDB.settings.pinsWindow = { x = x, y = y }
+    end
+end
+
 -- The main window, as /cp show and /cp hide drive it.
 function Controller.showMainWindow()
     local window = ns.Window
     if not window.isShown() then
-        window.attach(ns.Trade.frame() or AuctionHouseFrame or AuctionFrame, CraftProfitDB.settings.window)
+        window.attach(ns.Trade.frame() or AuctionHouseFrame or AuctionFrame, mainPosition())
         window.show()
     end
     Controller.refresh()
@@ -415,6 +478,34 @@ function Controller.togglePin()
     Controller.refresh()
 end
 
+-- The "x" of a row in the pinned window: removes that pin and refreshes every view; the
+-- selection stays as it was.
+function Controller.unpin(recipeID)
+    DB.pinRemove(CraftProfitCharDB, recipeID)
+    Controller.refresh()
+end
+
+-- What the pinned window shows: the pins in the pinned list's order with their
+-- evaluation, the sort, and how old their prices are (it never searches). The age is the
+-- main window's: the oldest price the evaluations used (result.oldestAge, whether it came
+-- from a full scan or a "Search prices"), here over every pin; none -> never priced, stale.
+function Controller.pinsData()
+    local settings = CraftProfitDB.settings
+    local sortMode = CraftProfitCharDB.sortMode
+    local items = ns.PinsUI.orderedPins(CraftProfitCharDB.pins, sortMode, Controller.evaluate)
+    local age
+    for _, item in ipairs(items) do
+        local itemAge = item.result.oldestAge
+        if Util.isFinite(itemAge) and (age == nil or itemAge > age) then age = itemAge end
+    end
+    return {
+        items = items,
+        byPoint = sortMode == DB.SORT_POINT,
+        ageText = Present.ageText(L, age),
+        stale = age == nil or age > settings.staleAfter,
+    }
+end
+
 -- The items worth a history point for a tracked recipe, and the ones that must be
 -- priced for the point to count. The output of a bind-on-pickup recipe cannot be
 -- sold at the auction house, so it is recorded when priced but never required.
@@ -469,7 +560,7 @@ function Controller.onAHOpen(open)
             if first then choose(first, "pin") end
         end
         if not window.isShown() then
-            window.attach(AuctionHouseFrame or AuctionFrame, CraftProfitDB.settings.window)
+            window.attach(AuctionHouseFrame or AuctionFrame, mainPosition())
             window.show()
         end
         Controller.refresh()
@@ -587,6 +678,13 @@ function Controller.init()
         })
         ns.LevelingUI.attach(CraftProfitDB.settings.levelWindow)
     end
+    -- Nothing is built here either: the pinned window is made on first open.
+    if ns.PinnedWindow then
+        ns.PinnedWindow.init(Controller, {
+            onMoved = function(_, x, y) Controller.savePinsPosition(x, y) end,
+        })
+        ns.PinnedWindow.attach(CraftProfitDB.settings.pinsWindow)
+    end
     -- Nothing is built here: the options window is made on first open.
     if ns.OptionsUI then
         ns.OptionsUI.init(Controller)
@@ -687,6 +785,8 @@ local function slash(msg)
         Controller.historyCommand(arg)
     elseif cmd == "level" then
         if ns.LevelingUI then ns.LevelingUI.toggle() end
+    elseif cmd == "pins" then
+        if ns.PinnedWindow then ns.PinnedWindow.toggle() end
     elseif cmd == "kitdemo" then
         if ns.KitDemo then ns.KitDemo.command(arg) end
     elseif cmd == "market" then
@@ -698,11 +798,11 @@ local function slash(msg)
 end
 
 -- The addon compartment entry (TOC AddonCompartmentFunc): the game calls it with the
--- addon's name and the mouse button. Left: options window; right: main window.
+-- addon's name and the mouse button. Left: options window; right: pinned window.
 function CraftProfit_OnCompartmentClick(_, mouseButton)
     if not Controller.ready then return end
     if mouseButton == "RightButton" then
-        Controller.toggleMainWindow()
+        if ns.PinnedWindow then ns.PinnedWindow.toggle() end
     elseif ns.OptionsUI then
         ns.OptionsUI.toggle()
     end

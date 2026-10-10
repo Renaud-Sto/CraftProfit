@@ -91,8 +91,8 @@ local function sanitizeSettings(s)
     -- The colour themes are gone: an old save's choice is dropped.
     s.theme = nil
     sanitizeAppearance(s)
-    -- Saved positions of the leveling and options windows: { x, y } or nothing.
-    for _, key in ipairs({ "levelWindow", "optionsWindow" }) do
+    -- Saved positions of the leveling, options and pinned windows: { x, y } or nothing.
+    for _, key in ipairs({ "levelWindow", "optionsWindow", "pinsWindow" }) do
         local pos = s[key]
         if type(pos) == "table" and Util.isFinite(pos.x) and Util.isFinite(pos.y) then
             s[key] = { x = pos.x, y = pos.y }

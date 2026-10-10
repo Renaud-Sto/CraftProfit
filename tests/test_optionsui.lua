@@ -122,7 +122,7 @@ H.test("the minimap check shows the saved state and saves the change through the
     H.eq(T.env.CraftProfitDB.settings.minimap.hide, false)
 end)
 
-H.test("the window buttons toggle the main window and the leveling window", function()
+H.test("the window buttons toggle the main window, the leveling window and the pinned window", function()
     local T, _, slash = boot()
     slash("options")
     local parts = T.ns.OptionsUI.parts
@@ -137,16 +137,156 @@ H.test("the window buttons toggle the main window and the leveling window", func
     T.ns.LevelingUI.toggle = function() toggles = toggles + 1 end
     click(parts.levelButton)
     H.eq(toggles, 1)
+    H.eq(parts.pinsButton.text, "Pinned recipes")
+    H.falsy(T.ns.PinnedWindow.isShown())
+    click(parts.pinsButton)
+    H.truthy(T.ns.PinnedWindow.isShown())
+    click(parts.pinsButton)
+    H.falsy(T.ns.PinnedWindow.isShown())
 end)
 
-H.test("the controls recap names the clicks and the commands, wrapped in the small font", function()
+-- Boots in `locale`, opens the options window and records every button's size.
+local function sized(locale)
+    local T, _, slash = boot(nil, locale)
+    local sizes = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.SetSize = function(self, w, h) sizes[self] = { w, h } end
+        return f
+    end
+    slash("options")
+    return T, sizes
+end
+
+H.test("the window buttons: main and leveling on a first row, pinned recipes centred under them", function()
+    local T, sizes = sized("frFR")
+    local O = T.ns.OptionsUI
+    local parts = O.parts
+    local main, level, pins = parts.mainButton, parts.levelButton, parts.pinsButton
+    H.eq(main.text, "Fenêtre principale")
+    H.eq(level.text, "Montée de métier")
+    H.eq(pins.text, "Recettes épinglées")
+    local half = math.floor((O.ROOM - 4) / 2)
+    for _, b in ipairs({ main, level, pins }) do H.eq(sizes[b], { half, 22 }) end
+    H.eq(main.point, { "TOPLEFT", parts.panels.windows.body, "TOPLEFT", 8, -2 })
+    H.eq(level.point, { "LEFT", main, "RIGHT", 4, 0 })
+    H.eq(pins.point, { "TOP", parts.panels.windows.body, "TOP", 0, -2 - 26 })
+    -- Two rows of 26 px in the panel.
+    H.eq(parts.panels.windows.frame.height, T.ns.Layout.panelHeight(2, 26))
+end)
+
+H.test("every options button label fits its button in English, French and Spanish", function()
+    for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
+        local T, sizes = sized(locale)
+        local O, Layout = T.ns.OptionsUI, T.ns.Layout
+        local parts = O.parts
+        local buttons = { parts.mainButton, parts.levelButton, parts.pinsButton }
+        for _, b in pairs(parts.headerButtons) do buttons[#buttons + 1] = b end
+        for _, b in pairs(parts.tileButtons) do buttons[#buttons + 1] = b end
+        for _, b in ipairs(buttons) do
+            -- The label keeps 8 px from each end of the button.
+            local need = Layout.textWidth(b.text, O.CHAR_W)
+            H.truthy(need <= sizes[b][1] - 16 or error(locale .. ": " .. b.text .. " needs " .. need
+                .. " px, has " .. (sizes[b][1] - 16)))
+        end
+    end
+end)
+
+-- A line's text without its colour escapes.
+local function plain(text)
+    return (text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+end
+
+local EXPECTED_LINES = {
+    "Minimap left click - this window",
+    "Minimap right click - pinned recipes",
+    "/cp show - open the main window",
+    "/cp hide - close the main window",
+    "/cp reset - put the main window back",
+    "/cp options - this window",
+    "/cp pins - pinned recipes",
+    "/cp level - leveling window",
+    "/cp minimap - show or hide the minimap button",
+    "/cp history - tracked recipes",
+    "/cp scan - scan the auction house",
+    "/cp market - which market is in use",
+    "/cp locale <code> - change the language",
+    "/cp selftest - run the self-test",
+}
+
+H.test("the controls panel lists the clicks and the commands, one per line, command in gold", function()
     local T, _, slash = boot()
     slash("options")
-    local recap = T.ns.OptionsUI.parts.recap
-    H.truthy(recap.text:find("right click main window", 1, true))
-    H.truthy(recap.text:find("/cp show, hide, options, level, minimap", 1, true))
-    -- The window grows with the recap (measured by the client; a fallback here).
-    H.truthy(T.ns.OptionsUI.frame():GetHeight() > 200)
+    local O, Colors = T.ns.OptionsUI, T.ns.Colors
+    local lines = O.parts.lines
+    H.eq(#lines, #EXPECTED_LINES)
+    H.eq(O.LINE_COUNT, #EXPECTED_LINES)
+    for i, fs in ipairs(lines) do
+        H.eq(plain(fs.text), EXPECTED_LINES[i])
+        -- The command (or click) in the game's gold, the description in white.
+        local gold, white = Colors.escape(Colors.text("gold")), Colors.escape(Colors.text("main"))
+        H.eq(fs.text:sub(1, #gold), gold)
+        H.truthy(fs.text:find("|r" .. white .. " - ", 1, true))
+    end
+end)
+
+H.test("each command line is one line of 14 px across the panel, cut rather than wrapped", function()
+    local T = W.boot(H, {})
+    T.env.UISpecialFrames = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.CreateFontString = function()
+            local fs = W.frame()
+            fs.SetWidth = function(self, w) self.width = w end
+            fs.SetHeight = function(self, h) self.height = h end
+            fs.SetWordWrap = function(self, v) self.wrap = v end
+            fs.SetPoint = function(self, ...) self.point = { ... } end
+            return fs
+        end
+        return f
+    end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    T.env.SlashCmdList.CRAFTPROFIT("options")
+    local O = T.ns.OptionsUI
+    local body = O.parts.panels.controls.body
+    for i, fs in ipairs(O.parts.lines) do
+        H.eq(fs.width, O.ROOM)
+        H.eq(fs.height, 14)
+        H.eq(fs.wrap, false)
+        H.eq(fs.point, { "TOPLEFT", body, "TOPLEFT", 8, -(i - 1) * 14 })
+    end
+end)
+
+H.test("the controls panel and the window heights follow the line count", function()
+    local T, _, slash = boot()
+    slash("options")
+    local O, Layout, Native = T.ns.OptionsUI, T.ns.Layout, T.ns.Native
+    local p = O.parts.panels
+    -- 8 px of air under the last line.
+    H.eq(O.LIST_BOTTOM, 8)
+    H.eq(p.controls.frame.height, Layout.panelHeight(O.LINE_COUNT, 14, 8))
+    local heights = p.appearance.frame.height + p.minimap.frame.height + p.windows.frame.height
+        + p.controls.frame.height
+    H.eq(O.frame():GetHeight(), Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + heights + 8 * 3)
+end)
+
+H.test("the command lines are translated and fit the panel in English, French and Spanish", function()
+    for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
+        local T, _, slash = boot(nil, locale)
+        slash("options")
+        local O, Layout = T.ns.OptionsUI, T.ns.Layout
+        for _, fs in ipairs(O.parts.lines) do
+            local text = plain(fs.text)
+            H.truthy(text ~= "" and not text:find("CMD_", 1, true))
+            local need = Layout.textWidth(text, O.SMALL_CHAR_W)
+            H.truthy(need <= O.ROOM or error(locale .. ": " .. text .. " needs " .. need .. " px"))
+        end
+        if locale == "frFR" then
+            H.eq(plain(O.parts.lines[7].text), "/cp pins - recettes épinglées")
+        end
+    end
 end)
 
 H.test("a drag saves the position and the next login opens it there", function()

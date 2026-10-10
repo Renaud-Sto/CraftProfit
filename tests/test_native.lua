@@ -1664,3 +1664,79 @@ H.test("the flat scroll bar reads the game's colours, and one missing track piec
     H.truthy(bar.thumbAtlases)
     H.eq(bar.trackFill.color, { 0.4, 0.4, 0.4, Native.SCROLL_TRACK_ALPHA })
 end)
+
+-- Windows: minimum height, strata and raising ---------------------------------------
+
+-- Frames that record their strata, toplevel flag, height and raises.
+local function recordWindowCalls(env)
+    local create = env.CreateFrame
+    env.CreateFrame = function(...)
+        local f = create(...)
+        f.raised = 0
+        f.SetFrameStrata = function(self, s) self.strata = s end
+        f.SetToplevel = function(self, v) self.toplevel = v end
+        f.Raise = function(self) self.raised = self.raised + 1 end
+        f.SetSize = function(self, w, h) self.width, self.height = w, h end
+        f.SetParent = function(self, p) self.parentFrame = p end
+        f.GetParent = function(self) return self.parentFrame end
+        return f
+    end
+end
+
+H.test("no window is shorter than its border corners need", function()
+    local _, Native, env = boot()
+    -- Atlas sizes unknown: the fallback minimum.
+    H.eq(Native.windowHeight(60), Native.MIN_WINDOW_H)
+    H.eq(Native.windowHeight(500), 500)
+    H.eq(Native.windowHeight(nil), Native.MIN_WINDOW_H)
+    H.eq(Native.windowHeight(0 / 0), Native.MIN_WINDOW_H)
+    -- Known corners: the top ones start 16 px above the frame, the bottom ones end 3 px
+    -- below it (8 on Camelot): the frame holds both corners less those overhangs.
+    local sizes = {
+        ["UI-Frame-PortraitMetal-CornerTopLeft"] = 84, ["UI-Frame-Metal-CornerTopRight"] = 75,
+        ["UI-Frame-Metal-CornerBottomLeft"] = 70, ["UI-Frame-Metal-CornerBottomRight"] = 72,
+    }
+    env.C_Texture = { GetAtlasInfo = function(name) return sizes[name] and { width = 10, height = sizes[name] } end }
+    H.eq(Native.minWindowHeight(), (84 - 16) + (72 - 3))
+    H.eq(Native.windowHeight(60), 137)
+    -- A window made too short is clamped.
+    recordWindowCalls(env)
+    local win = Native.window("NativeTestShort", "T", { width = 300, height = 40 })
+    H.eq(win.height, 137)
+end)
+
+H.test("windows sit in the HIGH strata, are toplevel and come to the front on show and on a click", function()
+    local _, Native, env = boot()
+    recordWindowCalls(env)
+    local win = Native.window("NativeTestFront", "T", { width = 300, height = 300 })
+    H.eq(win.strata, "HIGH")
+    H.eq(win.toplevel, true)
+    win.scripts.OnShow(win)
+    H.eq(win.raised, 1)
+    win.scripts.OnMouseDown(win, "LeftButton")
+    H.eq(win.raised, 2)
+    -- A press on a forwarded-drag button (rows, title) or on a native button inside it.
+    local row = env.CreateFrame("Button", nil, win.content)
+    row:SetParent(win.content)
+    Native.forwardDrag(row, win)
+    row.scripts.OnMouseDown(row, "LeftButton")
+    H.eq(win.raised, 3)
+    local panelBody = env.CreateFrame("Frame", nil, win)
+    panelBody:SetParent(win)
+    local button = Native.button(panelBody, "Go")
+    button.scripts.OnMouseDown(button, "LeftButton")
+    H.eq(win.raised, 4)
+    -- A widget outside any window raises nothing and does not fail.
+    local loose = Native.button(env.UIParent, "Loose")
+    loose.scripts.OnMouseDown(loose, "LeftButton")
+    H.eq(win.raised, 4)
+end)
+
+H.test("raising does not fail on a client without Raise or SetToplevel", function()
+    local _, Native = boot()
+    local win = Native.window("NativeTestNoRaise", "T")
+    win.Raise, win.SetToplevel = nil, nil
+    win.scripts.OnShow(win)
+    win.scripts.OnMouseDown(win, "LeftButton")
+    Native.raiseWindow(win)
+end)

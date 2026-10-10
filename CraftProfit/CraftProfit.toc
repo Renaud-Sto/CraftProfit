@@ -36,6 +36,7 @@ UI/Native.lua
 UI/Window.lua
 UI/PinsUI.lua
 UI/LevelingUI.lua
+UI/PinnedWindow.lua
 UI/OptionsUI.lua
 UI/MinimapButton.lua
 UI/KitDemo.lua

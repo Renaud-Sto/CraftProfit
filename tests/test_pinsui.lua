@@ -482,3 +482,54 @@ H.test("dragging a pinned row moves the window and the click that ends it select
     row.scripts.OnClick(row)
     H.eq(T.ns.Controller.currentRecipeID(), 2)
 end)
+
+H.test("rowValue gives the text and colour each pinned row shows, in both sort modes", function()
+    local T = boot()
+    T.env.GetMoneyString = function(c) return "<" .. c .. ">" end
+    local P, Colors, C = T.ns.PinsUI, T.ns.Colors, T.ns.Controller
+    local market = C.market()
+    T.ns.Prices.store(market, 1, 100, 10, 1699999940)
+    T.ns.Prices.store(market, 2, 50, 10, 1699999940)
+    T.ns.Prices.store(market, 100, 1000, 10, 1699999940)
+    local parts = openList(T)
+    local function shown()
+        local out = {}
+        for i = 1, 2 do
+            local row, colour = parts.rows[i], nil
+            row.value.SetTextColor = function(_, r, g, b, a) colour = { r, g, b, a } end
+            out[i] = row
+            row.colourOf = function() return colour end
+        end
+        P.refresh()
+        local list = {}
+        for i, row in ipairs(out) do list[i] = { row.recipeID, row.value.text, row.colourOf() } end
+        return list
+    end
+    -- Recipe 1: reagents 2 x 100 + 50 = 250, sold 1000 less 5 % = 950: net +700. Recipe 2
+    -- needs item 3, never priced: unknown, last.
+    H.eq(shown(), {
+        { 1, "<700>", Colors.FIXED.profit },
+        { 2, "?", Colors.text("muted") },
+    })
+    -- Cost per point: medium (difficulty 1) is 75 %, (250 - 950) / 0.75 = -933: a gain.
+    C.toggleSort()
+    H.eq(shown(), {
+        { 1, "+<933>/pt", Colors.FIXED.profit },
+        { 2, "?", Colors.text("muted") },
+    })
+    -- rowValue gives the same text and colour for those pins.
+    local ordered = P.orderedPins(T.env.CraftProfitCharDB.pins, "point", C.evaluate)
+    H.eq({ P.rowValue(ordered[1], true) }, { "+<933>/pt", Colors.FIXED.profit })
+    H.eq({ P.rowValue(ordered[2], true) }, { "?", Colors.text("muted") })
+    -- The three cases of the profit view, and the point view's own text.
+    local fmt = C.fmt
+    H.eq({ P.rowValue({ result = { net = 700 } }, false) }, { fmt(700), Colors.FIXED.profit })
+    H.eq({ P.rowValue({ result = { net = 0 } }, false) }, { fmt(0), Colors.FIXED.profit })
+    H.eq({ P.rowValue({ result = { net = -5 } }, false) }, { fmt(-5), Colors.FIXED.loss })
+    H.eq({ P.rowValue({ result = {} }, false) }, { "?", Colors.text("muted") })
+    H.eq({ P.rowValue({ result = { perPoint = { chance = 1, cost = 40 } } }, true) },
+        { fmt(40) .. "/pt", Colors.FIXED.loss })
+    H.eq({ P.rowValue({ result = { perPoint = { chance = 1, cost = -40 } } }, true) },
+        { "+" .. fmt(40) .. "/pt", Colors.FIXED.profit })
+    H.eq({ P.rowValue({ result = { net = 700 } }, true) }, { "?", Colors.text("muted") })
+end)

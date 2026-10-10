@@ -30,6 +30,28 @@ function Layout.stack(heights, gap, top)
     return offsets, y - gap - top
 end
 
+-- Index of the shown entry ({ shown = true, right = px }) with the largest right edge, the
+-- first one on a tie; nil when none is shown with a measured (finite number) edge. Picks the
+-- window a new one opens beside.
+function Layout.rightmost(entries)
+    local best, bestRight
+    for i, e in ipairs(entries) do
+        local r = e.right
+        local measured = type(r) == "number" and r == r and r ~= math.huge and r ~= -math.huge
+        if e.shown == true and measured and (best == nil or r > bestRight) then best, bestRight = i, r end
+    end
+    return best
+end
+
+-- Estimated width in pixels of `text` at `charW` pixels per letter (a UTF-8 letter, such as
+-- "é", counts once). Used where the client cannot measure, to size buttons for every
+-- language.
+function Layout.textWidth(text, charW)
+    if type(text) ~= "string" then return 0 end
+    local _, letters = text:gsub("[^\128-\191]", "")
+    return letters * charW
+end
+
 -- Largest of `sizes` (descending) at which a text measured `baseWidth` wide at
 -- `baseSize` fits `boxWidth`; the smallest size when none does, the first one when
 -- the width cannot be measured.

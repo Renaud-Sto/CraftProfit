@@ -63,6 +63,18 @@ The small button in the header of the panel switches between:
 
 Click a recipe in the list to show it in the window above.
 
+### The pinned recipes window
+
+`/cp pins`, a right click on the minimap button (or on the CraftProfit entry of the addon compartment), or the **Pinned recipes** button of the options window opens a separate, movable window with your pinned recipes (12 per character at most). It works anywhere: no auction house or profession window needed. It shows the **last known prices** and never searches; the line at the top says how old the oldest price it uses is (from a scan or a price search), in orange when it is older than an hour.
+
+- Each row shows the recipe, coloured by difficulty, and its value: the net result, or the cost per point, with the same colours and coin icons as the list at the auction house; `?` when a price is missing.
+- The sort button at the top switches **Sort: profit** and **Sort: cost/point**; it is the same choice as the list at the auction house.
+- The small **x** at the right of a row unpins that recipe (its tooltip says *Unpin*); the rows below move up and nothing else opens.
+- A click anywhere else on a row opens the main window on that recipe, with its stored prices.
+- 12 rows show at a time; with more, use the mouse wheel or the scroll bar.
+- Escape or the close button closes it. Drag it anywhere: it reopens where you left it, also after `/reload`. The first time it opens just right of the rightmost CraftProfit window on screen, or left of the middle of the screen when none is shown.
+- Pinning or unpinning from the main window updates it at once while it is open.
+
 ### The leveling window
 
 **Leveling** (button under the pinned list, or `/cp level`) opens a separate, movable window beside the main window, with the game's own look, like the main window. Its position is remembered, and the x closes it. It shows **every recipe you know** in a profession, cheapest skill point first, so you can see at a glance what to craft next to level at the smallest loss.
@@ -123,18 +135,20 @@ The chance of a point depends on the colour of the recipe and is an **estimate**
 
 Open it with `/cp options`, a left click on the minimap button, or the CraftProfit entry of the addon compartment (the game's addon list button on the minimap, when your client shows it). Escape closes it; drag it anywhere, it reopens where you left it.
 
+Where windows open: a CraftProfit window that has never been dragged opens just right of the rightmost CraftProfit window already on screen, so they never pile up on each other (the screen edge keeps it visible). With none shown, the main window opens beside the profession or auction house window, the leveling window beside the main window, the pinned recipes window left of the middle of the screen and the options window in the middle. Once dragged, a window always reopens where you left it. The window you open or click last comes to the front, above the other CraftProfit windows and the game's HUD panels.
+
 - **Appearance**: pick the *Header strip* of every section (Carved wood, Shade or Streaks) and the *Tile card* of the price tiles (Loot card or Inset). The two mix freely (6 looks); the lit button is your choice. It applies at once to every window, open or not, and is saved for your account. Default: Shade and Inset.
 - **Minimap**: *Show the minimap button*. Untick it to hide the button; `/cp minimap` hides it or brings it back too.
-- **Windows**: open or close the main window and the leveling window.
-- **Controls**: a recap of the clicks and commands below.
+- **Windows**: open or close the main window and the leveling window (first row) and the pinned recipes window (second row).
+- **Controls**: the minimap clicks and every command, one per line: the command in gold, what it does in white.
 
 Colours that carry a meaning never change with the look: gain in green, loss in red, the difficulty colours of recipes (orange, yellow, green, grey) and the tint of the result banner.
 
 ### Minimap button
 
-Left click: options window. Right click: open or close the main window (at the auction house the pinned list shows below it). Drag it with the left button to move it around the minimap; it keeps its place after `/reload`. Square minimaps (from a minimap addon) are followed along their edges.
+Left click: options window. Right click: open or close the [pinned recipes window](#the-pinned-recipes-window). Drag it with the left button to move it around the minimap; it keeps its place after `/reload`. Square minimaps (from a minimap addon) are followed along their edges.
 
-Planned next: a standalone pinned-recipes window that works away from the auction house, opened by `/cp pins` and by the minimap right click. Until then the right click opens the main window.
+The CraftProfit entry of the addon compartment (when your client shows it) works the same way: left click options, right click pinned recipes.
 
 ## Options and commands
 
@@ -143,11 +157,11 @@ Planned next: a standalone pinned-recipes window that works away from the auctio
 | Cost per skill point | Check box in the Options panel | Off |
 | Material detail folded or unfolded | Click the Materials header | Unfolded |
 | Window position | Drag it; `/cp reset` to undo | Beside the profession or auction house window |
-| Sort of the pinned list | Button in the header of the Pinned recipes panel | Profit |
+| Sort of the pinned list | Button in the header of the Pinned recipes panel, or at the top of the pinned recipes window | Profit |
 | Header strip and tile card | [Options window](#options-window); saved for the account | Shade, Inset |
 | Minimap button shown, and its place | Options window or `/cp minimap`; drag it | Shown, bottom left |
 
-Commands: `/cp` (or `/craftprofit`) with `show`, `hide`, `reset`, `options`, `minimap`, `scan`, `history`, `market`, `level`, `locale <code>` and `selftest`. See the [README](../README.md#commands).
+Commands: `/cp` (or `/craftprofit`) with `show`, `hide`, `reset`, `options`, `pins`, `minimap`, `scan`, `history`, `market`, `level`, `locale <code>` and `selftest`. See the [README](../README.md#commands).
 
 ## Languages
 

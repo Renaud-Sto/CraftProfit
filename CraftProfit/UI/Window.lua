@@ -327,7 +327,7 @@ function Window.relayout()
     pinsHost:SetPoint("TOPLEFT", frame, "TOPLEFT", Native.INSET_LEFT + PAD,
         -(Native.INSET_TOP + contentHeight - PAD + GAP))
     local extra = pinsHost:IsShown() and (GAP + pinsHost:GetHeight()) or 0
-    frame:SetHeight(CHROME_H + contentHeight + extra)
+    frame:SetHeight(Native.windowHeight(CHROME_H + contentHeight + extra))
 end
 
 local function hideSections()

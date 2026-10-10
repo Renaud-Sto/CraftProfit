@@ -265,14 +265,19 @@ function LevelingUI.init(controller, h)
     return frame
 end
 
--- Position: the saved one once the window has been dragged; otherwise right beside the
--- main window when it is on screen, else the middle of the screen.
+-- Position: the saved one once the window has been dragged; otherwise beside the rightmost
+-- shown CraftProfit window (Controller.besidePosition); when none can be measured, right
+-- beside the main window when it is on screen, else the middle of the screen.
 function LevelingUI.place()
     if not frame then return end
     frame:ClearAllPoints()
     local main = ns.Window.frame()
+    local x, y
+    if not savedPosition and ctl and ctl.besidePosition then x, y = ctl.besidePosition(frame) end
     if savedPosition then
         frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", savedPosition.x, savedPosition.y)
+    elseif x then
+        frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
     elseif main and ns.Window.isShown() then
         frame:SetPoint("TOPLEFT", main, "TOPRIGHT", 6, 0)
     else

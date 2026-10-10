@@ -963,3 +963,67 @@ H.test("the main window gets no theme handler (no swatch), /cp theme still answe
     H.truthy(T.chat[#T.chat]:find("Thème", 1, true))
     H.truthy(T.chat[#T.chat]:find("Or", 1, true))
 end)
+
+-- Appearance ------------------------------------------------------------------------
+
+H.test("the saved appearance is applied before the main window is built", function()
+    local T = W.boot(H, { items = ITEMS })
+    T.env.CraftProfitDB = { settings = { appearance = { header = "c", tile = "a" } } }
+    local Native, seen = T.ns.Native, nil
+    local create = T.ns.Window.create
+    T.ns.Window.create = function(...)
+        seen = { Native.appearance() }
+        return create(...)
+    end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(seen, { "c", "a" })
+    -- The main window's own tiles were built with that card.
+    H.eq(T.ns.Window.parts.tiles[1].variant, "a")
+end)
+
+H.test("a bad saved appearance falls back to b b at login", function()
+    local T = W.boot(H, { items = ITEMS })
+    T.env.CraftProfitDB = { settings = { appearance = { header = "x", tile = {} } } }
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq({ T.ns.Native.appearance() }, { "b", "b" })
+    H.eq(T.env.CraftProfitDB.settings.appearance, { header = "b", tile = "b" })
+end)
+
+H.test("setAppearance applies and saves each part, nil keeps it, and says whether anything changed", function()
+    local T = boot()
+    local C, Native = T.ns.Controller, T.ns.Native
+    local saved = function() return T.env.CraftProfitDB.settings.appearance end
+    H.eq(C.setAppearance("a", nil), true)
+    H.eq({ Native.appearance() }, { "a", "b" })
+    H.eq(saved(), { header = "a", tile = "b" })
+    H.eq(C.setAppearance(nil, "a"), true)
+    H.eq({ Native.appearance() }, { "a", "a" })
+    H.eq(saved(), { header = "a", tile = "a" })
+    -- The tiles already built follow at once.
+    H.eq(T.ns.Window.parts.tiles[1].variant, "a")
+    H.eq(C.setAppearance("a", "a"), false)
+    H.eq(C.setAppearance(nil, nil), false)
+    H.eq(C.setAppearance("c", "b"), true)
+    H.eq(saved(), { header = "c", tile = "b" })
+end)
+
+H.test("setAppearance refuses an unknown key and changes nothing", function()
+    local T = boot()
+    local C, Native = T.ns.Controller, T.ns.Native
+    for _, args in ipairs({ { "z", "a" }, { "a", "c" }, { 1, nil }, { nil, {} }, { "A", nil } }) do
+        H.eq(C.setAppearance(args[1], args[2]), false)
+        H.eq({ Native.appearance() }, { "b", "b" })
+        H.eq(T.env.CraftProfitDB.settings.appearance, { header = "b", tile = "b" })
+    end
+end)
+
+H.test("the saved keys and the native variants are the same sets", function()
+    local T = boot()
+    local DB, Native = T.ns.DB, T.ns.Native
+    for key in pairs(Native.HEADER_VARIANTS) do H.truthy(DB.HEADER_KEYS[key]) end
+    for key in pairs(DB.HEADER_KEYS) do H.truthy(Native.HEADER_VARIANTS[key]) end
+    for key in pairs(Native.TILE_VARIANTS) do H.truthy(DB.TILE_KEYS[key]) end
+    for key in pairs(DB.TILE_KEYS) do H.truthy(Native.TILE_VARIANTS[key]) end
+    H.truthy(Native.HEADER_VARIANTS[DB.DEFAULTS.appearance.header])
+    H.truthy(Native.TILE_VARIANTS[DB.DEFAULTS.appearance.tile])
+end)

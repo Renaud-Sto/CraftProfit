@@ -14,7 +14,8 @@ H.test("initAccount fills defaults and returns the same table", function()
     local db = {}
     H.truthy(DB.initAccount(db) == db)
     H.eq(db.dbVersion, 1)
-    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost", theme = "gold" })
+    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost", theme = "gold",
+        appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 } })
     H.eq(db.prices, {})
 end)
 
@@ -33,7 +34,8 @@ H.test("initAccount replaces invalid settings with defaults", function()
         cut = 0 / 0, medianN = 99, staleAfter = -5, showPerPoint = "yes", costExpanded = "no",
         window = { point = "NOPE", x = 1, y = 2 },
     } })
-    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost", theme = "gold" })
+    H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost", theme = "gold",
+        appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 } })
 end)
 
 H.test("initAccount keeps valid settings and floors medianN", function()
@@ -45,6 +47,7 @@ H.test("initAccount keeps valid settings and floors medianN", function()
     H.eq(db.settings, {
         cut = 0.5, medianN = 7, staleAfter = 120, showPerPoint = true, costExpanded = false, levelShowGrey = false, levelSort = "cost", theme = "gold",
         window = { point = "TOPLEFT", x = 100, y = -50 },
+        appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 },
     })
     H.eq(DB.initAccount({ settings = { cut = 0.51 } }).settings.cut, 0.05)
     H.eq(DB.initAccount({ settings = { cut = -0.01 } }).settings.cut, 0.05)
@@ -217,4 +220,62 @@ H.test("the theme setting becomes gold when the theme module is not loaded", fun
     local ns = H.newNS("Util", "Data/Skillup", "Recipes", "DB")
     local db = ns.DB.initAccount({ settings = { theme = "copper" } })
     H.eq(db.settings.theme, "gold")
+end)
+
+H.test("old saves without appearance or minimap get the defaults", function()
+    local DB = load()
+    H.eq(DB.DEFAULTS.appearance, { header = "b", tile = "b" })
+    H.eq(DB.DEFAULTS.minimap, { hide = false, angle = 225 })
+    local db = DB.initAccount({ settings = { cut = 0.1, theme = "gold" } })
+    H.eq(db.settings.appearance, { header = "b", tile = "b" })
+    H.eq(db.settings.minimap, { hide = false, angle = 225 })
+    -- Copies: changing a save never changes the defaults.
+    db.settings.appearance.header = "a"
+    db.settings.minimap.angle = 10
+    H.eq(DB.DEFAULTS.appearance.header, "b")
+    H.eq(DB.DEFAULTS.minimap.angle, 225)
+end)
+
+H.test("the appearance keeps known keys, each falling back alone, and drops unknown fields", function()
+    local DB = load()
+    local function appearance(value)
+        return DB.initAccount({ settings = { appearance = value } }).settings.appearance
+    end
+    H.eq(appearance({ header = "a", tile = "a" }), { header = "a", tile = "a" })
+    H.eq(appearance({ header = "c", tile = "b", junk = 1 }), { header = "c", tile = "b" })
+    H.eq(appearance({ header = "c", tile = "c" }), { header = "c", tile = "b" })
+    H.eq(appearance({ header = "z", tile = "a" }), { header = "b", tile = "a" })
+    H.eq(appearance({ header = "A", tile = 1 }), { header = "b", tile = "b" })
+    H.eq(appearance({ header = {}, tile = 0 / 0 }), { header = "b", tile = "b" })
+    for _, bad in ipairs({ "a", 5, true, 0 / 0 }) do
+        H.eq(appearance(bad), { header = "b", tile = "b" })
+    end
+    H.eq(appearance(nil), { header = "b", tile = "b" })
+    -- The keys match the variants the native kit can draw.
+    H.eq(DB.HEADER_KEYS, { a = true, b = true, c = true })
+    H.eq(DB.TILE_KEYS, { a = true, b = true })
+end)
+
+H.test("the minimap setting keeps a boolean hide and a finite angle brought into [0, 360)", function()
+    local DB = load()
+    local function minimap(value)
+        return DB.initAccount({ settings = { minimap = value } }).settings.minimap
+    end
+    H.eq(minimap({ hide = true, angle = 90 }), { hide = true, angle = 90 })
+    H.eq(minimap({ hide = false, angle = 0, junk = "x" }), { hide = false, angle = 0 })
+    H.eq(minimap({ angle = 360 }), { hide = false, angle = 0 })
+    H.eq(minimap({ angle = 450 }), { hide = false, angle = 90 })
+    H.eq(minimap({ angle = -90 }), { hide = false, angle = 270 })
+    H.eq(minimap({ angle = 359.5 }), { hide = false, angle = 359.5 })
+    H.eq(minimap({ hide = "yes", angle = "90" }), { hide = false, angle = 225 })
+    H.eq(minimap({ hide = 1, angle = 0 / 0 }), { hide = false, angle = 225 })
+    H.eq(minimap({ angle = math.huge }).angle, 225)
+    H.eq(minimap({ angle = -math.huge }).angle, 225)
+    for _, big in ipairs({ 1e300, -1e300, 2 ^ 60 + 0.5 }) do
+        local angle = minimap({ angle = big }).angle
+        H.truthy(angle >= 0 and angle < 360)
+    end
+    for _, bad in ipairs({ "x", 5, false }) do
+        H.eq(minimap(bad), { hide = false, angle = 225 })
+    end
 end)

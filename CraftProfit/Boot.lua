@@ -276,6 +276,23 @@ function Controller.cycleTheme()
     if Controller.setTheme(nextCode) then say(string.format(L.THEME_SET, Controller.themeLabel(nextCode))) end
 end
 
+-- Appearance ---------------------------------------------------------------------
+
+-- Picks the header strip and the tile card (either nil = keep), repaints every window at
+-- once (Native keeps its panels and tiles) and saves the choice. An unknown key refuses the
+-- whole call: nothing changes. Returns true when the look changed.
+function Controller.setAppearance(header, tile)
+    if header ~= nil and not DB.HEADER_KEYS[header] then return false end
+    if tile ~= nil and not DB.TILE_KEYS[tile] then return false end
+    local Native = ns.Native
+    local oldHeader, oldTile = Native.appearance()
+    if header ~= nil then Native.setHeaderVariant(header) end
+    if tile ~= nil then Native.setTileVariant(tile) end
+    local newHeader, newTile = Native.appearance()
+    CraftProfitDB.settings.appearance = { header = newHeader, tile = newTile }
+    return newHeader ~= oldHeader or newTile ~= oldTile
+end
+
 -- The "Track history" box: starts recording this recipe (or pauses it, keeping
 -- what was recorded).
 function Controller.setTracking(checked)
@@ -505,6 +522,10 @@ function Controller.init()
     ns.Locale.select(GetLocale())
     -- Before any window is built, so every widget is painted once, in the saved theme.
     ns.Kit.applyTheme(CraftProfitDB.settings.theme)
+    -- The saved look, before any window is built (sanitised by DB.initAccount).
+    local appearance = CraftProfitDB.settings.appearance
+    ns.Native.setHeaderVariant(appearance.header)
+    ns.Native.setTileVariant(appearance.tile)
 
     ns.Window.create({
         onPinClick = Controller.togglePin,

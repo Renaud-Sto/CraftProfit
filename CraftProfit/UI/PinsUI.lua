@@ -14,7 +14,10 @@ local VISIBLE = 6
 local BUTTON_H = Native.BUTTON_H
 local BUTTON_GAP = 6
 -- The game's small button height, for the sort button in the panel header.
-local SORT_H = 20
+local SORT_H = 18
+-- Raised 1 px above the geometric centre: the title's capitals sit above the middle of their
+-- line box (room for descenders), so a centred button looked too low next to them.
+local SORT_LIFT = 1.5
 local SORT_W = 120
 -- Two lines of the small font: a long translated status wraps rather than being cut.
 local STATUS_H = 28
@@ -242,8 +245,8 @@ function PinsUI.init(controller)
     -- centred on the header strip (PANEL_EDGE + (HEAD_H - SORT_H) / 2 from the top).
     parts.sort = Native.button(panel.frame, "", { width = SORT_W, onClick = function() ctl.toggleSort() end })
     parts.sort:SetHeight(SORT_H)
-    parts.sort:SetPoint("TOPRIGHT", panel.frame, "TOPRIGHT", -(Native.PANEL_EDGE + 4),
-        -(Native.PANEL_EDGE + (Native.HEAD_H - SORT_H) / 2))
+    parts.sort:SetPoint("TOPRIGHT", panel.frame, "TOPRIGHT", -(Native.PANEL_EDGE + 8),
+        -(Native.PANEL_EDGE + (Native.HEAD_H - SORT_H) / 2 - SORT_LIFT))
     -- The header frame is a child of the panel frame, one level up: lift the button above
     -- it (a header hit area, if any, stays at the panel frame's level).
     local level = panel.frame:GetFrameLevel()

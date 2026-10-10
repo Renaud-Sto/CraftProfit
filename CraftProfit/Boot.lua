@@ -183,6 +183,7 @@ function Controller.refresh()
     end
     if ns.PinsUI then ns.PinsUI.refresh() end
     if ns.LevelingUI then ns.LevelingUI.refresh() end
+    if ns.OptionsUI then ns.OptionsUI.refresh() end
 end
 
 -- Coalesces bursts (many ITEM_DATA_LOAD_RESULT events, one per search result).
@@ -274,6 +275,88 @@ function Controller.cycleTheme()
         if code == ns.Kit.themeName then nextCode = list[i % #list + 1] end
     end
     if Controller.setTheme(nextCode) then say(string.format(L.THEME_SET, Controller.themeLabel(nextCode))) end
+end
+
+-- Appearance ---------------------------------------------------------------------
+
+-- Picks the header strip and the tile card (either nil = keep), repaints every window at
+-- once (Native keeps its panels and tiles) and saves the choice. An unknown key refuses the
+-- whole call: nothing changes. Returns true when the look changed.
+function Controller.setAppearance(header, tile)
+    if header ~= nil and not DB.HEADER_KEYS[header] then return false end
+    if tile ~= nil and not DB.TILE_KEYS[tile] then return false end
+    -- Merged into the SAVED choice, never read back from Native: what is on screen may
+    -- differ (a developer preview), and must not leak into the save.
+    local saved = CraftProfitDB.settings.appearance
+    local newHeader, newTile = header or saved.header, tile or saved.tile
+    local changed = newHeader ~= saved.header or newTile ~= saved.tile
+    ns.Native.setHeaderVariant(newHeader)
+    ns.Native.setTileVariant(newTile)
+    CraftProfitDB.settings.appearance = { header = newHeader, tile = newTile }
+    return changed
+end
+
+-- The saved look: header, tile keys.
+function Controller.appearance()
+    local appearance = CraftProfitDB.settings.appearance
+    return appearance.header, appearance.tile
+end
+
+-- Options window and minimap button ---------------------------------------------------
+
+function Controller.minimapHidden()
+    return CraftProfitDB.settings.minimap.hide == true
+end
+
+-- Hides (true) or shows the minimap button, saves it, and applies it when the button
+-- module is loaded.
+function Controller.setMinimapHidden(hidden)
+    CraftProfitDB.settings.minimap.hide = hidden and true or false
+    local button = ns.MinimapButton
+    if type(button) == "table" and type(button.apply) == "function" then button.apply() end
+    -- The options window's check box follows a change made elsewhere (/cp minimap).
+    if ns.OptionsUI then ns.OptionsUI.refresh() end
+end
+
+function Controller.minimapAngle()
+    return CraftProfitDB.settings.minimap.angle
+end
+
+-- Saves where the minimap button was dragged; a bad angle is ignored.
+function Controller.setMinimapAngle(angle)
+    local clean = DB.angle(angle)
+    if clean then CraftProfitDB.settings.minimap.angle = clean end
+end
+
+-- /cp minimap: hides the button, or shows it again, and says which in one line.
+function Controller.minimapCommand()
+    local hidden = not Controller.minimapHidden()
+    Controller.setMinimapHidden(hidden)
+    say(hidden and L.MINIMAP_HIDDEN or L.MINIMAP_SHOWN)
+end
+
+function Controller.saveOptionsPosition(x, y)
+    if Util.isFinite(x) and Util.isFinite(y) then
+        CraftProfitDB.settings.optionsWindow = { x = x, y = y }
+    end
+end
+
+-- The main window, as /cp show and /cp hide drive it.
+function Controller.showMainWindow()
+    local window = ns.Window
+    if not window.isShown() then
+        window.attach(ns.Trade.frame() or AuctionHouseFrame or AuctionFrame, CraftProfitDB.settings.window)
+        window.show()
+    end
+    Controller.refresh()
+end
+
+function Controller.hideMainWindow()
+    ns.Window.hide()
+end
+
+function Controller.toggleMainWindow()
+    if ns.Window.isShown() then Controller.hideMainWindow() else Controller.showMainWindow() end
 end
 
 -- The "Track history" box: starts recording this recipe (or pauses it, keeping
@@ -505,6 +588,10 @@ function Controller.init()
     ns.Locale.select(GetLocale())
     -- Before any window is built, so every widget is painted once, in the saved theme.
     ns.Kit.applyTheme(CraftProfitDB.settings.theme)
+    -- The saved look, before any window is built (sanitised by DB.initAccount).
+    local appearance = CraftProfitDB.settings.appearance
+    ns.Native.setHeaderVariant(appearance.header)
+    ns.Native.setTileVariant(appearance.tile)
 
     ns.Window.create({
         onPinClick = Controller.togglePin,
@@ -535,6 +622,13 @@ function Controller.init()
         })
         ns.LevelingUI.attach(CraftProfitDB.settings.levelWindow)
     end
+    -- Nothing is built here: the options window is made on first open.
+    if ns.OptionsUI then
+        ns.OptionsUI.init(Controller)
+        ns.OptionsUI.attach(CraftProfitDB.settings.optionsWindow)
+    end
+    -- After the windows exist; makes nothing while the player keeps the button hidden.
+    if ns.MinimapButton then ns.MinimapButton.apply() end
     ns.AH.setHandlers({
         onOpen = Controller.onAHOpen,
         onSearch = function(itemID, listings)
@@ -619,13 +713,13 @@ local function slash(msg)
     local window = ns.Window
     local anchor = ns.Trade.frame() or AuctionHouseFrame or AuctionFrame
     if cmd == "show" then
-        if not window.isShown() then
-            window.attach(anchor, CraftProfitDB.settings.window)
-            window.show()
-        end
-        Controller.refresh()
+        Controller.showMainWindow()
     elseif cmd == "hide" then
-        window.hide()
+        Controller.hideMainWindow()
+    elseif cmd == "options" then
+        if ns.OptionsUI then ns.OptionsUI.toggle() end
+    elseif cmd == "minimap" then
+        Controller.minimapCommand()
     elseif cmd == "reset" then
         CraftProfitDB.settings.window = nil
         window.attach(anchor, nil)
@@ -649,6 +743,17 @@ local function slash(msg)
         say(string.format(L.MARKET_INFO, tostring(name), Controller.marketKey()))
     else
         say(L.SLASH_HELP)
+    end
+end
+
+-- The addon compartment entry (TOC AddonCompartmentFunc): the game calls it with the
+-- addon's name and the mouse button. Left: options window; right: main window.
+function CraftProfit_OnCompartmentClick(_, mouseButton)
+    if not Controller.ready then return end
+    if mouseButton == "RightButton" then
+        Controller.toggleMainWindow()
+    elseif ns.OptionsUI then
+        ns.OptionsUI.toggle()
     end
 end
 

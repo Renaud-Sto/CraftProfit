@@ -193,6 +193,22 @@ Since PR 6 the main window is native: it no longer follows the themes and has no
 - [ ] No Lua error (`/console scriptErrors 1`), no `ADDON_ACTION_BLOCKED`, with the profession window and with the AH.
 - [ ] Screenshots of the pinned list and the leveling window next to the game's own panels (`C`, the profession window), sent to the controller.
 
+## Options window (PR 8)
+- [ ] `/cp options` opens the options window (native frame, title "CraftProfit options"); Escape closes it; `/cp options` again toggles it.
+- [ ] Appearance: each header strip (Carved wood, Shade, Streaks) and each tile card (Loot card, Inset) applies at once to the main window, the pinned list (at the AH), the leveling window and the options window itself, also to a window that was closed at the time (open it after).
+- [ ] All 6 combinations look right (screenshot each); the best tile keeps its outline, a muted value stays grey, hover, click and magnifier on the AH tile still work after a switch.
+- [ ] The lit button always shows the saved choice when the window reopens; `/reload` keeps the choice.
+- [ ] Minimap button: shown by default, bottom left of the minimap (225 degrees); left click toggles the options window, right click toggles the main window (today; a standalone pinned window is planned for the right click).
+- [ ] The button's icon is the gold coin (if it is a question mark, the coin file is not served: note it in probe-findings F12); the ring and the hover highlight are centred on the icon.
+- [ ] Drag the button with the left button: it moves around the minimap and the release does not open anything; after `/reload` it is where you left it. With a square minimap addon, it follows the edges.
+- [ ] Tooltip on hover: "CraftProfit" and three green lines (left click, right click, drag).
+- [ ] Untick "Show the minimap button": it disappears; `/cp minimap` brings it back (one chat line each way); after `/reload` while hidden, no button and no chat line at login.
+- [ ] Addon compartment: does the CraftProfit entry show on Forever's minimap? Note the answer in probe-findings F12; if it shows, left click toggles the options and right click the main window.
+- [ ] Windows panel: "Main window" and "Leveling" toggle their windows.
+- [ ] `/cp locale frFR` and `esES`: the labels (Bois sculpté, Carte de butin, Bandeau des sections...) are cut, never overflowing their buttons; the Controls recap wraps inside its panel and the window grows to fit it.
+- [ ] No Lua error (`/console scriptErrors 1`), no `ADDON_ACTION_BLOCKED`, while switching, dragging and with the AH open.
+- [ ] Screenshots of the options window (English and French) and of the minimap button, sent to the controller.
+
 ## Numbers
 - [ ] For one recipe, compare each reagent price with the AH listing prices: the stored price is the median of the 5 cheapest units (not the minimum).
 - [ ] Sell one crafted item (or use `docs/probe-findings.md` F5): the mailed amount matches `price × (1 − cut)`. If not, change `DB.DEFAULTS.cut` and the test expectations.

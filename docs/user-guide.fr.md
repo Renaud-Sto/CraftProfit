@@ -119,9 +119,24 @@ Un craft qui fait perdre 16s 50c avec 25 % de chances de point coûte 66s par po
 
 La probabilité de point dépend de la couleur de la recette et c'est une **estimation**, pas une valeur mesurée : orange 100 %, jaune 75 %, vert 25 %, gris 0 % (affiché `n/d`). Le pourcentage utilisé est affiché à côté de la case, après la valeur. La couleur des recettes épinglées est rafraîchie à chaque mise à jour de la fenêtre de métier, elle suit donc votre niveau.
 
+## Fenêtre d'options
+
+Ouvrez-la avec `/cp options`, un clic gauche sur le bouton de la minicarte, ou l'entrée CraftProfit du compartiment d'addons (le bouton de la liste des addons sur la minicarte, si votre client l'affiche). Échap la ferme ; déplacez-la où vous voulez, elle se rouvre au même endroit.
+
+- **Apparence** : choisissez le *Bandeau des sections* (Bois sculpté, Ombre ou Stries) et les *Cases de prix* (Carte de butin ou Encart). Les deux se combinent librement (6 apparences) ; le bouton allumé est votre choix. Il s'applique aussitôt à toutes les fenêtres, ouvertes ou non, et est enregistré pour le compte. Par défaut : Bois et Encart.
+- **Minicarte** : *Afficher le bouton de la minicarte*. Décochez pour masquer le bouton ; `/cp minimap` le masque ou le rétablit aussi.
+- **Fenêtres** : ouvre ou ferme la fenêtre principale et la fenêtre de montée de métier.
+- **Commandes** : un rappel des clics et des commandes ci-dessous.
+
+### Bouton de la minicarte
+
+Clic gauche : fenêtre d'options. Clic droit : ouvre ou ferme la fenêtre principale (à l'hôtel des ventes, la liste des épingles s'affiche dessous). Glissez-le avec le bouton gauche pour le déplacer autour de la minicarte ; il garde sa place après `/reload`. Les minicartes carrées (d'un addon de minicarte) sont suivies le long de leurs bords.
+
+Prévu ensuite : une fenêtre autonome des recettes épinglées, utilisable loin de l'hôtel des ventes, ouverte par `/cp pins` et par le clic droit sur le bouton de la minicarte. D'ici là, le clic droit ouvre la fenêtre principale.
+
 ## Thèmes
 
-Toutes les fenêtres de CraftProfit (la fenêtre principale, la liste des épingles et la fenêtre de montée de métier) utilisent désormais les cadres, boutons, lignes et barres de défilement du jeu : les thèmes de couleurs ne changent plus rien à l'écran. `/cp theme` liste toujours **Or**, **Cuivre** et **Bleu acier** et enregistre votre choix, mais sans effet visible ; il sera remplacé par des options d'apparence dans une prochaine version.
+`/cp theme` liste toujours **Or**, **Cuivre** et **Bleu acier** et enregistre votre choix, mais sans effet visible depuis que toutes les fenêtres utilisent les cadres du jeu ; changez l'apparence dans la [fenêtre d'options](#fenêtre-doptions). Il sera retiré dans une prochaine version.
 
 Les couleurs qui ont un sens sont fixes : le gain en vert, la perte en rouge, les couleurs de difficulté des recettes (orange, jaune, vert, gris) et la teinte du bandeau de résultat.
 
@@ -133,9 +148,11 @@ Les couleurs qui ont un sens sont fixes : le gain en vert, la perte en rouge, le
 | Détail des composants replié ou déplié | Clic sur l'en-tête Composants | Déplié |
 | Position de la fenêtre | La déplacer ; `/cp reset` pour annuler | À côté de la fenêtre de métier ou de l'hôtel des ventes |
 | Tri de la liste des épingles | Bouton dans l'en-tête du panneau des épingles | Gain |
+| Bandeau des sections et cases de prix | [Fenêtre d'options](#fenêtre-doptions) ; enregistré pour le compte | Bois, Encart |
+| Bouton de la minicarte affiché, et sa place | Fenêtre d'options ou `/cp minimap` ; le faire glisser | Affiché, en bas à gauche |
 | Thème (plus d'effet visible, voir [Thèmes](#thèmes)) | `/cp theme [nom]` ; enregistré pour le compte | Or |
 
-Commandes : `/cp` (ou `/craftprofit`) avec `show`, `hide`, `reset`, `scan`, `history`, `market`, `level`, `locale <code>`, `theme [nom]` et `selftest`. Voir le [README](../README.fr.md#commandes).
+Commandes : `/cp` (ou `/craftprofit`) avec `show`, `hide`, `reset`, `options`, `minimap`, `scan`, `history`, `market`, `level`, `locale <code>`, `theme [nom]` et `selftest`. Voir le [README](../README.fr.md#commandes).
 
 ## Langues
 

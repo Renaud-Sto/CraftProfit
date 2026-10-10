@@ -119,9 +119,24 @@ A craft that loses 16s 50c with a 25 % chance of a point costs 66s per point on 
 
 The chance of a point depends on the colour of the recipe and is an **estimate**, not a measured value: orange 100 %, yellow 75 %, green 25 %, grey 0 % (shown `n/a`). The percentage used is displayed beside the check box, next to the value. The colour of pinned recipes is refreshed whenever the profession window updates, so it follows your skill.
 
+## Options window
+
+Open it with `/cp options`, a left click on the minimap button, or the CraftProfit entry of the addon compartment (the game's addon list button on the minimap, when your client shows it). Escape closes it; drag it anywhere, it reopens where you left it.
+
+- **Appearance**: pick the *Header strip* of every section (Carved wood, Shade or Streaks) and the *Tile card* of the price tiles (Loot card or Inset). The two mix freely (6 looks); the lit button is your choice. It applies at once to every window, open or not, and is saved for your account. Default: Wood and Inset.
+- **Minimap**: *Show the minimap button*. Untick it to hide the button; `/cp minimap` hides it or brings it back too.
+- **Windows**: open or close the main window and the leveling window.
+- **Controls**: a recap of the clicks and commands below.
+
+### Minimap button
+
+Left click: options window. Right click: open or close the main window (at the auction house the pinned list shows below it). Drag it with the left button to move it around the minimap; it keeps its place after `/reload`. Square minimaps (from a minimap addon) are followed along their edges.
+
+Planned next: a standalone pinned-recipes window that works away from the auction house, opened by `/cp pins` and by the minimap right click. Until then the right click opens the main window.
+
 ## Themes
 
-Every CraftProfit window (the main window, the pinned list and the leveling window) now uses the game's own frames, buttons, rows and scroll bars, so the colour themes no longer change anything you see. `/cp theme` still lists **Gold**, **Copper** and **Steel blue** and saves your choice, but it has no visible effect; it will be replaced by appearance options in a later version.
+`/cp theme` still lists **Gold**, **Copper** and **Steel blue** and saves your choice, but it has no visible effect since every window uses the game's own frames; use the [options window](#options-window) to change the look. It will be removed in a later version.
 
 Colours that carry a meaning are fixed: gain in green, loss in red, the difficulty colours of recipes (orange, yellow, green, grey) and the tint of the result banner.
 
@@ -133,9 +148,11 @@ Colours that carry a meaning are fixed: gain in green, loss in red, the difficul
 | Material detail folded or unfolded | Click the Materials header | Unfolded |
 | Window position | Drag it; `/cp reset` to undo | Beside the profession or auction house window |
 | Sort of the pinned list | Button in the header of the Pinned recipes panel | Profit |
+| Header strip and tile card | [Options window](#options-window); saved for the account | Shade, Inset |
+| Minimap button shown, and its place | Options window or `/cp minimap`; drag it | Shown, bottom left |
 | Theme (no visible effect any more, see [Themes](#themes)) | `/cp theme [name]`; saved for the account | Gold |
 
-Commands: `/cp` (or `/craftprofit`) with `show`, `hide`, `reset`, `scan`, `history`, `market`, `level`, `locale <code>`, `theme [name]` and `selftest`. See the [README](../README.md#commands).
+Commands: `/cp` (or `/craftprofit`) with `show`, `hide`, `reset`, `options`, `minimap`, `scan`, `history`, `market`, `level`, `locale <code>`, `theme [name]` and `selftest`. See the [README](../README.md#commands).
 
 ## Languages
 

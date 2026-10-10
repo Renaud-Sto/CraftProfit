@@ -18,7 +18,17 @@ DB.DEFAULTS = {
     costExpanded = true, -- material detail shown under the Materials line
     staleAfter = 3600,  -- seconds before prices are shown as old
     theme = "gold",
+    -- The look chosen in the options window: header strip and tile card (UI/Native.lua).
+    appearance = { header = "b", tile = "b" },
+    -- The minimap button: hidden or not, and its place around the minimap in degrees.
+    minimap = { hide = false, angle = 225 },
 }
+
+-- The appearance keys a save may hold; the same as Native.HEADER_VARIANTS and
+-- Native.TILE_VARIANTS (this file is pure Lua and loads before the UI; a test checks both
+-- agree).
+DB.HEADER_KEYS = { a = true, b = true, c = true }
+DB.TILE_KEYS = { a = true, b = true }
 
 local ANCHORS = {
     TOPLEFT = true, TOP = true, TOPRIGHT = true, LEFT = true, CENTER = true,
@@ -39,6 +49,38 @@ local function number(t, key, lo, hi, default, integer)
     t[key] = v
 end
 
+-- `key` when it is one of `keys`, else `default`. Only strings are looked up: a table or NaN
+-- key would be a valid index but never a variant.
+local function oneOf(key, keys, default)
+    if type(key) == "string" and keys[key] then return key end
+    return default
+end
+
+-- An angle in degrees brought into [0, 360); nil when it is not a finite number, or when
+-- it is too large for the modulo to stay exact.
+function DB.angle(v)
+    if not Util.isFinite(v) then return nil end
+    v = v % 360
+    if not (v >= 0 and v < 360) then return nil end
+    return v
+end
+
+-- Rebuilt as fresh tables: unknown fields go, and a save never shares a table with the
+-- defaults.
+local function sanitizeAppearance(s)
+    local a = type(s.appearance) == "table" and s.appearance or {}
+    local defaults = DB.DEFAULTS.appearance
+    s.appearance = {
+        header = oneOf(a.header, DB.HEADER_KEYS, defaults.header),
+        tile = oneOf(a.tile, DB.TILE_KEYS, defaults.tile),
+    }
+    local m = type(s.minimap) == "table" and s.minimap or {}
+    local mapDefaults = DB.DEFAULTS.minimap
+    local hide = m.hide
+    if type(hide) ~= "boolean" then hide = mapDefaults.hide end
+    s.minimap = { hide = hide, angle = DB.angle(m.angle) or mapDefaults.angle }
+end
+
 local function sanitizeSettings(s)
     number(s, "cut", 0, 0.5, DB.DEFAULTS.cut)
     number(s, "medianN", 1, 20, DB.DEFAULTS.medianN, true)
@@ -50,11 +92,15 @@ local function sanitizeSettings(s)
     if type(s.theme) ~= "string" or not (ns.Theme and ns.Theme.exists(s.theme)) then
         s.theme = DB.DEFAULTS.theme
     end
-    local lw = s.levelWindow
-    if type(lw) == "table" and Util.isFinite(lw.x) and Util.isFinite(lw.y) then
-        s.levelWindow = { x = lw.x, y = lw.y }
-    else
-        s.levelWindow = nil
+    sanitizeAppearance(s)
+    -- Saved positions of the leveling and options windows: { x, y } or nothing.
+    for _, key in ipairs({ "levelWindow", "optionsWindow" }) do
+        local pos = s[key]
+        if type(pos) == "table" and Util.isFinite(pos.x) and Util.isFinite(pos.y) then
+            s[key] = { x = pos.x, y = pos.y }
+        else
+            s[key] = nil
+        end
     end
     local w = s.window
     if type(w) == "table" and ANCHORS[w.point] and Util.isFinite(w.x) and Util.isFinite(w.y) then

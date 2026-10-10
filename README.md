@@ -26,6 +26,7 @@ CraftProfit is an addon for **World of Warcraft: Forever**. Select a recipe you 
 - **Auction house tools**: one button prices every pinned recipe, another scans the whole auction house. Click a reagent to search it in the auction house, quantity already filled in. CraftProfit never buys anything for you.
 - **Price history** (recording): tick *Track history* on up to 15 recipes and CraftProfit keeps their prices scan after scan, per ruleset (the game "realm" in the beta) and faction. The graphs come later.
 - **Standalone**: no Auctionator, no other addon required. It also picks up the scans other addons start.
+- **Options window and minimap button**: pick the look of the windows (header strip and tile card), applied at once; open it from the minimap button, the addon compartment or `/cp options`.
 - **English, French and Spanish** (follows the game language).
 
 ## Install
@@ -53,6 +54,8 @@ The full walkthrough, every option and the explanation of each number are in the
 | `/cp` or `/craftprofit` | Show the command list |
 | `/cp show` / `hide` | Show or hide the window |
 | `/cp reset` | Put the window back next to the profession or auction house window |
+| `/cp options` | Open or close the options window (look of the windows, minimap button, controls) |
+| `/cp minimap` | Hide the minimap button, or show it again |
 | `/cp scan` | Start a full auction house scan (auction house open) |
 | `/cp history` | List the tracked recipes; `/cp history remove <n>` deletes one |
 | `/cp level` | Open or close the leveling window |

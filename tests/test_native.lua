@@ -1033,3 +1033,273 @@ H.test("setMaxWidth changes a check box's cap later: label and hit area, never n
     H.eq(Native.CHECK_LABEL_X, -2)
     H.eq(Native.PANEL_EDGE, 2)
 end)
+
+-- Scroll bar ----------------------------------------------------------------------
+
+-- A bar 100 px high whose top is at y = 700 on a scale-1 screen, with `asked` recording
+-- every offset it asks for. The pointer sits at `env.cursorY`.
+local function scrollRig(env, Native)
+    env.GetCursorPosition = function() return 0, env.cursorY end
+    local bar = Native.scrollbar(nil, 100)
+    bar.frame.GetTop = function() return 700 end
+    bar.frame.GetEffectiveScale = function() return 1 end
+    local asked = {}
+    bar.onScroll = function(offset) asked[#asked + 1] = offset end
+    return bar, asked
+end
+
+local function press(env, bar, y, button)
+    env.cursorY = y
+    bar.frame.scripts.OnMouseDown(bar.frame, button)
+end
+
+local function tick(env, bar, y)
+    env.cursorY = y
+    local onUpdate = bar.frame.scripts.OnUpdate
+    if onUpdate then onUpdate(bar.frame, 0.016) end
+end
+
+H.test("the native scroll bar is a hidden Button, SCROLL_W wide and as tall as its track", function()
+    local _, Native, env = boot()
+    local made = recordFrames(env)
+    local parent = W.frame()
+    local bar = Native.scrollbar(parent, 100)
+    H.eq(Native.SCROLL_W, 8)
+    H.eq(made[1], bar.frame)
+    H.eq(bar.frame.kind, "Button")
+    H.eq(bar.frame.createParent, parent)
+    H.eq(bar.frame.size, { 8, 100 })
+    H.eq(bar.frame.shown, false)
+    H.truthy(rawget(bar, "thumb"))
+    -- No per-frame work while nobody drags.
+    H.eq(bar.frame.scripts.OnUpdate, nil)
+end)
+
+H.test("the native scroll bar hides when the list fits and shows a thumb of the right size otherwise", function()
+    local T, Native = boot()
+    local bar = Native.scrollbar(nil, 100)
+    H.falsy(bar:update(6, 6, 0))
+    H.falsy(bar.frame.shown)
+    local heights = {}
+    bar.thumb.SetHeight = function(_, h) heights[#heights + 1] = h end
+    local points = {}
+    bar.thumb.SetPoint = function(_, ...) points[#points + 1] = { ... } end
+    H.truthy(bar:update(12, 6, 3))
+    H.truthy(bar.frame.shown)
+    H.eq(heights[#heights], 50)
+    -- Offset 3 of 6 on a 50 px free track: 25 px down.
+    H.eq(points[1], { "TOPLEFT", bar.frame, "TOPLEFT", 0, -25 })
+    H.eq(points[2], { "TOPRIGHT", bar.frame, "TOPRIGHT", 0, -25 })
+    -- Never shorter than the kit's minimum, however long the list.
+    bar:update(1000, 6, 0)
+    H.eq(heights[#heights], T.ns.Kit.SCROLL_MIN_THUMB)
+    H.falsy(bar:update(4, 6, 0))
+    H.falsy(bar.frame.shown)
+end)
+
+H.test("clicking the native track asks for the matching offset and dragging follows the pointer", function()
+    local _, Native, env = boot()
+    local bar, asked = scrollRig(env, Native)
+    bar:update(12, 6, 0)
+    -- 100 px below the top of the track: its bottom, the last offset.
+    press(env, bar, 600, "LeftButton")
+    H.eq(asked, { 6 })
+    H.eq(type(bar.frame.scripts.OnUpdate), "function")
+    bar:update(12, 6, 6)
+    tick(env, bar, 650)
+    H.eq(asked, { 6, 3 })
+    -- Released: the per-frame script goes away and nothing follows any more.
+    bar.frame.scripts.OnMouseUp(bar.frame, "LeftButton")
+    H.eq(bar.frame.scripts.OnUpdate, nil)
+    tick(env, bar, 700)
+    H.eq(asked, { 6, 3 })
+end)
+
+H.test("grabbing the native thumb off-centre does not move the list, then dragging follows", function()
+    local _, Native, env = boot()
+    local bar, asked = scrollRig(env, Native)
+    bar:update(12, 6, 3)             -- thumb at y 25..75
+    press(env, bar, 672, "LeftButton") -- y = 28, near the thumb's top edge
+    H.eq(asked, {})
+    tick(env, bar, 650)              -- 22 px down: 3 + 2.64 rounds to 6
+    H.eq(asked, { 6 })
+end)
+
+H.test("only the left button starts a native drag and a lost mouse-up ends it", function()
+    local _, Native, env = boot()
+    local bar, asked = scrollRig(env, Native)
+    bar:update(12, 6, 0)
+    press(env, bar, 600, "RightButton")
+    H.eq(asked, {})
+    H.eq(bar.frame.scripts.OnUpdate, nil)
+    -- A nil button (a scripted click) counts as the left one.
+    env.IsMouseButtonDown = function() return true end
+    press(env, bar, 600, nil)
+    H.eq(asked, { 6 })
+    bar:update(12, 6, 6)
+    -- The button is no longer down although no mouse-up arrived: the drag stops.
+    env.IsMouseButtonDown = function() return false end
+    tick(env, bar, 650)
+    H.eq(asked, { 6 })
+    H.eq(bar.frame.scripts.OnUpdate, nil)
+end)
+
+H.test("hiding the native scroll bar ends a drag", function()
+    local _, Native, env = boot()
+    local bar, asked = scrollRig(env, Native)
+    bar:update(12, 6, 0)
+    press(env, bar, 600, "LeftButton")
+    H.eq(asked, { 6 })
+    bar.frame.scripts.OnHide(bar.frame)
+    H.eq(bar.frame.scripts.OnUpdate, nil)
+    bar:update(12, 6, 6)
+    tick(env, bar, 650)
+    H.eq(asked, { 6 })
+end)
+
+H.test("the native scroll bar ignores a pointer it cannot measure and works without a callback", function()
+    local _, Native, env = boot()
+    local bar = Native.scrollbar(nil, 100)
+    bar:update(12, 6, 0)
+    env.GetCursorPosition = function() end
+    bar.frame.scripts.OnMouseDown(bar.frame, "LeftButton")
+    H.eq(bar.frame.scripts.OnUpdate, nil)
+    bar.frame.GetEffectiveScale = function() return 1 end
+    env.GetCursorPosition = function() return 0, 600 end
+    bar.frame.scripts.OnMouseDown(bar.frame, "LeftButton")
+    bar.frame.scripts.OnUpdate(bar.frame)
+    bar.frame.scripts.OnMouseUp(bar.frame, "LeftButton")
+    H.eq(bar.frame.scripts.OnUpdate, nil)
+end)
+
+-- Records textures with their atlas, tiling and colour, per frame that made them.
+local function recordBarTextures(env)
+    local textures = {}
+    local create = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        f.CreateTexture = function()
+            local tex = W.frame()
+            tex.owner = f
+            tex.SetAtlas = function(self, atlas) self.atlas = atlas end
+            tex.SetVertTile = function(self, v) self.vertTile = v end
+            tex.SetColorTexture = function(self, r, g, b, a) self.color = { r, g, b, a } end
+            textures[#textures + 1] = tex
+            return tex
+        end
+        return f
+    end
+    return textures
+end
+
+H.test("the native scroll bar draws its track and thumb from the game's minimal-scrollbar atlases", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    local textures = recordBarTextures(env)
+    local bar = Native.scrollbar(nil, 100)
+    H.truthy(bar.trackAtlases)
+    H.truthy(bar.thumbAtlases)
+    local track, thumb = bar.trackPieces, bar.thumbPieces
+    H.eq(track.top.atlas, "minimal-scrollbar-track-top")
+    H.eq(track.middle.atlas, "!minimal-scrollbar-track-middle")
+    H.eq(track.bottom.atlas, "minimal-scrollbar-track-bottom")
+    -- "!" marks an atlas made to tile vertically.
+    H.eq(track.middle.vertTile, true)
+    H.eq(thumb.top.atlas, "minimal-scrollbar-small-thumb-top")
+    H.eq(thumb.middle.atlas, "minimal-scrollbar-small-thumb-middle")
+    H.eq(thumb.bottom.atlas, "minimal-scrollbar-small-thumb-bottom")
+    H.eq(thumb.top.owner, bar.thumb)
+    H.eq(rawget(bar, "trackFill"), nil)
+    H.eq(rawget(bar, "thumbFill"), nil)
+    for _, tex in ipairs(textures) do H.eq(rawget(tex, "color"), nil) end
+    -- The caps keep the atlas height (4 here) while the thumb is tall enough.
+    bar:update(12, 6, 0)
+    H.eq(thumb.top.height, 4)
+    H.eq(thumb.bottom.height, 4)
+end)
+
+H.test("the native thumb lights on hover and darkens while dragged when the client has those atlases", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    recordBarTextures(env)
+    local bar, asked = scrollRig(env, Native)
+    bar:update(12, 6, 0)
+    local thumb = bar.thumbPieces
+    bar.frame.scripts.OnEnter(bar.frame)
+    H.eq(thumb.middle.atlas, "minimal-scrollbar-small-thumb-middle-over")
+    H.eq(thumb.top.atlas, "minimal-scrollbar-small-thumb-top-over")
+    press(env, bar, 675, "LeftButton")
+    H.eq(asked, {})
+    H.eq(thumb.bottom.atlas, "minimal-scrollbar-small-thumb-bottom-down")
+    bar.frame.scripts.OnMouseUp(bar.frame, "LeftButton")
+    -- The fake cannot say the pointer is still over the bar: back to rest.
+    H.eq(thumb.middle.atlas, "minimal-scrollbar-small-thumb-middle")
+    bar.frame.IsMouseOver = function() return true end
+    press(env, bar, 675, "LeftButton")
+    bar.frame.scripts.OnMouseUp(bar.frame, "LeftButton")
+    H.eq(thumb.middle.atlas, "minimal-scrollbar-small-thumb-middle-over")
+    bar.frame.scripts.OnLeave(bar.frame)
+    H.eq(thumb.middle.atlas, "minimal-scrollbar-small-thumb-middle")
+end)
+
+H.test("a client without the hover atlases keeps the native thumb at rest", function()
+    local _, Native, env = boot()
+    env.C_Texture = { GetAtlasInfo = function(name)
+        if name:find("-over", 1, true) or name:find("-down", 1, true) then return nil end
+        return { width = 8, height = 4 }
+    end }
+    recordBarTextures(env)
+    local bar = Native.scrollbar(nil, 100)
+    bar:update(12, 6, 0)
+    bar.frame.scripts.OnEnter(bar.frame)
+    H.eq(bar.thumbPieces.middle.atlas, "minimal-scrollbar-small-thumb-middle")
+end)
+
+H.test("the native thumb caps share a thumb shorter than both of them", function()
+    local _, Native, env = boot()
+    env.C_Texture = { GetAtlasInfo = function() return { width = 8, height = 10 } end }
+    recordBarTextures(env)
+    local bar = Native.scrollbar(nil, 100)
+    -- 1000 rows: the thumb is the 16 px minimum, under the two 10 px caps.
+    bar:update(1000, 6, 0)
+    H.eq(bar.thumbPieces.top.height, 8)
+    H.eq(bar.thumbPieces.bottom.height, 8)
+    bar:update(12, 6, 0)
+    H.eq(bar.thumbPieces.top.height, 10)
+end)
+
+H.test("without the atlases the native scroll bar draws a faint grey track and a gold thumb", function()
+    local _, Native, env = boot()
+    env.C_Texture = nil
+    local textures = recordBarTextures(env)
+    local bar = Native.scrollbar(nil, 100)
+    H.falsy(bar.trackAtlases)
+    H.falsy(bar.thumbAtlases)
+    H.eq(rawget(bar, "trackPieces"), nil)
+    H.eq(rawget(bar, "thumbPieces"), nil)
+    -- No game colour objects in the fake: the Colors fallbacks.
+    H.eq(bar.trackFill.color, { 0.5, 0.5, 0.5, Native.SCROLL_TRACK_ALPHA })
+    H.eq(bar.thumbFill.color, { 1, 0.82, 0, 1 })
+    H.eq(bar.thumbFill.owner, bar.thumb)
+    for _, tex in ipairs(textures) do H.eq(rawget(tex, "atlas"), nil) end
+    -- Hover and drag do not raise on the flat bar.
+    bar:update(12, 6, 0)
+    bar.frame.scripts.OnEnter(bar.frame)
+    bar.frame.scripts.OnLeave(bar.frame)
+end)
+
+H.test("the flat scroll bar reads the game's colours, and one missing track piece flattens the track", function()
+    local _, Native, env = boot()
+    local function rgba(r, g, b) return { GetRGBA = function() return r, g, b, 1 end } end
+    env.DISABLED_FONT_COLOR = rgba(0.4, 0.4, 0.4)
+    env.NORMAL_FONT_COLOR = rgba(1, 0.8, 0.1)
+    env.C_Texture = { GetAtlasInfo = function(name)
+        if name == "minimal-scrollbar-track-bottom" then return nil end
+        return { width = 8, height = 4 }
+    end }
+    recordBarTextures(env)
+    local bar = Native.scrollbar(nil, 100)
+    H.falsy(bar.trackAtlases)
+    H.truthy(bar.thumbAtlases)
+    H.eq(bar.trackFill.color, { 0.4, 0.4, 0.4, Native.SCROLL_TRACK_ALPHA })
+end)

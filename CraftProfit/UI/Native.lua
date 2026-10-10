@@ -100,10 +100,11 @@ local function applyAtlas(tex, name)
     local info = atlasInfo(name)
     if not info or not pcall(tex.SetAtlas, tex, name) then return nil end
     -- A leading underscore marks an atlas made to tile horizontally, a leading "!" one made
-    -- to tile vertically (as the templates use them).
+    -- to tile vertically (as the templates use them). Set both ways: a texture switched
+    -- live from a tiled atlas to a plain one must stop tiling.
     local mark = name:sub(1, 1)
-    if mark == "_" and type(tex.SetHorizTile) == "function" then tex:SetHorizTile(true) end
-    if mark == "!" and type(tex.SetVertTile) == "function" then tex:SetVertTile(true) end
+    if type(tex.SetHorizTile) == "function" then tex:SetHorizTile(mark == "_") end
+    if type(tex.SetVertTile) == "function" then tex:SetVertTile(mark == "!") end
     return info
 end
 
@@ -387,8 +388,8 @@ end
 -- Panel ---------------------------------------------------------------------------
 
 Native.HEAD_H = 22
--- Header strip candidates, chosen at the /cp kitdemo checkpoint. Switching applies to
--- panels built afterwards (the demo rebuilds its window).
+-- Header strip choices (the player's appearance setting). Switching repaints every panel
+-- already built and applies to the ones built afterwards.
 Native.HEADER_VARIANTS = {
     a = "questlog-reward-header-top",
     b = "friends-frame-toptexbg",
@@ -401,18 +402,66 @@ Native.DIVIDER_ATLAS = "perks-divider-short"
 Native.PANEL_EDGE = 2
 local PANEL_EDGE = Native.PANEL_EDGE
 
--- Picks the header strip for panels built from now on; an unknown key keeps the current
--- one. Returns the key in use.
+-- Every panel and tile built by this module, in creation order, so a change of look
+-- reaches the live ones (shown or hidden). Each is added once, by its constructor; only
+-- tables made here go in. Frames are never destroyed by the game, so nothing is removed.
+Native.registry = { panels = {}, tiles = {} }
+
+-- The header strip and tile card in use: header, tile keys.
+function Native.appearance()
+    return Native.headerVariant, Native.tileVariant
+end
+
+-- Draws the header strip of the current variant on panel `p` (its fallback when the client
+-- lacks the atlas) and the divider under it. Used at construction and by a live switch.
+local function paintHeader(p)
+    local headBg, head = p.headerBg, p.head
+    local atlas = Native.HEADER_VARIANTS[Native.headerVariant]
+    if applyAtlas(headBg, atlas) then
+        p.headerAtlas = atlas
+    else
+        p.headerAtlas = nil
+        -- A faint gold strip, the colour of the game's header text; nothing when the game
+        -- gives no colour (never the previous variant's atlas).
+        local r, g, b = rgbOf(NORMAL_FONT_COLOR)
+        if r then
+            headBg:SetColorTexture(r, g, b, 0.15)
+        elseif type(headBg.SetTexture) == "function" then
+            headBg:SetTexture(nil)
+        end
+    end
+    local divider = p.dividerTexture
+    local info = applyAtlas(divider, Native.DIVIDER_ATLAS)
+    if info then
+        -- Centred on the header's bottom edge, at most 6 px tall whatever the atlas size.
+        divider:ClearAllPoints()
+        divider:SetPoint("LEFT", head, "BOTTOMLEFT", 0, 0)
+        divider:SetPoint("RIGHT", head, "BOTTOMRIGHT", 0, 0)
+        divider:SetHeight(math.min(type(info.height) == "number" and info.height or 2, 6))
+        divider:Show()
+        p.divider = divider
+    else
+        divider:Hide()
+        p.divider = nil
+    end
+end
+
+-- Picks the header strip; repaints every registered panel when it changes. An unknown key
+-- keeps the current one. Returns the key in use.
 function Native.setHeaderVariant(key)
-    if Native.HEADER_VARIANTS[key] then Native.headerVariant = key end
+    if key ~= nil and Native.HEADER_VARIANTS[key] and key ~= Native.headerVariant then
+        Native.headerVariant = key
+        for _, p in ipairs(Native.registry.panels) do paintHeader(p) end
+    end
     return Native.headerVariant
 end
 
 -- A section of a window: the game's dark inset as background, a header strip with a title
 -- (and an optional right-hand text in p.right), a divider under it, and a body to fill.
 -- Same fields and methods as Kit.panel: frame, body, title, right, setTitle, setRows,
--- height, onHeaderClick. Also: inset, headerBg, headerAtlas (nil when the fallback was
--- drawn), divider (nil when its atlas is missing).
+-- height, onHeaderClick. Also: inset, head, headerBg, headerAtlas (nil when the fallback was
+-- drawn), divider (nil when its atlas is missing), dividerTexture (always). Registered for
+-- live appearance switches (Native.setHeaderVariant).
 function Native.panel(parent, title)
     local Kit = ns.Kit
     local p = {}
@@ -431,25 +480,10 @@ function Native.panel(parent, title)
     local headBg = head:CreateTexture(nil, "BACKGROUND")
     headBg:SetAllPoints(head)
     p.headerBg = headBg
-    local atlas = Native.HEADER_VARIANTS[Native.headerVariant]
-    if applyAtlas(headBg, atlas) then
-        p.headerAtlas = atlas
-    else
-        -- A faint gold strip, the colour of the game's header text.
-        local r, g, b = rgbOf(NORMAL_FONT_COLOR)
-        if r then headBg:SetColorTexture(r, g, b, 0.15) end
-    end
-    local divider = head:CreateTexture(nil, "ARTWORK")
-    local info = applyAtlas(divider, Native.DIVIDER_ATLAS)
-    if info then
-        -- Centred on the header's bottom edge, at most 6 px tall whatever the atlas size.
-        divider:SetPoint("LEFT", head, "BOTTOMLEFT", 0, 0)
-        divider:SetPoint("RIGHT", head, "BOTTOMRIGHT", 0, 0)
-        divider:SetHeight(math.min(type(info.height) == "number" and info.height or 2, 6))
-        p.divider = divider
-    else
-        divider:Hide()
-    end
+    p.dividerTexture = head:CreateTexture(nil, "ARTWORK")
+    paintHeader(p)
+    local panels = Native.registry.panels
+    panels[#panels + 1] = p
 
     p.right = head:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     p.right:SetPoint("RIGHT", head, "RIGHT", -8, 0)
@@ -493,9 +527,9 @@ end
 
 -- Tile ----------------------------------------------------------------------------
 
--- Tile background candidates, chosen at the /cp kitdemo checkpoint; applies to tiles built
--- afterwards. "a": the loot card atlas, its stroke as the best-tile outline. "b": a nested
--- game inset with a 2 px gold outline for the best tile.
+-- Tile card choices (the player's appearance setting). "a": the loot card atlas, its stroke
+-- as the best-tile outline. "b": a nested game inset with a 2 px gold outline for the best
+-- tile. Every tile builds both and shows one; switching repaints the live tiles.
 Native.TILE_VARIANTS = { a = "looting_itemcard_bg", b = "inset" }
 Native.tileVariant = "b"
 Native.TILE_STROKE_ATLAS = "looting_itemcard_stroke_normal"
@@ -513,8 +547,13 @@ Native.TILE_FONTS = {
 local TILE_OUTLINE = 2
 local HOVER_FILE = "Interface\\QuestFrame\\UI-QuestTitleHighlight"
 
+-- Picks the tile card; repaints every registered tile when it changes. An unknown key keeps
+-- the current one. Returns the key in use.
 function Native.setTileVariant(key)
-    if Native.TILE_VARIANTS[key] then Native.tileVariant = key end
+    if key ~= nil and Native.TILE_VARIANTS[key] and key ~= Native.tileVariant then
+        Native.tileVariant = key
+        for _, tile in ipairs(Native.registry.tiles) do tile:applyVariant() end
+    end
     return Native.tileVariant
 end
 
@@ -550,11 +589,14 @@ end
 
 -- A small card with a label and a large value that shrinks to fit its width. Same fields
 -- and methods as Kit.tile: frame, label, value, set(spec), onClick(fn), showIcon(show),
--- hit, icon, best, muted. Also: variant (the one it was built with), bgAtlas (nil when the
--- card atlas was missing and the inset was drawn instead), outline (the best-tile marks).
+-- hit, icon, best, muted. Also: variant (the one asked for), bgAtlas (nil when the inset is
+-- drawn: variant b, or the card atlas missing), outline (the best-tile marks in use), and
+-- both structures: cardBg and cardStroke (the loot card textures), inset and goldOutline
+-- (the nested inset and its 4 gold lines). applyVariant() shows the current variant's;
+-- Native.setTileVariant calls it on every registered tile.
 function Native.tile(parent, width, height)
     local Kit = ns.Kit
-    local tile = { best = false, muted = false, width = width, variant = Native.tileVariant }
+    local tile = { best = false, muted = false, width = width }
     local f = CreateFrame("Frame", nil, parent)
     f:SetSize(width or 110, height or 52)
     tile.frame = f
@@ -564,34 +606,22 @@ function Native.tile(parent, width, height)
     face:SetAllPoints(f)
     tile.face = face
 
+    -- Variant a: the loot card and its stroke. Their atlases are applied when first shown
+    -- and retried until the client knows them.
     local cardAtlas = Native.TILE_VARIANTS.a
-    if tile.variant == "a" then
-        local bg = f:CreateTexture(nil, "BACKGROUND")
-        bg:SetAllPoints(f)
-        if applyAtlas(bg, cardAtlas) then
-            tile.bgAtlas = cardAtlas
-        else
-            bg:Hide()
-        end
-    end
-    if not tile.bgAtlas then
-        tile.inset = CreateFrame("Frame", nil, f, "InsetFrameTemplate")
-        tile.inset:SetAllPoints(f)
-    end
-    -- The best mark: the card's own stroke when the card and its stroke exist, else gold.
-    local stroke
-    if tile.bgAtlas then
-        stroke = face:CreateTexture(nil, "BORDER")
-        stroke:SetAllPoints(face)
-        if applyAtlas(stroke, Native.TILE_STROKE_ATLAS) then
-            stroke:Hide()
-            tile.outline = { stroke }
-        end
-    end
-    if not tile.outline then
-        if stroke then stroke:Hide() end
-        tile.outline = goldOutline(face)
-    end
+    local cardBg = f:CreateTexture(nil, "BACKGROUND")
+    cardBg:SetAllPoints(f)
+    cardBg:Hide()
+    tile.cardBg = cardBg
+    local cardStroke = face:CreateTexture(nil, "BORDER")
+    cardStroke:SetAllPoints(face)
+    cardStroke:Hide()
+    tile.cardStroke = cardStroke
+    local cardOk, strokeOk = false, false
+    -- Variant b (and the fallback of a): the nested inset and a gold outline.
+    tile.inset = CreateFrame("Frame", nil, f, "InsetFrameTemplate")
+    tile.inset:SetAllPoints(f)
+    tile.goldOutline = goldOutline(face)
 
     -- White, so a gold tag ("beta") stands out from it.
     tile.label = face:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -606,9 +636,28 @@ function Native.tile(parent, width, height)
     tile.value:SetWordWrap(false)
 
     local function paint()
-        for _, mark in ipairs(tile.outline) do mark:SetShown(tile.best) end
+        -- Only the marks of the structure in use; the other structure's stay hidden.
+        cardStroke:SetShown(tile.best and tile.outline[1] == cardStroke)
+        for _, line in ipairs(tile.goldOutline) do line:SetShown(tile.best and tile.outline == tile.goldOutline) end
         -- SetFontObject resets the colour to the font's own: paint after every font change.
         paintText(tile.value, tile.muted and DISABLED_FONT_COLOR or HIGHLIGHT_FONT_COLOR)
+    end
+
+    -- Shows the structure of the current variant and hides the other. The best mark: the
+    -- card's own stroke when the card and its stroke exist, else gold.
+    function tile:applyVariant()
+        self.variant = Native.tileVariant
+        local card = false
+        if self.variant == "a" then
+            if not cardOk then cardOk = applyAtlas(cardBg, cardAtlas) ~= nil end
+            card = cardOk
+        end
+        cardBg:SetShown(card)
+        self.inset:SetShown(not card)
+        self.bgAtlas = card and cardAtlas or nil
+        if card and not strokeOk then strokeOk = applyAtlas(cardStroke, Native.TILE_STROKE_ATLAS) ~= nil end
+        self.outline = (card and strokeOk) and { cardStroke } or self.goldOutline
+        paint()
     end
 
     -- spec: { label, tag, value, best, muted }
@@ -683,6 +732,10 @@ function Native.tile(parent, width, height)
         local right = shown and (6 + Native.TILE_ICON + 4) or Native.TILE_PAD
         self.label:SetPoint("TOPRIGHT", f, "TOPRIGHT", -right, -8)
     end
+
+    tile:applyVariant()
+    local tiles = Native.registry.tiles
+    tiles[#tiles + 1] = tile
     return tile
 end
 

@@ -100,11 +100,13 @@ local function applyAtlas(tex, name)
     local info = atlasInfo(name)
     if not info or not pcall(tex.SetAtlas, tex, name) then return nil end
     -- A leading underscore marks an atlas made to tile horizontally, a leading "!" one made
-    -- to tile vertically (as the templates use them). Set both ways: a texture switched
-    -- live from a tiled atlas to a plain one must stop tiling.
+    -- to tile vertically (as the templates use them). A texture gets one atlas for its whole
+    -- life: SetAtlas again with another atlas keeps tiling and coordinates of the old one
+    -- (a live look switch drew a cut strip, sheet fragments or nothing), so nothing here
+    -- is ever reset; switches show another texture instead.
     local mark = name:sub(1, 1)
-    if type(tex.SetHorizTile) == "function" then tex:SetHorizTile(mark == "_") end
-    if type(tex.SetVertTile) == "function" then tex:SetVertTile(mark == "!") end
+    if mark == "_" and type(tex.SetHorizTile) == "function" then tex:SetHorizTile(true) end
+    if mark == "!" and type(tex.SetVertTile) == "function" then tex:SetVertTile(true) end
     return info
 end
 
@@ -412,38 +414,30 @@ function Native.appearance()
     return Native.headerVariant, Native.tileVariant
 end
 
--- Draws the header strip of the current variant on panel `p` (its fallback when the client
--- lacks the atlas) and the divider under it. Used at construction and by a live switch.
-local function paintHeader(p)
-    local headBg, head = p.headerBg, p.head
-    local atlas = Native.HEADER_VARIANTS[p.fixedVariant or Native.headerVariant]
-    if applyAtlas(headBg, atlas) then
-        p.headerAtlas = atlas
-    else
-        p.headerAtlas = nil
-        -- A faint gold strip, the colour of the game's header text; nothing when the game
-        -- gives no colour (never the previous variant's atlas).
+-- Makes the strip texture of header variant `key` on `head`, hidden: its atlas set once,
+-- for good, or the fallback (a faint gold strip, the colour of the game's header text;
+-- nothing when the game gives no colour). Returns the texture and the atlas name (nil on
+-- fallback).
+local function headerTexture(head, key)
+    local tex = head:CreateTexture(nil, "BACKGROUND")
+    tex:SetAllPoints(head)
+    local atlas = Native.HEADER_VARIANTS[key]
+    if not applyAtlas(tex, atlas) then
+        atlas = nil
         local r, g, b = rgbOf(NORMAL_FONT_COLOR)
-        if r then
-            headBg:SetColorTexture(r, g, b, 0.15)
-        elseif type(headBg.SetTexture) == "function" then
-            headBg:SetTexture(nil)
-        end
+        if r then tex:SetColorTexture(r, g, b, 0.15) end
     end
-    local divider = p.dividerTexture
-    local info = applyAtlas(divider, Native.DIVIDER_ATLAS)
-    if info then
-        -- Centred on the header's bottom edge, at most 6 px tall whatever the atlas size.
-        divider:ClearAllPoints()
-        divider:SetPoint("LEFT", head, "BOTTOMLEFT", 0, 0)
-        divider:SetPoint("RIGHT", head, "BOTTOMRIGHT", 0, 0)
-        divider:SetHeight(math.min(type(info.height) == "number" and info.height or 2, 6))
-        divider:Show()
-        p.divider = divider
-    else
-        divider:Hide()
-        p.divider = nil
-    end
+    tex:Hide()
+    return tex, atlas
+end
+
+-- Shows the strip of the current variant on panel `p` and hides the others. Used at
+-- construction and by a live switch; never sets an atlas.
+local function paintHeader(p)
+    local key = p.fixedVariant or Native.headerVariant
+    for k, tex in pairs(p.headerTextures) do tex:SetShown(k == key) end
+    p.headerBg = p.headerTextures[key]
+    p.headerAtlas = p.headerAtlases[key]
 end
 
 -- Picks the header strip; repaints every registered panel when it changes. An unknown key
@@ -459,8 +453,9 @@ end
 -- A section of a window: the game's dark inset as background, a header strip with a title
 -- (and an optional right-hand text in p.right), a divider under it, and a body to fill.
 -- Same fields and methods as Kit.panel: frame, body, title, right, setTitle, setRows,
--- height, onHeaderClick. Also: inset, head, headerBg, headerAtlas (nil when the fallback was
--- drawn), divider (nil when its atlas is missing), dividerTexture (always). Registered for
+-- height, onHeaderClick. Also: inset, head, headerTextures (one per variant, each with its
+-- own atlas for good), headerBg (the one shown), headerAtlas (nil when the fallback is
+-- drawn), divider (nil when its atlas is missing). Registered for
 -- live appearance switches (Native.setHeaderVariant), unless `opts.variant` (a key of
 -- HEADER_VARIANTS) fixes its strip: then it is drawn once with that one and never
 -- registered (the /cp kitdemo previews, which must not repaint or outlive the real look).
@@ -482,11 +477,25 @@ function Native.panel(parent, title, opts)
     head:SetPoint("TOPRIGHT", f, "TOPRIGHT", -PANEL_EDGE, -PANEL_EDGE)
     head:SetHeight(Native.HEAD_H)
     p.head = head
-    local headBg = head:CreateTexture(nil, "BACKGROUND")
-    headBg:SetAllPoints(head)
-    p.headerBg = headBg
-    p.dividerTexture = head:CreateTexture(nil, "ARTWORK")
+    -- One texture per variant (only the fixed one for a fixed panel).
+    p.headerTextures, p.headerAtlases = {}, {}
+    for key in pairs(Native.HEADER_VARIANTS) do
+        if not p.fixedVariant or key == p.fixedVariant then
+            p.headerTextures[key], p.headerAtlases[key] = headerTexture(head, key)
+        end
+    end
     paintHeader(p)
+    local divider = head:CreateTexture(nil, "ARTWORK")
+    local info = applyAtlas(divider, Native.DIVIDER_ATLAS)
+    if info then
+        -- Centred on the header's bottom edge, at most 6 px tall whatever the atlas size.
+        divider:SetPoint("LEFT", head, "BOTTOMLEFT", 0, 0)
+        divider:SetPoint("RIGHT", head, "BOTTOMRIGHT", 0, 0)
+        divider:SetHeight(math.min(type(info.height) == "number" and info.height or 2, 6))
+        p.divider = divider
+    else
+        divider:Hide()
+    end
     if not p.fixedVariant then
         local panels = Native.registry.panels
         panels[#panels + 1] = p

@@ -482,16 +482,55 @@ H.test("an unknown header key repaints nothing and keeps the variant", function(
     H.eq(p.headerAtlas, "friends-frame-toptexbg")
 end)
 
-H.test("a horizontally tiled strip stops tiling when the next variant is not one", function()
+H.test("each header variant has its own texture, its atlas set once; a switch only shows another", function()
     local _, Native, env = boot()
     knownAtlases(env)
     recordTextures(env)
     local p = Native.panel(nil, "A")
-    p.headerBg.SetHorizTile = function(self, on) self.horizTile = on end
-    Native.setHeaderVariant("c")
-    H.eq(p.headerBg.horizTile, true)
-    Native.setHeaderVariant("a")
-    H.eq(p.headerBg.horizTile, false)
+    local hidden = Native.panel(nil, "B")
+    hidden.frame:Hide()
+    local atlasCalls = {}
+    for _, panel in ipairs({ p, hidden }) do
+        for key, tex in pairs(panel.headerTextures) do
+            H.eq(tex.atlas, Native.HEADER_VARIANTS[key])
+            local set = tex.SetAtlas
+            tex.SetAtlas = function(self, name)
+                atlasCalls[#atlasCalls + 1] = name
+                set(self, name)
+            end
+        end
+    end
+    local tiled = p.headerTextures.c
+    for _, key in ipairs({ "a", "c", "b", "a" }) do
+        Native.setHeaderVariant(key)
+        for _, panel in ipairs({ p, hidden }) do
+            for k, tex in pairs(panel.headerTextures) do H.eq(tex.shown, k == key) end
+            H.eq(panel.headerBg, panel.headerTextures[key])
+            H.eq(panel.headerAtlas, Native.HEADER_VARIANTS[key])
+        end
+    end
+    -- No texture ever got a second atlas.
+    H.eq(atlasCalls, {})
+    H.eq(rawget(tiled, "atlas"), "_UI-Frame-TopTileStreaks")
+end)
+
+H.test("only the underscore atlas tiles, on its own texture", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    local create = env.CreateFrame
+    env.CreateFrame = function(...)
+        local f = create(...)
+        f.CreateTexture = function()
+            local tex = W.frame()
+            tex.SetHorizTile = function(self, on) self.horizTile = on end
+            return tex
+        end
+        return f
+    end
+    local p = Native.panel(nil, "A")
+    H.eq(rawget(p.headerTextures.c, "horizTile"), true)
+    H.eq(rawget(p.headerTextures.a, "horizTile"), nil)
+    H.eq(rawget(p.headerTextures.b, "horizTile"), nil)
 end)
 
 H.test("a panel is registered once, whatever is done with it", function()

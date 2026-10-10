@@ -30,7 +30,7 @@ local TEMPLATES = {
     "UIPanelCloseButton", "TooltipBackdropTemplate", "QuestLogBorderFrameTemplate",
 }
 
-local win
+local win, atlasWin
 local function build()
     local f = CreateFrame("Frame", "CPPNativeWindow", nil, "ButtonFrameTemplate")
     f:SetParent(UIParent)
@@ -171,6 +171,45 @@ SlashCmdList.CPPN = function(msg)
             out("template", name, ok and "ok" or ("FAILS: " .. tostring(err)))
         end
         out("clients:", tostring(WOW_PROJECT_ID), tostring(WOW_PROJECT_CAMELOT), select(4, GetBuildInfo()))
+        return
+    end
+    if msg == "atlas" then
+        -- The three header strips at their native size on a plain background, with a 22 px
+        -- ruler on the left (the height of a panel header) and the atlas size printed.
+        if not atlasWin then
+            local f = CreateFrame("Frame", "CPPAtlasWindow", nil, "BackdropTemplate")
+            f:SetParent(UIParent)
+            f:SetSize(460, 330)
+            f:SetPoint("CENTER")
+            f:SetFrameStrata("HIGH")
+            f:SetMovable(true)
+            f:EnableMouse(true)
+            f:RegisterForDrag("LeftButton")
+            f:SetScript("OnDragStart", f.StartMoving)
+            f:SetScript("OnDragStop", f.StopMovingOrSizing)
+            tinsert(UISpecialFrames, "CPPAtlasWindow")
+            local bg = f:CreateTexture(nil, "BACKGROUND")
+            bg:SetAllPoints()
+            bg:SetColorTexture(0.1, 0.1, 0.1, 1)
+            local y = -10
+            for _, name in ipairs({ "friends-frame-toptexbg", "questlog-reward-header-top", "_UI-Frame-TopTileStreaks", "friends-frame-infobg" }) do
+                local info = C_Texture.GetAtlasInfo(name)
+                local label = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                label:SetPoint("TOPLEFT", f, "TOPLEFT", 40, y)
+                label:SetText(name .. " " .. (info and (info.width .. "x" .. info.height) or "MISSING"))
+                y = y - 14
+                local t = f:CreateTexture(nil, "ARTWORK")
+                pcall(t.SetAtlas, t, name, true)
+                t:SetPoint("TOPLEFT", f, "TOPLEFT", 40, y)
+                local ruler = f:CreateTexture(nil, "OVERLAY")
+                ruler:SetColorTexture(0, 1, 0, 1)
+                ruler:SetSize(4, 22)
+                ruler:SetPoint("TOPRIGHT", t, "TOPLEFT", -4, 0)
+                y = y - ((info and info.height or 20) + 12)
+            end
+            atlasWin = f
+        end
+        atlasWin:SetShown(not atlasWin:IsShown())
         return
     end
     if msg == "money" then

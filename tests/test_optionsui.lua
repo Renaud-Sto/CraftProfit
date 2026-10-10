@@ -122,7 +122,7 @@ H.test("the minimap check shows the saved state and saves the change through the
     H.eq(T.env.CraftProfitDB.settings.minimap.hide, false)
 end)
 
-H.test("the window buttons toggle the main window and the leveling window", function()
+H.test("the window buttons toggle the main window, the leveling window and the pinned window", function()
     local T, _, slash = boot()
     slash("options")
     local parts = T.ns.OptionsUI.parts
@@ -137,14 +137,47 @@ H.test("the window buttons toggle the main window and the leveling window", func
     T.ns.LevelingUI.toggle = function() toggles = toggles + 1 end
     click(parts.levelButton)
     H.eq(toggles, 1)
+    H.eq(parts.pinsButton.text, "Pinned recipes")
+    H.falsy(T.ns.PinnedWindow.isShown())
+    click(parts.pinsButton)
+    H.truthy(T.ns.PinnedWindow.isShown())
+    click(parts.pinsButton)
+    H.falsy(T.ns.PinnedWindow.isShown())
+end)
+
+H.test("the three window buttons share one row with room for a French label", function()
+    local T, _, slash = boot(nil, "frFR")
+    local sizes = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.SetSize = function(self, w, h) sizes[self] = { w, h } end
+        return f
+    end
+    slash("options")
+    local parts = T.ns.OptionsUI.parts
+    local main, level, pins = parts.mainButton, parts.levelButton, parts.pinsButton
+    H.eq(main.text, "Fenêtre principale")
+    H.eq(level.text, "Montée de métier")
+    H.eq(pins.text, "Recettes épinglées")
+    local w = sizes[main][1]
+    H.eq(sizes[level][1], w)
+    H.eq(sizes[pins][1], w)
+    -- Three equal buttons and two gaps fill the panel's room.
+    H.eq(w, math.floor((T.ns.OptionsUI.ROOM - 2 * 4) / 3))
+    -- About 18 letters of the game's button font, plus the label's 8 px each side.
+    H.truthy(w - 16 >= 104)
+    H.eq(level.point, { "LEFT", main, "RIGHT", 4, 0 })
+    H.eq(pins.point, { "LEFT", level, "RIGHT", 4, 0 })
 end)
 
 H.test("the controls recap names the clicks and the commands, wrapped in the small font", function()
     local T, _, slash = boot()
     slash("options")
     local recap = T.ns.OptionsUI.parts.recap
-    H.truthy(recap.text:find("right click main window", 1, true))
-    H.truthy(recap.text:find("/cp show, hide, options, level, minimap", 1, true))
+    H.truthy(recap.text:find("left click options, right click pinned recipes", 1, true))
+    H.truthy(recap.text:find("/cp show, hide, options, pins, level, minimap", 1, true))
+    H.falsy(recap.text:find("main window", 1, true))
     -- The window grows with the recap (measured by the client; a fallback here).
     H.truthy(T.ns.OptionsUI.frame():GetHeight() > 200)
 end)

@@ -15,7 +15,8 @@ local OptionsUI = {}
 ns.OptionsUI = OptionsUI
 
 local NAME = "CraftProfitOptionsWindow"
-local WIDTH = 372
+-- Wide enough for three window buttons on one row with their French labels.
+local WIDTH = 420
 local PAD = Native.CONTENT_PAD
 local GAP = 8
 local CHROME_H = Native.INSET_TOP + Native.INSET_BOTTOM
@@ -39,9 +40,10 @@ local ctl
 local frame, content, savedPosition
 local origin = { left = 0, right = 0, top = 0 }
 -- The widgets, exposed for tests: panels, headerButtons / tileButtons (by key), minimap,
--- mainButton, levelButton, headerLabel, tileLabel, recap.
+-- mainButton, levelButton, pinsButton, headerLabel, tileLabel, recap.
 local parts = { panels = {}, headerButtons = {}, tileButtons = {} }
 OptionsUI.parts = parts
+OptionsUI.ROOM = ROOM
 
 -- Lights `button` (the chosen segment) or puts it out; `button.lit` mirrors the state.
 local function setLit(button, lit)
@@ -137,14 +139,19 @@ local function build()
     parts.minimap:SetPoint("TOPLEFT", panels.minimap.body, "TOPLEFT", 4, -1)
 
     panels.windows = Native.panel(content, L.OPTIONS_WINDOWS)
-    local half = math.floor((ROOM - SEG_GAP) / 2)
-    parts.mainButton = Native.button(panels.windows.body, "", { width = half,
+    local third = math.floor((ROOM - SEG_GAP * 2) / 3)
+    parts.mainButton = Native.button(panels.windows.body, "", { width = third,
         onClick = function() ctl.toggleMainWindow() end })
     parts.mainButton:SetPoint("TOPLEFT", panels.windows.body, "TOPLEFT", 8, -2)
-    parts.levelButton = Native.button(panels.windows.body, "", { width = half,
+    parts.levelButton = Native.button(panels.windows.body, "", { width = third,
         onClick = function() if ns.LevelingUI then ns.LevelingUI.toggle() end end })
     parts.levelButton:SetPoint("LEFT", parts.mainButton, "RIGHT", SEG_GAP, 0)
-    for _, button in ipairs({ parts.mainButton, parts.levelButton }) do Native.forwardDrag(button, frame) end
+    parts.pinsButton = Native.button(panels.windows.body, "", { width = third,
+        onClick = function() if ns.PinnedWindow then ns.PinnedWindow.toggle() end end })
+    parts.pinsButton:SetPoint("LEFT", parts.levelButton, "RIGHT", SEG_GAP, 0)
+    for _, button in ipairs({ parts.mainButton, parts.levelButton, parts.pinsButton }) do
+        Native.forwardDrag(button, frame)
+    end
 
     panels.controls = Native.panel(content, L.OPTIONS_CONTROLS)
     parts.recap = panels.controls.body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -182,6 +189,7 @@ function OptionsUI.refresh()
     parts.minimap:SetChecked(not ctl.minimapHidden())
     parts.mainButton:setText(L.OPTIONS_MAIN_WINDOW)
     parts.levelButton:setText(L.LEVEL_BUTTON)
+    parts.pinsButton:setText(L.PINNED_TITLE)
     parts.recap:SetText(L.OPTIONS_RECAP)
     layout()
 end

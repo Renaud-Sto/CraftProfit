@@ -990,12 +990,13 @@ H.test("the saved keys and the native variants are the same sets", function()
     H.truthy(Native.TILE_VARIANTS[DB.DEFAULTS.appearance.tile])
 end)
 
-H.test("the slash help lists options and minimap in every language", function()
+H.test("the slash help lists options, pins and minimap in every language", function()
     for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
         local T = boot({ locale = locale, items = ITEMS })
         T.env.SlashCmdList.CRAFTPROFIT("nope")
         local help = T.chat[#T.chat]
         H.truthy(help:find("| options |", 1, true))
+        H.truthy(help:find("| pins |", 1, true))
         H.truthy(help:find("| minimap |", 1, true))
     end
 end)
@@ -1122,4 +1123,27 @@ H.test("savePinsPosition keeps a finite position and ignores anything else", fun
     C.savePinsPosition("1", 2)
     C.savePinsPosition(nil, nil)
     H.eq(settings.pinsWindow, { x = 10, y = 20 })
+end)
+
+H.test("/cp pins toggles the pinned window, whatever the case, without touching the main window", function()
+    local T = boot()
+    local slash = T.env.SlashCmdList.CRAFTPROFIT
+    H.falsy(T.ns.PinnedWindow.isShown())
+    slash("pins")
+    H.truthy(T.ns.PinnedWindow.isShown())
+    H.falsy(T.ns.Window.isShown())
+    slash("PINS")
+    H.falsy(T.ns.PinnedWindow.isShown())
+    -- No help line: it is a known command.
+    H.eq(#T.chat, 0)
+end)
+
+H.test("the recap and the tooltip are translated in French and Spanish", function()
+    for locale, words in pairs({ frFR = { "recettes épinglées", "pins" }, esES = { "recetas fijadas", "pins" } }) do
+        local T = boot({ locale = locale, items = ITEMS })
+        local L = T.ns.L
+        H.truthy(L.MINIMAP_TIP_RIGHT:find(words[1], 1, true))
+        H.truthy(L.OPTIONS_RECAP:find(words[1], 1, true))
+        H.truthy(L.OPTIONS_RECAP:find("options, " .. words[2] .. ", level", 1, true))
+    end
 end)

@@ -1,4 +1,4 @@
--- The minimap button: left click opens the options window, right click the main window,
+-- The minimap button: left click opens the options window, right click the pinned window,
 -- a left drag moves it around the minimap. The LibDBIcon convention without the library:
 -- 31x31, strata MEDIUM, level 8, radius from the minimap's size, square minimaps handled.
 -- Never created while the player keeps it hidden (settings.minimap.hide), not even at
@@ -189,7 +189,7 @@ function MinimapButton.create()
     button:SetScript("OnClick", function(self, which)
         if self.dragged == true then return end
         if which == "RightButton" then
-            controller().toggleMainWindow()
+            if ns.PinnedWindow then ns.PinnedWindow.toggle() end
         elseif ns.OptionsUI then
             ns.OptionsUI.toggle()
         end

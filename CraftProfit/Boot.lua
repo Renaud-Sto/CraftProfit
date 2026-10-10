@@ -729,6 +729,8 @@ local function slash(msg)
         Controller.historyCommand(arg)
     elseif cmd == "level" then
         if ns.LevelingUI then ns.LevelingUI.toggle() end
+    elseif cmd == "pins" then
+        if ns.PinnedWindow then ns.PinnedWindow.toggle() end
     elseif cmd == "kitdemo" then
         if ns.KitDemo then ns.KitDemo.command(arg) end
     elseif cmd == "market" then
@@ -740,11 +742,11 @@ local function slash(msg)
 end
 
 -- The addon compartment entry (TOC AddonCompartmentFunc): the game calls it with the
--- addon's name and the mouse button. Left: options window; right: main window.
+-- addon's name and the mouse button. Left: options window; right: pinned window.
 function CraftProfit_OnCompartmentClick(_, mouseButton)
     if not Controller.ready then return end
     if mouseButton == "RightButton" then
-        Controller.toggleMainWindow()
+        if ns.PinnedWindow then ns.PinnedWindow.toggle() end
     elseif ns.OptionsUI then
         ns.OptionsUI.toggle()
     end

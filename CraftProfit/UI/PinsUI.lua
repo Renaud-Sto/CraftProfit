@@ -17,7 +17,7 @@ local BUTTON_GAP = 6
 local SORT_H = 18
 -- Raised 1 px above the geometric centre: the title's capitals sit above the middle of their
 -- line box (room for descenders), so a centred button looked too low next to them.
-local SORT_LIFT = 1
+local SORT_LIFT = 2
 local SORT_W = 120
 -- Two lines of the small font: a long translated status wraps rather than being cut.
 local STATUS_H = 28

@@ -10,9 +10,9 @@ CraftProfit is an addon for **World of Warcraft: Forever**. Select a recipe you 
 
 *[Lisez-moi en français](README.fr.md)*
 
-> **Status: early beta (0.1.0).** Built and tested on the WoW: Forever beta (build 1.60.1, Interface 16001). Disenchant data still comes from the Classic tables and is marked *beta* in the window. See [Known limitations](docs/user-guide.md#known-limitations).
+> **Status: 1.0.0, for the WoW: Forever beta** (build 1.60.1, Interface 16001), where it was built and tested. Disenchant data still comes from the Classic tables and is marked *beta* in the window. See [Known limitations](docs/user-guide.md#known-limitations).
 
-<!-- Screenshots arrive with the UI rework: docs/images/ -->
+<!-- Screenshots to come: docs/images/ -->
 
 ## Features
 
@@ -24,14 +24,14 @@ CraftProfit is an addon for **World of Warcraft: Forever**. Select a recipe you 
 - **Several crafts at once**: multiply a recipe by 1 to 9999 crafts.
 - **Pinned recipes** (up to 12 per character), sorted by profit or by cost per point, to compare what to craft next; under the main window at the auction house, and anywhere in their own window (`/cp pins` or a right click on the minimap button).
 - **Auction house tools**: one button prices every pinned recipe, another scans the whole auction house. Click a reagent to search it in the auction house, quantity already filled in. CraftProfit never buys anything for you.
-- **Price history** (recording): tick *Track history* on up to 15 recipes and CraftProfit keeps their prices scan after scan, per ruleset (the game "realm" in the beta) and faction. The graphs come later.
+- **Price history** (recording): tick *Track history* on up to 15 recipes and CraftProfit keeps their prices scan after scan, per ruleset (the game "realm" in the beta) and faction. Graphs are planned.
 - **Standalone**: no Auctionator, no other addon required. It also picks up the scans other addons start.
 - **Options window and minimap button**: pick the look of the windows (header strip and tile card), applied at once; open it from the minimap button, the addon compartment or `/cp options`.
 - **English, French and Spanish** (follows the game language).
 
 ## Install
 
-1. Download the latest release (CurseForge page and GitHub Releases will be linked here at the first release), or clone this repository.
+1. Download the latest release from [GitHub Releases](https://github.com/Renaud-Sto/CraftProfit/releases) (the CurseForge page will be linked here once it is online), or clone this repository.
 2. Copy the `CraftProfit` folder (the one that contains `CraftProfit.toc`) into  
    `World of Warcraft/_classic_beta_/Interface/AddOns/`  
    so that you end up with `.../AddOns/CraftProfit/CraftProfit.toc`.
@@ -75,7 +75,7 @@ The full walkthrough, every option and the explanation of each number are in the
 | [In-game checklist](docs/in-game-checklist.md) | Testers | What to verify in the client before a release |
 | [Probe findings](docs/probe-findings.md) | Developers | What the in-game probe measured |
 | [CurseForge material](docs/curseforge/) | Maintainers | Project page text and submission checklist |
-| [Design history](docs/superpowers/) | Developers | The original design and implementation plan |
+| [Design history](docs/superpowers/) | Developers | The design specs and implementation plans |
 
 ## Alternatives
 

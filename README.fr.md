@@ -10,9 +10,9 @@ CraftProfit est un addon pour **World of Warcraft: Forever**. Sélectionnez une 
 
 *[Read this in English](README.md)*
 
-> **État : bêta précoce (0.1.0).** Développé et testé sur la bêta de WoW: Forever (build 1.60.1, Interface 16001). Les données de désenchantement viennent encore des tables du Classic et sont marquées *bêta* dans la fenêtre. Voir les [limites connues](docs/user-guide.fr.md#limites-connues).
+> **État : version 1.0.0, pour la bêta de WoW: Forever** (build 1.60.1, Interface 16001), sur laquelle elle a été développée et testée. Les données de désenchantement viennent encore des tables du Classic et sont marquées *bêta* dans la fenêtre. Voir les [limites connues](docs/user-guide.fr.md#limites-connues).
 
-<!-- Les captures d'écran arrivent avec la refonte de l'interface : docs/images/ -->
+<!-- Captures d'écran à venir : docs/images/ -->
 
 ## Fonctionnalités
 
@@ -24,14 +24,14 @@ CraftProfit est un addon pour **World of Warcraft: Forever**. Sélectionnez une 
 - **Plusieurs crafts d'un coup** : multipliez une recette de 1 à 9999 crafts.
 - **Recettes épinglées** (12 par personnage au maximum), triées par gain ou par coût par point, pour comparer quoi fabriquer ensuite ; sous la fenêtre principale à l'hôtel des ventes, et partout dans leur propre fenêtre (`/cp pins` ou un clic droit sur le bouton de la minicarte).
 - **Outils d'hôtel des ventes** : un bouton chiffre toutes les recettes épinglées, un autre scanne tout l'hôtel des ventes. Cliquez sur un composant pour le rechercher à l'hôtel des ventes, quantité déjà remplie. CraftProfit n'achète jamais rien à votre place.
-- **Historique des prix** (enregistrement) : cochez *Suivre l'historique* sur 15 recettes au plus et CraftProfit garde leurs prix scan après scan, par ruleset (le « royaume » de la bêta) et par faction. Les graphiques viendront ensuite.
+- **Historique des prix** (enregistrement) : cochez *Suivre l'historique* sur 15 recettes au plus et CraftProfit garde leurs prix scan après scan, par jeu de règles (le « royaume » de la bêta) et par faction. Les graphiques sont prévus pour plus tard.
 - **Autonome** : ni Auctionator ni aucun autre addon n'est nécessaire. Il récupère aussi les scans lancés par d'autres addons.
 - **Fenêtre d'options et bouton de la minicarte** : choisissez l'apparence des fenêtres (bandeau des sections et cases de prix), appliquée aussitôt ; ouvrez-la depuis le bouton de la minicarte, le compartiment d'addons ou `/cp options`.
 - **Anglais, français et espagnol** (selon la langue du jeu).
 
 ## Installation
 
-1. Téléchargez la dernière version (les liens CurseForge et GitHub Releases seront ajoutés ici à la première publication), ou clonez ce dépôt.
+1. Téléchargez la dernière version sur [GitHub Releases](https://github.com/Renaud-Sto/CraftProfit/releases) (le lien CurseForge sera ajouté ici dès que la page sera en ligne), ou clonez ce dépôt.
 2. Copiez le dossier `CraftProfit` (celui qui contient `CraftProfit.toc`) dans  
    `World of Warcraft/_classic_beta_/Interface/AddOns/`  
    pour obtenir `.../AddOns/CraftProfit/CraftProfit.toc`.
@@ -60,7 +60,7 @@ Le pas-à-pas complet, toutes les options et l'explication de chaque chiffre son
 | `/cp history` | Liste les recettes suivies ; `/cp history remove <n>` en supprime une |
 | `/cp pins` | Ouvre ou ferme la fenêtre des recettes épinglées (partout, derniers prix connus) |
 | `/cp level` | Ouvre ou ferme la fenêtre de montée de métier |
-| `/cp market` | Indique sous quel marché (ruleset et faction) les prix sont enregistrés |
+| `/cp market` | Indique sous quel marché (jeu de règles et faction) les prix sont enregistrés |
 | `/cp locale <code>` | Force une langue (`enUS`, `frFR`, `esES`, `esMX`) ; sans code, retour à la langue du jeu |
 | `/cp selftest` | Lance l'auto-test intégré |
 
@@ -75,7 +75,7 @@ Le pas-à-pas complet, toutes les options et l'explication de chaque chiffre son
 | [Liste de vérifications en jeu](docs/in-game-checklist.md) | Testeurs | Quoi vérifier dans le client avant une publication |
 | [Mesures de la sonde](docs/probe-findings.md) | Développeurs | Ce que la sonde en jeu a mesuré |
 | [Matériel CurseForge](docs/curseforge/) | Mainteneurs | Texte de la page du projet et liste de soumission |
-| [Historique de conception](docs/superpowers/) | Développeurs | La conception d'origine et le plan d'implémentation |
+| [Historique de conception](docs/superpowers/) | Développeurs | Les spécifications de conception et les plans d'implémentation |
 
 ## Alternatives
 

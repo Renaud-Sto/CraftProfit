@@ -4,7 +4,7 @@
 
 CraftProfit tells you what a profession recipe really costs at the auction house and what to do with the result. This guide explains every part of the window, how each number is computed, and what the addon cannot know.
 
-Contents: [The window](#the-window) · [At the auction house](#at-the-auction-house) · [How the numbers are computed](#how-the-numbers-are-computed) · [Options and commands](#options-and-commands) · [Languages](#languages) · [Known limitations](#known-limitations) · [FAQ and troubleshooting](#faq-and-troubleshooting)
+Contents: [The window](#the-window) · [At the auction house](#at-the-auction-house) · [How the numbers are computed](#how-the-numbers-are-computed) · [Options window](#options-window) · [Options and commands](#options-and-commands) · [Languages](#languages) · [Known limitations](#known-limitations) · [FAQ and troubleshooting](#faq-and-troubleshooting)
 
 ## The window
 

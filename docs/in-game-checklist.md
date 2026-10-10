@@ -163,16 +163,32 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Appearance: each header strip (Carved wood, Shade, Streaks) and each tile card (Loot card, Inset) applies at once to the main window, the pinned list (at the AH), the leveling window and the options window itself, also to a window that was closed at the time (open it after).
 - [ ] All 6 combinations look right (screenshot each); the best tile keeps its outline, a muted value stays grey, hover, click and magnifier on the AH tile still work after a switch.
 - [ ] The lit button always shows the saved choice when the window reopens; `/reload` keeps the choice.
-- [ ] Minimap button: shown by default, bottom left of the minimap (225 degrees); left click toggles the options window, right click toggles the main window (today; a standalone pinned window is planned for the right click).
+- [ ] Minimap button: shown by default, bottom left of the minimap (225 degrees); left click toggles the options window, right click toggles the pinned recipes window.
 - [ ] The button's icon is the gold coin (if it is a question mark, the coin file is not served: note it in probe-findings F12); the ring and the hover highlight are centred on the icon.
 - [ ] Drag the button with the left button: it moves around the minimap and the release does not open anything; after `/reload` it is where you left it. With a square minimap addon, it follows the edges.
 - [ ] Tooltip on hover: "CraftProfit" and three green lines (left click, right click, drag).
 - [ ] Untick "Show the minimap button": it disappears; `/cp minimap` brings it back (one chat line each way); after `/reload` while hidden, no button and no chat line at login.
-- [ ] Addon compartment: does the CraftProfit entry show on Forever's minimap? Note the answer in probe-findings F12; if it shows, left click toggles the options and right click the main window.
-- [ ] Windows panel: "Main window" and "Leveling" toggle their windows.
+- [ ] Addon compartment: does the CraftProfit entry show on Forever's minimap? Note the answer in probe-findings F12; if it shows, left click toggles the options and right click the pinned recipes window.
+- [ ] Windows panel: "Main window", "Leveling" and "Pinned recipes" toggle their windows.
 - [ ] `/cp locale frFR` and `esES`: the labels (Bois sculpté, Carte de butin, Bandeau des sections...) are cut, never overflowing their buttons; the Controls recap wraps inside its panel and the window grows to fit it.
 - [ ] No Lua error (`/console scriptErrors 1`), no `ADDON_ACTION_BLOCKED`, while switching, dragging and with the AH open.
 - [ ] Screenshots of the options window (English and French) and of the minimap button, sent to the controller.
+
+## Pinned window (PR 11)
+- [ ] With the profession window and the AH closed, `/cp pins` opens the "Pinned recipes" window (native frame, left of the middle of the screen the first time); `/cp pins` again closes it; Escape closes it.
+- [ ] Rows: names in their difficulty colours, values with coin icons (green gain, red loss, grey `?` for a pin with a missing price, never an error).
+- [ ] Age line: the age of the oldest price the pins use; orange when older than an hour or never priced. After **Search prices** at the AH (no full scan), the line shows a recent age, not "never scanned".
+- [ ] Sort button: switches profit and cost/point and relabels; the list under the main window at the AH follows the same choice.
+- [ ] The "x" of a row: tooltip "Unpin"; a click unpins the recipe, the rows below move up, the main window does not open and the selection does not change.
+- [ ] A click elsewhere on a row opens the main window on that recipe with its stored prices (with the profession window and the AH closed too); a row drag moves the window and selects nothing.
+- [ ] With 12 pins (the maximum per character) everything shows; scroll with the mouse wheel and the bar after unpinning and re-pinning (the bar hides while everything fits); unpinning the last row while scrolled to the bottom moves the list, no gap.
+- [ ] Empty state: with no pin, the window says "No pinned recipes. Pin a recipe from its window."
+- [ ] Drag the window, `/reload`, reopen it: it is where you left it.
+- [ ] Minimap right click and addon compartment right click open and close it; the tooltip says "Right click: pinned recipes".
+- [ ] At the AH, the list under the main window still works; pin or unpin from the main window and from the "x": both lists stay in sync.
+- [ ] Options window (now 420 px wide): in English, `/cp locale frFR` and `/cp locale esES`, the three Windows buttons ("Fenêtre principale", "Montée de métier", "Recettes épinglées"; "Ventana principal", "Subida", "Recetas fijadas") fit on one row without being cut; the recap names `/cp pins` and the right click.
+- [ ] `/cp locale frFR`: no label of the pinned window overflows (title, sort button, empty text, long recipe names cut before the value and the "x").
+- [ ] No Lua error (`/console scriptErrors 1`), no `ADDON_ACTION_BLOCKED`, with and without the AH open.
 
 ## Numbers
 - [ ] For one recipe, compare each reagent price with the AH listing prices: the stored price is the median of the 5 cheapest units (not the minimum).

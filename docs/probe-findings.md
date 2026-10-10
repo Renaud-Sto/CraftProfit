@@ -66,6 +66,6 @@ Status marks: ✅ measured in game · ⚠️ not measured · ❌ unusable.
 
 ## F12. Options window, minimap button and compartment (to measure in game) ⚠️
 
-- Addon compartment: does the CraftProfit entry (TOC `AddonCompartmentFunc: CraftProfit_OnCompartmentClick`, `IconTexture: Interface\Icons\INV_Misc_Coin_01`) show on Forever's minimap? Does left click open the options and right click the main window? ⚠️
+- Addon compartment: does the CraftProfit entry (TOC `AddonCompartmentFunc: CraftProfit_OnCompartmentClick`, `IconTexture: Interface\Icons\INV_Misc_Coin_01`) show on Forever's minimap? Does left click open the options and right click the pinned recipes window? ⚠️
 - Minimap button icon: does `GetFileIDFromPath("Interface\Icons\INV_Misc_Coin_01")` return an id (the coin draws), or does the button fall back to `INV_Misc_QuestionMark`? ⚠️
 - Minimap art: `Interface\Minimap\MiniMap-TrackingBorder` (ring), `UI-Minimap-Background`, `UI-Minimap-ZoomButton-Highlight` draw and line up with the 24 px background and 18 px icon, both anchored CENTER (0, 1) as LibDBIcon does? ⚠️

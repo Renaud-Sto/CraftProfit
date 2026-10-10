@@ -22,7 +22,7 @@ CraftProfit is an addon for **World of Warcraft: Forever**. Select a recipe you 
 - **Cost per skill point** (optional): what each point of skill really costs, from the colour of the recipe, shown as a gain when the crafts pay for themselves.
 - **Leveling window**: every recipe you know in a profession, ranked by the cost of a skill point, to see what to craft next.
 - **Several crafts at once**: multiply a recipe by 1 to 9999 crafts.
-- **Pinned recipes** (up to 12 per character), sorted by profit or by cost per point, to compare what to craft next.
+- **Pinned recipes** (up to 12 per character), sorted by profit or by cost per point, to compare what to craft next; under the main window at the auction house, and anywhere in their own window (`/cp pins` or a right click on the minimap button).
 - **Auction house tools**: one button prices every pinned recipe, another scans the whole auction house. Click a reagent to search it in the auction house, quantity already filled in. CraftProfit never buys anything for you.
 - **Price history** (recording): tick *Track history* on up to 15 recipes and CraftProfit keeps their prices scan after scan, per ruleset (the game "realm" in the beta) and faction. The graphs come later.
 - **Standalone**: no Auctionator, no other addon required. It also picks up the scans other addons start.
@@ -58,6 +58,7 @@ The full walkthrough, every option and the explanation of each number are in the
 | `/cp minimap` | Hide the minimap button, or show it again |
 | `/cp scan` | Start a full auction house scan (auction house open) |
 | `/cp history` | List the tracked recipes; `/cp history remove <n>` deletes one |
+| `/cp pins` | Open or close the pinned recipes window (works anywhere, last known prices) |
 | `/cp level` | Open or close the leveling window |
 | `/cp market` | Show which market (ruleset and faction) the prices are saved under |
 | `/cp locale <code>` | Force a language (`enUS`, `frFR`, `esES`, `esMX`); without code, back to the game language |

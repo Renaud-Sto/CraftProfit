@@ -1147,3 +1147,97 @@ H.test("the recap and the tooltip are translated in French and Spanish", functio
         H.truthy(L.OPTIONS_RECAP:find("options, " .. words[2] .. ", level", 1, true))
     end
 end)
+
+-- Default placement --------------------------------------------------------------------
+
+-- Gives a window a measured box (left edge and top in screen pixels).
+local function measure(f, left, top, width)
+    f.GetRight = function() return left + width end
+    f.GetTop = function() return top end
+end
+
+local function lastPoint(f) return f.points[#f.points] end
+
+local function recordPoints(f)
+    f.points = {}
+    f.SetPoint = function(self, ...) self.points[#self.points + 1] = { ... } end
+end
+
+H.test("besidePosition is just right of the rightmost shown CraftProfit window, never the window itself", function()
+    local T = boot()
+    local C = T.ns.Controller
+    H.eq(C.besidePosition(nil), nil)
+    local main = T.ns.Window.frame()
+    measure(main, 100, 800, 372)
+    T.ns.Window.show()
+    H.eq({ C.besidePosition(nil) }, { 478, 800 })
+    -- Its own box does not count.
+    H.eq(C.besidePosition(main), nil)
+    T.ns.LevelingUI.show()
+    local level = T.ns.LevelingUI.frame()
+    measure(level, 478, 790, 396)
+    H.eq({ C.besidePosition(nil) }, { 880, 790 })
+    H.eq({ C.besidePosition(level) }, { 478, 800 })
+    T.ns.LevelingUI.hide()
+    H.eq({ C.besidePosition(nil) }, { 478, 800 })
+end)
+
+H.test("without a saved place the pinned, leveling and options windows open beside the rightmost one", function()
+    local T = boot()
+    local main = T.ns.Window.frame()
+    measure(main, 100, 800, 372)
+    T.ns.Window.show()
+    T.ns.PinnedWindow.show()
+    local pinned = T.ns.PinnedWindow.frame()
+    recordPoints(pinned)
+    T.ns.PinnedWindow.place()
+    H.eq(lastPoint(pinned), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 478, 800 })
+    measure(pinned, 478, 800, 396)
+    local level = T.ns.LevelingUI.frame()
+    recordPoints(level)
+    T.ns.LevelingUI.show()
+    H.eq(lastPoint(level), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 880, 800 })
+    T.ns.OptionsUI.show()
+    local options = T.ns.OptionsUI.frame()
+    recordPoints(options)
+    T.ns.OptionsUI.place()
+    H.eq(lastPoint(options), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 880, 800 })
+    -- A saved position always wins.
+    T.ns.PinnedWindow.attach({ x = 5, y = 600 })
+    H.eq(lastPoint(pinned), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 5, 600 })
+    -- None shown (or none measured): today's defaults.
+    T.ns.Window.hide()
+    T.ns.LevelingUI.hide()
+    T.ns.OptionsUI.hide()
+    T.ns.PinnedWindow.attach(nil)
+    H.eq(lastPoint(pinned), { "CENTER", T.env.UIParent, "CENTER", -260, 0 })
+    T.ns.PinnedWindow.hide()
+    T.ns.OptionsUI.place()
+    H.eq(lastPoint(options), { "CENTER", T.env.UIParent, "CENTER", 0, 0 })
+end)
+
+H.test("the main window without a saved place opens beside a shown CraftProfit window, else beside the trade window", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local main = T.ns.Window.frame()
+    recordPoints(main)
+    T.ns.PinnedWindow.show()
+    measure(T.ns.PinnedWindow.frame(), 200, 700, 396)
+    C.showMainWindow()
+    H.eq(lastPoint(main), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 602, 700 })
+    T.ns.Window.hide()
+    T.ns.PinnedWindow.hide()
+    C.showMainWindow()
+    H.eq(lastPoint(main), { "CENTER", T.env.UIParent, "CENTER", 300, 0 })
+    -- A saved position wins.
+    T.ns.Window.hide()
+    T.ns.PinnedWindow.show()
+    T.env.CraftProfitDB.settings.window = { point = "TOPLEFT", x = 7, y = 500 }
+    C.showMainWindow()
+    H.eq(lastPoint(main), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 7, 500 })
+    -- Selecting a recipe from the profession window places it the same way.
+    T.ns.Window.hide()
+    T.env.CraftProfitDB.settings.window = nil
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    H.eq(lastPoint(main), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 602, 700 })
+end)

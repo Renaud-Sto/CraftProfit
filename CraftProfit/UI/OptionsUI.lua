@@ -221,12 +221,17 @@ function OptionsUI.init(controller)
     ctl = controller
 end
 
--- Position: the saved one once the window has been dragged, else the middle of the screen.
+-- Position: the saved one once the window has been dragged, else beside the rightmost
+-- shown CraftProfit window (Controller.besidePosition), else the middle of the screen.
 function OptionsUI.place()
     if not frame then return end
     frame:ClearAllPoints()
+    local x, y
+    if not savedPosition and ctl and ctl.besidePosition then x, y = ctl.besidePosition(frame) end
     if savedPosition then
         frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", savedPosition.x, savedPosition.y)
+    elseif x then
+        frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
     else
         frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     end

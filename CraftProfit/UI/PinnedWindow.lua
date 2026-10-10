@@ -256,13 +256,18 @@ function PinnedWindow.init(controller, h)
     ctl, handlers = controller, h or {}
 end
 
--- Position: the saved one once the window has been dragged, else left of the middle of
--- the screen (the main window opens right of it).
+-- Position: the saved one once the window has been dragged, else beside the rightmost
+-- shown CraftProfit window (Controller.besidePosition), else left of the middle of the
+-- screen (the main window opens right of it).
 function PinnedWindow.place()
     if not frame then return end
     frame:ClearAllPoints()
+    local x, y
+    if not savedPosition and ctl and ctl.besidePosition then x, y = ctl.besidePosition(frame) end
     if savedPosition then
         frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", savedPosition.x, savedPosition.y)
+    elseif x then
+        frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
     else
         frame:SetPoint("CENTER", UIParent, "CENTER", DEFAULT_X, 0)
     end

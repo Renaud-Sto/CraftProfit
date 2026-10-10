@@ -197,13 +197,48 @@ function Controller.requestRefresh()
     end)
 end
 
+-- Default placement: a window without a saved position opens with its top left corner
+-- 6 px right of the shown CraftProfit window that reaches furthest right (itself excluded),
+-- so the windows never open on top of each other. Returns x, y (TOPLEFT against UIParent's
+-- BOTTOMLEFT: absolute, so no window is ever anchored to another that depends on it), or
+-- nil when no such window is shown and measured: the caller keeps its own default.
+local BESIDE_GAP = 6
+function Controller.besidePosition(except)
+    local frames, entries = {}, {}
+    for _, mod in ipairs({ ns.Window, ns.LevelingUI, ns.PinnedWindow, ns.OptionsUI }) do
+        local f = type(mod) == "table" and type(mod.frame) == "function" and mod.frame() or nil
+        if f and f ~= except then
+            frames[#frames + 1] = f
+            entries[#entries + 1] = {
+                shown = f:IsShown() == true,
+                right = type(f.GetRight) == "function" and f:GetRight() or nil,
+            }
+        end
+    end
+    local index = ns.Layout.rightmost(entries)
+    if not index then return nil end
+    local top = frames[index]:GetTop()
+    if not Util.isFinite(top) then return nil end
+    return entries[index].right + BESIDE_GAP, top
+end
+
+-- The main window's position: the saved one, else beside a shown CraftProfit window, else
+-- nil (Window.attach then places it beside `target`).
+local function mainPosition()
+    local saved = CraftProfitDB.settings.window
+    if saved then return saved end
+    local x, y = Controller.besidePosition(ns.Window.frame())
+    if x then return { point = "TOPLEFT", x = x, y = y } end
+    return nil
+end
+
 function Controller.setRecipe(recipe, source)
     choose(recipe, source)
     local window = ns.Window
     if not window.isShown() then
         local target = ns.Trade.frame()
         if source == "pin" and ns.AH.isOpen then target = AuctionHouseFrame or AuctionFrame end
-        window.attach(target, CraftProfitDB.settings.window)
+        window.attach(target, mainPosition())
         window.show()
     end
     Controller.refresh()
@@ -319,7 +354,7 @@ end
 function Controller.showMainWindow()
     local window = ns.Window
     if not window.isShown() then
-        window.attach(ns.Trade.frame() or AuctionHouseFrame or AuctionFrame, CraftProfitDB.settings.window)
+        window.attach(ns.Trade.frame() or AuctionHouseFrame or AuctionFrame, mainPosition())
         window.show()
     end
     Controller.refresh()
@@ -504,7 +539,7 @@ function Controller.onAHOpen(open)
             if first then choose(first, "pin") end
         end
         if not window.isShown() then
-            window.attach(AuctionHouseFrame or AuctionFrame, CraftProfitDB.settings.window)
+            window.attach(AuctionHouseFrame or AuctionFrame, mainPosition())
             window.show()
         end
         Controller.refresh()

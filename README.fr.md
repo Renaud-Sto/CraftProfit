@@ -26,6 +26,7 @@ CraftProfit est un addon pour **World of Warcraft: Forever**. Sélectionnez une 
 - **Outils d'hôtel des ventes** : un bouton chiffre toutes les recettes épinglées, un autre scanne tout l'hôtel des ventes. Cliquez sur un composant pour le rechercher à l'hôtel des ventes, quantité déjà remplie. CraftProfit n'achète jamais rien à votre place.
 - **Historique des prix** (enregistrement) : cochez *Suivre l'historique* sur 15 recettes au plus et CraftProfit garde leurs prix scan après scan, par ruleset (le « royaume » de la bêta) et par faction. Les graphiques viendront ensuite.
 - **Autonome** : ni Auctionator ni aucun autre addon n'est nécessaire. Il récupère aussi les scans lancés par d'autres addons.
+- **Fenêtre d'options et bouton de la minicarte** : choisissez l'apparence des fenêtres (bandeau des sections et cases de prix), appliquée aussitôt ; ouvrez-la depuis le bouton de la minicarte, le compartiment d'addons ou `/cp options`.
 - **Anglais, français et espagnol** (selon la langue du jeu).
 
 ## Installation
@@ -53,6 +54,8 @@ Le pas-à-pas complet, toutes les options et l'explication de chaque chiffre son
 | `/cp` ou `/craftprofit` | Affiche la liste des commandes |
 | `/cp show` / `hide` | Affiche ou masque la fenêtre |
 | `/cp reset` | Remet la fenêtre à côté de la fenêtre de métier ou de l'hôtel des ventes |
+| `/cp options` | Ouvre ou ferme la fenêtre d'options (apparence des fenêtres, bouton de la minicarte, commandes) |
+| `/cp minimap` | Masque le bouton de la minicarte, ou le rétablit |
 | `/cp scan` | Lance un scan complet de l'hôtel des ventes (hôtel des ventes ouvert) |
 | `/cp history` | Liste les recettes suivies ; `/cp history remove <n>` en supprime une |
 | `/cp level` | Ouvre ou ferme la fenêtre de montée de métier |

@@ -63,3 +63,9 @@ Status marks: ✅ measured in game · ⚠️ not measured · ❌ unusable.
 ## F11: Money strings (measured 2026-10-10, `/cppn money`)
 
 - `GetCoinTextureString` and `GetCoinText` do not exist on Forever. `GetMoneyString(copper)` does and returns the coin icons as texture escapes: `21|TInterface\MoneyFrame\UI-GoldIcon:0:0:2:0|t 29|T...UI-SilverIcon...|t 5|T...UI-CopperIcon...|t` (height 0 = the font height). `Controller.fmt` uses it and falls back to the plain `21g 29s 5c` text when it answers nothing.
+
+## F12. Options window, minimap button and compartment (to measure in game) ⚠️
+
+- Addon compartment: does the CraftProfit entry (TOC `AddonCompartmentFunc: CraftProfit_OnCompartmentClick`, `IconTexture: Interface\Icons\INV_Misc_Coin_01`) show on Forever's minimap? Does left click open the options and right click the main window? ⚠️
+- Minimap button icon: does `GetFileIDFromPath("Interface\Icons\INV_Misc_Coin_01")` return an id (the coin draws), or does the button fall back to `INV_Misc_QuestionMark`? ⚠️
+- Minimap art: `Interface\Minimap\MiniMap-TrackingBorder` (ring), `UI-Minimap-Background`, `UI-Minimap-ZoomButton-Highlight` draw and line up with the 18 px icon at TOPLEFT (7, -5)? ⚠️

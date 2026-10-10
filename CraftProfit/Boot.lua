@@ -285,13 +285,15 @@ end
 function Controller.setAppearance(header, tile)
     if header ~= nil and not DB.HEADER_KEYS[header] then return false end
     if tile ~= nil and not DB.TILE_KEYS[tile] then return false end
-    local Native = ns.Native
-    local oldHeader, oldTile = Native.appearance()
-    if header ~= nil then Native.setHeaderVariant(header) end
-    if tile ~= nil then Native.setTileVariant(tile) end
-    local newHeader, newTile = Native.appearance()
+    -- Merged into the SAVED choice, never read back from Native: what is on screen may
+    -- differ (a developer preview), and must not leak into the save.
+    local saved = CraftProfitDB.settings.appearance
+    local newHeader, newTile = header or saved.header, tile or saved.tile
+    local changed = newHeader ~= saved.header or newTile ~= saved.tile
+    ns.Native.setHeaderVariant(newHeader)
+    ns.Native.setTileVariant(newTile)
     CraftProfitDB.settings.appearance = { header = newHeader, tile = newTile }
-    return newHeader ~= oldHeader or newTile ~= oldTile
+    return changed
 end
 
 -- The saved look: header, tile keys.
@@ -312,6 +314,8 @@ function Controller.setMinimapHidden(hidden)
     CraftProfitDB.settings.minimap.hide = hidden and true or false
     local button = ns.MinimapButton
     if type(button) == "table" and type(button.apply) == "function" then button.apply() end
+    -- The options window's check box follows a change made elsewhere (/cp minimap).
+    if ns.OptionsUI then ns.OptionsUI.refresh() end
 end
 
 function Controller.minimapAngle()

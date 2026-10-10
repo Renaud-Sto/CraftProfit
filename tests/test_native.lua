@@ -833,8 +833,9 @@ H.test("kitdemo b a rebuilds the demo with those variants and keeps them for the
     slash("kitdemo b a")
     local demo = named.CraftProfitNativeDemo
     H.eq(demo.shown, true)
-    H.eq(T.ns.Native.headerVariant, "b")
-    H.eq(T.ns.Native.tileVariant, "a")
+    -- The demo draws its own widgets with the variants; the live look is untouched.
+    H.eq(T.ns.KitDemo.parts.tiles[1].variant, "a")
+    H.eq({ T.ns.Native.appearance() }, { "b", "b" })
     H.truthy(lastChat(T):find("header b (friends-frame-toptexbg), tile a", 1, true))
     -- Asked again while shown: it stays shown with the new choice.
     slash("kitdemo C B")
@@ -845,12 +846,57 @@ H.test("kitdemo b a rebuilds the demo with those variants and keeps them for the
     H.eq(demo.shown, false)
     slash("kitdemo")
     H.eq(demo.shown, true)
-    H.eq(T.ns.Native.headerVariant, "c")
-    H.eq(T.ns.Native.tileVariant, "b")
+    H.eq(T.ns.KitDemo.parts.tiles[1].variant, "b")
+    H.eq({ T.ns.Native.appearance() }, { "b", "b" })
     -- One word changes the header and keeps the tile.
     slash("kitdemo a")
     H.eq(T.ns.KitDemo.header, "a")
     H.eq(T.ns.KitDemo.tile, "b")
+end)
+
+H.test("kitdemo leaves the live windows and the saved look alone, and its rebuilds do not grow the registry", function()
+    local T, _, slash = demoBoot()
+    local Native, C = T.ns.Native, T.ns.Controller
+    knownAtlases(T.env)
+    local mainTile = T.ns.Window.parts.tiles[1]
+    local panels, tiles = #Native.registry.panels, #Native.registry.tiles
+    slash("kitdemo c a")
+    H.eq(mainTile.variant, "b")
+    H.eq({ Native.appearance() }, { "b", "b" })
+    -- The demo's own widgets do show the asked variants.
+    H.eq(T.ns.KitDemo.parts.panels[1].headerAtlas, Native.HEADER_VARIANTS.c)
+    H.eq(T.ns.KitDemo.parts.tiles[1].bgAtlas, Native.TILE_VARIANTS.a)
+    slash("kitdemo a b")
+    slash("kitdemo b a")
+    H.eq(#Native.registry.panels, panels)
+    H.eq(#Native.registry.tiles, tiles)
+    -- A live switch does not repaint the demo's fixed widgets.
+    local demoTile = T.ns.KitDemo.parts.tiles[1]
+    C.setAppearance("c", nil)
+    H.eq(demoTile.variant, "a")
+    -- And the save merges into the saved choice: the demo's tile never leaks into it.
+    H.eq(T.env.CraftProfitDB.settings.appearance, { header = "c", tile = "b" })
+    H.eq({ Native.appearance() }, { "c", "b" })
+end)
+
+H.test("a widget fixed to a variant is drawn with it, unregistered, and an unknown fixed key is ignored", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    recordTextures(env)
+    local p = Native.panel(nil, "X", { variant = "c" })
+    local t = Native.tile(nil, 110, 52, { variant = "a" })
+    H.eq(p.headerAtlas, Native.HEADER_VARIANTS.c)
+    H.eq(t.variant, "a")
+    H.eq(#Native.registry.panels, 0)
+    H.eq(#Native.registry.tiles, 0)
+    Native.setHeaderVariant("a")
+    Native.setTileVariant("a")
+    Native.setTileVariant("b")
+    H.eq(p.headerAtlas, Native.HEADER_VARIANTS.c)
+    H.eq(t.variant, "a")
+    local loose = Native.panel(nil, "Y", { variant = "zz" })
+    H.eq(#Native.registry.panels, 1)
+    H.eq(loose.headerAtlas, Native.HEADER_VARIANTS.a)
 end)
 
 H.test("kitdemo with an unknown variant prints one line and changes nothing", function()

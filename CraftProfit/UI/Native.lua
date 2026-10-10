@@ -416,7 +416,7 @@ end
 -- lacks the atlas) and the divider under it. Used at construction and by a live switch.
 local function paintHeader(p)
     local headBg, head = p.headerBg, p.head
-    local atlas = Native.HEADER_VARIANTS[Native.headerVariant]
+    local atlas = Native.HEADER_VARIANTS[p.fixedVariant or Native.headerVariant]
     if applyAtlas(headBg, atlas) then
         p.headerAtlas = atlas
     else
@@ -461,10 +461,15 @@ end
 -- Same fields and methods as Kit.panel: frame, body, title, right, setTitle, setRows,
 -- height, onHeaderClick. Also: inset, head, headerBg, headerAtlas (nil when the fallback was
 -- drawn), divider (nil when its atlas is missing), dividerTexture (always). Registered for
--- live appearance switches (Native.setHeaderVariant).
-function Native.panel(parent, title)
+-- live appearance switches (Native.setHeaderVariant), unless `opts.variant` (a key of
+-- HEADER_VARIANTS) fixes its strip: then it is drawn once with that one and never
+-- registered (the /cp kitdemo previews, which must not repaint or outlive the real look).
+function Native.panel(parent, title, opts)
     local Kit = ns.Kit
     local p = {}
+    if type(opts) == "table" and opts.variant ~= nil and Native.HEADER_VARIANTS[opts.variant] then
+        p.fixedVariant = opts.variant
+    end
     local f = CreateFrame("Frame", nil, parent)
     p.frame = f
     -- InsetFrameTemplate shares its parent's level (useParentLevel): everything else here is
@@ -482,8 +487,10 @@ function Native.panel(parent, title)
     p.headerBg = headBg
     p.dividerTexture = head:CreateTexture(nil, "ARTWORK")
     paintHeader(p)
-    local panels = Native.registry.panels
-    panels[#panels + 1] = p
+    if not p.fixedVariant then
+        local panels = Native.registry.panels
+        panels[#panels + 1] = p
+    end
 
     p.right = head:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     p.right:SetPoint("RIGHT", head, "RIGHT", -8, 0)
@@ -593,10 +600,14 @@ end
 -- drawn: variant b, or the card atlas missing), outline (the best-tile marks in use), and
 -- both structures: cardBg and cardStroke (the loot card textures), inset and goldOutline
 -- (the nested inset and its 4 gold lines). applyVariant() shows the current variant's;
--- Native.setTileVariant calls it on every registered tile.
-function Native.tile(parent, width, height)
+-- Native.setTileVariant calls it on every registered tile. `opts.variant` (a key of
+-- TILE_VARIANTS) fixes the card instead: drawn once with it, never registered (as panels).
+function Native.tile(parent, width, height, opts)
     local Kit = ns.Kit
     local tile = { best = false, muted = false, width = width }
+    if type(opts) == "table" and opts.variant ~= nil and Native.TILE_VARIANTS[opts.variant] then
+        tile.fixedVariant = opts.variant
+    end
     local f = CreateFrame("Frame", nil, parent)
     f:SetSize(width or 110, height or 52)
     tile.frame = f
@@ -646,7 +657,7 @@ function Native.tile(parent, width, height)
     -- Shows the structure of the current variant and hides the other. The best mark: the
     -- card's own stroke when the card and its stroke exist, else gold.
     function tile:applyVariant()
-        self.variant = Native.tileVariant
+        self.variant = self.fixedVariant or Native.tileVariant
         local card = false
         if self.variant == "a" then
             if not cardOk then cardOk = applyAtlas(cardBg, cardAtlas) ~= nil end
@@ -734,8 +745,10 @@ function Native.tile(parent, width, height)
     end
 
     tile:applyVariant()
-    local tiles = Native.registry.tiles
-    tiles[#tiles + 1] = tile
+    if not tile.fixedVariant then
+        local tiles = Native.registry.tiles
+        tiles[#tiles + 1] = tile
+    end
     return tile
 end
 

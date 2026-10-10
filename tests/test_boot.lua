@@ -1050,3 +1050,18 @@ H.test("/cp show and /cp hide go through the controller's main window functions"
     T.ns.Controller.toggleMainWindow()
     H.falsy(T.ns.Window.isShown())
 end)
+
+H.test("setAppearance saves the saved choice merged with the new part, not what is on screen", function()
+    local T = boot()
+    local C, Native = T.ns.Controller, T.ns.Native
+    -- Something drew another look without saving it (a developer preview).
+    Native.setTileVariant("a")
+    H.eq(C.setAppearance("c", nil), true)
+    H.eq(T.env.CraftProfitDB.settings.appearance, { header = "c", tile = "b" })
+    -- And the screen is brought back to the saved choice.
+    H.eq({ Native.appearance() }, { "c", "b" })
+    Native.setHeaderVariant("a")
+    H.eq(C.setAppearance(nil, nil), false)
+    H.eq({ Native.appearance() }, { "c", "b" })
+end)
+

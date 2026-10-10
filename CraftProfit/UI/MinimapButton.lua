@@ -175,10 +175,10 @@ function MinimapButton.create()
     button.dragged, button.dragging, button.dragAngle = false, false, nil
 
     local background = texture("BACKGROUND", BACKGROUND, 24, 24)
-    background:SetPoint("TOPLEFT", button, "TOPLEFT", 7, -5)
+    background:SetPoint("CENTER", button, "CENTER", 0, 1)
     local icon = texture("ARTWORK", iconPath(), 18, 18)
     icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
-    icon:SetPoint("TOPLEFT", button, "TOPLEFT", 7, -5)
+    icon:SetPoint("CENTER", button, "CENTER", 0, 1)
     button.icon = icon
     local border = texture("OVERLAY", BORDER, 50, 50)
     border:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
@@ -200,6 +200,8 @@ function MinimapButton.create()
         self:SetScript("OnUpdate", onUpdate)
     end)
     button:SetScript("OnDragStop", stopDrag)
+    -- Hidden mid-drag (/cp minimap, the options check): the drag ends, no OnUpdate left.
+    button:SetScript("OnHide", stopDrag)
     button:SetScript("OnEnter", showTooltip)
     button:SetScript("OnLeave", hideTooltip)
     return button

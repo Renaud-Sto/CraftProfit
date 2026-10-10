@@ -99,6 +99,7 @@ local function boot(saved, opts)
     T.env.CraftProfitDB = saved
     T.env.UISpecialFrames = {}
     local made = {}
+    T.textures = {}
     local minimap = W.frame()
     minimap.GetWidth = function() return 140 end
     minimap.GetCenter = function() return 1000, 600 end
@@ -133,12 +134,15 @@ local function boot(saved, opts)
             tex.SetTexture = function(self, path) self.path = path end
             tex.SetTexCoord = function(self, ...) self.coords = { ... } end
             tex.SetSize = function(self, w, h) self.size = { w, h } end
+            tex.SetPoint = function(self, ...) self.point = { ... } end
+            T.textures[#T.textures + 1] = tex
             return tex
         end
         made[#made + 1] = f
         return f
     end
     T.made = made
+    T.textures = T.textures or {}
     if not opts.noLogin then T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit") end
     return T
 end
@@ -264,6 +268,42 @@ H.test("a drag whose mouse-up never arrives stops on the next frame", function()
     b.scripts.OnUpdate(b)
     H.eq(b.scripts.OnUpdate, nil)
     H.eq(T.env.CraftProfitDB.settings.minimap.angle, 270)
+end)
+
+H.test("hiding the button mid-drag ends the drag", function()
+    local T = boot()
+    local b = button(T)
+    b.scripts.OnDragStart(b)
+    H.eq(type(b.scripts.OnUpdate), "function")
+    T.cursor = { 1100, 600 }
+    b.scripts.OnUpdate(b)
+    T.ns.Controller.setMinimapHidden(true)
+    -- The fake Hide does not run OnHide: the client does.
+    b.scripts.OnHide(b)
+    H.eq(b.scripts.OnUpdate, nil)
+    H.eq(b.dragging, false)
+    H.eq(T.env.CraftProfitDB.settings.minimap.angle, 0)
+    -- A later hide (no drag running) changes nothing.
+    T.env.CraftProfitDB.settings.minimap.angle = 90
+    b.scripts.OnHide(b)
+    H.eq(T.env.CraftProfitDB.settings.minimap.angle, 90)
+end)
+
+H.test("the background and the icon sit in the middle of the button, as LibDBIcon does", function()
+    local T = boot()
+    local b = button(T)
+    local byPath = {}
+    for _, tex in ipairs(T.textures) do
+        if rawget(tex, "path") then byPath[tex.path] = tex end
+    end
+    local background = byPath["Interface\\Minimap\\UI-Minimap-Background"]
+    local ring = byPath["Interface\\Minimap\\MiniMap-TrackingBorder"]
+    H.eq(background.size, { 24, 24 })
+    H.eq(background.point, { "CENTER", b, "CENTER", 0, 1 })
+    H.eq(b.icon.size, { 18, 18 })
+    H.eq(b.icon.point, { "CENTER", b, "CENTER", 0, 1 })
+    H.eq(ring.size, { 50, 50 })
+    H.eq(ring.point, { "TOPLEFT", b, "TOPLEFT", 0, 0 })
 end)
 
 H.test("the tooltip names the addon and the three gestures, and hides on leave", function()

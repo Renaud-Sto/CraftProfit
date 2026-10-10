@@ -65,8 +65,10 @@ end)
 
 H.test("the segmented buttons light the saved choice and set it on a click", function()
     local T, _, slash = boot({ settings = { appearance = { header = "c", tile = "a" } } })
+    T.env.C_Texture = { GetAtlasInfo = function() return { width = 100, height = 4 } end }
     slash("options")
     local parts = T.ns.OptionsUI.parts
+    H.eq(parts.panels.appearance.headerAtlas, T.ns.Native.HEADER_VARIANTS.c)
     H.eq(lit(parts.headerButtons), "c")
     H.eq(lit(parts.tileButtons), "a")
     H.eq(parts.headerButtons.a.text, "Quest bar")
@@ -82,8 +84,8 @@ H.test("the segmented buttons light the saved choice and set it on a click", fun
     H.eq(lit(parts.tileButtons), "b")
     H.eq(T.env.CraftProfitDB.settings.appearance, { header = "a", tile = "b" })
     -- The options window's own panels follow the switch.
-    H.eq(parts.panels.appearance.headerAtlas == nil or parts.panels.appearance.headerAtlas
-        == T.ns.Native.HEADER_VARIANTS.a, true)
+    H.eq(parts.panels.appearance.headerAtlas, T.ns.Native.HEADER_VARIANTS.a)
+    H.eq(parts.panels.controls.headerAtlas, T.ns.Native.HEADER_VARIANTS.a)
 end)
 
 H.test("the lit buttons follow a choice made while the window was closed", function()
@@ -172,3 +174,15 @@ H.test("a language switch relabels the open options window", function()
     H.eq(named.CraftProfitOptionsWindow.titleText.text, "CraftProfit options")
     H.eq(T.ns.OptionsUI.parts.panels.controls.title.text, "CONTROLS")
 end)
+
+H.test("the minimap check follows /cp minimap while the window is open", function()
+    local T, _, slash = boot()
+    slash("options")
+    local check = T.ns.OptionsUI.parts.minimap
+    H.eq(check.checked, true)
+    slash("minimap")
+    H.eq(check.checked, false)
+    slash("minimap")
+    H.eq(check.checked, true)
+end)
+

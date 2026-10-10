@@ -11,17 +11,17 @@ Their pages share a structure: a one-sentence summary, **Features**, **Usage** (
 | Item | Requirement | Status |
 | --- | --- | --- |
 | Project name | English, unique, no game name or version number | `CraftProfit`: OK |
-| Summary | One sentence, no "best" claim, no keyword list | Drafted |
-| Description | English first, says what it does and how; promotional links at the bottom only | Drafted |
+| Summary | One sentence, no "best" claim, no keyword list | Done ([project-page.md](project-page.md)) |
+| Description | English first, says what it does and how; promotional links at the bottom only | Done, up to date for 1.0.0 |
 | Icon | 400 × 400 px minimum, square PNG, original, not a solid colour, not a Blizzard asset | **To do** |
-| Screenshots | Real in-game images, titled | **To do** (after the UI rework) |
-| License | You own the content or may redistribute it; chosen on the project form | **MIT** (`LICENSE` added); select "MIT License" on the CurseForge form |
-| Categories | Professions; Auction & Economy | Chosen |
+| Screenshots | Real in-game images, titled | **To do** |
+| License | You own the content or may redistribute it; chosen on the project form | Done: **MIT** (`LICENSE`); select "MIT License" on the CurseForge form |
+| Categories | Professions; Auction & Economy | Done |
 | Game version | Forever, 1.60.1 | To confirm in the upload form; the TOC says Interface 16001 |
-| Changelog | Required with every file | [CHANGELOG.md](../../CHANGELOG.md) |
-| Release type | Alpha, beta or release | Start with **beta** (early beta addon on a beta game) |
+| Changelog | Required with every file | Done: the 1.0.0 section of [CHANGELOG.md](../../CHANGELOG.md) |
+| Release type | Alpha, beta or release | **Beta**: the game itself is still in beta, even though the addon is 1.0.0 |
 | Source / issues links | Recommended | GitHub, in the description |
-| Author name | Shown on the page | `Sto` (TOC `## Author` updated); use the same name on the CurseForge account |
+| Author name | Shown on the page | Done: `Sto` (TOC `## Author`); use the same name on the CurseForge account |
 
 ## License
 
@@ -40,18 +40,19 @@ Measuring every bracket in game is not realistic, so an external source stays ne
 
 ## Before the first upload
 
-1. Create the icon and the screenshots (after the interface rework).
-2. Run the [in-game checklist](../in-game-checklist.md) on the current beta build; retest on the launch build (4 November 2026), the `Interface` number may change. Verify it with `/dump select(4, GetBuildInfo())` and list several values in the TOC if you support more than one build.
-3. Update the version in `CraftProfit/CraftProfit.toc`, [CHANGELOG.md](../../CHANGELOG.md) and the README status line.
-4. Have a French and a Spanish speaker read the translations.
+1. **To do:** create the icon and the screenshots.
+2. **To do:** run the [in-game checklist](../in-game-checklist.md) on the current beta build; retest on the launch build (4 November 2026), the `Interface` number may change. Verify it with `/dump select(4, GetBuildInfo())` and list several values in the TOC if you support more than one build.
+3. Done for 1.0.0: the version in `CraftProfit/CraftProfit.toc`, [CHANGELOG.md](../../CHANGELOG.md) and the README status line.
+4. **To do:** have a French and a Spanish speaker read the translations.
 
 ## Releasing
 
 ### Manual (first release)
 
 1. Zip the `CraftProfit` folder (the one with `CraftProfit.toc`) so the archive contains a single top folder `CraftProfit/`:  
-   `cd CraftProfit/.. && zip -r CraftProfit-0.1.0.zip CraftProfit -x "*.DS_Store"`
-2. Upload it on the CurseForge project, with the changelog text, release type *beta*, game version *Forever 1.60.1*.
+   `cd CraftProfit/.. && zip -r CraftProfit-1.0.0.zip CraftProfit -x "*.DS_Store" "CraftProfit/.pkgmeta"`  
+   Check it with `unzip -l CraftProfit-1.0.0.zip`: only `CraftProfit/` with the TOC and the files it lists, no `.pkgmeta` (packager settings, not part of the addon), tests, probe or docs.
+2. Upload it on the CurseForge project, with the 1.0.0 changelog text, release type *beta*, game version *Forever 1.60.1*.
 3. Create a GitHub release with the same file.
 
 ### Automatic (afterwards)
@@ -85,7 +86,7 @@ jobs:
           args: -t CraftProfit
 ```
 
-5. Tag and push: `git tag v0.1.0 && git push origin v0.1.0`. The release type comes from the tag name: a plain `v0.1.0` is a release, `v0.1.0-beta1` a beta, anything untagged an alpha.
+5. Tag and push, for example `git tag v1.0.1 && git push origin v1.0.1`. The release type comes from the tag name: a plain `v1.0.1` is a release, `v1.0.1-beta1` a beta, anything untagged an alpha. While the game is in beta, use a `-beta` tag to keep the release type *beta*.
 
 **Untested:** the `-t` option and the detection of the *Forever* game version by the packager have not been tried on this repository. If the upload picks the wrong game version, pass it explicitly with `-g 1.60.1` or fall back to the manual upload. Do the first release by hand and automate the second.
 

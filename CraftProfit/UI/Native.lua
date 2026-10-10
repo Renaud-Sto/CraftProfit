@@ -397,6 +397,11 @@ Native.HEADER_VARIANTS = {
     b = "friends-frame-toptexbg",
     c = "_UI-Frame-TopTileStreaks",
 }
+-- The part of an atlas that holds the art, when the atlas has shadow around it: the quest bar
+-- (307 x 55.5) has a dark rim above and below its wood (measured with /cppn atlas, about
+-- 20% on top and 3% at the bottom); stretched whole into a 22 px header, the wood was only
+-- 17 px tall and the title and the sort button stuck out of it.
+Native.HEADER_CROP = { a = { 0, 1, 0.2, 0.97 } }
 Native.headerVariant = "b"
 Native.DIVIDER_ATLAS = "perks-divider-short"
 -- The header sits this far inside the panel's inset border, on every side but the bottom;
@@ -422,7 +427,11 @@ local function headerTexture(head, key)
     local tex = head:CreateTexture(nil, "BACKGROUND")
     tex:SetAllPoints(head)
     local atlas = Native.HEADER_VARIANTS[key]
-    if not applyAtlas(tex, atlas) then
+    if applyAtlas(tex, atlas) then
+        -- Coordinates after SetAtlas are read inside the atlas, as the game does it.
+        local crop = Native.HEADER_CROP[key]
+        if crop then tex:SetTexCoord(crop[1], crop[2], crop[3], crop[4]) end
+    else
         atlas = nil
         local r, g, b = rgbOf(NORMAL_FONT_COLOR)
         if r then tex:SetColorTexture(r, g, b, 0.15) end

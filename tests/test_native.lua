@@ -514,6 +514,31 @@ H.test("each header variant has its own texture, its atlas set once; a switch on
     H.eq(rawget(tiled, "atlas"), "_UI-Frame-TopTileStreaks")
 end)
 
+H.test("the quest bar is cropped to its wood so a 22 px header is filled by it", function()
+    local _, Native, env = boot()
+    knownAtlases(env)
+    recordTextures(env)
+    local coords = {}
+    local create = env.CreateFrame
+    local wrapped = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = wrapped(kind, name, parent, template)
+        local make = f.CreateTexture
+        f.CreateTexture = function(...)
+            local tex = make(...)
+            tex.SetTexCoord = function(self, l, r, t, b) coords[self] = { l, r, t, b } end
+            return tex
+        end
+        return f
+    end
+    local p = Native.panel(nil, "A")
+    H.eq(coords[p.headerTextures.a], Native.HEADER_CROP.a)
+    H.eq(coords[p.headerTextures.a], { 0, 1, 0.2, 0.97 })
+    H.eq(coords[p.headerTextures.b], nil)
+    H.eq(coords[p.headerTextures.c], nil)
+    H.truthy(create)
+end)
+
 H.test("only the underscore atlas tiles, on its own texture", function()
     local _, Native, env = boot()
     knownAtlases(env)

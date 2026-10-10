@@ -336,19 +336,74 @@ H.test("the frame height follows a folded Materials panel and a likely line", fu
         Window.sections({ hasLikely = false, expanded = true, reagents = 2 })), 16 + Window.GAP)
 end)
 
-H.test("sections are stacked inside the content margin, a gap apart", function()
-    local _, Window = boot()
+-- Records the anchors of every section frame (reset by ClearAllPoints).
+local function sectionPoints(Window)
     local points = {}
     for key, f in pairs(Window.parts.frames) do
         f.SetPoint = function(_, ...) points[key] = points[key] or {}; table.insert(points[key], { ... }) end
         f.ClearAllPoints = function() points[key] = {} end
     end
+    return points
+end
+
+H.test("sections are stacked inside the inset's content margin, a gap apart", function()
+    -- A client whose ButtonFrameTemplate has its Inset: content is the inset.
+    local T = W.boot(H)
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        if template == "ButtonFrameTemplate" then f.Inset = W.frame() end
+        return f
+    end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    local Window = T.ns.Window
+    local content = Window.frame().content
+    H.truthy(content ~= Window.frame())
+    local points = sectionPoints(Window)
     Window.render(model())
     local pad = 4
-    local content = Window.frame().content
     H.eq(points.banner[1], { "TOPLEFT", content, "TOPLEFT", pad, -pad })
     H.eq(points.banner[2], { "TOPRIGHT", content, "TOPRIGHT", -pad, -pad })
     H.eq(points.tiles[1], { "TOPLEFT", content, "TOPLEFT", pad, -(pad + 52 + Window.GAP) })
+end)
+
+H.test("without an inset (changed build) the sections start at the inset's edges of the frame", function()
+    local T, Window = boot()
+    local Native = T.ns.Native
+    local frame = Window.frame()
+    H.eq(frame.content, frame)
+    local points = sectionPoints(Window)
+    Window.render(model())
+    local pad = Native.CONTENT_PAD
+    H.eq(points.banner[1], { "TOPLEFT", frame, "TOPLEFT", Native.INSET_LEFT + pad, -Native.INSET_TOP - pad })
+    H.eq(points.banner[2], { "TOPRIGHT", frame, "TOPRIGHT", -Native.INSET_RIGHT - pad, -Native.INSET_TOP - pad })
+    H.eq(points.tiles[1][5], -Native.INSET_TOP - pad - 52 - Window.GAP)
+end)
+
+H.test("the per-point check's hit area never reaches under its value", function()
+    local T, Window = boot()
+    local Native = T.ns.Native
+    local p = Window.parts
+    local inset
+    p.perPoint.SetHitRectInsets = function(_, _, right) inset = right end
+    -- A label far wider than the row, a value 60 px wide.
+    p.perPoint.label.GetUnboundedStringWidth = function() return 400 end
+    p.perPointValue.GetUnboundedStringWidth = function() return 60 end
+    local bodyWidth = Window.INNER_WIDTH - Native.PANEL_EDGE * 2
+    local checkLeft = 8
+    local function hitRight() return checkLeft + Native.CHECK_SIZE - inset end
+    Window.render(model({ showPerPoint = true, lines = { { label = "Cost per point", value = "12s (25%, estimate)", key = "perpoint", tone = "loss" } } }))
+    local valueLeft = bodyWidth - 8 - 60
+    H.truthy(hitRight() <= valueLeft)
+    H.truthy(hitRight() > valueLeft - 8)
+    -- Value hidden: the label may use the room up to the body's margin, never past it.
+    Window.render(model())
+    H.truthy(hitRight() <= bodyWidth - 8)
+    H.truthy(hitRight() > valueLeft)
+    -- A short label keeps a hit area just over its own width.
+    p.perPoint.label.GetUnboundedStringWidth = function() return 50 end
+    Window.render(model())
+    H.eq(inset, -(50 + 4))
 end)
 
 H.test("an empty window shows the message and hides every section", function()

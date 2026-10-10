@@ -25,16 +25,23 @@ local OPTION_ROWS = 3
 -- OPTION_ROWS of these.
 local OPTION_ROW_H = math.max(Native.CHECK_SIZE, Native.BUTTON_H, Native.INPUT_H) + 2
 local TRACK_X = 160
+local PER_POINT_X = 8
+local VALUE_MARGIN = 8 -- per-point value from the body's right edge
+local LABEL_GAP = 8 -- between the per-point label and its value
 local EMPTY_H = 24
 local MAX_DETAIL = 12 -- Recipes.MAX_REAGENTS
--- A folded native panel: its header strip, 2 px inside the inset border at the top and
--- at the bottom (Native.panel's edge).
-local FOLDED_H = Native.HEAD_H + 2 * 2
+-- A folded native panel: its header strip, inside the inset border at the top and at the
+-- bottom by Native.panel's edge.
+local FOLDED_H = Native.HEAD_H + Native.PANEL_EDGE * 2
 local PAD = Native.CONTENT_PAD
 -- The window's own chrome above and below its inset (title bar, bottom border).
 local CHROME_H = Native.INSET_TOP + Native.INSET_BOTTOM
 
 local frame, content, pinsHost
+-- Where the sections start inside `content`: 0 inside the native inset; the inset's own
+-- edges when a build has no inset and `content` is the frame itself, so the layout and
+-- the height maths (which count the chrome) stay the same.
+local origin = { left = 0, right = 0, top = 0 }
 local handlers = {}
 local expanded = true
 local contentHeight = 80
@@ -223,7 +230,7 @@ local function buildOptions()
     parts.craftsBox = box
 
     -- The track label is cut before the body's right margin (a long translation).
-    local bodyWidth = Window.INNER_WIDTH - 2 * 2
+    local bodyWidth = Window.INNER_WIDTH - Native.PANEL_EDGE * 2
     local trackRoom = bodyWidth - TRACK_X - Native.CHECK_SIZE - 8
     local track = Native.check(body, "", function(checked)
         if handlers.onTrackToggle then handlers.onTrackToggle(checked) end
@@ -234,13 +241,13 @@ local function buildOptions()
     local perPoint = Native.check(body, "", function(checked)
         if handlers.onPerPointToggle then handlers.onPerPointToggle(checked) end
     end)
-    perPoint:SetPoint("TOPLEFT", body, "TOPLEFT", 8, rowY(2, Native.CHECK_SIZE))
+    perPoint:SetPoint("TOPLEFT", body, "TOPLEFT", PER_POINT_X, rowY(2, Native.CHECK_SIZE))
     parts.perPoint = perPoint
     parts.perPointValue = body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    parts.perPointValue:SetPoint("RIGHT", body, "TOPRIGHT", -8, -OPTION_ROW_H * 1.5)
+    parts.perPointValue:SetPoint("RIGHT", body, "TOPRIGHT", -VALUE_MARGIN, -OPTION_ROW_H * 1.5)
     parts.perPointValue:SetJustifyH("RIGHT")
     -- The value wins: a long (translated) label is cut short before it runs under it.
-    perPoint.label:SetPoint("RIGHT", parts.perPointValue, "LEFT", -8, 0)
+    perPoint.label:SetPoint("RIGHT", parts.perPointValue, "LEFT", -LABEL_GAP, 0)
     perPoint.label:SetWordWrap(false)
     perPoint.label:SetJustifyH("LEFT")
     parts.perPointTone = nil
@@ -288,6 +295,9 @@ function Window.create(h)
         onTitleClick = searchOutput,
     })
     content = frame.content
+    if content == frame then
+        origin = { left = Native.INSET_LEFT, right = Native.INSET_RIGHT, top = Native.INSET_TOP }
+    end
     buildBanner()
     buildTiles()
     parts.tiles[1]:onClick(searchOutput)
@@ -298,7 +308,7 @@ function Window.create(h)
     buildOptions()
 
     parts.empty = content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-    parts.empty:SetPoint("TOP", content, "TOP", 0, -PAD - 6)
+    parts.empty:SetPoint("TOP", content, "TOP", 0, -origin.top - PAD - 6)
     paint(parts.empty, Colors.text("muted"))
 
     pinsHost = CreateFrame("Frame", nil, frame)
@@ -351,13 +361,31 @@ local function layout(list)
     for i, section in ipairs(list) do
         local f = parts.frames[section.key]
         f:ClearAllPoints()
-        f:SetPoint("TOPLEFT", content, "TOPLEFT", PAD, offsets[i])
-        f:SetPoint("TOPRIGHT", content, "TOPRIGHT", -PAD, offsets[i])
+        f:SetPoint("TOPLEFT", content, "TOPLEFT", origin.left + PAD, offsets[i] - origin.top)
+        f:SetPoint("TOPRIGHT", content, "TOPRIGHT", -origin.right - PAD, offsets[i] - origin.top)
         f:SetHeight(section.height)
         f:Show()
     end
     contentHeight = Window.contentHeightOf(list)
     Window.relayout()
+end
+
+-- Width of a string at its natural size; 0 when it cannot be measured.
+local function naturalWidth(fs)
+    local width
+    if type(fs.GetUnboundedStringWidth) == "function" then width = fs:GetUnboundedStringWidth() end
+    if type(width) ~= "number" then width = fs:GetStringWidth() end
+    return type(width) == "number" and width or 0
+end
+
+-- The per-point label is cut before its value; its check box's hit area (widened over the
+-- label) must stop there too, or a click on the value would toggle the option.
+local function fitPerPointLabel()
+    local value = parts.perPointValue
+    local valueWidth = value:IsShown() and naturalWidth(value) or 0
+    local bodyWidth = Window.INNER_WIDTH - Native.PANEL_EDGE * 2
+    local labelLeft = PER_POINT_X + Native.CHECK_SIZE + Native.CHECK_LABEL_X
+    parts.perPoint:setMaxWidth(bodyWidth - VALUE_MARGIN - valueWidth - LABEL_GAP - labelLeft)
 end
 
 local function setPerPoint(line)
@@ -366,12 +394,13 @@ local function setPerPoint(line)
         -- Emptied too: the label is anchored to it and would stay cut short.
         value:SetText("")
         value:Hide()
-        return
+    else
+        parts.perPointTone = line.tone
+        value:SetText((line.tone == "profit" and "+" or "") .. (line.value or ""))
+        parts.paintPerPoint()
+        value:Show()
     end
-    parts.perPointTone = line.tone
-    value:SetText((line.tone == "profit" and "+" or "") .. (line.value or ""))
-    parts.paintPerPoint()
-    value:Show()
+    fitPerPointLabel()
 end
 
 function Window.render(model)

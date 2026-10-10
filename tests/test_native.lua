@@ -990,3 +990,31 @@ H.test("a native list row selected tint falls back to gold without the game colo
     local row = Native.listRow(W.frame(), 1, 18)
     H.eq(row.selected.color, { 1, 0.82, 0, 0.16 })
 end)
+
+H.test("setMaxWidth changes a check box's cap later: label and hit area, never negative", function()
+    local _, Native, env = boot()
+    local label = W.frame()
+    label.GetStringWidth = function() return 300 end
+    local width, insets
+    label.SetWidth = function(_, w) width = w end
+    local create = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        if template == "UICheckButtonTemplate" then
+            f.Text = label
+            f.SetHitRectInsets = function(_, l, r, t, b) insets = { l, r, t, b } end
+        end
+        return f
+    end
+    local c = Native.check(nil, "A long label")
+    H.eq(insets[2], -304)
+    c:setMaxWidth(100)
+    H.eq(width, 100)
+    H.eq(insets[2], -104)
+    H.eq(label.text, "A long label")
+    c:setMaxWidth(-20)
+    H.eq(width, 0)
+    H.eq(insets[2], -4)
+    H.eq(Native.CHECK_LABEL_X, -2)
+    H.eq(Native.PANEL_EDGE, 2)
+end)

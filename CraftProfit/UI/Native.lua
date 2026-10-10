@@ -44,8 +44,9 @@ Native.TITLE_ICON = 14
 Native.SEARCH_ATLAS = "common-search-magnifyingglass"
 -- Space between a button's edge and its label, so a long label is cut before the border.
 local BUTTON_TEXT_PAD = 8
--- The template anchors a check box label 2 px left of the box's right edge: its hit area
--- grows by the label width plus this margin.
+-- The template anchors a check box label this far from the box's right edge (LEFT to RIGHT,
+-- x = -2, UICheckButtonTemplate); its hit area grows by the label width plus CHECK_LABEL_GAP.
+Native.CHECK_LABEL_X = -2
 local CHECK_LABEL_GAP = 4
 
 -- `v` when it is a real table (a frame, a region), nil otherwise.
@@ -314,7 +315,8 @@ end
 -- The game's check box with its label on the right. Clicking the label toggles it (the hit
 -- area is widened over the label, as the game's own options do). `onToggle(checked)` (also
 -- settable later as `check.onToggle`) runs after a player's click, with the game's sound.
--- `maxWidth` (optional): the label never gets wider (cut, not wrapped), nor does the hit area.
+-- `maxWidth` (optional): the label never gets wider (cut, not wrapped), nor does the hit area;
+-- `check:setMaxWidth(w)` changes it later (e.g. when a value beside the label changes width).
 function Native.check(parent, text, onToggle, maxWidth)
     local c = CreateFrame("CheckButton", nil, nil, "UICheckButtonTemplate")
     c:SetParent(parent)
@@ -322,14 +324,17 @@ function Native.check(parent, text, onToggle, maxWidth)
     local label = tableOf(c.Text)
     if not label then
         label = c:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-        label:SetPoint("LEFT", c, "RIGHT", -2, 0)
+        label:SetPoint("LEFT", c, "RIGHT", Native.CHECK_LABEL_X, 0)
     end
     c.label = label
     c.onToggle = onToggle
-    if type(maxWidth) == "number" then
-        label:SetWidth(maxWidth)
-        label:SetWordWrap(false)
+    local function capLabel()
+        if type(maxWidth) == "number" then
+            label:SetWidth(maxWidth)
+            label:SetWordWrap(false)
+        end
     end
+    capLabel()
     -- A CheckButton flips its own state before OnClick: read it, never flip it again.
     c:SetScript("OnClick", function(self)
         local checked = self:GetChecked() and true or false
@@ -345,6 +350,11 @@ function Native.check(parent, text, onToggle, maxWidth)
         width = type(width) == "number" and width or 0
         if type(maxWidth) == "number" then width = math.min(width, maxWidth) end
         self:SetHitRectInsets(0, -(width + CHECK_LABEL_GAP), 0, 0)
+    end
+    function c:setMaxWidth(w)
+        maxWidth = type(w) == "number" and math.max(0, w) or nil
+        capLabel()
+        self:setText(label:GetText())
     end
     c:SetChecked(false)
     c:setText(text)
@@ -383,7 +393,8 @@ Native.headerVariant = "b"
 Native.DIVIDER_ATLAS = "perks-divider-short"
 -- The header sits this far inside the panel's inset border, on every side but the bottom;
 -- the body keeps the same margin at the bottom. 2 + 22 + 4 + rows + 2 = Kit.panelHeight.
-local PANEL_EDGE = 2
+Native.PANEL_EDGE = 2
+local PANEL_EDGE = Native.PANEL_EDGE
 
 -- Picks the header strip for panels built from now on; an unknown key keeps the current
 -- one. Returns the key in use.

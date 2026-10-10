@@ -22,7 +22,7 @@ Files load in the order of `CraftProfit/CraftProfit.toc`. Each file receives the
 | File | Module | Role | Uses the game API |
 | --- | --- | --- | --- |
 | `Util.lua` | `ns.Util` | Number guards (`isFinite`, `isCopper`, `count`, `id`), `clamp`, `round` | no |
-| `Format.lua` | `ns.Format` | Money and duration formatting | no (the coin formatter is passed in) |
+| `Format.lua` | `ns.Format` | Money (copper dropped from 100 gold up, `Format.ROUND_FROM`) and duration formatting | no (the coin formatter is passed in) |
 | `Colors.lua` | `ns.Colors` | Meaning colours `FIXED` (profit, loss, incomplete, stale, best, optimal, medium, easy, trivial), shared with the old code as `Theme.FIXED`; `text(kind)` reads the game's `HIGHLIGHT_FONT_COLOR` (`main`), `DISABLED_FONT_COLOR` (`muted`) or `NORMAL_FONT_COLOR` (`gold`) with a fallback; `escape(c)` builds a `\|c` colour escape | no (game colour globals read under `pcall`) |
 | `Core.lua` | `ns.Core` | Cost sum, net sale, vendor value, expected and likely disenchant, cost per point, best option, ranking helpers | no |
 | `Data/Skillup.lua` | `ns.Data.Skillup` | Skill-up chance by recipe colour (estimates) | no |

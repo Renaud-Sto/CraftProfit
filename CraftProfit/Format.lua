@@ -22,10 +22,16 @@ local function plainCoins(copper)
     return table.concat(parts, " ")
 end
 
+-- From 100 gold up the copper is dropped (rounded to the nearest silver): the coin icons
+-- make a full amount too wide for a tile or a column, and a cut-off "9..." reads as a
+-- wrong number. The error is under 1 silver in 100 gold.
+Format.ROUND_FROM = 100 * 10000
+
 -- Unknown or invalid amounts give "?", never "0".
 function Format.money(copper, coinFn)
     if not Util.isFinite(copper) then return "?" end
     local whole = Util.round(Util.clamp(math.abs(copper), 0, Format.MAX_COPPER))
+    if whole >= Format.ROUND_FROM then whole = Util.round(whole / 100) * 100 end
     local sign = (copper < 0 and whole > 0) and "-" or ""
     local text
     if coinFn then text = coinFn(whole) end

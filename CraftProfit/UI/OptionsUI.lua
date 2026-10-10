@@ -15,7 +15,8 @@ local OptionsUI = {}
 ns.OptionsUI = OptionsUI
 
 local NAME = "CraftProfitOptionsWindow"
--- Wide enough for three window buttons on one row with their French labels.
+-- Wide enough for the three segmented header buttons with their Spanish and French labels
+-- ("Madera tallada", "Bois sculpté") at CHAR_W per letter.
 local WIDTH = 420
 local PAD = Native.CONTENT_PAD
 local GAP = 8
@@ -29,6 +30,10 @@ local LABEL_H = 14
 local CHOICE_ROW_H = LABEL_H + 2 + Native.BUTTON_H + 4
 local SEG_GAP = 4
 local LINE_ROW_H = 26
+-- Width of one letter of the game's button font (GameFontNormal, 12 px), estimated from the
+-- client: "Montée de métier" (16 letters) did not fit a 107 px label. The tests check every
+-- button label of every language against it.
+local CHAR_W = 7
 -- The controls recap's height when the client cannot measure the wrapped text.
 local RECAP_FALLBACK_H = 64
 
@@ -44,6 +49,7 @@ local origin = { left = 0, right = 0, top = 0 }
 local parts = { panels = {}, headerButtons = {}, tileButtons = {} }
 OptionsUI.parts = parts
 OptionsUI.ROOM = ROOM
+OptionsUI.CHAR_W = CHAR_W
 
 -- Lights `button` (the chosen segment) or puts it out; `button.lit` mirrors the state.
 local function setLit(button, lit)
@@ -89,7 +95,7 @@ local function layout()
     local p = parts.panels
     p.appearance:setRows(2, CHOICE_ROW_H)
     p.minimap:setRows(1, LINE_ROW_H)
-    p.windows:setRows(1, LINE_ROW_H)
+    p.windows:setRows(2, LINE_ROW_H)
     p.controls:setRows(0, 0, recapHeight())
     local order = { p.appearance, p.minimap, p.windows, p.controls }
     local heights = {}
@@ -139,16 +145,19 @@ local function build()
     parts.minimap:SetPoint("TOPLEFT", panels.minimap.body, "TOPLEFT", 4, -1)
 
     panels.windows = Native.panel(content, L.OPTIONS_WINDOWS)
-    local third = math.floor((ROOM - SEG_GAP * 2) / 3)
-    parts.mainButton = Native.button(panels.windows.body, "", { width = third,
+    -- Two rows: main and leveling side by side, pinned recipes centred under them, all three
+    -- half the room wide so a French label is never cut.
+    local half = math.floor((ROOM - SEG_GAP) / 2)
+    local winBody = panels.windows.body
+    parts.mainButton = Native.button(winBody, "", { width = half,
         onClick = function() ctl.toggleMainWindow() end })
-    parts.mainButton:SetPoint("TOPLEFT", panels.windows.body, "TOPLEFT", 8, -2)
-    parts.levelButton = Native.button(panels.windows.body, "", { width = third,
+    parts.mainButton:SetPoint("TOPLEFT", winBody, "TOPLEFT", 8, -2)
+    parts.levelButton = Native.button(winBody, "", { width = half,
         onClick = function() if ns.LevelingUI then ns.LevelingUI.toggle() end end })
     parts.levelButton:SetPoint("LEFT", parts.mainButton, "RIGHT", SEG_GAP, 0)
-    parts.pinsButton = Native.button(panels.windows.body, "", { width = third,
+    parts.pinsButton = Native.button(winBody, "", { width = half,
         onClick = function() if ns.PinnedWindow then ns.PinnedWindow.toggle() end end })
-    parts.pinsButton:SetPoint("LEFT", parts.levelButton, "RIGHT", SEG_GAP, 0)
+    parts.pinsButton:SetPoint("TOP", winBody, "TOP", 0, -2 - LINE_ROW_H)
     for _, button in ipairs({ parts.mainButton, parts.levelButton, parts.pinsButton }) do
         Native.forwardDrag(button, frame)
     end

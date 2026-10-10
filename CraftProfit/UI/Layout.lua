@@ -43,6 +43,15 @@ function Layout.rightmost(entries)
     return best
 end
 
+-- Estimated width in pixels of `text` at `charW` pixels per letter (a UTF-8 letter, such as
+-- "é", counts once). Used where the client cannot measure, to size buttons for every
+-- language.
+function Layout.textWidth(text, charW)
+    if type(text) ~= "string" then return 0 end
+    local _, letters = text:gsub("[^\128-\191]", "")
+    return letters * charW
+end
+
 -- Largest of `sizes` (descending) at which a text measured `baseWidth` wide at
 -- `baseSize` fits `boxWidth`; the smallest size when none does, the first one when
 -- the width cannot be measured.

@@ -145,8 +145,9 @@ H.test("the window buttons toggle the main window, the leveling window and the p
     H.falsy(T.ns.PinnedWindow.isShown())
 end)
 
-H.test("the three window buttons share one row with room for a French label", function()
-    local T, _, slash = boot(nil, "frFR")
+-- Boots in `locale`, opens the options window and records every button's size.
+local function sized(locale)
+    local T, _, slash = boot(nil, locale)
     local sizes = {}
     local create = T.env.CreateFrame
     T.env.CreateFrame = function(...)
@@ -155,20 +156,41 @@ H.test("the three window buttons share one row with room for a French label", fu
         return f
     end
     slash("options")
-    local parts = T.ns.OptionsUI.parts
+    return T, sizes
+end
+
+H.test("the window buttons: main and leveling on a first row, pinned recipes centred under them", function()
+    local T, sizes = sized("frFR")
+    local O = T.ns.OptionsUI
+    local parts = O.parts
     local main, level, pins = parts.mainButton, parts.levelButton, parts.pinsButton
     H.eq(main.text, "Fenêtre principale")
     H.eq(level.text, "Montée de métier")
     H.eq(pins.text, "Recettes épinglées")
-    local w = sizes[main][1]
-    H.eq(sizes[level][1], w)
-    H.eq(sizes[pins][1], w)
-    -- Three equal buttons and two gaps fill the panel's room.
-    H.eq(w, math.floor((T.ns.OptionsUI.ROOM - 2 * 4) / 3))
-    -- About 18 letters of the game's button font, plus the label's 8 px each side.
-    H.truthy(w - 16 >= 104)
+    local half = math.floor((O.ROOM - 4) / 2)
+    for _, b in ipairs({ main, level, pins }) do H.eq(sizes[b], { half, 22 }) end
+    H.eq(main.point, { "TOPLEFT", parts.panels.windows.body, "TOPLEFT", 8, -2 })
     H.eq(level.point, { "LEFT", main, "RIGHT", 4, 0 })
-    H.eq(pins.point, { "LEFT", level, "RIGHT", 4, 0 })
+    H.eq(pins.point, { "TOP", parts.panels.windows.body, "TOP", 0, -2 - 26 })
+    -- Two rows of 26 px in the panel.
+    H.eq(parts.panels.windows.frame.height, T.ns.Layout.panelHeight(2, 26))
+end)
+
+H.test("every options button label fits its button in English, French and Spanish", function()
+    for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
+        local T, sizes = sized(locale)
+        local O, Layout = T.ns.OptionsUI, T.ns.Layout
+        local parts = O.parts
+        local buttons = { parts.mainButton, parts.levelButton, parts.pinsButton }
+        for _, b in pairs(parts.headerButtons) do buttons[#buttons + 1] = b end
+        for _, b in pairs(parts.tileButtons) do buttons[#buttons + 1] = b end
+        for _, b in ipairs(buttons) do
+            -- The label keeps 8 px from each end of the button.
+            local need = Layout.textWidth(b.text, O.CHAR_W)
+            H.truthy(need <= sizes[b][1] - 16 or error(locale .. ": " .. b.text .. " needs " .. need
+                .. " px, has " .. (sizes[b][1] - 16)))
+        end
+    end
 end)
 
 H.test("the controls recap names the clicks and the commands, wrapped in the small font", function()

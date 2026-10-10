@@ -173,6 +173,60 @@ SlashCmdList.CPPN = function(msg)
         out("clients:", tostring(WOW_PROJECT_ID), tostring(WOW_PROJECT_CAMELOT), select(4, GetBuildInfo()))
         return
     end
+    if msg == "btn" then
+        -- Where the art of a UIPanelButtonTemplate button sits inside its frame, and where
+        -- CraftProfit's header sort button and header sit on screen (numbers, no drawing).
+        local b = CreateFrame("Button", nil, nil, "UIPanelButtonTemplate")
+        b:SetParent(UIParent)
+        b:SetSize(120, 18)
+        b:SetPoint("CENTER", UIParent, "CENTER", 0, -300)
+        out("button frame size", b:GetWidth(), b:GetHeight())
+        local keys = { "Left", "Right", "Middle", "Center", "LeftDisabled", "RightDisabled", "MiddleDisabled" }
+        for _, key in ipairs(keys) do
+            local r = b[key]
+            if type(r) == "table" and r.GetPoint then
+                local line = key .. " size " .. tostring(r:GetWidth()) .. "x" .. tostring(r:GetHeight())
+                for i = 1, r:GetNumPoints() do
+                    local point, rel, relPoint, x, y = r:GetPoint(i)
+                    line = line .. " | " .. tostring(point) .. " -> " .. tostring(relPoint) .. " " .. tostring(x) .. "," .. tostring(y)
+                end
+                out(line)
+            end
+        end
+        for _, key in ipairs({ "Text" }) do
+            local r = b[key]
+            if type(r) == "table" and r.GetPoint then
+                out("Text size", r:GetWidth(), r:GetHeight(), "font height", select(2, r:GetFont()))
+            end
+        end
+        b:Hide()
+        local f = EnumerateFrames()
+        local found
+        while f do
+            if f.GetObjectType and f:GetObjectType() == "Button" and f.GetText then
+                local ok, text = pcall(f.GetText, f)
+                if ok and type(text) == "string" and (text:find("Tri :", 1, true) or text:find("Sort", 1, true) or text:find("Order", 1, true)) and f:GetHeight() == 18 then
+                    found = f
+                    break
+                end
+            end
+            f = EnumerateFrames(f)
+        end
+        local line = "no 18 px sort button found (open the pinned list at the AH first)"
+        if found then
+            local panel = found:GetParent()
+            line = string.format("sort top %.1f bottom %.1f height %.1f | panel top %.1f bottom %.1f", found:GetTop(), found:GetBottom(), found:GetHeight(), panel:GetTop(), panel:GetBottom())
+            out(line)
+            for _, child in ipairs({ panel:GetChildren() }) do
+                if child ~= found and child:GetHeight() and child:GetHeight() > 20 and child:GetHeight() < 30 then
+                    out(string.format("child %s top %.1f bottom %.1f height %.1f shown %s", tostring(child:GetObjectType()), child:GetTop() or -1, child:GetBottom() or -1, child:GetHeight(), tostring(child:IsShown())))
+                end
+            end
+            return
+        end
+        out(line)
+        return
+    end
     if msg == "atlas" then
         -- The three header strips at their native size on a plain background, with a 22 px
         -- ruler on the left (the height of a panel header) and the atlas size printed.

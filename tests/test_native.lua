@@ -28,7 +28,7 @@ local function recordFrames(env)
 end
 
 H.test("the native module loads beside the kit without game globals", function()
-    local ns = H.newNS("Theme", "UI/Kit", "UI/Native")
+    local ns = H.newNS("Colors", "Theme", "UI/Kit", "UI/Native")
     H.truthy(ns.Native)
     H.eq(ns.Native.CONTENT_PAD, 4)
 end)
@@ -725,6 +725,21 @@ H.test("the demo money line uses the client's coin string when it has one", func
     H.eq(found, "Best price: <212900>")
 end)
 
+H.test("a check box label is left-justified so a capped width does not centre it", function()
+    local _, Native, env = boot()
+    local label = W.frame()
+    local justify
+    label.SetJustifyH = function(_, v) justify = v end
+    local create = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        if template == "UICheckButtonTemplate" then f.Text = label end
+        return f
+    end
+    Native.check(nil, "Track", nil, 120)
+    H.eq(justify, "LEFT")
+end)
+
 H.test("a check box with maxWidth caps its label and its hit area", function()
     local _, Native, env = boot()
     local label = W.frame()
@@ -779,4 +794,242 @@ end)
 H.test("the window inset constants match the template anchors once everything is hidden", function()
     local _, Native = boot()
     H.eq({ Native.INSET_LEFT, Native.INSET_TOP, Native.INSET_RIGHT, Native.INSET_BOTTOM }, { 9, 24, 6, 4 })
+end)
+
+-- Banner --------------------------------------------------------------------------
+
+-- Records the textures and font strings of every frame made from now on, with the calls a
+-- banner or a list row makes on them.
+local function recordRegions(env)
+    local textures, strings, made = {}, {}, {}
+    local create = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        f.kind, f.template, f.createParent = kind, template, parent or false
+        f.SetPoint = function(self, ...)
+            local points = rawget(self, "points") or {}
+            points[#points + 1] = { ... }
+            self.points = points
+        end
+        f.CreateTexture = function(_, _, layer, _, sublevel)
+            local tex = W.frame()
+            tex.layer, tex.sublevel = layer, sublevel
+            tex.SetColorTexture = function(self, r, g, b, a) self.color = { r, g, b, a } end
+            tex.SetVertexColor = function(self, r, g, b, a) self.vertex = { r, g, b, a } end
+            tex.SetTexture = function(self, file) self.file = file end
+            tex.SetBlendMode = function(self, mode) self.blend = mode end
+            tex.SetWidth = function(self, w) self.width = w end
+            textures[#textures + 1] = tex
+            return tex
+        end
+        f.CreateFontString = function(_, _, _, font)
+            local fs = W.frame()
+            fs.fonts = { font }
+            fs.SetFontObject = function(self, fontName) self.fonts[#self.fonts + 1] = fontName end
+            fs.SetTextColor = function(self, r, g, b, a) self.textColor = { r, g, b, a } end
+            strings[#strings + 1] = fs
+            return fs
+        end
+        made[#made + 1] = f
+        return f
+    end
+    return textures, strings, made
+end
+
+local function lastFont(fs) return fs.fonts[#fs.fonts] end
+
+H.test("a banner is a frame on a game inset with a label, a text and a value", function()
+    local T, Native, env = boot()
+    recordRegions(env)
+    local parent = W.frame()
+    local banner = Native.banner(parent, 52)
+    H.eq(banner.frame.createParent, parent)
+    H.eq(banner.frame.height, 52)
+    H.eq(banner.inset.template, "InsetFrameTemplate")
+    H.eq(banner.inset.createParent, banner.frame)
+    H.truthy(banner.label and banner.text and banner.value)
+    H.eq(type(banner.set), "function")
+    H.eq(#banner.edges, 4)
+    -- Built neutral: the trivial grey, before any result.
+    local grey = T.ns.Colors.FIXED.trivial
+    H.eq(banner.fill, { grey[1], grey[2], grey[3], 0.09 })
+end)
+
+H.test("a banner takes its tint from the result kind: fill at 0.09, 2 px edge at 0.45, value in the tone", function()
+    local T, Native, env = boot()
+    recordRegions(env)
+    local FIXED = T.ns.Colors.FIXED
+    local banner = Native.banner(nil, 52, 354)
+    local cases = {
+        { "profit", FIXED.profit }, { "loss", FIXED.loss }, { "incomplete", FIXED.incomplete },
+        { "none", FIXED.trivial }, { "weird", FIXED.trivial }, { nil, FIXED.trivial },
+    }
+    for _, case in ipairs(cases) do
+        local tone = case[2]
+        banner:set({ kind = case[1], label = "BEST", text = "Sell at the AH", value = "1g" })
+        H.eq(banner.fill, { tone[1], tone[2], tone[3], 0.09 })
+        H.eq(banner.edge, { tone[1], tone[2], tone[3], 0.45 })
+        H.eq(banner.fillTexture.vertex, { tone[1], tone[2], tone[3], 0.09 })
+        for _, line in ipairs(banner.edges) do H.eq(line.vertex, { tone[1], tone[2], tone[3], 0.45 }) end
+        H.eq(banner.value.textColor, { tone[1], tone[2], tone[3], tone[4] })
+    end
+    -- Plain white textures tinted by vertex colour, never a theme colour.
+    H.eq(banner.fillTexture.color, { 1, 1, 1, 1 })
+    for _, line in ipairs(banner.edges) do H.eq(line.color, { 1, 1, 1, 1 }) end
+end)
+
+H.test("the banner edge is 2 px on each side of the card", function()
+    local _, Native, env = boot()
+    recordRegions(env)
+    local banner = Native.banner(nil, 52)
+    local across, down = 0, 0
+    for _, line in ipairs(banner.edges) do
+        if rawget(line, "height") == 2 and rawget(line, "width") == nil then across = across + 1 end
+        if rawget(line, "width") == 2 and rawget(line, "height") == nil then down = down + 1 end
+    end
+    H.eq({ across, down }, { 2, 2 })
+end)
+
+H.test("a banner sets its label, text and value, and appends the warning in the incomplete colour", function()
+    local T, Native, env = boot()
+    recordRegions(env)
+    local banner = Native.banner(nil, 52, 354)
+    banner:set({ kind = "profit", label = "BEST WAY", text = "Sell at the AH", value = "3g 24s" })
+    H.eq(banner.label.text, "BEST WAY")
+    H.eq(banner.text.text, "Sell at the AH")
+    H.eq(banner.value.text, "3g 24s")
+    local esc = T.ns.Colors.escape(T.ns.Colors.FIXED.incomplete)
+    banner:set({ kind = "incomplete", label = "BEST WAY", warning = "2 prices missing", text = "x", value = "?" })
+    H.eq(banner.label.text, "BEST WAY \194\183 " .. esc .. "2 prices missing|r")
+    banner:set({})
+    H.eq(banner.label.text, "")
+    H.eq(banner.text.text, "")
+    H.eq(banner.value.text, "")
+    -- The text keeps the best colour after its font is reset.
+    local best = T.ns.Colors.FIXED.best
+    H.eq(banner.text.textColor, { best[1], best[2], best[3], best[4] })
+end)
+
+H.test("the banner value steps down the game fonts when wider than 120 px", function()
+    local T, Native, env = boot()
+    recordRegions(env)
+    local Kit = T.ns.Kit
+    local banner = Native.banner(nil, 52, 354)
+    banner.value.GetUnboundedStringWidth = function() return 200 end
+    banner:set({ kind = "profit", label = "L", text = "t", value = "123456g 12s 12c" })
+    local sizes = {}
+    for i, font in ipairs(Native.BANNER_FONTS) do sizes[i] = font[2] end
+    local want = Kit.fitSize(200, sizes[1], 120, sizes)
+    H.truthy(want < sizes[1])
+    local expected
+    for _, font in ipairs(Native.BANNER_FONTS) do if font[2] == want then expected = font[1] end end
+    H.eq(lastFont(banner.value), expected)
+    banner.value.GetUnboundedStringWidth = function() return 100 end
+    banner:set({ kind = "profit", label = "L", text = "t", value = "3g" })
+    H.eq(lastFont(banner.value), Native.BANNER_FONTS[1][1])
+    -- Game font objects only.
+    for _, font in ipairs(Native.BANNER_FONTS) do H.truthy(font[1]:find("^GameFont")) end
+end)
+
+H.test("a banner text that would run under the value drops to the small font", function()
+    local _, Native, env = boot()
+    recordRegions(env)
+    local banner = Native.banner(nil, 52, 354)
+    banner.value.GetUnboundedStringWidth = function() return 60 end
+    -- Room: 354 - 2 * 12 - 60 - 8 = 262.
+    banner.text.GetUnboundedStringWidth = function() return 263 end
+    banner:set({ kind = "incomplete", label = "L", text = "A long partial result text", value = "1g" })
+    H.eq(lastFont(banner.text), "GameFontNormalSmall")
+    banner.text.GetUnboundedStringWidth = function() return 262 end
+    banner:set({ kind = "profit", label = "L", text = "Short", value = "1g" })
+    H.eq(lastFont(banner.text), "GameFontNormal")
+    -- The frame's own width wins once it is laid out.
+    banner.frame.GetWidth = function() return 300 end
+    banner:set({ kind = "profit", label = "L", text = "Short", value = "1g" })
+    H.eq(lastFont(banner.text), "GameFontNormalSmall")
+end)
+
+H.test("a banner text stays in the normal font when nothing can be measured", function()
+    local _, Native, env = boot()
+    recordRegions(env)
+    local banner = Native.banner(nil, 52)
+    banner.text.GetUnboundedStringWidth = function() return 900 end
+    banner:set({ kind = "profit", label = "L", text = "Text", value = "1g" })
+    H.eq(lastFont(banner.text), "GameFontNormal")
+end)
+
+-- List row ------------------------------------------------------------------------
+
+H.test("a native list row is a Button in its slot with a hidden gold selected tint", function()
+    local _, Native, env = boot()
+    local textures, _, made = recordRegions(env)
+    env.NORMAL_FONT_COLOR = { GetRGBA = function() return 1, 0.8, 0.1, 1 end }
+    local body = W.frame()
+    local row = Native.listRow(body, 3, 18, 14)
+    H.eq(made[#made], row)
+    H.eq(row.kind, "Button")
+    H.eq(row.createParent, body)
+    H.eq(row.height, 18)
+    H.eq(row.points[1], { "TOPLEFT", body, "TOPLEFT", 0, -36 })
+    H.eq(row.points[2], { "TOPRIGHT", body, "TOPRIGHT", -14, -36 })
+    H.eq(row.selected, textures[1])
+    H.falsy(row.selected.shown)
+    H.eq(row.selected.color, { 1, 0.8, 0.1, 0.16 })
+    -- No click handler: the caller sets it.
+    H.eq(row.scripts.OnClick, nil)
+    local first = Native.listRow(body, 1, 18)
+    H.eq(first.points[1], { "TOPLEFT", body, "TOPLEFT", 0, 0 })
+    H.eq(first.points[2], { "TOPRIGHT", body, "TOPRIGHT", 0, 0 })
+end)
+
+H.test("a native list row lights up with the game's quest highlight on hover", function()
+    local _, Native, env = boot()
+    recordRegions(env)
+    local row = Native.listRow(W.frame(), 2, 18, 0)
+    local hover = row.hover
+    H.eq(hover.file, "Interface\\QuestFrame\\UI-QuestTitleHighlight")
+    H.eq(hover.blend, "ADD")
+    -- Over the selected tint.
+    H.eq(hover.layer, row.selected.layer)
+    H.truthy(rawget(hover, "sublevel") > (rawget(row.selected, "sublevel") or 0))
+    H.falsy(hover.shown)
+    row.scripts.OnEnter(row)
+    H.truthy(hover.shown)
+    row.scripts.OnLeave(row)
+    H.falsy(hover.shown)
+end)
+
+H.test("a native list row selected tint falls back to gold without the game colour", function()
+    local _, Native, env = boot()
+    recordRegions(env)
+    local row = Native.listRow(W.frame(), 1, 18)
+    H.eq(row.selected.color, { 1, 0.82, 0, 0.16 })
+end)
+
+H.test("setMaxWidth changes a check box's cap later: label and hit area, never negative", function()
+    local _, Native, env = boot()
+    local label = W.frame()
+    label.GetStringWidth = function() return 300 end
+    local width, insets
+    label.SetWidth = function(_, w) width = w end
+    local create = env.CreateFrame
+    env.CreateFrame = function(kind, name, parent, template)
+        local f = create(kind, name, parent, template)
+        if template == "UICheckButtonTemplate" then
+            f.Text = label
+            f.SetHitRectInsets = function(_, l, r, t, b) insets = { l, r, t, b } end
+        end
+        return f
+    end
+    local c = Native.check(nil, "A long label")
+    H.eq(insets[2], -304)
+    c:setMaxWidth(100)
+    H.eq(width, 100)
+    H.eq(insets[2], -104)
+    H.eq(label.text, "A long label")
+    c:setMaxWidth(-20)
+    H.eq(width, 0)
+    H.eq(insets[2], -4)
+    H.eq(Native.CHECK_LABEL_X, -2)
+    H.eq(Native.PANEL_EDGE, 2)
 end)

@@ -121,11 +121,10 @@ La probabilité de point dépend de la couleur de la recette et c'est une **esti
 
 ## Thèmes
 
-CraftProfit propose trois thèmes de couleurs : **Or** (par défaut), **Cuivre** et **Bleu acier**. Un thème change les couleurs des cadres, des panneaux et des boutons, jamais la disposition.
+CraftProfit propose trois thèmes de couleurs : **Or** (par défaut), **Cuivre** et **Bleu acier**. Un thème change les couleurs des cadres, des panneaux et des boutons de la liste des épingles et de la fenêtre de montée de métier, jamais la disposition. La fenêtre principale a l'apparence du jeu et ne change pas avec le thème.
 
 - Tapez `/cp theme` pour lister les thèmes et voir celui en cours, ou `/cp theme copper` (`gold`, `copper` ou `steel` ; majuscules ou minuscules, peu importe) pour changer. Un nom inconnu ne change rien et le signale.
-- Ou cliquez sur le petit carré de couleur dans l'en-tête de la fenêtre principale, à gauche de la croix de fermeture : chaque clic passe au thème suivant (Or, Cuivre, Bleu acier, puis de nouveau Or) et affiche `Thème choisi : ...` dans le chat. Le carré montre la couleur principale du thème en cours.
-- Le changement s'applique tout de suite à la fenêtre principale, à la liste des épingles, à la fenêtre de montée de métier et aux barres de défilement, sans `/reload`. Il est enregistré pour tout le compte : tous vos personnages utilisent le même thème.
+- Le changement s'applique tout de suite à la liste des épingles, à la fenêtre de montée de métier et à leurs barres de défilement, sans `/reload`. Il est enregistré pour tout le compte : tous vos personnages utilisent le même thème.
 - Les couleurs qui ont un sens ne changent jamais avec le thème : le gain en vert, la perte en rouge, les couleurs de difficulté des recettes (orange, jaune, vert, gris) et la teinte du bandeau de résultat.
 
 ## Options et commandes
@@ -136,7 +135,7 @@ CraftProfit propose trois thèmes de couleurs : **Or** (par défaut), **Cuivre**
 | Détail des composants replié ou déplié | Clic sur l'en-tête Composants | Déplié |
 | Position de la fenêtre | La déplacer ; `/cp reset` pour annuler | À côté de la fenêtre de métier ou de l'hôtel des ventes |
 | Tri de la liste des épingles | Bouton dans l'en-tête du panneau des épingles | Gain |
-| Thème | `/cp theme [nom]`, ou le carré de couleur dans l'en-tête de la fenêtre principale ; enregistré pour le compte | Or |
+| Thème (liste des épingles et fenêtre de montée de métier) | `/cp theme [nom]` ; enregistré pour le compte | Or |
 
 Commandes : `/cp` (ou `/craftprofit`) avec `show`, `hide`, `reset`, `scan`, `history`, `market`, `level`, `locale <code>`, `theme [nom]` et `selftest`. Voir le [README](../README.fr.md#commandes).
 

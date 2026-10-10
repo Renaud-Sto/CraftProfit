@@ -198,7 +198,7 @@ H.test("known recipes are stored per profession, repaired, and cycled", function
 end)
 
 H.test("the theme setting keeps a known theme and falls back to gold otherwise", function()
-    local ns = H.newNS("Util", "Theme", "Data/Skillup", "Recipes", "DB")
+    local ns = H.newNS("Util", "Colors", "Theme", "Data/Skillup", "Recipes", "DB")
     local DB = ns.DB
     H.eq(DB.DEFAULTS.theme, "gold")
     local function theme(value)

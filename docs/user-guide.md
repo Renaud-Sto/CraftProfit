@@ -121,11 +121,10 @@ The chance of a point depends on the colour of the recipe and is an **estimate**
 
 ## Themes
 
-CraftProfit has three colour themes: **Gold** (the default), **Copper** and **Steel blue**. A theme changes the colours of the frames, panels and buttons, never the layout.
+CraftProfit has three colour themes: **Gold** (the default), **Copper** and **Steel blue**. A theme changes the colours of the frames, panels and buttons of the pinned list and the leveling window, never the layout. The main window uses the game's own look and does not change with the theme.
 
 - Type `/cp theme` to list the themes and see the one in use, or `/cp theme copper` (`gold`, `copper` or `steel`; capitals do not matter) to switch. An unknown name changes nothing and says so.
-- Or click the small coloured square in the header of the main window, left of the close button: each click goes to the next theme (Gold, Copper, Steel blue, then Gold again) and prints `Theme set: ...` in the chat. The square shows the main colour of the theme in use.
-- The change applies at once to the main window, the pinned list, the leveling window and the scroll bars, with no `/reload`. It is saved for the whole account, so every character uses it.
+- The change applies at once to the pinned list, the leveling window and their scroll bars, with no `/reload`. It is saved for the whole account, so every character uses it.
 - Colours that carry a meaning never change with the theme: gain in green, loss in red, the difficulty colours of recipes (orange, yellow, green, grey) and the tint of the result banner.
 
 ## Options and commands
@@ -136,7 +135,7 @@ CraftProfit has three colour themes: **Gold** (the default), **Copper** and **St
 | Material detail folded or unfolded | Click the Materials header | Unfolded |
 | Window position | Drag it; `/cp reset` to undo | Beside the profession or auction house window |
 | Sort of the pinned list | Button in the header of the Pinned recipes panel | Profit |
-| Theme | `/cp theme [name]`, or the coloured square in the main window header; saved for the account | Gold |
+| Theme (pinned list and leveling window) | `/cp theme [name]`; saved for the account | Gold |
 
 Commands: `/cp` (or `/craftprofit`) with `show`, `hide`, `reset`, `scan`, `history`, `market`, `level`, `locale <code>`, `theme [name]` and `selftest`. See the [README](../README.md#commands).
 

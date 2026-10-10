@@ -6,7 +6,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ### Added
 - Native UI foundations and `/cp kitdemo` variants (developer tool): widgets built on the game's own frame templates, shown by `/cp kitdemo [header [tile]]` with a choice of header strip and tile background; the previous themed demo moved to `/cp kitdemo old [theme]`.
-- Choose the colour theme: `/cp theme` lists Gold, Copper and Steel blue and `/cp theme copper` switches at once, with no `/reload`, for the main window, the pinned list, the leveling window and the scroll bars. A small coloured square in the header of the main window, left of the close button, cycles the themes. The choice is saved for the account. Colours with a meaning (gain, loss, recipe difficulty, banner tint) do not change.
+- Choose the colour theme: `/cp theme` lists Gold, Copper and Steel blue and `/cp theme copper` switches at once, with no `/reload`, for the pinned list, the leveling window and the scroll bars. The choice is saved for the account. Colours with a meaning (gain, loss, recipe difficulty, banner tint) do not change.
 - Click the AH (NET) tile or the recipe title of the main window to search the crafted item at the auction house, to see how many are for sale next to its price. A small magnifier icon marks both while the auction house is open. With the auction house closed it says to open it, and an item bound when picked up says it cannot be sold there.
 - Developer groundwork for the UI rework: colour themes (gold, copper, steel blue) and a shared widget kit, with a `/cp kitdemo` window.
 - Leveling window (`/cp level`, or the Leveling button under the pinned list): every learned recipe of a profession (grey ones hidden unless asked) ranked by the cost of a skill point from the last scan, stored per character so it works at the auction house. Grey recipes are hidden unless asked.
@@ -18,11 +18,12 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - Project documentation: README (English and French), user guide (English and French), technical documentation, contributing guide, CurseForge page text and submission checklist, issue and pull request templates, continuous integration.
 
 ### Changed
+- The main window now uses the game's own frame, panels, buttons and fonts. The header colour swatch is gone from it.
 - Scroll bars: grabbing the thumb off-centre no longer makes it jump, only the left mouse button scrolls, and a drag stops when the button is no longer down (for example after alt-tab). The pinned list, the leveling list and the Materials rows share one row widget, and the window title is measured only when it changes.
-- The pinned list and the leveling window have the new look, like the main window: a Pinned recipes panel with the sort button in its header, a Next point panel, themed buttons, and both follow the colour themes.
+- The pinned list and the leveling window have the new look: a Pinned recipes panel with the sort button in its header, a Next point panel, themed buttons, and both follow the colour themes.
 - Pinned recipe names are coloured by difficulty (orange, yellow, green, grey), as in the profession window.
 - The main window has a new look: a result banner with the best way to sell and the net result, three tiles for the auction house, vendor and disenchant values, and separate Materials and Options panels. Its functions are unchanged; what you see differs: the best option is outlined on its tile instead of marked with ">", the per-point result is a coloured value beside its option instead of a "Gain per point" line, and the banner shows the verdict on one line.
-- The best tile of the main window now has a 2 px bright gold outline and a faint gold tint, so it stands out from the other tiles.
+- The best tile of the main window is outlined in the game's gold (2 px), so it stands out from the other tiles.
 - The partial-result warning ("PRICES MISSING") now sits in amber on the banner label line so it is never cut off; the French and Spanish "cost per point" option labels are shorter.
 
 ### Fixed

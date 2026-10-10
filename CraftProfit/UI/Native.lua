@@ -44,8 +44,9 @@ Native.TITLE_ICON = 14
 Native.SEARCH_ATLAS = "common-search-magnifyingglass"
 -- Space between a button's edge and its label, so a long label is cut before the border.
 local BUTTON_TEXT_PAD = 8
--- The template anchors a check box label 2 px left of the box's right edge: its hit area
--- grows by the label width plus this margin.
+-- The template anchors a check box label this far from the box's right edge (LEFT to RIGHT,
+-- x = -2, UICheckButtonTemplate); its hit area grows by the label width plus CHECK_LABEL_GAP.
+Native.CHECK_LABEL_X = -2
 local CHECK_LABEL_GAP = 4
 
 -- `v` when it is a real table (a frame, a region), nil otherwise.
@@ -314,7 +315,8 @@ end
 -- The game's check box with its label on the right. Clicking the label toggles it (the hit
 -- area is widened over the label, as the game's own options do). `onToggle(checked)` (also
 -- settable later as `check.onToggle`) runs after a player's click, with the game's sound.
--- `maxWidth` (optional): the label never gets wider (cut, not wrapped), nor does the hit area.
+-- `maxWidth` (optional): the label never gets wider (cut, not wrapped), nor does the hit area;
+-- `check:setMaxWidth(w)` changes it later (e.g. when a value beside the label changes width).
 function Native.check(parent, text, onToggle, maxWidth)
     local c = CreateFrame("CheckButton", nil, nil, "UICheckButtonTemplate")
     c:SetParent(parent)
@@ -322,14 +324,19 @@ function Native.check(parent, text, onToggle, maxWidth)
     local label = tableOf(c.Text)
     if not label then
         label = c:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-        label:SetPoint("LEFT", c, "RIGHT", -2, 0)
+        label:SetPoint("LEFT", c, "RIGHT", Native.CHECK_LABEL_X, 0)
     end
     c.label = label
     c.onToggle = onToggle
-    if type(maxWidth) == "number" then
-        label:SetWidth(maxWidth)
-        label:SetWordWrap(false)
+    -- A font string with a set width centres its text: keep the label against the box.
+    label:SetJustifyH("LEFT")
+    local function capLabel()
+        if type(maxWidth) == "number" then
+            label:SetWidth(maxWidth)
+            label:SetWordWrap(false)
+        end
     end
+    capLabel()
     -- A CheckButton flips its own state before OnClick: read it, never flip it again.
     c:SetScript("OnClick", function(self)
         local checked = self:GetChecked() and true or false
@@ -345,6 +352,11 @@ function Native.check(parent, text, onToggle, maxWidth)
         width = type(width) == "number" and width or 0
         if type(maxWidth) == "number" then width = math.min(width, maxWidth) end
         self:SetHitRectInsets(0, -(width + CHECK_LABEL_GAP), 0, 0)
+    end
+    function c:setMaxWidth(w)
+        maxWidth = type(w) == "number" and math.max(0, w) or nil
+        capLabel()
+        self:setText(label:GetText())
     end
     c:SetChecked(false)
     c:setText(text)
@@ -383,7 +395,8 @@ Native.headerVariant = "b"
 Native.DIVIDER_ATLAS = "perks-divider-short"
 -- The header sits this far inside the panel's inset border, on every side but the bottom;
 -- the body keeps the same margin at the bottom. 2 + 22 + 4 + rows + 2 = Kit.panelHeight.
-local PANEL_EDGE = 2
+Native.PANEL_EDGE = 2
+local PANEL_EDGE = Native.PANEL_EDGE
 
 -- Picks the header strip for panels built from now on; an unknown key keeps the current
 -- one. Returns the key in use.
@@ -502,9 +515,9 @@ function Native.setTileVariant(key)
     return Native.tileVariant
 end
 
--- A 2 px outline inside `frame`, in the game's gold; hidden. Returns its four textures.
-local function goldOutline(frame)
-    local r, g, b = rgbOf(NORMAL_FONT_COLOR)
+-- Four lines of `thickness` px along the inside edges of `frame` (top, bottom, left,
+-- right), uncoloured. Returns the textures.
+local function edgeLines(frame, thickness)
     local lines = {}
     local function line(p1, p2, width, height)
         local tex = frame:CreateTexture(nil, "BORDER")
@@ -512,14 +525,23 @@ local function goldOutline(frame)
         tex:SetPoint(p2, frame, p2, 0, 0)
         if width then tex:SetWidth(width) end
         if height then tex:SetHeight(height) end
-        if r then tex:SetColorTexture(r, g, b, 1) end
-        tex:Hide()
         lines[#lines + 1] = tex
     end
-    line("TOPLEFT", "TOPRIGHT", nil, TILE_OUTLINE)
-    line("BOTTOMLEFT", "BOTTOMRIGHT", nil, TILE_OUTLINE)
-    line("TOPLEFT", "BOTTOMLEFT", TILE_OUTLINE, nil)
-    line("TOPRIGHT", "BOTTOMRIGHT", TILE_OUTLINE, nil)
+    line("TOPLEFT", "TOPRIGHT", nil, thickness)
+    line("BOTTOMLEFT", "BOTTOMRIGHT", nil, thickness)
+    line("TOPLEFT", "BOTTOMLEFT", thickness, nil)
+    line("TOPRIGHT", "BOTTOMRIGHT", thickness, nil)
+    return lines
+end
+
+-- A 2 px outline inside `frame`, in the game's gold; hidden. Returns its four textures.
+local function goldOutline(frame)
+    local r, g, b = rgbOf(NORMAL_FONT_COLOR)
+    local lines = edgeLines(frame, TILE_OUTLINE)
+    for _, tex in ipairs(lines) do
+        if r then tex:SetColorTexture(r, g, b, 1) end
+        tex:Hide()
+    end
     return lines
 end
 
@@ -659,4 +681,149 @@ function Native.tile(parent, width, height)
         self.label:SetPoint("TOPRIGHT", f, "TOPRIGHT", -right, -8)
     end
     return tile
+end
+
+-- Banner --------------------------------------------------------------------------
+
+-- The result banner: a card like the tiles (variant b, a nested game inset) tinted by the
+-- kind of result. The tint is a meaning colour (Colors.FIXED), never an appearance choice:
+-- plain white textures vertex-coloured, a faint fill and a 2 px edge.
+Native.BANNER_PAD = 12
+Native.BANNER_FILL = 0.09
+Native.BANNER_EDGE = 0.45
+Native.BANNER_EDGE_PX = 2
+-- Widest the value may be before it steps down the font ladder.
+Native.BANNER_VALUE_ROOM = 120
+-- Same game fonts as the tile values (never SetFont with a file).
+Native.BANNER_FONTS = Native.TILE_FONTS
+local BANNER_GAP = 8
+local BANNER_TONES = { profit = "profit", loss = "loss", incomplete = "incomplete" }
+
+-- parent, height; `width` (optional) is the width the caller will anchor it to, used to
+-- measure the text while the frame has no laid-out width yet (its own width wins once it
+-- has one). Fields: frame, inset, face, label, text, value, fillTexture, edges (4 lines),
+-- fill and edge (the { r, g, b, a } applied), set(spec).
+function Native.banner(parent, height, width)
+    local Kit, Colors = ns.Kit, ns.Colors
+    local banner = { width = width }
+    local f = CreateFrame("Frame", nil, parent)
+    f:SetHeight(height or 52)
+    banner.frame = f
+    -- The tile's structure: the inset shares the frame's level, `face` sits one above.
+    banner.inset = CreateFrame("Frame", nil, f, "InsetFrameTemplate")
+    banner.inset:SetAllPoints(f)
+    local face = CreateFrame("Frame", nil, f)
+    face:SetAllPoints(f)
+    banner.face = face
+
+    local fill = face:CreateTexture(nil, "BACKGROUND")
+    fill:SetAllPoints(face)
+    fill:SetColorTexture(1, 1, 1, 1)
+    banner.fillTexture = fill
+    banner.edges = edgeLines(face, Native.BANNER_EDGE_PX)
+    for _, line in ipairs(banner.edges) do line:SetColorTexture(1, 1, 1, 1) end
+    banner.fill, banner.edge = { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
+
+    local pad = Native.BANNER_PAD
+    local label = face:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    label:SetPoint("TOPLEFT", f, "TOPLEFT", pad, -10)
+    local value = face:CreateFontString(nil, "OVERLAY", Native.BANNER_FONTS[1][1])
+    value:SetPoint("RIGHT", f, "RIGHT", -pad, 0)
+    value:SetJustifyH("RIGHT")
+    value:SetWordWrap(false)
+    -- The label stops before the value too, so a long warning cannot run under it.
+    label:SetPoint("RIGHT", value, "LEFT", -BANNER_GAP, 0)
+    label:SetJustifyH("LEFT")
+    label:SetWordWrap(false)
+    -- The text runs up to the value, so a short or empty value leaves it more room.
+    local text = face:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    text:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", pad, 10)
+    text:SetPoint("RIGHT", value, "LEFT", -BANNER_GAP, 0)
+    text:SetJustifyH("LEFT")
+    text:SetWordWrap(false)
+    banner.label, banner.value, banner.text = label, value, text
+
+    local function tint(tone)
+        local r, g, b = tone[1], tone[2], tone[3]
+        banner.fill = { r, g, b, Native.BANNER_FILL }
+        banner.edge = { r, g, b, Native.BANNER_EDGE }
+        fill:SetVertexColor(r, g, b, Native.BANNER_FILL)
+        for _, line in ipairs(banner.edges) do line:SetVertexColor(r, g, b, Native.BANNER_EDGE) end
+    end
+
+    -- spec: { kind = "profit"|"loss"|"incomplete"|other, label, warning, text, value }
+    function banner:set(spec)
+        spec = spec or {}
+        local FIXED = Colors.FIXED
+        local tone = FIXED[BANNER_TONES[spec.kind] or "trivial"]
+        local labelText = spec.label or ""
+        if spec.warning then
+            labelText = labelText .. " \194\183 " .. Colors.escape(FIXED.incomplete) .. spec.warning .. "|r"
+        end
+        self.label:SetText(labelText)
+        self.text:SetText(spec.text or "")
+
+        local fonts = Native.BANNER_FONTS
+        local sizes = {}
+        for i, font in ipairs(fonts) do sizes[i] = font[2] end
+        self.value:SetFontObject(fonts[1][1])
+        self.value:SetText(spec.value or "")
+        local size = Kit.fitSize(naturalWidth(self.value), sizes[1], Native.BANNER_VALUE_ROOM, sizes)
+        if size ~= sizes[1] then
+            for _, font in ipairs(fonts) do
+                if font[2] == size then self.value:SetFontObject(font[1]) end
+            end
+        end
+        -- SetFontObject resets the colour to the font's own: paint after every font change.
+        self.value:SetTextColor(tone[1], tone[2], tone[3], tone[4])
+
+        -- A text too long for the room left by the value (a partial result, say) drops to
+        -- the small font rather than losing its end; kept normal when it cannot be measured.
+        self.text:SetFontObject("GameFontNormal")
+        local frameWidth = f:GetWidth()
+        if type(frameWidth) ~= "number" or frameWidth <= 0 then frameWidth = self.width end
+        local valueWidth, textWidth = naturalWidth(self.value), naturalWidth(self.text)
+        if type(frameWidth) == "number" and type(valueWidth) == "number" and type(textWidth) == "number"
+            and textWidth > frameWidth - pad * 2 - valueWidth - BANNER_GAP then
+            self.text:SetFontObject("GameFontNormalSmall")
+        end
+        local best = FIXED.best
+        self.text:SetTextColor(best[1], best[2], best[3], best[4])
+        tint(tone)
+    end
+
+    tint(Colors.FIXED.trivial)
+    return banner
+end
+
+-- List row ------------------------------------------------------------------------
+
+Native.ROW_SELECTED_ALPHA = 0.16
+
+-- A clickable list row, same contract as Kit.listRow: a Button of `rowH` pixels in slot
+-- `index` of `body`, with a hidden gold "selected" tint (`row.selected`) and the game's
+-- quest highlight on hover (`row.hover`), both under whatever the caller adds. `rightInset`
+-- keeps the row clear of a scroll bar. The caller sets OnClick, and forwards drags to its
+-- window (Native.forwardDrag) when the rows cover the window's body.
+function Native.listRow(body, index, rowH, rightInset)
+    local y = -(index - 1) * rowH
+    local row = CreateFrame("Button", nil, body)
+    row:SetHeight(rowH)
+    row:SetPoint("TOPLEFT", body, "TOPLEFT", 0, y)
+    row:SetPoint("TOPRIGHT", body, "TOPRIGHT", -(rightInset or 0), y)
+    row.selected = row:CreateTexture(nil, "BACKGROUND")
+    row.selected:SetAllPoints(row)
+    local gold = ns.Colors.text("gold")
+    row.selected:SetColorTexture(gold[1], gold[2], gold[3], Native.ROW_SELECTED_ALPHA)
+    row.selected:Hide()
+    -- Sublevel 1: the hover shows over the selected tint.
+    local hover = row:CreateTexture(nil, "BACKGROUND", nil, 1)
+    hover:SetAllPoints(row)
+    hover:SetTexture(HOVER_FILE)
+    hover:SetBlendMode("ADD")
+    hover:Hide()
+    row:HookScript("OnEnter", function() hover:Show() end)
+    row:HookScript("OnLeave", function() hover:Hide() end)
+    row.hover = hover
+    return row
 end

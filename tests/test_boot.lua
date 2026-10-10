@@ -945,9 +945,9 @@ H.test("setTheme returns false for an unknown theme and changes nothing", functi
     H.truthy(T.ns.Controller.setTheme("steel"))
 end)
 
-H.test("the window is given the theme handler and the French messages exist", function()
+H.test("the main window gets no theme handler (no swatch), /cp theme still answers in French", function()
     local T = boot({ locale = "frFR", items = ITEMS })
-    H.truthy(T.ns.Window.lastHandlers.onThemeClick)
+    H.eq(rawget(T.ns.Window.lastHandlers, "onThemeClick"), nil)
     T.env.SlashCmdList.CRAFTPROFIT("theme")
     H.truthy(T.chat[#T.chat]:find("Thème", 1, true))
     H.truthy(T.chat[#T.chat]:find("Or", 1, true))

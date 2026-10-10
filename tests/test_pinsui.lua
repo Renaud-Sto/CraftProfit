@@ -482,3 +482,39 @@ H.test("dragging a pinned row moves the window and the click that ends it select
     row.scripts.OnClick(row)
     H.eq(T.ns.Controller.currentRecipeID(), 2)
 end)
+
+H.test("rowValue gives the text and colour each pinned row shows, in both sort modes", function()
+    local T = boot()
+    T.env.GetMoneyString = function(c) return "<" .. c .. ">" end
+    local P, Colors, C = T.ns.PinsUI, T.ns.Colors, T.ns.Controller
+    local market = C.market()
+    T.ns.Prices.store(market, 1, 100, 10, 1699999940)
+    T.ns.Prices.store(market, 2, 50, 10, 1699999940)
+    T.ns.Prices.store(market, 100, 1000, 10, 1699999940)
+    local parts = openList(T)
+    for _, byPoint in ipairs({ false, true }) do
+        if byPoint then C.toggleSort() end
+        local colours = {}
+        for i = 1, 2 do
+            parts.rows[i].value.SetTextColor = function(_, r, g, b, a) colours[i] = { r, g, b, a } end
+        end
+        P.refresh()
+        local ordered = P.orderedPins(T.env.CraftProfitCharDB.pins, T.env.CraftProfitCharDB.sortMode, C.evaluate)
+        for i, item in ipairs(ordered) do
+            local text, colour = P.rowValue(item, byPoint)
+            H.eq(parts.rows[i].value.text, text)
+            H.eq(colours[i], colour)
+        end
+    end
+    -- The three cases of the profit view, and the point view's own text.
+    local fmt = C.fmt
+    H.eq({ P.rowValue({ result = { net = 700 } }, false) }, { fmt(700), Colors.FIXED.profit })
+    H.eq({ P.rowValue({ result = { net = 0 } }, false) }, { fmt(0), Colors.FIXED.profit })
+    H.eq({ P.rowValue({ result = { net = -5 } }, false) }, { fmt(-5), Colors.FIXED.loss })
+    H.eq({ P.rowValue({ result = {} }, false) }, { "?", Colors.text("muted") })
+    H.eq({ P.rowValue({ result = { perPoint = { chance = 1, cost = 40 } } }, true) },
+        { fmt(40) .. "/pt", Colors.FIXED.loss })
+    H.eq({ P.rowValue({ result = { perPoint = { chance = 1, cost = -40 } } }, true) },
+        { "+" .. fmt(40) .. "/pt", Colors.FIXED.profit })
+    H.eq({ P.rowValue({ result = { net = 700 } }, true) }, { "?", Colors.text("muted") })
+end)

@@ -41,6 +41,8 @@ ns.Locale.register("esES", {
     UNPIN = "Quitar",
     PINS_EMPTY = "Ninguna receta fijada",
     PINS_FULL = "Demasiadas recetas fijadas",
+    PINNED_TITLE = "Recetas fijadas",
+    PINNED_EMPTY = "Ninguna receta fijada. Fija una receta desde su ventana.",
     SEARCH_PRICES = "Buscar precios",
     SORT_NET = "Orden: ganancia",
     SORT_POINT = "Orden: coste/punto",

@@ -1027,3 +1027,73 @@ H.test("setAppearance saves the saved choice merged with the new part, not what 
     H.eq({ Native.appearance() }, { "c", "b" })
 end)
 
+
+-- Pinned window data ---------------------------------------------------------------
+
+local function pinRaw(id, output)
+    return { recipeID = id, name = "P" .. id, difficulty = "easy", outputItemID = output, qtyMin = 1, qtyMax = 1,
+        reagents = { { itemID = 1, qty = 2 }, { itemID = 2, qty = 1 } } }
+end
+
+H.test("pinsData lists the pins in the pinned list's order with the scan age", function()
+    local T = boot({ items = { [100] = ITEMS[100], [101] = { quality = 1, ilvl = 1, sellPrice = 10, classID = 0, bindType = 2 } } })
+    local C, DB = T.ns.Controller, T.ns.DB
+    stock(T)
+    DB.pinAdd(T.env.CraftProfitCharDB, pinRaw(1, 101))
+    DB.pinAdd(T.env.CraftProfitCharDB, pinRaw(2, 100))
+    local data = C.pinsData()
+    local ids = {}
+    for i, item in ipairs(data.items) do ids[i] = item.recipe.recipeID end
+    -- Recipe 2 sells at a profit, recipe 1 has no price for its output.
+    H.eq(ids, { 2, 1 })
+    H.eq(data.byPoint, false)
+    H.truthy(data.items[1].result.net > 0)
+    local expected = T.ns.PinsUI.orderedPins(T.env.CraftProfitCharDB.pins, "net", C.evaluate)
+    H.eq(data.items[1].recipe, expected[1].recipe)
+    H.eq(data.ageText, "Prices: never scanned")
+    H.eq(data.stale, true)
+    C.market().snapshotTime = 1700000000 - 120
+    data = C.pinsData()
+    H.eq(data.ageText, "Prices: 2m ago")
+    H.eq(data.stale, false)
+    C.market().snapshotTime = 1700000000 - 7200
+    H.eq(C.pinsData().stale, true)
+    C.toggleSort()
+    H.eq(C.pinsData().byPoint, true)
+end)
+
+H.test("pinsData is empty with no pin", function()
+    local T = boot()
+    local data = T.ns.Controller.pinsData()
+    H.eq(data.items, {})
+    H.eq(data.byPoint, false)
+end)
+
+H.test("unpin removes the pin, refreshes and keeps the selection", function()
+    local T = boot()
+    local C, DB = T.ns.Controller, T.ns.DB
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    C.togglePin()
+    DB.pinAdd(T.env.CraftProfitCharDB, pinRaw(9, 100))
+    H.eq(T.ns.Window.lastModel.pinned, true)
+    C.unpin(5)
+    H.eq(DB.pinIndex(T.env.CraftProfitCharDB, 5), nil)
+    H.eq(#T.env.CraftProfitCharDB.pins, 1)
+    H.eq(T.ns.Window.lastModel.pinned, false)
+    H.eq(C.currentRecipeID(), 5)
+    -- An id that is not pinned: nothing changes, nothing raises.
+    C.unpin(12345)
+    H.eq(#T.env.CraftProfitCharDB.pins, 1)
+end)
+
+H.test("savePinsPosition keeps a finite position and ignores anything else", function()
+    local T = boot()
+    local C, settings = T.ns.Controller, T.env.CraftProfitDB.settings
+    C.savePinsPosition(10, 20)
+    H.eq(settings.pinsWindow, { x = 10, y = 20 })
+    C.savePinsPosition(0 / 0, 5)
+    C.savePinsPosition(5, math.huge)
+    C.savePinsPosition("1", 2)
+    C.savePinsPosition(nil, nil)
+    H.eq(settings.pinsWindow, { x = 10, y = 20 })
+end)

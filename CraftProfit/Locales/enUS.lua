@@ -41,6 +41,8 @@ ns.Locale.register("enUS", {
     UNPIN = "Unpin",
     PINS_EMPTY = "No pinned recipe yet",
     PINS_FULL = "Too many pinned recipes",
+    PINNED_TITLE = "Pinned recipes",
+    PINNED_EMPTY = "No pinned recipes. Pin a recipe from its window.",
     SEARCH_PRICES = "Search prices",
     SORT_NET = "Sort: profit",
     SORT_POINT = "Sort: cost/point",

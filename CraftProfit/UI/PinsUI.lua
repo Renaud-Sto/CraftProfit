@@ -77,12 +77,26 @@ function PinsUI.orderedPins(pins, sortMode, evaluate)
     return sorted
 end
 
--- Text and colour of a row's value in the cost-per-point view.
-local function pointValue(perPoint)
-    local text, tone = ns.Present.pointRow(L, ctl.fmt, perPoint)
-    local colour = tone == "profit" and Colors.FIXED.profit or tone == "loss" and Colors.FIXED.loss
-        or Colors.text("muted")
-    return text, colour
+-- Amounts with the game's coin icons. The controller's own formatter when this list was
+-- never initialised: the pinned window shares rowValue.
+local function fmt(copper)
+    return (ctl or ns.Controller).fmt(copper)
+end
+
+-- Text and colour ({ r, g, b, a }) of the value of one ordered pin (`item.recipe`,
+-- `item.result`): its cost per point, or its net profit; "?" when it is unknown. Shared by
+-- this list and the pinned window.
+function PinsUI.rowValue(item, byPoint)
+    local result = item.result
+    if byPoint then
+        local text, tone = ns.Present.pointRow(L, fmt, result.perPoint)
+        local colour = tone == "profit" and Colors.FIXED.profit or tone == "loss" and Colors.FIXED.loss
+            or Colors.text("muted")
+        return text, colour
+    elseif result.net ~= nil then
+        return fmt(result.net), result.net >= 0 and Colors.FIXED.profit or Colors.FIXED.loss
+    end
+    return L.UNKNOWN, Colors.text("muted")
 end
 
 function PinsUI.refresh()
@@ -104,22 +118,14 @@ function PinsUI.refresh()
     for i = 1, VISIBLE do
         local row, item = rows[i], ordered[offset + i]
         if item then
-            local recipe, result = item.recipe, item.result
+            local recipe = item.recipe
             row.recipeID = recipe.recipeID
             row.name:SetText(recipe.name ~= "" and recipe.name or ("#" .. recipe.recipeID))
             -- The difficulty stored with the pin, kept up to date while the profession
             -- window is open; a pin without one keeps the plain text colour.
             local nc = Colors.FIXED[recipe.difficulty] or Colors.text("main")
             row.name:SetTextColor(nc[1], nc[2], nc[3], nc[4])
-            local text, c
-            if byPoint then
-                text, c = pointValue(result.perPoint)
-            elseif result.net ~= nil then
-                text = ctl.fmt(result.net)
-                c = result.net >= 0 and Colors.FIXED.profit or Colors.FIXED.loss
-            else
-                text, c = L.UNKNOWN, Colors.text("muted")
-            end
+            local text, c = PinsUI.rowValue(item, byPoint)
             row.value:SetText(text)
             row.value:SetTextColor(c[1], c[2], c[3], c[4])
             row.selected:SetShown(recipe.recipeID == currentID)

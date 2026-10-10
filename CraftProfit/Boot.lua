@@ -183,6 +183,7 @@ function Controller.refresh()
     end
     if ns.PinsUI then ns.PinsUI.refresh() end
     if ns.LevelingUI then ns.LevelingUI.refresh() end
+    if ns.PinnedWindow then ns.PinnedWindow.refresh() end
     if ns.OptionsUI then ns.OptionsUI.refresh() end
 end
 
@@ -308,6 +309,12 @@ function Controller.saveOptionsPosition(x, y)
     end
 end
 
+function Controller.savePinsPosition(x, y)
+    if Util.isFinite(x) and Util.isFinite(y) then
+        CraftProfitDB.settings.pinsWindow = { x = x, y = y }
+    end
+end
+
 -- The main window, as /cp show and /cp hide drive it.
 function Controller.showMainWindow()
     local window = ns.Window
@@ -413,6 +420,27 @@ function Controller.togglePin()
         if not ok and reason == "full" then say(L.PINS_FULL) end
     end
     Controller.refresh()
+end
+
+-- The "x" of a row in the pinned window: removes that pin and refreshes every view; the
+-- selection stays as it was.
+function Controller.unpin(recipeID)
+    DB.pinRemove(CraftProfitCharDB, recipeID)
+    Controller.refresh()
+end
+
+-- What the pinned window shows: the pins in the pinned list's order with their
+-- evaluation, the sort, and how old the last full scan's prices are (it never searches).
+function Controller.pinsData()
+    local settings = CraftProfitDB.settings
+    local sortMode = CraftProfitCharDB.sortMode
+    local age = Prices.snapshotAge(Controller.market(), time())
+    return {
+        items = ns.PinsUI.orderedPins(CraftProfitCharDB.pins, sortMode, Controller.evaluate),
+        byPoint = sortMode == DB.SORT_POINT,
+        ageText = Present.ageText(L, age),
+        stale = age == nil or age > settings.staleAfter,
+    }
 end
 
 -- The items worth a history point for a tracked recipe, and the ones that must be
@@ -586,6 +614,13 @@ function Controller.init()
             onMoved = function(_, x, y) CraftProfitDB.settings.levelWindow = { x = x, y = y } end,
         })
         ns.LevelingUI.attach(CraftProfitDB.settings.levelWindow)
+    end
+    -- Nothing is built here either: the pinned window is made on first open.
+    if ns.PinnedWindow then
+        ns.PinnedWindow.init(Controller, {
+            onMoved = function(_, x, y) Controller.savePinsPosition(x, y) end,
+        })
+        ns.PinnedWindow.attach(CraftProfitDB.settings.pinsWindow)
     end
     -- Nothing is built here: the options window is made on first open.
     if ns.OptionsUI then

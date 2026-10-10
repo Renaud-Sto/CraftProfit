@@ -41,6 +41,8 @@ ns.Locale.register("frFR", {
     UNPIN = "Désépingler",
     PINS_EMPTY = "Aucune recette épinglée",
     PINS_FULL = "Trop de recettes épinglées",
+    PINNED_TITLE = "Recettes épinglées",
+    PINNED_EMPTY = "Aucune recette épinglée. Épinglez une recette depuis sa fenêtre.",
     SEARCH_PRICES = "Rechercher les prix",
     SORT_NET = "Tri : gain",
     SORT_POINT = "Tri : coût/point",

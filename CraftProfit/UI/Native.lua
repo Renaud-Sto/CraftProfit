@@ -169,6 +169,44 @@ end
 
 -- Window --------------------------------------------------------------------------
 
+-- ButtonFrameTemplate's border is the NineSlice layout PortraitFrameTemplate
+-- (Blizzard_SharedXML/Mainline/NineSliceLayouts.lua): its top corners start 16 px above the
+-- frame, its bottom corners end 3 px below it (8 with the Camelot override; 3 is the larger
+-- need). The side edges fill the gap between them: a frame shorter than both corners less
+-- those overhangs has no room for them and the corners stick out above and below.
+Native.CORNER_TOP_ATLASES = { "UI-Frame-PortraitMetal-CornerTopLeft", "UI-Frame-Metal-CornerTopRight" }
+Native.CORNER_BOTTOM_ATLASES = { "UI-Frame-Metal-CornerBottomLeft", "UI-Frame-Metal-CornerBottomRight" }
+Native.CORNER_TOP_OVERHANG = 16
+Native.CORNER_BOTTOM_OVERHANG = 3
+-- Used when the client does not give the corner sizes.
+Native.MIN_WINDOW_H = 140
+
+local function tallest(names)
+    local best
+    for _, name in ipairs(names) do
+        local info = atlasInfo(name)
+        local h = info and info.height
+        if type(h) ~= "number" or h ~= h or h <= 0 then return nil end
+        if not best or h > best then best = h end
+    end
+    return best
+end
+
+-- The least height a Native.window may have: the corners' own need when the client knows
+-- their atlases, else Native.MIN_WINDOW_H.
+function Native.minWindowHeight()
+    local top, bottom = tallest(Native.CORNER_TOP_ATLASES), tallest(Native.CORNER_BOTTOM_ATLASES)
+    if not top or not bottom then return Native.MIN_WINDOW_H end
+    return math.max(0, top - Native.CORNER_TOP_OVERHANG) + math.max(0, bottom - Native.CORNER_BOTTOM_OVERHANG)
+end
+
+-- `h` raised to the least window height; every window height goes through it.
+function Native.windowHeight(h)
+    local least = Native.minWindowHeight()
+    if type(h) ~= "number" or h ~= h or h < least then return least end
+    return h
+end
+
 -- A movable game panel (ButtonFrameTemplate: rock background, metal border, title bar,
 -- close button) without portrait and without button bar. Returned hidden and unanchored;
 -- Escape is not registered (callers add the name to UISpecialFrames when they want it).
@@ -181,7 +219,7 @@ function Native.window(name, title, opts)
     local f = CreateFrame("Frame", name, nil, "ButtonFrameTemplate")
     f:SetParent(UIParent)
     f:Hide()
-    f:SetSize(opts.width or 372, opts.height or 200)
+    f:SetSize(opts.width or 372, Native.windowHeight(opts.height or 200))
     f:SetFrameStrata("MEDIUM")
     f:SetClampedToScreen(true)
     f:SetMovable(true)

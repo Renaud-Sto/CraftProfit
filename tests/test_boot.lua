@@ -1241,3 +1241,27 @@ H.test("the main window without a saved place opens beside a shown CraftProfit w
     C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
     H.eq(lastPoint(main), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 602, 700 })
 end)
+
+H.test("every window keeps the least height the border needs", function()
+    local T = W.boot(H, { items = ITEMS })
+    T.ns.Native.MIN_WINDOW_H = 2000
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.SetSize = function(self, _, h) self.height = h end
+        return f
+    end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    local C = T.ns.Controller
+    C.showMainWindow()
+    H.eq(T.ns.Window.frame().height, 2000)
+    T.ns.LevelingUI.show()
+    H.eq(T.ns.LevelingUI.frame().height, 2000)
+    T.ns.PinnedWindow.show()
+    H.eq(T.ns.PinnedWindow.frame().height, 2000)
+    T.ns.OptionsUI.show()
+    H.eq(T.ns.OptionsUI.frame().height, 2000)
+    -- With a recipe the main window still never goes below it.
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    H.eq(T.ns.Window.frame().height, 2000)
+end)

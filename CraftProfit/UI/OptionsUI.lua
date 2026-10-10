@@ -125,7 +125,7 @@ local function layout()
         f:SetPoint("TOPLEFT", content, "TOPLEFT", origin.left + PAD, offsets[i] - origin.top)
         f:SetPoint("TOPRIGHT", content, "TOPRIGHT", -origin.right - PAD, offsets[i] - origin.top)
     end
-    frame:SetHeight(CHROME_H + PAD + total + PAD)
+    frame:SetHeight(Native.windowHeight(CHROME_H + PAD + total + PAD))
 end
 
 local function pickHeader(key)

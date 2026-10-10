@@ -415,7 +415,10 @@ H.test("an empty window shows the message and hides every section", function()
         if f.shown then error("section still shown: " .. key) end
     end
     H.eq(Window.frame().titleText.text, "CraftProfit")
-    H.eq(Window.frame().height, Native.INSET_TOP + Native.CONTENT_PAD * 2 + 24 + Native.INSET_BOTTOM)
+    -- Taller than its text: never shorter than the border corners need.
+    H.eq(Window.frame().height, Native.windowHeight(Native.INSET_TOP + Native.CONTENT_PAD * 2 + 24
+        + Native.INSET_BOTTOM))
+    H.eq(Window.frame().height, Native.MIN_WINDOW_H)
     H.eq(Window.lastModel, nil)
 end)
 

@@ -27,7 +27,9 @@ local INNER_WIDTH = WIDTH - Native.INSET_LEFT - Native.INSET_RIGHT - PAD * 2
 local GREY_LABEL_X = Native.CHECK_SIZE + Native.CHECK_LABEL_X
 local HIDDEN_RIGHT = 4
 local HIDDEN_GAP = 8
-local VALUE_W = 112
+-- Room for the per-point value with the game's coin icons (wider than letters): a large
+-- amount such as 999g 99s 99c/pt fits; the name column gives up the difference.
+local VALUE_W = 130
 local CRAFTS_W = 36
 
 local ctl, handlers
@@ -47,6 +49,8 @@ LevelingUI.parts = parts
 LevelingUI.WIDTH = WIDTH
 LevelingUI.INNER_WIDTH = INNER_WIDTH
 LevelingUI.EMPTY_WIDTH = EMPTY_WIDTH
+LevelingUI.VALUE_W = VALUE_W
+LevelingUI.CRAFTS_W = CRAFTS_W
 
 -- Width of a string at its natural size; 0 when it cannot be measured.
 local function textWidth(fs)

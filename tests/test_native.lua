@@ -691,7 +691,6 @@ H.test("the demo title click and the money line work, with plain money when the 
         end
         return f
     end
-    T.env.GetCoinTextureString = function() return nil end
     T.env.GetMoneyString = function() return {} end
     slash("kitdemo")
     local demo = named.CraftProfitNativeDemo
@@ -704,8 +703,11 @@ H.test("the demo title click and the money line work, with plain money when the 
     H.eq(found, "Best price: 21g 29s")
 end)
 
-H.test("the demo money line uses the client's coin string when it has one", function()
+H.test("the demo money line has the coin icons of GetMoneyString, as the windows do", function()
     local T, _, slash = demoBoot()
+    -- Forever: no GetCoinTextureString (the fake's own is hidden), GetMoneyString draws icons.
+    T.env.GetCoinTextureString = nil
+    T.env.GetMoneyString = function(c) return "<" .. c .. ">" end
     local texts = {}
     local create = T.env.CreateFrame
     T.env.CreateFrame = function(...)
@@ -1141,6 +1143,22 @@ H.test("only the left button starts a native drag and a lost mouse-up ends it", 
     env.IsMouseButtonDown = function() return false end
     tick(env, bar, 650)
     H.eq(asked, { 6 })
+    H.eq(bar.frame.scripts.OnUpdate, nil)
+end)
+
+H.test("releasing another button does not end a native drag, the left one does", function()
+    local _, Native, env = boot()
+    local bar, asked = scrollRig(env, Native)
+    bar:update(12, 6, 0)
+    press(env, bar, 600, "LeftButton")
+    H.eq(asked, { 6 })
+    bar:update(12, 6, 6)
+    bar.frame.scripts.OnMouseUp(bar.frame, "RightButton")
+    H.eq(type(bar.frame.scripts.OnUpdate), "function")
+    tick(env, bar, 650)
+    H.eq(asked, { 6, 3 })
+    -- A nil button (a scripted release) counts as the left one.
+    bar.frame.scripts.OnMouseUp(bar.frame, nil)
     H.eq(bar.frame.scripts.OnUpdate, nil)
 end)
 

@@ -120,13 +120,13 @@ local function say(text)
     DEFAULT_CHAT_FRAME:AddMessage("CraftProfit: " .. text)
 end
 
--- An amount with the game's coin icons when the client formats it, else plain text.
+-- An amount as the windows show it (Controller.fmt: the game's coin icons through
+-- GetMoneyString on Forever, plain text otherwise), so the demo matches them.
 local function moneyText(copper)
-    for _, format in ipairs({ GetCoinTextureString, GetMoneyString }) do
-        if type(format) == "function" then
-            local ok, text = pcall(format, copper)
-            if ok and type(text) == "string" then return text end
-        end
+    local Controller = ns.Controller
+    if type(Controller) == "table" and type(Controller.fmt) == "function" then
+        local ok, text = pcall(Controller.fmt, copper)
+        if ok and type(text) == "string" then return text end
     end
     return "21g 29s"
 end

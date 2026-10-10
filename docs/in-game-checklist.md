@@ -188,6 +188,8 @@ Since PR 6 the main window is native: it no longer follows the themes and has no
 - [ ] `/cp theme copper` changes nothing visible any more (expected).
 - [ ] Amounts show gold, silver and copper coin icons in the tiles, the banner, the reagent rows, the pinned list and the leveling window.
 - [ ] A large amount (for example 999g 99s 99c, on a costly recipe or with `/cp kitdemo`) shrinks and does not overflow its tile.
+- [ ] A large per-point value (for example 999g 99s 99c/pt) in the leveling window is not cut, and the crafts figure (`x4`) stays beside it.
+- [ ] `/cp kitdemo`: the money line shows coin icons.
 - [ ] No Lua error (`/console scriptErrors 1`), no `ADDON_ACTION_BLOCKED`, with the profession window and with the AH.
 - [ ] Screenshots of the pinned list and the leveling window next to the game's own panels (`C`, the profession window), sent to the controller.
 

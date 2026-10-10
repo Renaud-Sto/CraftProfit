@@ -401,12 +401,22 @@ H.test("loading the addon with a pin does not touch the market until the AH open
     H.truthy(next(T.env.CraftProfitDB.markets) ~= nil)
 end)
 
-H.test("a theme switch no longer touches the pinned list", function()
-    local T = boot()
+H.test("pins are not evaluated while the list is hidden, nor by a theme switch", function()
+    -- Pins stored before the addon loads, as in the game: nothing evaluates them (which
+    -- would open the market too early) until the AH shows the list.
+    local T = W.boot(H, { items = ITEMS })
+    T.env.CraftProfitCharDB = {}
+    T.ns.DB.initChar(T.env.CraftProfitCharDB)
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(1, 100, { { itemID = 1, qty = 2 } }))
     local Controller = T.ns.Controller
     local evaluate, calls = Controller.evaluate, 0
     Controller.evaluate = function(...) calls = calls + 1; return evaluate(...) end
+    Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(calls, 0)
+    T.ns.Kit.applyTheme("steel")
+    H.eq(calls, 0)
     openList(T)
+    H.truthy(calls > 0)
     calls = 0
     T.ns.Kit.applyTheme("copper")
     H.eq(calls, 0)

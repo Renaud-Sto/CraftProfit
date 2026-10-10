@@ -22,7 +22,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - Amounts now show the game's gold, silver and copper icons (the old text letters were a fallback that was always taken on Forever).
 - The main window now uses the game's own frame, panels, buttons and fonts. The header colour swatch is gone from it.
 - Scroll bars: grabbing the thumb off-centre no longer makes it jump, only the left mouse button scrolls, and a drag stops when the button is no longer down (for example after alt-tab). The pinned list, the leveling list and the Materials rows share one row widget, and the window title is measured only when it changes.
-- The pinned list and the leveling window have the new look: a Pinned recipes panel with the sort button in its header, a Next point panel, themed buttons, and both follow the colour themes.
+- The pinned list and the leveling window have the new look: a Pinned recipes panel with the sort button in its header and a Next point panel.
 - Pinned recipe names are coloured by difficulty (orange, yellow, green, grey), as in the profession window.
 - The main window has a new look: a result banner with the best way to sell and the net result, three tiles for the auction house, vendor and disenchant values, and separate Materials and Options panels. Its functions are unchanged; what you see differs: the best option is outlined on its tile instead of marked with ">", the per-point result is a coloured value beside its option instead of a "Gain per point" line, and the banner shows the verdict on one line.
 - The best tile of the main window is outlined in the game's gold (2 px), so it stands out from the other tiles.

@@ -279,3 +279,22 @@ H.test("dragging a leveling row moves the window and the click that ends it sele
     row.scripts.OnClick(row)
     H.eq(calls[#calls], { "select", 2 })
 end)
+
+H.test("the value column is wide enough for an amount with coin icons, the crafts column sits before it", function()
+    local _, UI = boot(function(f)
+        f.CreateFontString = function()
+            local fs = W.frame()
+            fs.SetWidth = function(self, w) self.width = w end
+            fs.points = {}
+            fs.SetPoint = function(self, ...) self.points[#self.points + 1] = { ... } end
+            return fs
+        end
+    end)
+    H.eq(UI.VALUE_W, 130)
+    local row = UI.parts.rows[1]
+    H.eq(row.value.width, UI.VALUE_W)
+    H.eq(row.crafts.width, UI.CRAFTS_W)
+    H.eq(row.crafts.points[1], { "RIGHT", row, "RIGHT", -(8 + UI.VALUE_W + 8), 0 })
+    -- The name runs from the left edge to the crafts column and gives up the extra room.
+    H.eq(row.name.points[2], { "RIGHT", row.crafts, "LEFT", -8, 0 })
+end)

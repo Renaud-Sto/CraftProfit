@@ -1018,7 +1018,12 @@ function Native.scrollbar(parent, trackH)
         paintThumb()
         follow()
     end)
-    f:SetScript("OnMouseUp", stopDrag)
+    -- Only the left button's release ends a drag: releasing a right click pressed during
+    -- a drag must not drop it while the left button is still held.
+    f:SetScript("OnMouseUp", function(_, button)
+        if button ~= nil and button ~= "LeftButton" then return end
+        stopDrag()
+    end)
     f:SetScript("OnHide", stopDrag)
     f:HookScript("OnEnter", function()
         hovered = true

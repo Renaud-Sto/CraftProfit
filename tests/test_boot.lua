@@ -1027,3 +1027,26 @@ H.test("the saved keys and the native variants are the same sets", function()
     H.truthy(Native.HEADER_VARIANTS[DB.DEFAULTS.appearance.header])
     H.truthy(Native.TILE_VARIANTS[DB.DEFAULTS.appearance.tile])
 end)
+
+H.test("the slash help lists options and minimap in every language", function()
+    for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
+        local T = boot({ locale = locale, items = ITEMS })
+        T.env.SlashCmdList.CRAFTPROFIT("nope")
+        local help = T.chat[#T.chat]
+        H.truthy(help:find("| options |", 1, true))
+        H.truthy(help:find("| minimap |", 1, true))
+    end
+end)
+
+H.test("/cp show and /cp hide go through the controller's main window functions", function()
+    local T = boot()
+    local slash = T.env.SlashCmdList.CRAFTPROFIT
+    slash("show")
+    H.truthy(T.ns.Window.isShown())
+    slash("hide")
+    H.falsy(T.ns.Window.isShown())
+    T.ns.Controller.toggleMainWindow()
+    H.truthy(T.ns.Window.isShown())
+    T.ns.Controller.toggleMainWindow()
+    H.falsy(T.ns.Window.isShown())
+end)

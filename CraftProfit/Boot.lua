@@ -183,6 +183,7 @@ function Controller.refresh()
     end
     if ns.PinsUI then ns.PinsUI.refresh() end
     if ns.LevelingUI then ns.LevelingUI.refresh() end
+    if ns.OptionsUI then ns.OptionsUI.refresh() end
 end
 
 -- Coalesces bursts (many ITEM_DATA_LOAD_RESULT events, one per search result).
@@ -291,6 +292,50 @@ function Controller.setAppearance(header, tile)
     local newHeader, newTile = Native.appearance()
     CraftProfitDB.settings.appearance = { header = newHeader, tile = newTile }
     return newHeader ~= oldHeader or newTile ~= oldTile
+end
+
+-- The saved look: header, tile keys.
+function Controller.appearance()
+    local appearance = CraftProfitDB.settings.appearance
+    return appearance.header, appearance.tile
+end
+
+-- Options window and minimap button ---------------------------------------------------
+
+function Controller.minimapHidden()
+    return CraftProfitDB.settings.minimap.hide == true
+end
+
+-- Hides (true) or shows the minimap button, saves it, and applies it when the button
+-- module is loaded.
+function Controller.setMinimapHidden(hidden)
+    CraftProfitDB.settings.minimap.hide = hidden and true or false
+    local button = ns.MinimapButton
+    if type(button) == "table" and type(button.apply) == "function" then button.apply() end
+end
+
+function Controller.saveOptionsPosition(x, y)
+    if Util.isFinite(x) and Util.isFinite(y) then
+        CraftProfitDB.settings.optionsWindow = { x = x, y = y }
+    end
+end
+
+-- The main window, as /cp show and /cp hide drive it.
+function Controller.showMainWindow()
+    local window = ns.Window
+    if not window.isShown() then
+        window.attach(ns.Trade.frame() or AuctionHouseFrame or AuctionFrame, CraftProfitDB.settings.window)
+        window.show()
+    end
+    Controller.refresh()
+end
+
+function Controller.hideMainWindow()
+    ns.Window.hide()
+end
+
+function Controller.toggleMainWindow()
+    if ns.Window.isShown() then Controller.hideMainWindow() else Controller.showMainWindow() end
 end
 
 -- The "Track history" box: starts recording this recipe (or pauses it, keeping
@@ -556,6 +601,11 @@ function Controller.init()
         })
         ns.LevelingUI.attach(CraftProfitDB.settings.levelWindow)
     end
+    -- Nothing is built here: the options window is made on first open.
+    if ns.OptionsUI then
+        ns.OptionsUI.init(Controller)
+        ns.OptionsUI.attach(CraftProfitDB.settings.optionsWindow)
+    end
     ns.AH.setHandlers({
         onOpen = Controller.onAHOpen,
         onSearch = function(itemID, listings)
@@ -640,13 +690,11 @@ local function slash(msg)
     local window = ns.Window
     local anchor = ns.Trade.frame() or AuctionHouseFrame or AuctionFrame
     if cmd == "show" then
-        if not window.isShown() then
-            window.attach(anchor, CraftProfitDB.settings.window)
-            window.show()
-        end
-        Controller.refresh()
+        Controller.showMainWindow()
     elseif cmd == "hide" then
-        window.hide()
+        Controller.hideMainWindow()
+    elseif cmd == "options" then
+        if ns.OptionsUI then ns.OptionsUI.toggle() end
     elseif cmd == "reset" then
         CraftProfitDB.settings.window = nil
         window.attach(anchor, nil)

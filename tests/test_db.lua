@@ -279,3 +279,16 @@ H.test("the minimap setting keeps a boolean hide and a finite angle brought into
         H.eq(minimap(bad), { hide = false, angle = 225 })
     end
 end)
+
+H.test("the options window position keeps finite x and y and drops anything else", function()
+    local DB = load()
+    local function pos(value)
+        return DB.initAccount({ settings = { optionsWindow = value } }).settings.optionsWindow
+    end
+    H.eq(pos({ x = 10, y = -20, junk = 1 }), { x = 10, y = -20 })
+    H.eq(pos({ x = 0 / 0, y = 1 }), nil)
+    H.eq(pos({ x = 1, y = math.huge }), nil)
+    H.eq(pos({ x = "1", y = 2 }), nil)
+    H.eq(pos("x"), nil)
+    H.eq(pos(nil), nil)
+end)

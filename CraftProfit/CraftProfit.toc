@@ -35,5 +35,6 @@ UI/Native.lua
 UI/Window.lua
 UI/PinsUI.lua
 UI/LevelingUI.lua
+UI/OptionsUI.lua
 UI/KitDemo.lua
 Boot.lua

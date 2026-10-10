@@ -461,7 +461,7 @@ H.test("the pinned list is built from the native kit", function()
     for _, key in ipairs({ "sort", "search", "scan", "level" }) do
         H.eq(parts[key].template, "UIPanelButtonTemplate")
     end
-    H.eq(parts.sort.height, 20)
+    H.eq(parts.sort.height, 18)
     H.eq(parts.rows[1].kind, "Button")
     -- Native rows keep the window's drag (Native.forwardDrag registers it).
     H.eq(type(parts.rows[1].scripts.OnDragStart), "function")

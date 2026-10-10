@@ -106,7 +106,7 @@ end
 -- Native demo ---------------------------------------------------------------------
 
 local NATIVE_NAME = "CraftProfitNativeDemo"
-local SORT_H = 20
+local SORT_H = 18
 local LINE_H = 16
 local DEMO_MONEY = 21 * 10000 + 29 * 100
 local MAX_DEMO_MONEY = 999 * 10000 + 99 * 100 + 99 -- 999g 99s 99c, more than any price in the beta
@@ -217,7 +217,7 @@ local function buildPage()
     scan:Disable()
     local sort = Native.button(options.frame, "Sort", { width = 50 })
     sort:SetHeight(SORT_H)
-    sort:SetPoint("TOPRIGHT", options.frame, "TOPRIGHT", -4, -3)
+    sort:SetPoint("TOPRIGHT", options.frame, "TOPRIGHT", -10, -4)
 
     local line = page:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     line:SetText("Best price: " .. moneyText(DEMO_MONEY))

@@ -1,7 +1,7 @@
 local H = ...
 
 local function load()
-    return H.newNS("Theme").Theme
+    return H.newNS("Colors", "Theme").Theme
 end
 
 local function lin(c)

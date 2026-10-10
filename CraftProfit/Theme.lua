@@ -1,6 +1,7 @@
 -- Colour themes for the UI. Pure data, no WoW API. A window reads every colour that
--- belongs to the look from a theme; Theme.FIXED holds the colours that carry a
--- meaning (gain, loss, recipe difficulty) and never change with the theme.
+-- belongs to the look from a theme; Theme.FIXED (the same table as ns.Colors.FIXED) holds
+-- the colours that carry a meaning (gain, loss, recipe difficulty) and never change with
+-- the theme.
 local _, ns = ...
 
 local Theme = {}
@@ -26,17 +27,8 @@ local function hex(rgb, alpha)
     }
 end
 
-Theme.FIXED = {
-    profit = { 0.35, 0.90, 0.45, 1 },
-    loss = { 1.00, 0.40, 0.35, 1 },
-    incomplete = { 1.00, 0.82, 0.25, 1 },
-    stale = { 1.00, 0.60, 0.25, 1 },
-    best = { 1.00, 0.82, 0.00, 1 },
-    optimal = { 1.00, 0.50, 0.25, 1 },
-    medium = { 1.00, 0.82, 0.00, 1 },
-    easy = { 0.25, 0.75, 0.25, 1 },
-    trivial = { 0.55, 0.55, 0.55, 1 },
-}
+-- The meaning colours live in Colors.lua (loaded first); the old kit reads them here.
+Theme.FIXED = ns.Colors.FIXED
 
 local themes = {
     gold = {

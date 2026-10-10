@@ -2,7 +2,7 @@ local H = ...
 local W = dofile("tests/fakewow.lua")
 
 local function load()
-    return H.newNS("Theme", "UI/Kit").Kit
+    return H.newNS("Colors", "Theme", "UI/Kit").Kit
 end
 
 H.test("panelHeight adds the header, the body padding and the rows", function()

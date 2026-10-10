@@ -175,20 +175,36 @@ H.test("the x unpins the recipe, refreshes every view and selects nothing", func
     H.eq(UI.parts.empty.text, "No pinned recipes. Pin a recipe from its window.")
 end)
 
-H.test("the x says Unpin in its tooltip", function()
+H.test("the x says Unpin in its tooltip and keeps its row lit", function()
     local T, UI = boot({ pins = { raw(1) } })
     UI.show()
-    local x = UI.parts.rows[1].unpin
+    local row = UI.parts.rows[1]
+    local x = row.unpin
     H.eq(x.text, "x")
+    -- Without the game's title helper: plain text.
     x.scripts.OnEnter(x)
     H.truthy(T.tooltip.owner == x)
     H.eq(T.tooltip.text, "Unpin")
     H.truthy(T.tooltip.shown)
+    H.truthy(row.hover.shown)
     x.scripts.OnLeave(x)
     H.falsy(T.tooltip.shown)
+    H.falsy(row.hover.shown)
+    -- With it: the game's tooltip title, as the minimap button.
+    local titled
+    T.env.GameTooltip_SetTitle = function(tip, text) titled = { tip, text } end
+    T.tooltip.text = nil
+    x.scripts.OnEnter(x)
+    H.truthy(titled[1] == T.env.GameTooltip)
+    H.eq(titled[2], "Unpin")
+    H.eq(T.tooltip.text, nil)
+    H.truthy(row.hover.shown)
+    x.scripts.OnLeave(x)
+    H.falsy(row.hover.shown)
     -- Without a tooltip object: nothing raises.
     T.env.GameTooltip = nil
     x.scripts.OnEnter(x)
+    H.truthy(row.hover.shown)
     x.scripts.OnLeave(x)
 end)
 

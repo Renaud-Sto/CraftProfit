@@ -105,10 +105,15 @@ local function section(key, height)
     return f
 end
 
+-- The game's tooltip title (as the minimap button), plain text when the helper is missing.
 local function showTip(self)
     if type(GameTooltip) ~= "table" then return end
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText(L.UNPIN)
+    if type(GameTooltip_SetTitle) == "function" then
+        GameTooltip_SetTitle(GameTooltip, L.UNPIN)
+    else
+        GameTooltip:SetText(L.UNPIN)
+    end
     GameTooltip:Show()
 end
 
@@ -117,7 +122,8 @@ local function hideTip()
 end
 
 -- The "x": a plain Button (no template, so its scripts are ours), the game's grey small
--- font lit to white on hover.
+-- font lit to white on hover. The pointer on it leaves the row, which would drop the row's
+-- highlight: the "x" keeps it lit while hovered.
 local function buildUnpin(row)
     local x = CreateFrame("Button", nil, row)
     x:SetSize(UNPIN_SIZE, UNPIN_SIZE)
@@ -130,8 +136,14 @@ local function buildUnpin(row)
         if self.dragged == true then return end
         if self.recipeID then ctl.unpin(self.recipeID) end
     end)
-    x:SetScript("OnEnter", showTip)
-    x:SetScript("OnLeave", hideTip)
+    x:SetScript("OnEnter", function(self)
+        row.hover:Show()
+        showTip(self)
+    end)
+    x:SetScript("OnLeave", function()
+        row.hover:Hide()
+        hideTip()
+    end)
     return x
 end
 

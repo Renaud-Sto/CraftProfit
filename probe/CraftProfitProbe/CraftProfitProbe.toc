@@ -6,3 +6,4 @@
 ## SavedVariables: CraftProfitProbeLog
 
 Probe.lua
+Native.lua

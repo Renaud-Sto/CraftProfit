@@ -170,12 +170,13 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Untick "Show the minimap button": it disappears; `/cp minimap` brings it back (one chat line each way); after `/reload` while hidden, no button and no chat line at login.
 - [ ] Addon compartment: does the CraftProfit entry show on Forever's minimap? Note the answer in probe-findings F12; if it shows, left click toggles the options and right click the pinned recipes window.
 - [ ] Windows panel: "Main window", "Leveling" and "Pinned recipes" toggle their windows.
-- [ ] `/cp locale frFR` and `esES`: the labels (Bois sculpté, Carte de butin, Bandeau des sections...) are cut, never overflowing their buttons; the Controls recap wraps inside its panel and the window grows to fit it.
+- [ ] `/cp locale frFR` and `esES`: every button label (Bois sculpté, Madera tallada, Carte de butin...) shows in full, no `...`.
+- [ ] Controls panel: the two minimap clicks then one command per line (`/cp show` ... `/cp selftest`), the command in gold and its description in white; no line wraps or overlaps the next; in French and Spanish no line is cut; the window height fits the list exactly.
 - [ ] No Lua error (`/console scriptErrors 1`), no `ADDON_ACTION_BLOCKED`, while switching, dragging and with the AH open.
 - [ ] Screenshots of the options window (English and French) and of the minimap button, sent to the controller.
 
 ## Pinned window (PR 11)
-- [ ] With the profession window and the AH closed, `/cp pins` opens the "Pinned recipes" window (native frame, left of the middle of the screen the first time); `/cp pins` again closes it; Escape closes it.
+- [ ] With the profession window and the AH closed, `/cp pins` opens the "Pinned recipes" window (native frame; the first time, left of the middle of the screen when no other CraftProfit window is open); `/cp pins` again closes it; Escape closes it.
 - [ ] Rows: names in their difficulty colours, values with coin icons (green gain, red loss, grey `?` for a pin with a missing price, never an error).
 - [ ] Age line: the age of the oldest price the pins use; orange when older than an hour or never priced. After **Search prices** at the AH (no full scan), the line shows a recent age, not "never scanned".
 - [ ] Sort button: switches profit and cost/point and relabels; the list under the main window at the AH follows the same choice.
@@ -186,9 +187,16 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Drag the window, `/reload`, reopen it: it is where you left it.
 - [ ] Minimap right click and addon compartment right click open and close it; the tooltip says "Right click: pinned recipes".
 - [ ] At the AH, the list under the main window still works; pin or unpin from the main window and from the "x": both lists stay in sync.
-- [ ] Options window (now 420 px wide): in English, `/cp locale frFR` and `/cp locale esES`, the three Windows buttons ("Fenêtre principale", "Montée de métier", "Recettes épinglées"; "Ventana principal", "Subida", "Recetas fijadas") fit on one row without being cut; the recap names `/cp pins` and the right click.
+- [ ] Options window Windows panel: "Main window" and "Leveling" on the first row, "Pinned recipes" centred on the second; in English, `/cp locale frFR` and `/cp locale esES` ("Fenêtre principale", "Montée de métier", "Recettes épinglées"; "Ventana principal", "Subida", "Recetas fijadas") no label is cut; the Controls list has `/cp pins` and the right click.
 - [ ] `/cp locale frFR`: no label of the pinned window overflows (title, sort button, empty text, long recipe names cut before the value and the "x").
 - [ ] No Lua error (`/console scriptErrors 1`), no `ADDON_ACTION_BLOCKED`, with and without the AH open.
+
+## Default placement (PR 19 fixes)
+- [ ] Delete the saved positions (`/run CraftProfitDB.settings.pinsWindow=nil CraftProfitDB.settings.levelWindow=nil CraftProfitDB.settings.optionsWindow=nil CraftProfitDB.settings.window=nil` then `/reload`).
+- [ ] Open the profession window and select a recipe: the main window opens beside it. Then `/cp level`, `/cp pins` and `/cp options` one after the other: each opens just right of the rightmost window already open, none on top of another; near the screen edge it stays on screen.
+- [ ] Close all, `/cp pins` alone: left of the middle of the screen; `/cp options` alone: in the middle; then `/cp show`: the main window opens right of the open one.
+- [ ] Drag one window, close and reopen it: it is where you left it, whatever else is open; same after `/reload`.
+- [ ] No Lua error, no window jumping when another one closes.
 
 ## Numbers
 - [ ] For one recipe, compare each reagent price with the AH listing prices: the stored price is the median of the 5 cheapest units (not the minimum).

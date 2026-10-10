@@ -72,7 +72,7 @@ Cliquez sur une recette de la liste pour l'afficher dans la fenêtre au-dessus.
 - Le petit **x** à droite d'une ligne désépingle la recette (son infobulle dit *Désépingler*) ; les lignes en dessous remontent et rien d'autre ne s'ouvre.
 - Un clic ailleurs sur une ligne ouvre la fenêtre principale sur cette recette, avec ses prix enregistrés.
 - 12 lignes sont visibles à la fois ; au-delà, utilisez la molette ou la barre de défilement.
-- Échap ou la croix la ferme. Déplacez-la où vous voulez : elle se rouvre au même endroit, même après `/reload`. La première fois, elle s'ouvre à gauche du milieu de l'écran.
+- Échap ou la croix la ferme. Déplacez-la où vous voulez : elle se rouvre au même endroit, même après `/reload`. La première fois, elle s'ouvre juste à droite de la fenêtre CraftProfit la plus à droite à l'écran, ou à gauche du milieu de l'écran si aucune n'est affichée.
 - Épingler ou désépingler depuis la fenêtre principale la met à jour aussitôt si elle est ouverte.
 
 ### La fenêtre de montée de métier
@@ -135,10 +135,12 @@ La probabilité de point dépend de la couleur de la recette et c'est une **esti
 
 Ouvrez-la avec `/cp options`, un clic gauche sur le bouton de la minicarte, ou l'entrée CraftProfit du compartiment d'addons (le bouton de la liste des addons sur la minicarte, si votre client l'affiche). Échap la ferme ; déplacez-la où vous voulez, elle se rouvre au même endroit.
 
+Où s'ouvrent les fenêtres : une fenêtre CraftProfit jamais déplacée s'ouvre juste à droite de la fenêtre CraftProfit la plus à droite déjà à l'écran, pour qu'elles ne s'empilent jamais (le bord de l'écran la garde visible). Si aucune n'est affichée, la fenêtre principale s'ouvre à côté de la fenêtre de métier ou de l'hôtel des ventes, la montée de métier à côté de la fenêtre principale, les recettes épinglées à gauche du milieu de l'écran et les options au milieu. Une fois déplacée, une fenêtre se rouvre toujours là où vous l'avez laissée.
+
 - **Apparence** : choisissez le *Bandeau des sections* (Bois sculpté, Ombre ou Stries) et les *Cases de prix* (Carte de butin ou Encart). Les deux se combinent librement (6 apparences) ; le bouton allumé est votre choix. Il s'applique aussitôt à toutes les fenêtres, ouvertes ou non, et est enregistré pour le compte. Par défaut : Ombre et Encart.
 - **Minicarte** : *Afficher le bouton de la minicarte*. Décochez pour masquer le bouton ; `/cp minimap` le masque ou le rétablit aussi.
-- **Fenêtres** : ouvre ou ferme la fenêtre principale, la fenêtre de montée de métier et la fenêtre des recettes épinglées. La fenêtre d'options fait 420 px de large pour que ces trois boutons tiennent sur une ligne.
-- **Commandes** : un rappel des clics et des commandes ci-dessous.
+- **Fenêtres** : ouvre ou ferme la fenêtre principale et la fenêtre de montée de métier (première ligne) et la fenêtre des recettes épinglées (deuxième ligne).
+- **Commandes** : les clics sur la minicarte et toutes les commandes, une par ligne : la commande en doré, ce qu'elle fait en blanc.
 
 Les couleurs qui ont un sens ne changent jamais avec l'apparence : le gain en vert, la perte en rouge, les couleurs de difficulté des recettes (orange, jaune, vert, gris) et la teinte du bandeau de résultat.
 

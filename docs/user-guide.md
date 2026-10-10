@@ -72,7 +72,7 @@ Click a recipe in the list to show it in the window above.
 - The small **x** at the right of a row unpins that recipe (its tooltip says *Unpin*); the rows below move up and nothing else opens.
 - A click anywhere else on a row opens the main window on that recipe, with its stored prices.
 - 12 rows show at a time; with more, use the mouse wheel or the scroll bar.
-- Escape or the close button closes it. Drag it anywhere: it reopens where you left it, also after `/reload`. The first time it opens left of the middle of the screen.
+- Escape or the close button closes it. Drag it anywhere: it reopens where you left it, also after `/reload`. The first time it opens just right of the rightmost CraftProfit window on screen, or left of the middle of the screen when none is shown.
 - Pinning or unpinning from the main window updates it at once while it is open.
 
 ### The leveling window
@@ -135,10 +135,12 @@ The chance of a point depends on the colour of the recipe and is an **estimate**
 
 Open it with `/cp options`, a left click on the minimap button, or the CraftProfit entry of the addon compartment (the game's addon list button on the minimap, when your client shows it). Escape closes it; drag it anywhere, it reopens where you left it.
 
+Where windows open: a CraftProfit window that has never been dragged opens just right of the rightmost CraftProfit window already on screen, so they never pile up on each other (the screen edge keeps it visible). With none shown, the main window opens beside the profession or auction house window, the leveling window beside the main window, the pinned recipes window left of the middle of the screen and the options window in the middle. Once dragged, a window always reopens where you left it.
+
 - **Appearance**: pick the *Header strip* of every section (Carved wood, Shade or Streaks) and the *Tile card* of the price tiles (Loot card or Inset). The two mix freely (6 looks); the lit button is your choice. It applies at once to every window, open or not, and is saved for your account. Default: Shade and Inset.
 - **Minimap**: *Show the minimap button*. Untick it to hide the button; `/cp minimap` hides it or brings it back too.
-- **Windows**: open or close the main window, the leveling window and the pinned recipes window. The options window is 420 px wide so these three buttons fit on one row.
-- **Controls**: a recap of the clicks and commands below.
+- **Windows**: open or close the main window and the leveling window (first row) and the pinned recipes window (second row).
+- **Controls**: the minimap clicks and every command, one per line: the command in gold, what it does in white.
 
 Colours that carry a meaning never change with the look: gain in green, loss in red, the difficulty colours of recipes (orange, yellow, green, grey) and the tint of the result banner.
 

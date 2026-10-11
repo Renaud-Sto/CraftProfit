@@ -120,7 +120,7 @@ function PinsUI.refresh()
         if item then
             local recipe = item.recipe
             row.recipeID = recipe.recipeID
-            row.name:SetText(recipe.name ~= "" and recipe.name or ("#" .. recipe.recipeID))
+            row.name:SetText(ctl.recipeName(recipe))
             -- The difficulty stored with the pin, kept up to date while the profession
             -- window is open; a pin without one keeps the plain text colour.
             local nc = Colors.FIXED[recipe.difficulty] or Colors.text("main")

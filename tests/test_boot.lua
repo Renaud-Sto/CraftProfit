@@ -8,7 +8,8 @@ local ITEMS = {
 }
 
 local RAW = {
-    recipeID = 5, name = "Sword", difficulty = 1, outputItemID = 100, qtyMin = 1, qtyMax = 1,
+    -- Read in the fake client's language (enUS): its stored name is the current one.
+    recipeID = 5, name = "Sword", locale = "enUS", difficulty = 1, outputItemID = 100, qtyMin = 1, qtyMax = 1,
     reagents = { { itemID = 1, qty = 2 }, { itemID = 2, qty = 1 } },
 }
 
@@ -239,7 +240,7 @@ local function mockProfession(T)
 end
 
 -- Fix wave item 1
-H.test("the window model carries the recipe name, or the output item name, or nil", function()
+H.test("the window model carries the recipe name, or the output item name, or #id", function()
     local T = boot()
     T.ns.Controller.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
     H.eq(T.ns.Window.lastModel.title, "Sword")
@@ -250,7 +251,7 @@ H.test("the window model carries the recipe name, or the output item name, or ni
     H.eq(T.ns.Window.lastModel.title, "Item100")
     local T2 = boot({ items = {} })
     T2.ns.Controller.setRecipe(T2.ns.Recipes.normalize(unnamed), "profession")
-    H.eq(T2.ns.Window.lastModel.title, nil)
+    H.eq(T2.ns.Window.lastModel.title, "#5")
     H.eq(T2.ns.Controller.itemName(100), nil)
 end)
 
@@ -1297,4 +1298,96 @@ H.test("the main window opens beside a shown CraftProfit window even with the tr
     measure(T.ns.PinnedWindow.frame(), 200, 700, 396)
     C.showMainWindow()
     H.eq(lastPoint(main), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 602, 700 })
+end)
+
+-- Names follow the game's language
+local function frenchPin(T, items)
+    local pin = T.ns.Recipes.normalize({
+        recipeID = 3398, name = "Côtelettes de lion épicées", locale = "frFR", outputItemID = 3727,
+        reagents = { { itemID = 1, qty = 1 } },
+    })
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, pin)
+    if items then items[3727] = { quality = 1, ilvl = 25, sellPrice = 125, classID = 0, bindType = 0 } end
+    return T.env.CraftProfitCharDB.pins[1]
+end
+
+H.test("recipeName prefers the client's recipe name, then the item's, then the stored one", function()
+    local items = { [100] = ITEMS[100] }
+    local T = boot({ items = items })
+    local C = T.ns.Controller
+    local pin = frenchPin(T, nil)
+    -- Nothing current is known yet: the stored name, and the item is asked for.
+    H.eq(C.recipeName(pin), "Côtelettes de lion épicées")
+    local asked = false
+    for _, id in ipairs(T.loadRequests) do if id == 3727 then asked = true end end
+    H.truthy(asked)
+    -- The item arrives: its name, written back into the pin with the language.
+    items[3727] = { quality = 1, ilvl = 25, sellPrice = 125, classID = 0, bindType = 0 }
+    H.eq(C.recipeName(pin), "Item3727")
+    H.eq(pin.name, "Item3727")
+    H.eq(pin.locale, "enUS")
+    -- The client's recipe name wins over everything.
+    T.env.C_TradeSkillUI = { GetRecipeInfo = function(id) return { recipeID = id, name = "Hot Lion Chops" } end }
+    H.eq(C.recipeName(pin), "Hot Lion Chops")
+    H.eq(T.env.CraftProfitCharDB.pins[1].name, "Hot Lion Chops")
+    H.eq(C.recipeName(nil), "")
+end)
+
+H.test("recipeName skips a client recipe name that is secret, empty, not a string or raising", function()
+    local items = {}
+    local T = boot({ items = items })
+    local C = T.ns.Controller
+    local pin = frenchPin(T, items)
+    T.env.issecretvalue = function(v) return v == "SECRET" end
+    for _, bad in ipairs({ "SECRET", "", 5 }) do
+        T.env.C_TradeSkillUI = { GetRecipeInfo = function() return { name = bad } end }
+        H.eq(C.recipeName(pin), "Item3727")
+    end
+    T.env.C_TradeSkillUI = { GetRecipeInfo = function() error("boom") end }
+    H.eq(C.recipeName(pin), "Item3727")
+    T.env.C_TradeSkillUI = { GetRecipeInfo = function() return "not a table" end }
+    H.eq(C.recipeName(pin), "Item3727")
+end)
+
+H.test("the main window title follows the game's language and the item load refreshes it", function()
+    local items = { [100] = ITEMS[100] }
+    local T = boot({ items = items })
+    local C = T.ns.Controller
+    frenchPin(T, nil)
+    C.selectPin(3398)
+    H.eq(T.ns.Window.lastModel.title, "Côtelettes de lion épicées")
+    items[3727] = { quality = 1, ilvl = 25, sellPrice = 125, classID = 0, bindType = 0 }
+    C.onEvent("ITEM_DATA_LOAD_RESULT", 3727, true)
+    T.run()
+    H.eq(T.ns.Window.lastModel.title, "Item3727")
+end)
+
+H.test("/cp history lists tracked recipes by their current-language name", function()
+    local items = {}
+    local T = boot({ items = items })
+    local C = T.ns.Controller
+    C.selectPin(frenchPin(T, items).recipeID)
+    T.ns.Window.lastHandlers.onTrackToggle(true)
+    C.historyCommand("")
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r 1. Item3727 (tracking)")
+    C.historyCommand("remove 1")
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Removed from history: Item3727")
+end)
+
+H.test("professionName reads the current-language name and writes it back, else keeps the stored one", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local prof = { key = "185", name = "Cuisine" }
+    H.eq(C.professionName(prof), "Cuisine")
+    T.env.GetProfessions = function() return 1 end
+    T.env.GetProfessionInfo = function() return "Cooking", "icon", 60, 75, 0, 0, 185 end
+    H.eq(C.professionName(prof), "Cooking")
+    H.eq(prof.name, "Cooking")
+    H.eq(C.professionName({ key = "185", name = "" }), "Cooking")
+    H.eq(C.professionName({ key = "Forge", name = "" }), "Forge")
+    H.eq(C.professionName({ key = "Forge", name = "Forge" }), "Forge")
+    H.eq(C.professionName(nil), "-")
+    -- A live name too long to store is not used.
+    T.env.GetProfessionInfo = function() return string.rep("x", 65), "icon", 60, 75, 0, 0, 185 end
+    H.eq(C.professionName(prof), "Cooking")
 end)

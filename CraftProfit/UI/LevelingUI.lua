@@ -76,8 +76,10 @@ function LevelingUI.hide()
     if frame then frame:Hide() end
 end
 
+-- The recipe's name in the game's current language (the controller's), else the stored one.
 local function name(recipe)
-    return recipe.name ~= "" and recipe.name or ("#" .. recipe.recipeID)
+    if ctl and ctl.recipeName then return ctl.recipeName(recipe) end
+    return ns.Recipes.label(recipe)
 end
 
 function LevelingUI.refresh()
@@ -102,7 +104,7 @@ function LevelingUI.refresh()
         end
         return
     end
-    parts.profession:setText(data.profession.name)
+    parts.profession:setText(ctl.professionName and ctl.professionName(data.profession) or data.profession.name)
     parts.age:SetText(data.ageText)
     parts.ageStale = data.stale and true or false
     parts.paintAge()

@@ -87,6 +87,33 @@ function Controller.itemName(itemID)
     return nil
 end
 
+-- The name shown for a stored recipe (pin, known recipe, tracked recipe), in the game's
+-- current language: names are stored when pinned or read and would stay in the old
+-- language after a language switch. Recipes.liveName picks the client's recipe name, else
+-- the crafted item's (loaded on demand: ITEM_DATA_LOAD_RESULT refreshes), else the stored
+-- one, and writes a newer name back into the stored recipe. Identity stays the recipe id.
+function Controller.recipeName(recipe)
+    if type(recipe) ~= "table" then return "" end
+    return Recipes.liveName(recipe, {
+        locale = ns.Trade.locale(),
+        recipeName = ns.Trade.recipeName,
+        itemName = Controller.itemName,
+    })
+end
+
+-- The name shown for a stored profession (a CraftProfitCharDB.known entry) in the game's
+-- current language, else the stored one; a newer name is written back.
+function Controller.professionName(prof)
+    if type(prof) ~= "table" then return "-" end
+    local live = ns.Trade.professionName(prof.key)
+    if live and #live <= 64 then
+        if live ~= prof.name then prof.name = live end
+        return live
+    end
+    if type(prof.name) == "string" and prof.name ~= "" then return prof.name end
+    return tostring(prof.key or "-")
+end
+
 function Controller.knowsEnchanting()
     return ns.Trade.hasProfession(ns.Trade.ENCHANTING_SKILL_LINE)
 end
@@ -167,11 +194,7 @@ function Controller.refresh()
     if recipe then
         local model = Present.build(Controller.evaluate(recipe, state.crafts), L, Controller.fmt,
             { staleAfter = settings.staleAfter, itemName = Controller.itemName })
-        if type(recipe.name) == "string" and recipe.name ~= "" then
-            model.title = recipe.name
-        else
-            model.title = Controller.itemName(recipe.outputItemID)
-        end
+        model.title = Controller.recipeName(recipe)
         for _, reagent in ipairs(recipe.reagents or {}) do Controller.itemInfo(reagent.itemID) end
         model.pinned = DB.pinIndex(CraftProfitCharDB, recipe.recipeID) ~= nil
         model.tracked = History.isActive(CraftProfitDB, recipe.recipeID)
@@ -739,7 +762,7 @@ function Controller.historyCommand(arg)
         local entry = tracked[index]
         if History.remove(CraftProfitDB, index) then
             History.prune(CraftProfitDB, Controller.market(), Controller.historyItems)
-            say(string.format(L.HISTORY_REMOVED, entry.recipe.name ~= "" and entry.recipe.name or entry.recipe.recipeID))
+            say(string.format(L.HISTORY_REMOVED, Controller.recipeName(entry.recipe)))
             Controller.refresh()
         else
             say(L.HISTORY_NO_SUCH)
@@ -752,8 +775,8 @@ function Controller.historyCommand(arg)
     end
     say(string.format(L.HISTORY_HEADER, #tracked, History.MAX_TRACKED))
     for i, entry in ipairs(tracked) do
-        local name = entry.recipe.name ~= "" and entry.recipe.name or ("#" .. entry.recipe.recipeID)
-        say(string.format("%d. %s (%s)", i, name, entry.active and L.TRACK_ACTIVE or L.TRACK_PAUSED))
+        say(string.format("%d. %s (%s)", i, Controller.recipeName(entry.recipe),
+            entry.active and L.TRACK_ACTIVE or L.TRACK_PAUSED))
     end
 end
 

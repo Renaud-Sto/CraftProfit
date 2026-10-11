@@ -294,3 +294,19 @@ H.test("the value column is wide enough for an amount with coin icons, the craft
     -- The name runs from the left edge to the crafts column and gives up the extra room.
     H.eq(row.name.points[2], { "RIGHT", row.crafts, "LEFT", -8, 0 })
 end)
+
+H.test("the profession and recipe names come from the controller's current-language names", function()
+    local T, UI = boot()
+    local d = data()
+    d.items[1].recipe.outputItemID = 100
+    d.profession = { key = "185", name = "Cuisine" }
+    feed(T, d)
+    T.env.GetProfessions = function() return 1 end
+    T.env.GetProfessionInfo = function() return "Cooking", "icon", 60, 75, 0, 0, 185 end
+    T.env.C_TradeSkillUI = { GetRecipeInfo = function(id) return id == 1 and { name = "Hot Lion Chops" } or nil end }
+    UI.show()
+    H.eq(UI.parts.profession.text, "Cooking")
+    H.eq(d.profession.name, "Cooking")
+    H.eq(UI.parts.rows[1].name.text, "Hot Lion Chops")
+    H.eq(UI.parts.rows[2].name.text, "Copper Helm")
+end)

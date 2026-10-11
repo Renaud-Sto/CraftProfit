@@ -156,16 +156,18 @@ function PinsUI.refresh()
 end
 
 -- The status line after a search. counts: ok (items whose search returned, with or without
--- listings), total, noListing (returned an empty list), failed (did not answer). ok + failed
--- = total for a search that ran to its end. Everything answered with listings: the short
+-- listings), total, noListing (returned no usable listing), failed (did not answer). ok +
+-- failed = total for a search that ran to its end. "Updated" counts only the prices actually
+-- stored (ok - noListing), so updated + no listing + no answer = total. All stored: the short
 -- form; otherwise "x of y" and a fragment for each kind of miss.
 function PinsUI.searchSummary(locale, counts)
     local ok, total = counts.ok or 0, counts.total or 0
     local noListing, failed = counts.noListing or 0, counts.failed or 0
-    if ok == total and noListing == 0 and failed == 0 then
-        return string.format(locale.SEARCH_UPDATED, ok)
+    local updated = math.max(0, ok - noListing)
+    if updated == total and noListing == 0 and failed == 0 then
+        return string.format(locale.SEARCH_UPDATED, updated)
     end
-    local text = string.format(locale.SEARCH_UPDATED_OF, ok, total)
+    local text = string.format(locale.SEARCH_UPDATED_OF, updated, total)
     if noListing > 0 then text = text .. string.format(locale.SEARCH_NO_LISTING, noListing) end
     if failed > 0 then text = text .. string.format(locale.SEARCH_NO_ANSWER, failed) end
     return text
@@ -203,7 +205,11 @@ function PinsUI.startSearch(recipes)
     if type(recipes) ~= "table" then recipes = CraftProfitCharDB.pins end
     local ids = PinsUI.wantedFor(recipes, ctl.itemInfo, ns.Data.Disenchant.lookup,
         ctl.knowsEnchanting())
-    if #ids == 0 then return end
+    if #ids == 0 then
+        -- Said rather than silent: the click did something, there was simply nothing to price.
+        setStatus(L.SEARCH_NOTHING)
+        return
+    end
     notFound = 0
     queue = ns.PriceQueue.new({
         itemIDs = ids,

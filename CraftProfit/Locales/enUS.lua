@@ -58,6 +58,7 @@ ns.Locale.register("enUS", {
     SEARCH_NO_LISTING = " · no listing: %d (nobody is selling them now)",
     SEARCH_NO_ANSWER = " · no answer: %d, try again",
     SEARCH_NEED_AH = "Open the auction house first",
+    SEARCH_NOTHING = "Nothing to search",
     SEARCH_UNSELLABLE = "This item cannot be sold at the auction house",
     ITEM_NOT_LOADED = "Item not loaded yet, try again in a moment",
     BROWSE_UNAVAILABLE = "The auction house search is not available",

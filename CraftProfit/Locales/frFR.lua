@@ -58,6 +58,7 @@ ns.Locale.register("frFR", {
     SEARCH_NO_LISTING = " · sans offre\194\160: %d (personne n'en vend)",
     SEARCH_NO_ANSWER = " · sans réponse\194\160: %d, réessayez",
     SEARCH_NEED_AH = "Ouvrez d'abord l'hôtel des ventes",
+    SEARCH_NOTHING = "Rien à rechercher",
     SEARCH_UNSELLABLE = "Cet objet ne peut pas être vendu à l'hôtel des ventes",
     ITEM_NOT_LOADED = "Objet pas encore chargé, réessayez dans un instant",
     BROWSE_UNAVAILABLE = "La recherche de l'hôtel des ventes n'est pas disponible",

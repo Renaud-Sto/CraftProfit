@@ -39,7 +39,7 @@ La case **Suivre l'historique** (à côté de Crafts) fait garder à CraftProfit
 
 ### Boutons Épingler et Actualiser recette
 
-**Actualiser recette** (à droite du bouton Épingler) interroge l'hôtel des ventes pour les seuls objets de la recette affichée : ses composants, l'objet obtenu et, si besoin, les matériaux de désenchantement. Cela prend quelques secondes (10 à 15 pour une recette ordinaire). Il ne marche que si l'hôtel des ventes est ouvert, qu'une recette est affichée et qu'aucune autre recherche n'est en cours ; sinon il est grisé. Son résultat s'affiche dans la ligne de statut sous la liste des épingles.
+**Actualiser recette** (à droite du bouton Épingler) interroge l'hôtel des ventes pour les seuls objets de la recette affichée : ses composants, l'objet obtenu et, si besoin, les matériaux de désenchantement. Cela prend quelques secondes. Il ne marche que si l'hôtel des ventes est ouvert, qu'une recette est affichée et qu'aucune autre recherche n'est en cours ; sinon il est grisé. Son résultat s'affiche dans la ligne de statut sous la liste des épingles.
 
 **Épingler** garde la recette dans votre liste d'épingles, utilisable même fenêtre de métier fermée. **Désépingler** la retire. Un personnage peut épingler 20 recettes par défaut ; changez la limite (12, 20, 30 ou 40) dans la [fenêtre d'options](#fenêtre-doptions). Quand la liste est pleine, le chat indique « Limite de recettes épinglées atteinte (20). Augmentez-la dans /cp options. »
 
@@ -58,10 +58,10 @@ Trois façons de mettre les prix à jour, de la plus rapide à la plus large :
 
 À la fin d'une actualisation, la ligne de statut dit ce qui s'est passé :
 
-- `12 objets mis à jour` : tous les objets ont répondu avec des offres.
-- `12 objets sur 12 mis à jour · sans offre : 3 (personne n'en vend)` : ces objets ont répondu, mais personne n'en vend en ce moment ; leur ancien prix (s'il existe) est gardé.
-- `10 objets sur 12 mis à jour · sans réponse : 2, réessayez` : l'hôtel des ventes n'a pas répondu à temps pour ces objets ; appuyez de nouveau sur le bouton.
-- Les deux peuvent apparaître ensemble. Une recherche arrêtée par la fermeture de l'hôtel des ventes affiche `Recherche annulée`.
+- `12 objets mis à jour` : tous les prix ont été mis à jour.
+- `9 objets sur 12 mis à jour · sans offre : 3 (personne n'en vend)` : 9 prix ont été mis à jour ; les 3 autres objets ont répondu, mais personne n'en vend en ce moment, donc leur ancien prix (s'il existe) est gardé.
+- `10 objets sur 12 mis à jour · sans réponse : 2, réessayez` : l'hôtel des ventes n'a pas répondu à temps pour 2 objets ; appuyez de nouveau sur le bouton.
+- Les deux peuvent apparaître ensemble ; les trois nombres font toujours le total (`0 objets sur 3 mis à jour · sans offre : 3 ...` quand personne n'en vend aucun). `Rien à rechercher` signifie que la recette n'a aucun objet à chiffrer. Une recherche arrêtée par la fermeture de l'hôtel des ventes affiche `Recherche annulée`.
 
 ### La liste des épingles
 

@@ -39,7 +39,7 @@ The **Track history** box (next to Crafts) makes CraftProfit keep the prices of 
 
 ### Pin and Refresh recipe buttons
 
-**Refresh recipe** (right of the Pin button) searches the auction house for the items of the recipe on screen only: its reagents, the crafted item and, when relevant, the disenchant materials. It takes a few seconds (about 10 to 15 for a usual recipe). It works only while the auction house is open, a recipe is shown and no other search is running; otherwise it is greyed out. Its result shows in the status line under the pinned list.
+**Refresh recipe** (right of the Pin button) searches the auction house for the items of the recipe on screen only: its reagents, the crafted item and, when relevant, the disenchant materials. It takes a few seconds. It works only while the auction house is open, a recipe is shown and no other search is running; otherwise it is greyed out. Its result shows in the status line under the pinned list.
 
 **Pin** keeps the recipe in your pinned list, usable even with the profession window closed. **Unpin** removes it. A character can pin 20 recipes by default; change the limit (12, 20, 30 or 40) in the [options window](#options-window). When the list is full, the chat says "Pinned recipes limit reached (20). Raise it in /cp options."
 
@@ -58,10 +58,10 @@ When the auction house opens, the window shows the **Pinned recipes** panel unde
 
 When a refresh ends, the status line says what happened:
 
-- `Updated 12 items`: every item answered with listings.
-- `Updated 12 of 12 items · no listing: 3 (nobody is selling them now)`: those items answered, but nobody is selling them at the moment, so their old price (if any) is kept.
-- `Updated 10 of 12 items · no answer: 2, try again`: the auction house did not answer for those items in time; press the button again.
-- Both fragments can appear together. A search stopped by closing the auction house says `Search cancelled`.
+- `Updated 12 items`: every price was updated.
+- `Updated 9 of 12 items · no listing: 3 (nobody is selling them now)`: 9 prices were updated; the other 3 items answered, but nobody is selling them at the moment, so their old price (if any) is kept.
+- `Updated 10 of 12 items · no answer: 2, try again`: the auction house did not answer for 2 items in time; press the button again.
+- Both fragments can appear together; the three numbers always add up to the total (`Updated 0 of 3 items · no listing: 3 ...` when nobody sells any of them). `Nothing to search` means the recipe has no item to price. A search stopped by closing the auction house says `Search cancelled`.
 
 ### The pinned list
 

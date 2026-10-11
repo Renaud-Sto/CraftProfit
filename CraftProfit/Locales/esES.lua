@@ -58,6 +58,7 @@ ns.Locale.register("esES", {
     SEARCH_NO_LISTING = " · sin ofertas: %d (nadie las vende)",
     SEARCH_NO_ANSWER = " · sin respuesta: %d, reintenta",
     SEARCH_NEED_AH = "Abre primero la casa de subastas",
+    SEARCH_NOTHING = "Nada que buscar",
     SEARCH_UNSELLABLE = "Este objeto no se puede vender en la casa de subastas",
     ITEM_NOT_LOADED = "Objeto aún no cargado, inténtalo de nuevo en un momento",
     BROWSE_UNAVAILABLE = "La búsqueda de la casa de subastas no está disponible",

@@ -428,6 +428,12 @@ function Controller.savePinsPosition(x, y)
     end
 end
 
+function Controller.saveLevelPosition(x, y)
+    if Util.isFinite(x) and Util.isFinite(y) then
+        CraftProfitDB.settings.levelWindow = { x = x, y = y }
+    end
+end
+
 -- The main window, as /cp show and /cp hide drive it.
 function Controller.showMainWindow()
     local window = ns.Window
@@ -768,7 +774,7 @@ function Controller.init()
     if ns.PinsUI then ns.PinsUI.init(Controller) end
     if ns.LevelingUI then
         ns.LevelingUI.init(Controller, {
-            onMoved = function(_, x, y) CraftProfitDB.settings.levelWindow = { x = x, y = y } end,
+            onMoved = function(_, x, y) Controller.saveLevelPosition(x, y) end,
         })
         ns.LevelingUI.attach(CraftProfitDB.settings.levelWindow)
     end

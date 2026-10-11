@@ -199,6 +199,9 @@ function LevelingUI.init(controller, h)
         width = WIDTH,
         height = CHROME_H + PAD + total + PAD,
         onMoved = function(point, x, y)
+            -- Kept for the next open in this session too (place reads it), as the pinned
+            -- and options windows do.
+            savedPosition = { x = x, y = y }
             if handlers.onMoved then handlers.onMoved(point, x, y) end
         end,
     })

@@ -12,6 +12,13 @@ CraftProfit is an addon for **World of Warcraft: Forever**. Select a recipe you 
 
 > **Status: 1.0.0, for the WoW: Forever beta** (build 1.60.1, Interface 16001), where it was built and tested. Disenchant data still comes from the Classic tables and is marked *beta* in the window. See [Known limitations](docs/user-guide.md#known-limitations).
 
+## Screenshots
+
+![The main window at the auction house, with the pinned list under it](docs/screenshots/01-main-window.png)
+![The pinned recipes window](docs/screenshots/02-pinned-window.png)
+![The leveling window](docs/screenshots/03-leveling.png)
+![The options window](docs/screenshots/04-options.png)
+
 ## Features
 
 - **Recipe cost** from live auction house prices, with the reagent detail unfolded under the total.

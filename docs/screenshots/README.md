@@ -1,6 +1,6 @@
 # Screenshots
 
-The screenshots of the project, used by the [README](../../README.md) and the [CurseForge page](../curseforge/project-page.md). None is taken yet: the README and the CurseForge page link them once the files are here.
+The screenshots of the project, used by the [README](../../README.md) and the [CurseForge page](../curseforge/project-page.md). They were taken on 2026-10-11 on the WoW: Forever beta (build 1.60.1), English client. `04-options.png` and `02-pinned-window.png` are crops of `05-all-windows.png`; `06-main-window-loss.png` shows a recipe that loses money. Retake them when the look changes.
 
 Take them on an **English client** (`/cp locale` back to the game language if you forced another one), with real prices (run **Scan AH** first), at your usual UI scale. Save them as PNG in this folder, with exactly these names. Crop out other players' names and the chat if it shows anything personal.
 

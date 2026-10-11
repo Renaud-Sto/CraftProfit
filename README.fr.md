@@ -12,6 +12,15 @@ CraftProfit est un addon pour **World of Warcraft: Forever**. Sélectionnez une 
 
 > **État : version 1.0.0, pour la bêta de WoW: Forever** (build 1.60.1, Interface 16001), sur laquelle elle a été développée et testée. Les données de désenchantement viennent encore des tables du Classic et sont marquées *bêta* dans la fenêtre. Voir les [limites connues](docs/user-guide.fr.md#limites-connues).
 
+## Captures d'écran
+
+![La fenêtre principale à l'hôtel des ventes, avec la liste épinglée dessous](docs/screenshots/01-main-window.png)
+![La fenêtre des recettes épinglées](docs/screenshots/02-pinned-window.png)
+![La fenêtre de montée de métier](docs/screenshots/03-leveling.png)
+![La fenêtre d'options](docs/screenshots/04-options.png)
+
+(Captures du client en anglais.)
+
 ## Fonctionnalités
 
 - **Coût d'une recette** aux prix réels de l'hôtel des ventes, avec le détail des composants sous le total.

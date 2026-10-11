@@ -76,9 +76,9 @@ Made for **World of Warcraft: Forever** (beta build 1.60.1, Interface 16001). No
 
 *CraftProfit is a fan-made addon, not affiliated with or endorsed by Blizzard Entertainment.*
 
-## Gallery (needed before submission)
+## Gallery
 
-Upload the screenshots listed in [docs/screenshots/README.md](../screenshots/README.md) (English client, real game images), with their titles: the main window, the pinned recipes window, the leveling window, the options window and, optionally, all windows together. Avoid other players' names in the shot (crop or choose a quiet spot).
+The screenshots are in [docs/screenshots](../screenshots/README.md) (English client, real game images): `01-main-window.png`, `02-pinned-window.png`, `03-leveling.png`, `04-options.png`, `05-all-windows.png` and `06-main-window-loss.png`. Upload them in the CurseForge gallery with these titles: the main window at the auction house, the pinned recipes window, the leveling window, the options window, all windows together, and a recipe that loses money (best option: disenchant).
 
 ## Project icon
 

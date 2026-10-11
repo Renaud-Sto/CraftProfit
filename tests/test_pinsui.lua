@@ -930,3 +930,61 @@ H.test("the retry status reads in French and Spanish", function()
         H.eq(F.ns.PinsUI.status, text)
     end
 end)
+
+-- 102 is bound on pickup; 103 is not loaded (no item info yet).
+local BOP_ITEMS = {
+    [100] = ITEMS[100], [101] = ITEMS[101],
+    [102] = { quality = 2, ilvl = 15, sellPrice = 200, classID = 0, bindType = 1 },
+}
+
+local function bootBop()
+    local T = W.boot(H, { items = BOP_ITEMS })
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    T.sent = {}
+    T.ns.AH.search = function(id) T.sent[#T.sent + 1] = id; return true end
+    T.ns.AH.isOpen = true
+    return T
+end
+
+H.test("a crafted item bound on pickup is not searched; its reagents are", function()
+    local T = bootBop()
+    local C = T.ns.Controller
+    local bop = T.ns.Recipes.normalize(raw(5, 102, { { itemID = 1, qty = 2 }, { itemID = 2, qty = 1 } }))
+    H.eq(T.ns.PinsUI.wantedFor({ bop }, C.itemInfo, T.ns.Data.Disenchant.lookup), { 1, 2 })
+    -- Mixed with a sellable recipe: only the bound output is left out.
+    local sellable = T.ns.Recipes.normalize(raw(6, 100, { { itemID = 3, qty = 1 } }))
+    H.eq(T.ns.PinsUI.wantedFor({ bop, sellable }, C.itemInfo, T.ns.Data.Disenchant.lookup), { 1, 2, 3, 100 })
+end)
+
+H.test("a crafted item whose info is not loaded yet is still searched", function()
+    local T = bootBop()
+    local C = T.ns.Controller
+    local unknown = T.ns.Recipes.normalize(raw(7, 103, { { itemID = 1, qty = 1 } }))
+    H.eq(T.ns.PinsUI.wantedFor({ unknown }, C.itemInfo, T.ns.Data.Disenchant.lookup), { 1, 103 })
+end)
+
+H.test("the summary of a bound-on-pickup recipe counts only its reagents", function()
+    local T = bootBop()
+    local P = T.ns.PinsUI
+    local bop = T.ns.Recipes.normalize(raw(5, 102, { { itemID = 1, qty = 2 }, { itemID = 2, qty = 1 } }))
+    P.startSearch({ bop })
+    H.eq(P.status, "Searching 0/2")
+    P.onSearchResults(1, listing)
+    P.onSearchResults(2, listing)
+    H.eq(T.sent, { 1, 2 })
+    H.eq(P.status, "Updated 2 prices")
+    -- With a miss (also missed on the retry): "of 2", never the bound item.
+    P.startSearch({ bop })
+    P.onSearchResults(1, listing)
+    P.onSearchResults(2, {})
+    P.onSearchResults(2, {})
+    H.eq(P.status, "Updated 1 of 2 prices · no listing: #2 (nobody is selling them now)")
+end)
+
+H.test("the main window shows n/a on the AH tile of a bound-on-pickup item, as before", function()
+    local T = bootBop()
+    T.ns.Controller.setRecipe(T.ns.Recipes.normalize(raw(5, 102, { { itemID = 1, qty = 2 } })), "profession")
+    local tile = T.ns.Window.lastModel.tiles[1]
+    H.eq(tile.key, "ah")
+    H.eq(tile.value, "n/a")
+end)

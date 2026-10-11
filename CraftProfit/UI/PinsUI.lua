@@ -48,12 +48,31 @@ function PinsUI.setStatus(text)
 end
 local setStatus = PinsUI.setStatus
 
--- Item ids whose prices all the given recipes need, each listed once.
+-- Bind on pickup (C_Item.GetItemInfo's bindType), as Evaluate and Controller.historyItems.
+local BIND_ON_PICKUP = 1
+
+-- True when the recipe's crafted item can never be sold at the AH (bind on pickup): its
+-- price is not worth a search (the AH tile already says n/a). When the item info is not
+-- loaded yet, the binding is unknown: it is searched, as before.
+local function unsellableOutput(recipe, itemInfo)
+    local info = itemInfo(recipe.outputItemID)
+    if type(info) ~= "table" or info.bindType ~= BIND_ON_PICKUP then return false end
+    -- Also one of its own reagents (unlikely): the reagent still needs its price.
+    for _, r in ipairs(recipe.reagents or {}) do
+        if r.itemID == recipe.outputItemID then return false end
+    end
+    return true
+end
+
+-- Item ids whose prices all the given recipes need, each listed once. A crafted item bound
+-- on pickup is left out (it cannot be sold at the AH), so it is never searched nor counted
+-- in the summary; its reagents and disenchant materials are kept.
 function PinsUI.wantedFor(pins, itemInfo, lookup, knowsEnchanting)
     local ids, seen = {}, {}
     for _, recipe in ipairs(pins) do
+        local skip = unsellableOutput(recipe, itemInfo) and recipe.outputItemID or nil
         for _, id in ipairs(ns.Evaluate.wantedItems(recipe, itemInfo, lookup, knowsEnchanting)) do
-            if not seen[id] then
+            if id ~= skip and not seen[id] then
                 seen[id] = true
                 ids[#ids + 1] = id
             end

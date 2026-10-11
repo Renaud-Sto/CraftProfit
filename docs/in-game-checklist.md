@@ -213,6 +213,7 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Close the AH mid-search (recipe or pinned): `Search cancelled`, no Lua error; reopen the AH: Refresh recipe is enabled again.
 - [ ] The options window note names **Refresh pinned** (and its French and Spanish names), still on three lines at most.
 
+- [ ] A recipe whose crafted item is bound on pickup (its AH tile shows `n/a`): Refresh recipe counts only its reagents (and disenchant materials when shown), the bound item is never searched (no `SEND` for it in the trace) and never named in the summary.
 - [ ] Retry: when a refresh misses prices, the status shows `Retrying 0/n … n/n` for only those items before the summary (n = the missed ones); a price found on the retry is counted as updated and not named. No third try. Close the AH during the retry: `Search cancelled`, no error. Refresh recipe stays greyed across both tries.
 - [ ] Search trace (probe, F13): with `probe/CraftProfitProbe` enabled, `/cpp clear`, `/cpp trace on`, run a Refresh pinned with 20 pins, `/cpp trace off`, `/reload`; nothing extra in chat while tracing; the log has `TRACE` lines for every `SEND` and search event. Note per missed item: number of events, `results` at the first event vs later, the gap from `SEND`, any throttle `QUEUED` / `DROPPED` and the time to `SYSTEM_READY`; copy the findings into probe-findings F13.
 

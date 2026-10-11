@@ -59,6 +59,8 @@ Important changes go through a pull request; `main` stays releasable.
 
 Short imperative subject with a type prefix: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`. Explain the *why* in the body when it is not obvious. One logical change per commit.
 
+Files are committed as mode 644 (only `tests/check.sh` is executable). Some synced or shared folders flip files to 755 by themselves: before committing, `git diff --summary` must show no `mode change` line. Restore an untouched file with `git checkout -- <file>`, `chmod 644` a file you edited, or set `git config core.fileMode false` in your clone. Add files by name rather than with `git add -A`.
+
 ## Code conventions
 
 - Lua 5.1 only (what the game runs). No `goto`, no integer division, no `table.unpack`.
@@ -72,7 +74,7 @@ Short imperative subject with a type prefix: `feat:`, `fix:`, `docs:`, `test:`, 
 ## Adding or fixing a language
 
 1. Strings live in `CraftProfit/Locales/<code>.lua`. `enUS.lua` is the reference.
-2. Each language must define exactly the same keys as `enUS`, keep the same format specifiers (`%d`, `%s`) and leave no string empty; `tests/test_locale.lua` checks this.
+2. Each language must define exactly the same keys as `enUS`, keep the same format specifiers (`%d`, `%s`) **in the same order** (Lua 5.1 has no positional arguments, so a swapped `%s` and `%d` raises in game) and leave no string empty; `tests/test_locale.lua` checks this.
 3. To add a language: create the file, add it to `CraftProfit/CraftProfit.toc` after `Locale.lua`, register it with `ns.Locale.register("<code>", {...})`, and add it to the test. Run `/cp locale <code>` in game to review it.
 4. Item and recipe names come from the game and must never be translated by hand.
 

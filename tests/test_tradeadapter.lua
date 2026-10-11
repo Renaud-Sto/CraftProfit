@@ -291,3 +291,91 @@ H.test("professionInfo names the open profession from the info table or the clas
     T.env.GetTradeSkillLine = function() error("boom") end
     H.eq({ T.Trade.professionInfo() }, {})
 end)
+
+-- Names in the client's current language
+H.test("a recipe read from the window carries the client's language", function()
+    local T = setup()
+    T.env.ProfessionsFrame = professions(5)
+    T.env.Enum = { CraftingReagentType = { Basic = BASIC } }
+    T.env.C_TradeSkillUI = mainlineApi()
+    H.eq(T.Trade.readSelected().locale, nil)
+    T.env.GetLocale = function() return "frFR" end
+    H.eq(T.Trade.readSelected().locale, "frFR")
+    H.eq(T.Trade.locale(), "frFR")
+    T.env.GetLocale = function() error("boom") end
+    H.eq(T.Trade.locale(), nil)
+    T.env.issecretvalue = function(v) return v == "SECRET" end
+    T.env.GetLocale = function() return "SECRET" end
+    H.eq(T.Trade.locale(), nil)
+end)
+
+H.test("recipeName reads the client's recipe name, nil when missing, empty, secret or raising", function()
+    local T = setup()
+    H.eq(T.Trade.recipeName(3398), nil)
+    local name = "Hot Lion Chops"
+    T.env.C_TradeSkillUI = { GetRecipeInfo = function(id)
+        if id == 3398 then return { recipeID = id, name = name } end
+        return nil
+    end }
+    H.eq(T.Trade.recipeName(3398), "Hot Lion Chops")
+    H.eq(T.Trade.recipeName(7), nil)
+    H.eq(T.Trade.recipeName(nil), nil)
+    for _, bad in ipairs({ "", 12, "SECRET" }) do
+        name = bad
+        T.env.issecretvalue = function(v) return v == "SECRET" end
+        H.eq(T.Trade.recipeName(3398), nil)
+    end
+    T.env.C_TradeSkillUI = { GetRecipeInfo = function() error("boom") end }
+    H.eq(T.Trade.recipeName(3398), nil)
+end)
+
+H.test("professionName reads the character's profession list, then the trade skill display name", function()
+    local T = setup()
+    H.eq(T.Trade.professionName("185"), nil)
+    T.env.GetProfessions = function() return 3, nil, 7 end
+    T.env.GetProfessionInfo = function(index)
+        if index == 3 then return "Blacksmithing", "icon", 140, 150, 0, 0, 164 end
+        return "Cooking", "icon", 60, 75, 0, 0, 185
+    end
+    H.eq(T.Trade.professionName("185"), "Cooking")
+    H.eq(T.Trade.professionName("164"), "Blacksmithing")
+    -- Not a skill line id (an old key made of the name), or not one of the character's.
+    H.eq(T.Trade.professionName("Forge"), nil)
+    H.eq(T.Trade.professionName(nil), nil)
+    H.eq(T.Trade.professionName("129"), nil)
+    T.env.C_TradeSkillUI = { GetTradeSkillDisplayName = function(id) return id == 129 and "First Aid" or "" end }
+    H.eq(T.Trade.professionName("129"), "First Aid")
+    H.eq(T.Trade.professionName("333"), nil)
+    T.env.C_TradeSkillUI = { GetTradeSkillDisplayName = function() error("boom") end }
+    H.eq(T.Trade.professionName("129"), nil)
+    -- A secret name in the list is skipped.
+    T.env.issecretvalue = function(v) return v == "Cooking" end
+    H.eq(T.Trade.professionName("185"), nil)
+end)
+
+H.test("isDataSourceChanging asks the client, false when it cannot", function()
+    local T = setup()
+    H.eq(T.Trade.isDataSourceChanging(), false)
+    T.env.C_TradeSkillUI = { IsDataSourceChanging = function() return true end }
+    H.eq(T.Trade.isDataSourceChanging(), true)
+    T.env.C_TradeSkillUI = { IsDataSourceChanging = function() return false end }
+    H.eq(T.Trade.isDataSourceChanging(), false)
+    T.env.C_TradeSkillUI = { IsDataSourceChanging = function() error("boom") end }
+    H.eq(T.Trade.isDataSourceChanging(), false)
+end)
+
+H.test("cancelScan drops the scan in progress without calling it back", function()
+    local T = setup()
+    local api = mainlineApi({ GetAllRecipeIDs = function() return { 10, 11, 12 } end })
+    openProfession(T, api)
+    T.Trade.KNOWN_CHUNK = 1
+    local done, aborted = false, false
+    T.Trade.scanKnown(function() done = true end, function() aborted = true end)
+    T.Trade.cancelScan()
+    T.drain()
+    H.eq({ done, aborted }, { false, false })
+    -- A new scan afterwards runs normally.
+    T.Trade.scanKnown(function() done = true end)
+    T.drain()
+    H.truthy(done)
+end)

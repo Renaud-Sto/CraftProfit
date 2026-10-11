@@ -32,18 +32,26 @@ local ENCHANTING_SPELL = 7411
 
 -- True when the character has the profession. GetProfessions lists the
 -- professions' indices; GetProfessionInfo returns the skill line as 7th value.
-function Trade.hasProfession(skillLine)
-    if type(GetProfessions) == "function" and type(GetProfessionInfo) == "function" then
-        local listed = { pcall(GetProfessions) }
-        if listed[1] then
-            for i = 2, 8 do
-                local index = listed[i]
-                if type(index) == "number" and not isSecret(index) then
-                    local ok, _, _, _, _, _, _, line = pcall(GetProfessionInfo, index)
-                    if ok and not isSecret(line) and line == skillLine then return true end
-                end
-            end
+-- The character's professions as { name, line } (the name in the client's current
+-- language; works with every profession window closed), possibly empty.
+local function professions()
+    local list = {}
+    if type(GetProfessions) ~= "function" or type(GetProfessionInfo) ~= "function" then return list end
+    local listed = { pcall(GetProfessions) }
+    if not listed[1] then return list end
+    for i = 2, 8 do
+        local index = listed[i]
+        if type(index) == "number" and not isSecret(index) then
+            local ok, name, _, _, _, _, _, line = pcall(GetProfessionInfo, index)
+            if ok and not isSecret(line) then list[#list + 1] = { name = name, line = line } end
         end
+    end
+    return list
+end
+
+function Trade.hasProfession(skillLine)
+    for _, prof in ipairs(professions()) do
+        if prof.line == skillLine then return true end
     end
     if skillLine == Trade.ENCHANTING_SKILL_LINE and type(IsPlayerSpell) == "function" then
         local ok, known = pcall(IsPlayerSpell, ENCHANTING_SPELL)
@@ -62,6 +70,54 @@ function Trade.difficultyOf(recipeID)
     local difficulty = info.relativeDifficulty
     if isSecret(difficulty) then return nil end
     return ns.Data.Skillup.name(difficulty)
+end
+
+-- The client's language code ("frFR"), or nil.
+function Trade.locale()
+    if type(GetLocale) ~= "function" then return nil end
+    local ok, locale = pcall(GetLocale)
+    return ok and Util.text(locale, isSecret) or nil
+end
+
+-- The recipe's name in the client's current language, from the game's recipe data, or nil.
+-- The game answers with the profession window closed too (measured: a table either way;
+-- whether its name is filled then is not measured yet, `/cpp rname` shows it). A missing,
+-- empty or secret name gives nil and the caller falls back to the crafted item's name.
+function Trade.recipeName(recipeID)
+    local api = C_TradeSkillUI
+    if not (api and api.GetRecipeInfo) or not Util.id(recipeID) then return nil end
+    local ok, info = pcall(api.GetRecipeInfo, recipeID)
+    if not ok or type(info) ~= "table" then return nil end
+    return Util.text(info.name, isSecret)
+end
+
+-- The name of a stored profession (its key, the skill line id as a string: "185") in the
+-- client's current language, or nil. The character's profession list first (it needs no
+-- open window), then the trade skill API's display name.
+function Trade.professionName(key)
+    local line = Util.id(tonumber(key))
+    if not line then return nil end
+    for _, prof in ipairs(professions()) do
+        if prof.line == line then
+            local name = Util.text(prof.name, isSecret)
+            if name then return name end
+        end
+    end
+    local api = C_TradeSkillUI
+    if api and api.GetTradeSkillDisplayName then
+        local ok, name = pcall(api.GetTradeSkillDisplayName, line)
+        if ok then return Util.text(name, isSecret) end
+    end
+    return nil
+end
+
+-- True while the game is switching the window to another profession (the list is not
+-- rebuilt yet: the Blizzard window waits too). False when the client cannot tell.
+function Trade.isDataSourceChanging()
+    local api = C_TradeSkillUI
+    if not (api and api.IsDataSourceChanging) then return false end
+    local ok, changing = pcall(api.IsDataSourceChanging)
+    return ok and not isSecret(changing) and changing == true
 end
 
 function Trade.frame()
@@ -124,7 +180,7 @@ local function readA(recipeID)
     local name = info.name
     if isSecret(name) then name = nil end
     return {
-        recipeID = recipeID, name = name, difficulty = info.relativeDifficulty,
+        recipeID = recipeID, name = name, locale = Trade.locale(), difficulty = info.relativeDifficulty,
         outputItemID = schematic.outputItemID,
         qtyMin = schematic.quantityMin, qtyMax = schematic.quantityMax,
         reagents = reagents,
@@ -145,7 +201,7 @@ local function readB(recipeID, index)
             }
         end
         return {
-            recipeID = recipeID, name = name, difficulty = kind,
+            recipeID = recipeID, name = name, locale = Trade.locale(), difficulty = kind,
             outputItemID = Trade.idFromLink(GetTradeSkillItemLink(index), "item"),
             qtyMin = minMade, qtyMax = maxMade, reagents = reagents,
         }
@@ -231,6 +287,12 @@ function Trade.scanKnown(onDone, onAbort)
     end
     step()
     return true
+end
+
+-- Abandons the scan in progress (its callbacks are never called): the window switched to
+-- another profession, the list it was reading is gone.
+function Trade.cancelScan()
+    knownToken = knownToken + 1
 end
 
 -- Calls onChange(recipeID|nil) whenever the selection changes.

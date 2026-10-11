@@ -56,12 +56,12 @@ Trois façons de mettre les prix à jour, de la plus rapide à la plus large :
 - **Actualiser épinglées** chiffre tous les composants et tous les objets obtenus des recettes épinglées, un objet à la fois, avec un compteur de progression : environ une minute pour 20 recettes épinglées. Avec beaucoup de recettes épinglées, **Scanner l'HV** va souvent plus vite. Les prix sont enregistrés avec leur date. Si vous fermez l'hôtel des ventes en cours de route, la recherche est annulée et les prix déjà reçus sont conservés. Une seule recherche à la fois : Actualiser recette est grisé pendant qu'elle tourne.
 - **Scanner l'HV** lit tout l'hôtel des ventes d'un coup (le jeu autorise un scan complet par tranche de 15 minutes et par compte). Il chiffre des milliers d'objets, ce qui permet d'évaluer ensuite n'importe quelle recette. Si un autre addon lance un scan, CraftProfit utilise son résultat sans refaire de demande. Si le serveur ne répond pas, le statut le dit : le délai de 15 minutes est probablement en cours.
 
-À la fin d'une actualisation, la ligne de statut dit ce qui s'est passé :
+À la fin d'une actualisation, la ligne de statut dit ce qui s'est passé. Elle compte des prix : un par objet recherché, c'est-à-dire pas seulement les composants, mais aussi l'objet obtenu et, s'il peut être désenchanté, ses matériaux de désenchantement. Une recette à 5 composants peut donc compter 7 prix.
 
-- `12 objets mis à jour` : tous les prix ont été mis à jour.
-- `9 objets sur 12 mis à jour · sans offre : 3 (personne n'en vend)` : 9 prix ont été mis à jour ; les 3 autres objets ont répondu, mais personne n'en vend en ce moment, donc leur ancien prix (s'il existe) est gardé.
-- `10 objets sur 12 mis à jour · sans réponse : 2, réessayez` : l'hôtel des ventes n'a pas répondu à temps pour 2 objets ; appuyez de nouveau sur le bouton.
-- Les deux peuvent apparaître ensemble ; les trois nombres font toujours le total (`0 objets sur 3 mis à jour · sans offre : 3 ...` quand personne n'en vend aucun). `Rien à rechercher` signifie que la recette n'a aucun objet à chiffrer. Une recherche arrêtée par la fermeture de l'hôtel des ventes affiche `Recherche annulée`.
+- `7 prix mis à jour` : tous les prix ont été mis à jour.
+- `6 prix sur 7 mis à jour · sans réponse : Barre d'argent, réessayez` : l'hôtel des ventes n'a pas répondu à temps pour cet objet ; appuyez de nouveau sur le bouton. Un ou deux objets manquants sont nommés ; au-delà, la ligne donne leur nombre (`sans réponse : 3, réessayez`).
+- `5 prix sur 7 mis à jour · sans offre : Barre de cuivre, Barre d'argent (personne n'en vend)` : ces objets ont répondu, mais personne n'en vend en ce moment ; leur ancien prix (s'il existe) est gardé.
+- Les deux peuvent apparaître ensemble ; les trois nombres font toujours le total (`0 prix sur 3 mis à jour · sans offre : 3 ...` quand personne n'en vend aucun). La ligne tient sur deux lignes au plus : un nom d'objet très long est coupé par `...`. `Rien à rechercher` signifie que la recette n'a aucun objet à chiffrer. Une recherche arrêtée par la fermeture de l'hôtel des ventes affiche `Recherche annulée`.
 
 ### La liste des épingles
 

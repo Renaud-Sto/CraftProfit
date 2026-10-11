@@ -11,7 +11,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ### Changed
 - **Search prices** is renamed **Refresh pinned** (FR "Actualiser épinglées", ES "Actualizar fijadas"); it still prices every pinned recipe, one item at a time (about a minute for 20 recipes). **Scan AH** is unchanged.
-- The search status says what happened: "Updated 12 items" when everything answered with listings, else "Updated 10 of 12 items" followed by "no listing: n (nobody is selling them now)" and/or "no answer: n, try again", instead of "n not found".
+- The search status says what happened, counted in prices (one per item searched: the materials, the crafted item and its disenchant materials): "Updated 7 prices" when every price was stored, else "Updated 6 of 7 prices" followed by "no listing: … (nobody is selling them now)" and/or "no answer: …, try again", naming the items when there are one or two of a kind (e.g. "no answer: Silver Bar, try again") and giving their number otherwise, instead of "n not found". The status line is cut at two lines.
 - The default pinned recipes limit is now 20 per character (it was 12 in 1.0.0). Saves from 1.0.0 load unchanged.
 
 ### Fixed

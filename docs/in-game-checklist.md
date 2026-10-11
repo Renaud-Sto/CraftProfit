@@ -28,7 +28,7 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 
 ## Auction house
 - [ ] Opening the AH shows the window with the Pinned recipes section (first pin selected).
-- [ ] **Refresh pinned** counts `1/N … N/N` and ends with `Updated N items` (or the longer summary, see Refresh actions); prices and the verdict fill in; the age reads a few seconds.
+- [ ] **Refresh pinned** counts `1/N … N/N` and ends with `Updated N prices` (or the longer summary, see Refresh actions); prices and the verdict fill in; the age reads a few seconds.
 - [ ] Closing the AH during a search shows `Search cancelled` with no error.
 - [ ] **Scan AH** starts a scan, the client does not freeze, the status ends `Scan complete: N items priced`. A second press inside 15 minutes shows the cooldown message.
 - [ ] A scan started by another addon (if installed) is picked up (prices refresh) without pressing Scan.
@@ -208,7 +208,8 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] At the AH, pick a recipe with old prices, press **Refresh recipe**: the status counts `1/N … N/N` over that recipe's items only (reagents, output, disenchant materials when shown), ends within seconds (note how many), and only that recipe's prices and age change (another pin keeps its old age in the pinned window).
 - [ ] While any search runs (recipe or pinned), Refresh recipe is greyed; it comes back at the end. Pressing **Refresh pinned** during a recipe refresh does nothing; the recipe refresh finishes normally.
 - [ ] **Refresh pinned** right after a recipe refresh: counts all the pinned items and its summary does not carry the previous misses.
-- [ ] Summary lines: everything found shows `Updated N items`; an item nobody sells (search a rare reagent) shows `Updated N-1 of N items · no listing: 1 (nobody is selling them now)` (the three numbers add up to N; a recipe nobody sells anything of shows `Updated 0 of N items · no listing: N ...`); a slow server or a throttled search shows `· no answer: n, try again`; both can show together and stay within two lines, also in French (`sans offre : n`, non-breaking space before the colon) and Spanish.
+- [ ] Summary lines: everything found shows `Updated N prices`; an item nobody sells (search a rare reagent) shows `Updated N-1 of N prices · no listing: <its name> (nobody is selling them now)` (the three numbers add up to N; a recipe nobody sells anything of shows `Updated 0 of N prices · no listing: N ...`); a slow server or a throttled search shows `· no answer: <name>, try again` (one or two names, a number from three on); both can show together; the line never goes past two lines (long names cut with `...`), also in French (`sans réponse : Barre d'argent, réessayez`, non-breaking space before the colon) and Spanish.
+- [ ] For a recipe with 5 materials whose item can be disenchanted, Refresh recipe counts 7 prices (5 materials, the crafted item, a disenchant material): note the counts and that the named missing item is one of these.
 - [ ] Close the AH mid-search (recipe or pinned): `Search cancelled`, no Lua error; reopen the AH: Refresh recipe is enabled again.
 - [ ] The options window note names **Refresh pinned** (and its French and Spanish names), still on three lines at most.
 

@@ -56,12 +56,12 @@ When the auction house opens, the window shows the **Pinned recipes** panel unde
 - **Refresh pinned** prices every reagent and every output of the pinned recipes, one item at a time, with a progress count: about a minute for 20 pinned recipes. With many recipes pinned, **Scan AH** is usually faster. Prices are saved with their date. If you close the auction house meanwhile, the search is cancelled and the prices already received are kept. Only one search runs at a time: Refresh recipe is greyed out while it runs.
 - **Scan AH** reads the entire auction house in one go (the game allows one full scan per 15 minutes per account). It prices thousands of items, so every recipe can be evaluated afterwards. If another addon starts a scan, CraftProfit uses its result without a second request. If the server does not answer, the status says so: the 15 minute cooldown is probably running.
 
-When a refresh ends, the status line says what happened:
+When a refresh ends, the status line says what happened. It counts prices: one per item searched, which is not only the materials but also the crafted item and, when it can be disenchanted, its disenchant materials. A recipe with 5 materials can therefore count 7 prices.
 
-- `Updated 12 items`: every price was updated.
-- `Updated 9 of 12 items · no listing: 3 (nobody is selling them now)`: 9 prices were updated; the other 3 items answered, but nobody is selling them at the moment, so their old price (if any) is kept.
-- `Updated 10 of 12 items · no answer: 2, try again`: the auction house did not answer for 2 items in time; press the button again.
-- Both fragments can appear together; the three numbers always add up to the total (`Updated 0 of 3 items · no listing: 3 ...` when nobody sells any of them). `Nothing to search` means the recipe has no item to price. A search stopped by closing the auction house says `Search cancelled`.
+- `Updated 7 prices`: every price was updated.
+- `Updated 6 of 7 prices · no answer: Silver Bar, try again`: the auction house did not answer in time for that item; press the button again. One or two missing items are named; with more, the line gives their number (`no answer: 3, try again`).
+- `Updated 5 of 7 prices · no listing: Copper Bar, Silver Bar (nobody is selling them now)`: those items answered, but nobody is selling them at the moment, so their old price (if any) is kept.
+- Both fragments can appear together; the three numbers always add up to the total (`Updated 0 of 3 prices · no listing: 3 ...` when nobody sells any of them). The line holds two lines at most: very long item names are cut with `...`. `Nothing to search` means the recipe has no item to price. A search stopped by closing the auction house says `Search cancelled`.
 
 ### The pinned list
 

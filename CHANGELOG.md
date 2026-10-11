@@ -4,6 +4,12 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ## [Unreleased]
 
+### Added
+- Pinned recipes limit in the options window: 12, 20, 30 or 40 recipes per character (account-wide setting), chosen with four buttons in the new **Pinned recipes** panel. A note under them says that a higher limit makes **Search prices** take longer, because the auction house is searched one item at a time. The change applies at once. When the list is full, pinning says "Pinned recipes limit reached (n). Raise it in /cp options." Lowering the limit never deletes a pin: the ones over the limit stay, and new pins are refused until the list is under the limit again.
+
+### Changed
+- The default pinned recipes limit is now 20 per character (it was 12 in 1.0.0). Saves from 1.0.0 load unchanged.
+
 ### Fixed
 - Recipe and profession names follow the game language after a language change: pinned recipes, the leveling window, the main window title and `/cp history` no longer keep the names of the language they were saved in. Switching profession with the tabs of the open profession window now refreshes the leveling list and the pinned difficulties too.
 

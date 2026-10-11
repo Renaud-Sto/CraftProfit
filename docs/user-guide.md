@@ -39,7 +39,7 @@ The **Track history** box (next to Crafts) makes CraftProfit keep the prices of 
 
 ### Pin button
 
-**Pin** keeps the recipe in your pinned list (up to 12 per character), usable even with the profession window closed. **Unpin** removes it.
+**Pin** keeps the recipe in your pinned list, usable even with the profession window closed. **Unpin** removes it. A character can pin 20 recipes by default; change the limit (12, 20, 30 or 40) in the [options window](#options-window). When the list is full, the chat says "Pinned recipes limit reached (20). Raise it in /cp options."
 
 ## At the auction house
 
@@ -65,7 +65,7 @@ Click a recipe in the list to show it in the window above.
 
 ### The pinned recipes window
 
-`/cp pins`, a right click on the minimap button (or on the CraftProfit entry of the addon compartment), or the **Pinned recipes** button of the options window opens a separate, movable window with your pinned recipes (12 per character at most). It works anywhere: no auction house or profession window needed. It shows the **last known prices** and never searches; the line at the top says how old the oldest price it uses is (from a scan or a price search), in orange when it is older than an hour.
+`/cp pins`, a right click on the minimap button (or on the CraftProfit entry of the addon compartment), or the **Pinned recipes** button of the options window opens a separate, movable window with your pinned recipes. It works anywhere: no auction house or profession window needed. It shows the **last known prices** and never searches; the line at the top says how old the oldest price it uses is (from a scan or a price search), in orange when it is older than an hour.
 
 - Each row shows the recipe, coloured by difficulty, and its value: the net result, or the cost per point, with the same colours and coin icons as the list at the auction house; `?` when a price is missing.
 - The sort button at the top switches **Sort: profit** and **Sort: cost/point**; it is the same choice as the list at the auction house.
@@ -138,6 +138,7 @@ Open it with `/cp options`, a left click on the minimap button, or the CraftProf
 Where windows open: a CraftProfit window that has never been dragged opens just right of the rightmost CraftProfit window already on screen, so they never pile up on each other (the screen edge keeps it visible). With none shown, the main window opens beside the profession or auction house window, the leveling window beside the main window, the pinned recipes window left of the middle of the screen and the options window in the middle. Once dragged, a window always reopens where you left it. The window you open or click last comes to the front, above the other CraftProfit windows and the game's HUD panels.
 
 - **Appearance**: pick the *Header strip* of every section (Carved wood, Shade or Streaks) and the *Tile card* of the price tiles (Loot card or Inset). The two mix freely (6 looks); the lit button is your choice. It applies at once to every window, open or not, and is saved for your account. Default: Shade and Inset.
+- **Pinned recipes**: the *Limit per character*, 12, 20, 30 or 40 (default 20); the lit button is your choice, saved for your account and used from the next pin. A higher limit makes **Search prices** take longer, because the auction house is searched one item at a time. Lowering the limit never deletes a pin: pins over the new limit stay, and new pins are refused until you unpin enough of them.
 - **Minimap**: *Show the minimap button*. Untick it to hide the button; `/cp minimap` hides it or brings it back too.
 - **Windows**: open or close the main window and the leveling window (first row) and the pinned recipes window (second row).
 - **Controls**: the minimap clicks and every command, one per line: the command in gold, what it does in white.

@@ -33,10 +33,10 @@ Select a recipe you know and a small window appears next to your profession wind
 - **Cost per skill point** (optional): what each point really costs, from the recipe colour; shown as a gain when the crafts pay for themselves.
 - **Several crafts at once**: multiply a recipe by 1 to 9999.
 - **Leveling window**: every recipe you know in a profession, ranked by the cost of the next skill point (or by speed).
-- **Pinned recipes** (12 per character), sorted by profit or by cost per point, to decide what to craft next; at the auction house and anywhere in their own window, with the last known prices.
+- **Pinned recipes** (20 per character by default; 12, 20, 30 or 40 in the options window), sorted by profit or by cost per point, to decide what to craft next; at the auction house and anywhere in their own window, with the last known prices.
 - **Auction house tools**: *Search prices* prices every pinned recipe; *Scan AH* reads the whole auction house; click a reagent to search it with the quantity already filled in, or the crafted item to see how many are for sale. CraftProfit never buys anything for you.
 - **Price history** (recording): tick *Track history* on up to 15 recipes to keep their prices scan after scan. Graphs are planned.
-- **Options window and minimap button**: pick the look of the windows, open the other windows, see every command.
+- **Options window and minimap button**: pick the look of the windows and the pinned recipes limit, open the other windows, see every command.
 - **Standalone**: no Auctionator or other addon needed.
 - **English, French and Spanish**, following the game language.
 

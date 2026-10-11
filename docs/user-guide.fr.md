@@ -39,7 +39,7 @@ La case **Suivre l'historique** (à côté de Crafts) fait garder à CraftProfit
 
 ### Bouton Épingler
 
-**Épingler** garde la recette dans votre liste d'épingles (12 par personnage au maximum), utilisable même fenêtre de métier fermée. **Désépingler** la retire.
+**Épingler** garde la recette dans votre liste d'épingles, utilisable même fenêtre de métier fermée. **Désépingler** la retire. Un personnage peut épingler 20 recettes par défaut ; changez la limite (12, 20, 30 ou 40) dans la [fenêtre d'options](#fenêtre-doptions). Quand la liste est pleine, le chat indique « Limite de recettes épinglées atteinte (20). Augmentez-la dans /cp options. »
 
 ## À l'hôtel des ventes
 
@@ -65,7 +65,7 @@ Cliquez sur une recette de la liste pour l'afficher dans la fenêtre au-dessus.
 
 ### La fenêtre des recettes épinglées
 
-`/cp pins`, un clic droit sur le bouton de la minicarte (ou sur l'entrée CraftProfit du compartiment d'addons), ou le bouton **Recettes épinglées** de la fenêtre d'options ouvre une fenêtre séparée et déplaçable avec vos recettes épinglées (12 par personnage au maximum). Elle marche partout : ni hôtel des ventes ni fenêtre de métier nécessaires. Elle montre les **derniers prix connus** et ne lance jamais de recherche ; la ligne du haut indique l'âge du plus ancien prix utilisé (venu d'un scan ou d'une recherche de prix), en orange au-delà d'une heure.
+`/cp pins`, un clic droit sur le bouton de la minicarte (ou sur l'entrée CraftProfit du compartiment d'addons), ou le bouton **Recettes épinglées** de la fenêtre d'options ouvre une fenêtre séparée et déplaçable avec vos recettes épinglées. Elle marche partout : ni hôtel des ventes ni fenêtre de métier nécessaires. Elle montre les **derniers prix connus** et ne lance jamais de recherche ; la ligne du haut indique l'âge du plus ancien prix utilisé (venu d'un scan ou d'une recherche de prix), en orange au-delà d'une heure.
 
 - Chaque ligne montre la recette, colorée selon sa difficulté, et sa valeur : le résultat net, ou le coût par point, avec les mêmes couleurs et icônes de pièces que la liste à l'hôtel des ventes ; `?` quand un prix manque.
 - Le bouton de tri en haut bascule entre **Tri : gain** et **Tri : coût/point** ; c'est le même choix que pour la liste à l'hôtel des ventes.
@@ -138,6 +138,7 @@ Ouvrez-la avec `/cp options`, un clic gauche sur le bouton de la minicarte, ou l
 Où s'ouvrent les fenêtres : une fenêtre CraftProfit jamais déplacée s'ouvre juste à droite de la fenêtre CraftProfit la plus à droite déjà à l'écran, pour qu'elles ne s'empilent jamais (le bord de l'écran la garde visible). Si aucune n'est affichée, la fenêtre principale s'ouvre à côté de la fenêtre de métier ou de l'hôtel des ventes, la montée de métier à côté de la fenêtre principale, les recettes épinglées à gauche du milieu de l'écran et les options au milieu. Une fois déplacée, une fenêtre se rouvre toujours là où vous l'avez laissée. La fenêtre ouverte ou cliquée en dernier passe au premier plan, au-dessus des autres fenêtres CraftProfit et des panneaux d'interface du jeu.
 
 - **Apparence** : choisissez le *Bandeau des sections* (Bois sculpté, Ombre ou Stries) et les *Cases de prix* (Carte de butin ou Encart). Les deux se combinent librement (6 apparences) ; le bouton allumé est votre choix. Il s'applique aussitôt à toutes les fenêtres, ouvertes ou non, et est enregistré pour le compte. Par défaut : Ombre et Encart.
+- **Recettes épinglées** : la *Limite par personnage*, 12, 20, 30 ou 40 (20 par défaut) ; le bouton allumé est votre choix, enregistré pour le compte et appliqué dès la prochaine épingle. Une limite plus haute rallonge **Rechercher les prix**, car l'hôtel des ventes est interrogé un objet à la fois. Baisser la limite ne supprime jamais d'épingle : celles au-delà de la nouvelle limite restent, et les nouvelles sont refusées tant que vous n'en avez pas retiré assez.
 - **Minicarte** : *Afficher le bouton de la minicarte*. Décochez pour masquer le bouton ; `/cp minimap` le masque ou le rétablit aussi.
 - **Fenêtres** : ouvre ou ferme la fenêtre principale et la fenêtre de montée de métier (première ligne) et la fenêtre des recettes épinglées (deuxième ligne).
 - **Commandes** : les clics sur la minicarte et toutes les commandes, une par ligne : la commande en doré, ce qu'elle fait en blanc.

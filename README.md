@@ -22,11 +22,11 @@ CraftProfit is an addon for **World of Warcraft: Forever**. Select a recipe you 
 - **Cost per skill point** (optional): what each point of skill really costs, from the colour of the recipe, shown as a gain when the crafts pay for themselves.
 - **Leveling window**: every recipe you know in a profession, ranked by the cost of a skill point, to see what to craft next.
 - **Several crafts at once**: multiply a recipe by 1 to 9999 crafts.
-- **Pinned recipes** (up to 12 per character), sorted by profit or by cost per point, to compare what to craft next; under the main window at the auction house, and anywhere in their own window (`/cp pins` or a right click on the minimap button).
+- **Pinned recipes** (20 per character by default; 12, 20, 30 or 40 in the options window), sorted by profit or by cost per point, to compare what to craft next; under the main window at the auction house, and anywhere in their own window (`/cp pins` or a right click on the minimap button).
 - **Auction house tools**: one button prices every pinned recipe, another scans the whole auction house. Click a reagent to search it in the auction house, quantity already filled in. CraftProfit never buys anything for you.
 - **Price history** (recording): tick *Track history* on up to 15 recipes and CraftProfit keeps their prices scan after scan, per ruleset (the game "realm" in the beta) and faction. Graphs are planned.
 - **Standalone**: no Auctionator, no other addon required. It also picks up the scans other addons start.
-- **Options window and minimap button**: pick the look of the windows (header strip and tile card), applied at once; open it from the minimap button, the addon compartment or `/cp options`.
+- **Options window and minimap button**: pick the look of the windows (header strip and tile card), applied at once, and the pinned recipes limit; open it from the minimap button, the addon compartment or `/cp options`.
 - **English, French and Spanish** (follows the game language).
 
 ## Install
@@ -54,7 +54,7 @@ The full walkthrough, every option and the explanation of each number are in the
 | `/cp` or `/craftprofit` | Show the command list |
 | `/cp show` / `hide` | Show or hide the window |
 | `/cp reset` | Put the window back next to the profession or auction house window |
-| `/cp options` | Open or close the options window (look of the windows, minimap button, controls) |
+| `/cp options` | Open or close the options window (look of the windows, pinned recipes limit, minimap button, controls) |
 | `/cp minimap` | Hide the minimap button, or show it again |
 | `/cp scan` | Start a full auction house scan (auction house open) |
 | `/cp history` | List the tracked recipes; `/cp history remove <n>` deletes one |

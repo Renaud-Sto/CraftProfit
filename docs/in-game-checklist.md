@@ -182,7 +182,7 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Sort button: switches profit and cost/point and relabels; the list under the main window at the AH follows the same choice.
 - [ ] The "x" of a row: tooltip "Unpin"; a click unpins the recipe, the rows below move up, the main window does not open and the selection does not change.
 - [ ] A click elsewhere on a row opens the main window on that recipe with its stored prices (with the profession window and the AH closed too); a row drag moves the window and selects nothing.
-- [ ] With 12 pins (the maximum per character) everything shows; scroll with the mouse wheel and the bar after unpinning and re-pinning (the bar hides while everything fits); unpinning the last row while scrolled to the bottom moves the list, no gap.
+- [ ] With 12 pins everything shows; scroll with the mouse wheel and the bar after unpinning and re-pinning (the bar hides while everything fits); unpinning the last row while scrolled to the bottom moves the list, no gap.
 - [ ] Empty state: with no pin, the window says "No pinned recipes. Pin a recipe from its window."
 - [ ] Drag the window, `/reload`, reopen it: it is where you left it.
 - [ ] Minimap right click and addon compartment right click open and close it; the tooltip says "Right click: pinned recipes".
@@ -190,6 +190,16 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Options window Windows panel: "Main window" and "Leveling" on the first row, "Pinned recipes" centred on the second; in English, `/cp locale frFR` and `/cp locale esES` ("Fenêtre principale", "Montée de métier", "Recettes épinglées"; "Ventana principal", "Subida", "Recetas fijadas") no label is cut; the Controls list has `/cp pins` and the right click.
 - [ ] `/cp locale frFR`: no label of the pinned window overflows (title, sort button, empty text, long recipe names cut before the value and the "x").
 - [ ] No Lua error (`/console scriptErrors 1`), no `ADDON_ACTION_BLOCKED`, with and without the AH open.
+
+## Pinned recipes limit
+- [ ] A fresh save: `/cp options` shows the PINNED RECIPES panel with 20 lit. Pin recipes up to 20: the 21st is refused with `Pinned recipes limit reached (20). Raise it in /cp options.`; nothing is added.
+- [ ] Click 30 in `/cp options` (window left open): the next pin works at once, up to 30; close and reopen the options window, `/reload`: 30 is still lit.
+- [ ] Lower the limit to 12 with more than 12 pins: no pin is deleted (count them in `/cp pins`, also after `/reload`), a new pin is refused with the message, unpinning still works from the main window and from the "x".
+- [ ] Set 40 and pin 40 recipes (or as many as you can): the list under the main window at the AH and the pinned recipes window both scroll with the wheel and the bar to the last pin; the "x" of the bottom row while scrolled to the end unpins it and the list moves up with no gap.
+- [ ] **Search prices** with many pins (30 to 40) still completes; note how long it takes and the pin count in the PR.
+- [ ] The options window is now about 662 px tall: at your usual UI scale it fits on screen whole (title bar to the bottom of CONTROLS), and again at a smaller resolution if you can.
+- [ ] The note under the limit buttons fits in two lines, nothing cut, in English, `/cp locale frFR` and `/cp locale esES`; the "Limit per character" label and the 12 / 20 / 30 / 40 buttons are not cut either.
+- [ ] No Lua error, no `ADDON_ACTION_BLOCKED`.
 
 ## Default placement (PR 19 fixes)
 - [ ] Delete the saved positions (`/run CraftProfitDB.settings.pinsWindow=nil CraftProfitDB.settings.levelWindow=nil CraftProfitDB.settings.optionsWindow=nil CraftProfitDB.settings.window=nil` then `/reload`).
@@ -215,6 +225,6 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] A French-client and a Spanish-client friend each run the checklist's Profession window and Auction house sections and report any untranslated or truncated text.
 
 ## Robustness
-- [ ] Pin 13 recipes: the 13th is refused with `Too many pinned recipes`.
+- [ ] With the limit at 12 (`/cp options`), pin 13 recipes: the 13th is refused with `Pinned recipes limit reached (12). Raise it in /cp options.`
 - [ ] Select a recipe while item data is not cached (first login): the Vendor and Disenchant lines show `?` and fill in on their own within a second.
 - [ ] `/reload` with the AH open does not raise an error.

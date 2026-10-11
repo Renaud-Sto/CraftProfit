@@ -257,3 +257,146 @@ function History.sanitize(db, now)
         end
     end
 end
+
+-- Daily views -------------------------------------------------------------------
+--
+-- History.dailySeries(series, now, days) -> { { day, avg, low, high, n }, ... }
+--   One entry per local calendar day of the last `days` days (today included) that has
+--   at least one point, ascending; days without data are absent. `day` is the epoch of
+--   the start of that local day. Raw points are folded per local day (average weighted
+--   by their count). A merged daily point (older than RAW_SECONDS, dated at the start of
+--   its UTC day) is placed on the local day holding the middle of its UTC day, so it keeps
+--   its calendar date in any time zone. Points after `now` are ignored. Never mutates
+--   `series`; a hostile series or argument gives an empty array.
+-- History.usual(series, now) -> { price, days, measures } or nil
+--   Median of the daily averages of the last 30 days; nil under 3 distinct days.
+-- History.compare(today, usual) -> { pct, tone } or nil
+--   pct = rounded percent difference (today - usual) / usual; tone "flat" when |pct| <= 3,
+--   else "up" or "down". nil when either is not finite or usual <= 0.
+-- History.weekdayProfile(days, usual) -> 7 entries, Monday to Sunday, { pct, n }
+--   From dailySeries entries (or any entries with `day` and `avg` or `value`): the mean of
+--   the daily values of that weekday against `usual`, as a rounded percentage; pct is nil
+--   with fewer than 2 days or without a usable usual price.
+-- History.dayOf(t), History.weekday(t) (1 Monday .. 7 Sunday) read the local date
+-- through History.setDateFn(fn) (a function like date("*t", t); nil restores the game's).
+
+History.USUAL_DAYS = 30
+History.USUAL_MIN_DAYS = 3
+History.FLAT_PERCENT = 3
+History.WEEKDAY_MIN_DAYS = 2
+
+local dateFn
+
+function History.setDateFn(fn)
+    dateFn = fn
+end
+
+local function localDate(t)
+    -- `date` is the game's global (os.date in plain Lua).
+    local fn = dateFn or date or os.date
+    return fn("*t", t)
+end
+
+-- Start of the local calendar day holding t.
+function History.dayOf(t)
+    local d = localDate(t)
+    return t - ((d.hour * 60 + d.min) * 60 + d.sec)
+end
+
+-- Day of the week of t, local time: 1 Monday .. 7 Sunday.
+function History.weekday(t)
+    return (localDate(t).wday + 5) % 7 + 1
+end
+
+-- Start of the local day `k` days before the local day starting at `day` (DST safe:
+-- one hour more or less never crosses the middle of a day).
+local function daysBefore(day, k)
+    return History.dayOf(day - k * DAY + DAY / 2)
+end
+
+function History.dailySeries(series, now, days)
+    local out = {}
+    if type(series) ~= "table" or not Util.isCopper(now) then return out end
+    days = Util.count(days)
+    if not days then return out end
+    local first = daysBefore(History.dayOf(now), days - 1)
+    local byDay, order = {}, {}
+    for _, p in ipairs(series) do
+        if validPoint(p) and p[1] <= now then
+            local merged = now - p[1] > History.RAW_SECONDS and p[1] % DAY == 0
+            local day = History.dayOf(merged and p[1] + DAY / 2 or p[1])
+            if day >= first then
+                local b = byDay[day]
+                if not b then
+                    b = { day = day, sum = 0, low = p[4], high = p[5], n = 0 }
+                    byDay[day] = b
+                    order[#order + 1] = b
+                end
+                b.sum = b.sum + p[2] * p[6]
+                b.low = math.min(b.low, p[4])
+                b.high = math.max(b.high, p[5])
+                b.n = b.n + p[6]
+            end
+        end
+    end
+    for _, b in ipairs(order) do
+        out[#out + 1] = { day = b.day, avg = Util.round(b.sum / b.n), low = b.low, high = b.high, n = b.n }
+    end
+    table.sort(out, function(a, c) return a.day < c.day end)
+    return out
+end
+
+-- Median of an array of finite numbers (rounded mean of the two middle ones when even).
+function History.median(values)
+    local sorted = {}
+    for _, v in ipairs(values) do sorted[#sorted + 1] = v end
+    if #sorted == 0 then return nil end
+    table.sort(sorted)
+    local mid = math.floor((#sorted + 1) / 2)
+    if #sorted % 2 == 1 then return sorted[mid] end
+    return Util.round((sorted[mid] + sorted[mid + 1]) / 2)
+end
+
+function History.usual(series, now)
+    local daily = History.dailySeries(series, now, History.USUAL_DAYS)
+    if #daily < History.USUAL_MIN_DAYS then return nil end
+    local values, measures = {}, 0
+    for _, d in ipairs(daily) do
+        values[#values + 1] = d.avg
+        measures = measures + d.n
+    end
+    return { price = History.median(values), days = #daily, measures = measures }
+end
+
+function History.compare(today, usual)
+    if not Util.isFinite(today) or not Util.isFinite(usual) or usual <= 0 then return nil end
+    local pct = Util.round((today - usual) / usual * 100)
+    local tone = "flat"
+    if pct > History.FLAT_PERCENT then tone = "up" elseif pct < -History.FLAT_PERCENT then tone = "down" end
+    return { pct = pct, tone = tone }
+end
+
+function History.weekdayProfile(days, usual)
+    local sums, counts = {}, {}
+    for i = 1, 7 do sums[i], counts[i] = 0, 0 end
+    if type(days) == "table" then
+        for _, d in ipairs(days) do
+            local value = type(d) == "table" and (d.value or d.avg) or nil
+            if Util.isFinite(value) and Util.isFinite(d.day) then
+                local w = History.weekday(d.day)
+                sums[w] = sums[w] + value
+                counts[w] = counts[w] + 1
+            end
+        end
+    end
+    local usable = Util.isFinite(usual) and usual > 0
+    local out = {}
+    for i = 1, 7 do
+        local pct
+        if usable and counts[i] >= History.WEEKDAY_MIN_DAYS then
+            pct = Util.round((sums[i] / counts[i] - usual) / usual * 100)
+        end
+        out[i] = { pct = pct, n = counts[i] }
+    end
+    return out
+end

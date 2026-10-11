@@ -309,3 +309,132 @@ H.test("sanitize keeps the first 30 tracked recipes", function()
     H.eq(#saved.tracked, 30)
     H.eq(saved.tracked[30].recipe.recipeID, 30)
 end)
+
+-- Daily views ---------------------------------------------------------------------
+-- A local date function `offset` seconds ahead of UTC, without daylight saving, so the
+-- tests never depend on the machine's time zone. NOW (day 500 since the epoch) is a
+-- Sunday at 00:00 UTC.
+local function stubDate(offset)
+    return function(fmt, t)
+        assert(fmt == "*t")
+        local s = t + offset
+        local days = math.floor(s / DAY)
+        local secs = s - days * DAY
+        return { hour = math.floor(secs / 3600), min = math.floor(secs % 3600 / 60), sec = secs % 60,
+            wday = (days + 4) % 7 + 1 }
+    end
+end
+
+local function withDate(offset)
+    local H2 = load().History
+    H2.setDateFn(stubDate(offset))
+    return H2
+end
+
+local function copy(v)
+    if type(v) ~= "table" then return v end
+    local t = {}
+    for k, x in pairs(v) do t[k] = copy(x) end
+    return t
+end
+
+H.test("dayOf and weekday follow the local date function", function()
+    local H2 = withDate(2 * 3600)
+    H.eq(H2.dayOf(NOW), NOW - 2 * 3600)          -- Sunday 02:00 local
+    H.eq(H2.weekday(NOW), 7)
+    H.eq(H2.weekday(NOW + DAY), 1)               -- Monday
+    H2.setDateFn(stubDate(-5 * 3600))
+    H.eq(H2.dayOf(NOW), NOW - DAY + 5 * 3600)    -- Saturday 19:00 local
+    H.eq(H2.weekday(NOW), 6)
+end)
+
+H.test("dailySeries folds raw points per local day and keeps merged points on their date", function()
+    local H2 = withDate(2 * 3600)
+    local series = {
+        { NOW - 20 * DAY, 300, 1, 250, 380, 4 },     -- a merged daily point
+        { NOW - 3 * 3600, 100, 1, 100, 100, 1 },     -- Saturday 23:00 local
+        { NOW - 3600, 200, 1, 200, 200, 1 },         -- Sunday 01:00 local
+        { NOW - 1800, 300, 1, 300, 300, 2 },         -- Sunday 01:30 local, two measures
+        { NOW + 60, 999, 1, 999, 999, 1 },           -- ahead of now: ignored
+        "junk", { NOW - 100, math.huge, 1, 1, 1, 1 }, { NOW - 50, -3, 1, 1, 1, 1 }, { NOW - 40, 5, 1, 5, 5, 0 },
+    }
+    local saved = copy(series)
+    local daily = H2.dailySeries(series, NOW, 30)
+    H.eq(daily, {
+        { day = NOW - 20 * DAY - 2 * 3600, avg = 300, low = 250, high = 380, n = 4 },
+        { day = NOW - DAY - 2 * 3600, avg = 100, low = 100, high = 100, n = 1 },
+        { day = NOW - 2 * 3600, avg = 267, low = 200, high = 300, n = 3 },
+    })
+    H.eq(series, saved)                          -- never mutated
+    -- West of UTC the merged point keeps its calendar date.
+    H2.setDateFn(stubDate(-5 * 3600))
+    H.eq(H2.dailySeries({ { NOW - 20 * DAY, 300, 1, 250, 380, 4 } }, NOW, 30)[1].day, NOW - 20 * DAY + 5 * 3600)
+    -- The period: 7 days is today and the 6 days before.
+    H2.setDateFn(stubDate(0))
+    local week = H2.dailySeries({ { NOW - 7 * DAY + 1, 5, 1, 5, 5, 1 }, { NOW - 6 * DAY, 6, 1, 6, 6, 1 } }, NOW, 7)
+    H.eq(#week, 1)
+    H.eq(week[1].avg, 6)
+    for _, bad in ipairs({ { "x", NOW, 7 }, { series, 0 / 0, 7 }, { series, NOW, 0 }, { series, NOW, "7" } }) do
+        H.eq(H2.dailySeries(bad[1], bad[2], bad[3]), {})
+    end
+end)
+
+H.test("usual is the median of the daily averages of 30 days, from 3 distinct days", function()
+    local H2 = withDate(0)
+    -- A flat month, one measure a day, compacted as the addon keeps it.
+    local month = {}
+    for age = 29, 0, -1 do month[#month + 1] = { NOW - age * DAY + 3600, 100, 1, 100, 100, 1 } end
+    month = H2.compact(month, NOW + 7200)
+    H.eq(H2.usual(month, NOW + 7200), { price = 100, days = 30, measures = 30 })
+    -- Odd and even counts, gaps, an older day left out.
+    local function at(age, unit) return { NOW - age * DAY, unit, 1, unit, unit, 1 } end
+    H.eq(H2.usual({ at(40, 5000), at(25, 100), at(10, 300), at(1, 200) }, NOW).price, 200)
+    H.eq(H2.usual({ at(25, 100), at(10, 300), at(3, 1000), at(1, 200) }, NOW).price, 250)
+    -- All prices equal: the median is that price.
+    H.eq(H2.usual({ at(3, 70), at(2, 70), at(1, 70) }, NOW), { price = 70, days = 3, measures = 3 })
+    -- Under 3 distinct days (several measures on one day count once).
+    H.eq(H2.usual({ at(2, 100), at(1, 200), { NOW - DAY + 60, 300, 1, 300, 300, 1 } }, NOW), nil)
+    H.eq(H2.usual({}, NOW), nil)
+    H.eq(H2.usual("junk", NOW), nil)
+    H.eq(H2.usual({ "junk", at(2, 0 / 0), at(1, -1) }, NOW), nil)
+end)
+
+H.test("compare gives a rounded percentage and a tone, never dividing by zero", function()
+    local H2 = load().History
+    H.eq(H2.compare(103, 100), { pct = 3, tone = "flat" })
+    H.eq(H2.compare(97, 100), { pct = -3, tone = "flat" })
+    H.eq(H2.compare(104, 100), { pct = 4, tone = "up" })
+    H.eq(H2.compare(82, 100), { pct = -18, tone = "down" })
+    H.eq(H2.compare(-50, 100), { pct = -150, tone = "down" })
+    H.eq(H2.compare(100, 100), { pct = 0, tone = "flat" })
+    for _, bad in ipairs({ { 100, 0 }, { 100, -5 }, { nil, 100 }, { 100, nil }, { 0 / 0, 100 }, { 100, math.huge }, { "1", 100 } }) do
+        H.eq(H2.compare(bad[1], bad[2]), nil)
+    end
+end)
+
+H.test("weekdayProfile shows a rising weekend and a falling Monday", function()
+    local H2 = withDate(0)
+    local days = {}
+    for k = 27, 0, -1 do
+        local day = NOW - k * DAY
+        local w = H2.weekday(day)
+        local avg = (w == 6 or w == 7) and 120 or (w == 1 and 80 or 100)
+        days[#days + 1] = { day = day, avg = avg, low = avg, high = avg, n = 1 }
+    end
+    local profile = H2.weekdayProfile(days, 100)
+    H.eq(#profile, 7)
+    H.eq(profile[1], { pct = -20, n = 4 })       -- Monday
+    H.eq(profile[2], { pct = 0, n = 4 })
+    H.eq(profile[6], { pct = 20, n = 4 })        -- Saturday
+    H.eq(profile[7], { pct = 20, n = 4 })        -- Sunday
+    -- One day of a weekday is not enough; entries with `value` work too.
+    local few = H2.weekdayProfile({ { day = NOW, value = 50 }, { day = NOW - 7 * DAY, value = 70 },
+        { day = NOW - DAY, value = 10 } }, 100)
+    H.eq(few[7], { pct = -40, n = 2 })
+    H.eq(few[6], { n = 1 })
+    H.eq(few[1], { n = 0 })
+    -- No usable usual price, no data, hostile entries.
+    for _, usual in ipairs({ 0, -1, 0 / 0 }) do H.eq(H2.weekdayProfile(days, usual)[1], { n = 4 }) end
+    H.eq(H2.weekdayProfile(nil, 100)[3], { n = 0 })
+    H.eq(H2.weekdayProfile({ "junk", { day = 0 / 0, avg = 5 }, { day = NOW, avg = "x" } }, 100)[7], { n = 0 })
+end)

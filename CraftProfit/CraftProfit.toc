@@ -25,6 +25,7 @@ Recipes.lua
 DB.lua
 Prices.lua
 History.lua
+HistoryView.lua
 PriceQueue.lua
 Evaluate.lua
 Present.lua

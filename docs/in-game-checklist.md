@@ -213,6 +213,9 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Close the AH mid-search (recipe or pinned): `Search cancelled`, no Lua error; reopen the AH: Refresh recipe is enabled again.
 - [ ] The options window note names **Refresh pinned** (and its French and Spanish names), still on three lines at most.
 
+- [ ] Retry: when a refresh misses prices, the status shows `Retrying 0/n … n/n` for only those items before the summary (n = the missed ones); a price found on the retry is counted as updated and not named. No third try. Close the AH during the retry: `Search cancelled`, no error. Refresh recipe stays greyed across both tries.
+- [ ] Search trace (probe, F13): with `probe/CraftProfitProbe` enabled, `/cpp clear`, `/cpp trace on`, run a Refresh pinned with 20 pins, `/cpp trace off`, `/reload`; nothing extra in chat while tracing; the log has `TRACE` lines for every `SEND` and search event. Note per missed item: number of events, `results` at the first event vs later, the gap from `SEND`, any throttle `QUEUED` / `DROPPED` and the time to `SYSTEM_READY`; copy the findings into probe-findings F13.
+
 ## Default placement (PR 19 fixes)
 - [ ] Delete the saved positions (`/run CraftProfitDB.settings.pinsWindow=nil CraftProfitDB.settings.levelWindow=nil CraftProfitDB.settings.optionsWindow=nil CraftProfitDB.settings.window=nil` then `/reload`).
 - [ ] Open the profession window and select a recipe: the main window opens beside it. Then `/cp level`, `/cp pins` and `/cp options` one after the other: each opens just right of the rightmost window already open, none on top of another; near the screen edge it stays on screen.

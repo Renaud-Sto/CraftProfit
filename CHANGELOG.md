@@ -9,6 +9,8 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 - **Refresh recipe** button in the main window's Options panel, beside Pin: searches the auction house for the items of the recipe on screen only (a few seconds). Enabled only while the auction house is open, a recipe is shown and no other search runs.
 
+- A price search asks a second time, automatically, for the prices that did not answer or came back with no listing, before showing the summary ("Retrying n/m"); the summary counts what both tries found.
+
 ### Changed
 - **Search prices** is renamed **Refresh pinned** (FR "Actualiser épinglées", ES "Actualizar fijadas"); it still prices every pinned recipe, one item at a time (about a minute for 20 recipes). **Scan AH** is unchanged.
 - The search status says what happened, counted in prices (one per item searched: the materials, the crafted item and its disenchant materials): "Updated 7 prices" when every price was stored, else "Updated 6 of 7 prices" followed by "no listing: … (nobody is selling them now)" and/or "no answer: …, try again", naming the items when there are one or two of a kind (e.g. "no answer: Silver Bar, try again") and giving their number otherwise, instead of "n not found". The status line is cut at two lines.

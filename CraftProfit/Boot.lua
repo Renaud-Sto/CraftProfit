@@ -354,7 +354,7 @@ end
 
 -- How many recipes a character may pin (account wide setting, one of DB.PIN_LIMITS).
 function Controller.pinLimit()
-    return CraftProfitDB.settings.maxPins
+    return DB.pinLimit(CraftProfitDB.settings.maxPins)
 end
 
 -- Saves a new limit and refreshes every view (the options window lights it). Anything but a

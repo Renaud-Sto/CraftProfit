@@ -345,3 +345,21 @@ H.test("a recipe only a disenchant without data could sell reads no data, not ?"
     H.eq(UI.parts.rows[1].value.text, "no data")
     H.eq(UI.parts.rows[2].value.text, "?")
 end)
+
+H.test("a drop at a non-finite position is not kept for the next open", function()
+    local T, UI = boot()
+    feed(T, data())
+    UI.show()
+    local frame = UI.frame()
+    frame.GetLeft = function() return 0 / 0 end
+    frame.scripts.OnDragStop(frame)
+    local points = {}
+    frame.SetPoint = function(_, ...) points[#points + 1] = { ... } end
+    UI.hide()
+    UI.show()
+    -- Reopened at its default place, never at a NaN offset.
+    H.truthy(#points > 0)
+    for _, p in ipairs(points) do
+        for i = 4, 5 do H.truthy(p[i] == nil or p[i] == p[i]) end
+    end
+end)

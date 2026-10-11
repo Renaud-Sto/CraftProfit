@@ -3,7 +3,7 @@
 -- button; it sits beside the main window until it has been dragged.
 local _, ns = ...
 local L = ns.L
-local Native, Colors = ns.Native, ns.Colors
+local Native, Colors, Util = ns.Native, ns.Colors, ns.Util
 -- Pure layout maths (panelHeight, stack).
 local Layout = ns.Layout
 
@@ -191,8 +191,8 @@ function LevelingUI.init(controller, h)
         height = CHROME_H + PAD + total + PAD,
         onMoved = function(point, x, y)
             -- Kept for the next open in this session too (place reads it), as the pinned
-            -- and options windows do.
-            savedPosition = { x = x, y = y }
+            -- and options windows do; two finite numbers only (Controller.saveLevelPosition).
+            if Util.isFinite(x) and Util.isFinite(y) then savedPosition = { x = x, y = y } end
             if handlers.onMoved then handlers.onMoved(point, x, y) end
         end,
     })

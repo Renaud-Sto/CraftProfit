@@ -47,3 +47,31 @@ H.test("disenchant data covers armor and weapons of uncommon, rare and epic qual
         end
     end
 end)
+
+-- The item levels (1 to 100) with no row, per kind and quality. A gap shows "no data" in
+-- the window, never a missing price; this list makes every gap a deliberate choice.
+H.test("the disenchant gaps are the known ones", function()
+    local list, gaps = brackets(), {}
+    for _, kind in ipairs({ "armor", "weapon" }) do
+        for quality = 2, 4 do
+            local start
+            for ilvl = 1, 101 do
+                local covered = ilvl == 101
+                for _, b in ipairs(list) do
+                    if b.kind == kind and b.quality == quality and ilvl >= b.minIlvl and ilvl <= b.maxIlvl then
+                        covered = true
+                    end
+                end
+                if not covered and not start then start = ilvl end
+                if covered and start then
+                    gaps[#gaps + 1] = string.format("%s %d: %d-%d", kind, quality, start, ilvl - 1)
+                    start = nil
+                end
+            end
+        end
+    end
+    H.eq(gaps, {
+        "armor 2: 1-4", "armor 2: 61-100", "armor 3: 66-100", "armor 4: 1-39", "armor 4: 61-100",
+        "weapon 2: 1-5", "weapon 2: 61-100", "weapon 3: 66-100", "weapon 4: 1-39", "weapon 4: 61-100",
+    })
+end)

@@ -30,8 +30,11 @@ ns.Locale.register("enUS", {
     WARN_PRICES = "PRICES MISSING",
     VERDICT_INCOMPLETE = "Incomplete: prices missing",
     VERDICT_NONE = "No way to sell this item",
+    -- No disenchant row for the item level: not a missing price, no search fills it.
+    VERDICT_NO_DATA = "No disenchant data for this item",
     NA = "n/a",
     UNKNOWN = "?",
+    NO_DATA = "no data",
     AGE = "Prices: %s ago",
     AGE_NEVER = "Prices: never scanned",
     AGE_SEC = "%ds",

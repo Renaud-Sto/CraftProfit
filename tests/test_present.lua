@@ -262,3 +262,41 @@ H.test("the French and Spanish models use their own panel and tile texts", funct
     H.eq(m.tiles[1].label, "HV (NET)")
     H.eq(m.tiles[3].tag, "bêta")
 end)
+
+local EPIC_63 = function() return { quality = 4, ilvl = 63, sellPrice = 200, classID = 2, bindType = 2 } end
+
+H.test("a disenchant data gap shows no data and never the missing prices warning", function()
+    local ns = load()
+    local m = model(ns, { itemInfo = EPIC_63, lookupDisenchant = ns.Data.Disenchant.lookup })
+    H.eq(m.lines[4].value, "no data")
+    H.eq(m.tiles[3].value, "no data")
+    H.truthy(m.tiles[3].muted)
+    H.eq(m.banner, { label = "RESULT", text = "Best: Auction house", value = "+7s", kind = "profit" })
+    H.eq(m.verdict.kind, "profit")
+end)
+
+H.test("a data gap on an item nobody can sell otherwise says so in the banner", function()
+    local ns = load()
+    -- Bound on pickup (no auction house), no vendor price, epic above item level 60.
+    local m = model(ns, { knowsEnchanting = true, lookupDisenchant = ns.Data.Disenchant.lookup,
+        itemInfo = function() return { quality = 4, ilvl = 63, sellPrice = 0, classID = 2, bindType = 1 } end })
+    H.eq(m.verdict, { kind = "none", text = "No disenchant data for this item", value = "" })
+    H.eq(m.banner.warning, nil)
+    ns.Locale.select("frFR")
+    m = model(ns, { knowsEnchanting = true, lookupDisenchant = ns.Data.Disenchant.lookup,
+        itemInfo = function() return { quality = 4, ilvl = 63, sellPrice = 0, classID = 2, bindType = 1 } end })
+    H.eq(m.verdict.text, "Pas de données de désenchantement")
+    H.eq(m.lines[4].value, "pas de données")
+end)
+
+H.test("a 99.5% disenchant outcome gets its sub-line with one decimal", function()
+    local ns = load()
+    -- The real rare bracket of item level 56-65.
+    local m = model(ns, {
+        itemInfo = function() return { quality = 3, ilvl = 60, sellPrice = 200, classID = 2, bindType = 2 } end,
+        lookupDisenchant = ns.Data.Disenchant.lookup,
+        priceOf = function(id) return ({ [1] = 100, [2] = 50, [100] = 1000, [14344] = 400, [20725] = 9000 })[id] end,
+    }, { itemName = function() return "Shard" end })
+    H.eq(m.lines[5].key, "likely")
+    H.eq(m.lines[5].label, "99.5%: 1x Shard = 3s 80c")
+end)

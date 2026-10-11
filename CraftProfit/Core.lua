@@ -95,9 +95,10 @@ function Core.likelyDisenchant(entries, priceOf, cut)
     return { chance = best.chance, itemID = best.itemID, min = best.min, max = best.max, value = Util.round(bestValue) }
 end
 
--- options[key] = { status = "ok"|"unknown"|"na", value = copper }.
+-- options[key] = { status = "ok"|"unknown"|"na"|"nodata", value = copper }.
 -- Returns the best "ok" key and value, and whether any option was "unknown"
--- (so the best known one may not be the true best).
+-- (so the best known one may not be the true best). "nodata" (no disenchant row for
+-- the item) is not counted: no price search could complete it.
 function Core.bestOption(options)
     local bestKey, bestValue, incomplete = nil, nil, false
     for _, key in ipairs(Core.OPTION_ORDER) do

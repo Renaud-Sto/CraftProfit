@@ -130,11 +130,12 @@ H.test("items that cannot be disenchanted have no disenchant option", function()
     H.eq(E.run(ctx({ itemInfo = info({ classID = 0 }) })).incomplete, false)
 end)
 
-H.test("missing disenchant data or an unpriced result is unknown, not zero", function()
+H.test("missing disenchant data is no data, an unpriced result is unknown, neither is zero", function()
     local E = load().Evaluate
     local noData = E.run(ctx({ lookupDisenchant = function() return nil end }))
-    H.eq(noData.options.disenchant.status, "unknown")
-    H.eq(noData.incomplete, true)
+    H.eq(noData.options.disenchant.status, "nodata")
+    H.eq(noData.options.disenchant.value, nil)
+    H.eq(noData.incomplete, false)
     local noPrice = E.run(ctx({ priceOf = prices({ [200] = false }) }))
     H.eq(noPrice.options.disenchant.status, "unknown")
 end)
@@ -253,4 +254,24 @@ H.test("the likely disenchant outcome is per disenchant whatever the number of c
     local one = E.run(ctx(c))
     c.crafts = 4
     H.eq(E.run(ctx(c)).options.disenchant.likely, one.options.disenchant.likely)
+end)
+
+H.test("an item level with no disenchant row is no data, not a missing price", function()
+    local E = load().Evaluate
+    -- An epic weapon above item level 60: no bracket covers it in the shipped data.
+    local r = E.run(ctx({ itemInfo = info({ quality = 4, ilvl = 63 }),
+        lookupDisenchant = load().Data.Disenchant.lookup }))
+    H.eq(r.options.disenchant, { status = "nodata" })
+    H.eq(r.incomplete, false)
+    H.eq(r.best, "ah")
+    H.eq(r.net, 700)
+    -- Nothing to search for it: its results are unknown.
+    H.eq(E.wantedItems(RECIPE, info({ quality = 4, ilvl = 63 }), load().Data.Disenchant.lookup), { 1, 2, 100 })
+end)
+
+H.test("an unknown item level is still unknown, not no data", function()
+    local E = load().Evaluate
+    local r = E.run(ctx({ itemInfo = info({ ilvl = 0 / 0 }), lookupDisenchant = function() return nil end }))
+    H.eq(r.options.disenchant, { status = "unknown" })
+    H.eq(r.incomplete, true)
 end)

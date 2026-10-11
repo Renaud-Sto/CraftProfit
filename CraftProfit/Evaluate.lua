@@ -9,15 +9,18 @@ ns.Evaluate = Evaluate
 
 local BIND_ON_PICKUP = 1
 
--- Returns "ok", entries | "na" | "unknown" for the disenchant results of an item.
--- A bind-on-pickup item cannot change hands, so only a character who knows
+-- Returns "ok", entries | "na" | "unknown" | "nodata" for the disenchant results of an
+-- item. A bind-on-pickup item cannot change hands, so only a character who knows
 -- Enchanting can disenchant it; a tradable item can be disenchanted by anyone.
+-- "nodata": the item is known but the disenchant table has no row for its item level.
+-- No search can fill that gap, so it is not a missing price (see Core.bestOption).
 local function disenchantEntries(info, lookup, knowsEnchanting)
     if not info then return "unknown" end
     if info.bindType == BIND_ON_PICKUP and not knowsEnchanting then return "na" end
     if not Disenchant.canDisenchant(info.itemID, info.quality, info.classID) then return "na" end
+    if not Util.isFinite(info.ilvl) then return "unknown" end
     local entries = lookup(Disenchant.kindOf(info.classID), info.quality, info.ilvl)
-    if not entries then return "unknown" end
+    if not entries then return "nodata" end
     return "ok", entries
 end
 

@@ -79,7 +79,11 @@ end
 
 local function verdictFor(result, L, fmt)
     if result.net == nil and result.best == nil and not result.incomplete then
-        return { kind = "none", text = L.VERDICT_NONE, value = "" }
+        -- Nothing known, nothing missing: either no way to sell at all, or the only way left
+        -- is a disenchant the data does not cover.
+        local de = result.options and result.options.disenchant
+        local text = de and de.status == "nodata" and L.VERDICT_NO_DATA or L.VERDICT_NONE
+        return { kind = "none", text = text, value = "" }
     end
     if result.net == nil then
         return { kind = "incomplete", text = L.VERDICT_INCOMPLETE, value = "" }
@@ -99,24 +103,34 @@ local function verdictFor(result, L, fmt)
     }
 end
 
+-- A chance as a percentage: whole when it is ("75"), else one decimal ("99.5"), so an
+-- outcome that is not certain never reads as 100.
+function Present.percent(chance)
+    local p = chance * 100
+    local whole = math.floor(p + 0.5)
+    if math.abs(p - whole) < 0.05 then return tostring(whole) end
+    return string.format("%.1f", p)
+end
+
 -- Grey sub-line under the disenchant value: the most probable outcome, so the
 -- player sees the gamble behind the average ("75%: 1-2x Soul Dust = 7s 30c").
 local function likelyLine(likely, fmt, itemName)
     local name = itemName and itemName(likely.itemID) or ("#" .. likely.itemID)
     local qty = likely.min == likely.max and tostring(likely.min) or (likely.min .. "-" .. likely.max)
-    local percent = math.floor(likely.chance * 100 + 0.5)
     return {
-        label = string.format("%d%%: %sx %s = %s", percent, qty, name, fmt(likely.value)),
+        label = string.format("%s%%: %sx %s = %s", Present.percent(likely.chance), qty, name, fmt(likely.value)),
         value = "", key = "likely", best = false, muted = true,
     }
 end
 
--- Text shown for an option amount: the price, "n/a" or "?".
+-- Text shown for an option amount: the price, "n/a", "no data" or "?".
 local function optionText(option, L, fmt)
     if option.status == "ok" then
         return fmt(option.value)
     elseif option.status == "na" then
         return L.NA
+    elseif option.status == "nodata" then
+        return L.NO_DATA
     end
     return L.UNKNOWN
 end

@@ -22,7 +22,7 @@ CraftProfit est un addon pour **World of Warcraft: Forever**. Sélectionnez une 
 - **Coût par point de compétence** (optionnel) : ce que coûte vraiment chaque point, d'après la couleur de la recette, affiché comme un gain quand les crafts se paient d'eux-mêmes.
 - **Fenêtre de montée de métier** : toutes les recettes que vous connaissez dans un métier, classées par coût du point de compétence, pour voir quoi fabriquer ensuite.
 - **Plusieurs crafts d'un coup** : multipliez une recette de 1 à 9999 crafts.
-- **Recettes épinglées** (20 par personnage par défaut ; 12, 20, 30 ou 40 dans la fenêtre d'options), triées par gain ou par coût par point, pour comparer quoi fabriquer ensuite (avec beaucoup d'épingles, **Scanner l'HV** va souvent plus vite que **Rechercher les prix**) ; sous la fenêtre principale à l'hôtel des ventes, et partout dans leur propre fenêtre (`/cp pins` ou un clic droit sur le bouton de la minicarte).
+- **Recettes épinglées** (20 par personnage par défaut ; 12, 20, 30 ou 40 dans la fenêtre d'options), triées par gain ou par coût par point, pour comparer quoi fabriquer ensuite (avec beaucoup d'épingles, **Scanner l'HV** va souvent plus vite que **Actualiser épinglées**) ; sous la fenêtre principale à l'hôtel des ventes, et partout dans leur propre fenêtre (`/cp pins` ou un clic droit sur le bouton de la minicarte).
 - **Outils d'hôtel des ventes** : un bouton chiffre toutes les recettes épinglées, un autre scanne tout l'hôtel des ventes. Cliquez sur un composant pour le rechercher à l'hôtel des ventes, quantité déjà remplie. CraftProfit n'achète jamais rien à votre place.
 - **Historique des prix** (enregistrement) : cochez *Suivre l'historique* sur 15 recettes au plus et CraftProfit garde leurs prix scan après scan, par jeu de règles (le « royaume » de la bêta) et par faction. Les graphiques sont prévus pour plus tard.
 - **Autonome** : ni Auctionator ni aucun autre addon n'est nécessaire. Il récupère aussi les scans lancés par d'autres addons.
@@ -42,7 +42,7 @@ Les développeurs peuvent utiliser un lien symbolique plutôt qu'une copie, voir
 ## Démarrage rapide
 
 1. Ouvrez une fenêtre de métier et sélectionnez une recette que vous connaissez. La fenêtre CraftProfit apparaît à sa droite.
-2. À l'hôtel des ventes, appuyez sur **Rechercher les prix** (chiffre les recettes épinglées) ou sur **Scanner l'HV** (chiffre tout, une fois par tranche de 15 minutes).
+2. À l'hôtel des ventes, appuyez sur **Actualiser recette** dans la fenêtre principale (la recette affichée, quelques secondes), **Actualiser épinglées** (les recettes épinglées, environ une minute pour 20) ou **Scanner l'HV** (tout, une fois par tranche de 15 minutes).
 3. Épinglez les recettes qui vous intéressent avec le bouton **Épingler**, puis comparez-les dans la liste.
 
 Le pas-à-pas complet, toutes les options et l'explication de chaque chiffre sont dans le [guide de l'utilisateur](docs/user-guide.fr.md).

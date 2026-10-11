@@ -22,7 +22,7 @@ CraftProfit is an addon for **World of Warcraft: Forever**. Select a recipe you 
 - **Cost per skill point** (optional): what each point of skill really costs, from the colour of the recipe, shown as a gain when the crafts pay for themselves.
 - **Leveling window**: every recipe you know in a profession, ranked by the cost of a skill point, to see what to craft next.
 - **Several crafts at once**: multiply a recipe by 1 to 9999 crafts.
-- **Pinned recipes** (20 per character by default; 12, 20, 30 or 40 in the options window), sorted by profit or by cost per point, to compare what to craft next (with many pinned, **Scan AH** is usually faster than **Search prices**); under the main window at the auction house, and anywhere in their own window (`/cp pins` or a right click on the minimap button).
+- **Pinned recipes** (20 per character by default; 12, 20, 30 or 40 in the options window), sorted by profit or by cost per point, to compare what to craft next (with many pinned, **Scan AH** is usually faster than **Refresh pinned**); under the main window at the auction house, and anywhere in their own window (`/cp pins` or a right click on the minimap button).
 - **Auction house tools**: one button prices every pinned recipe, another scans the whole auction house. Click a reagent to search it in the auction house, quantity already filled in. CraftProfit never buys anything for you.
 - **Price history** (recording): tick *Track history* on up to 15 recipes and CraftProfit keeps their prices scan after scan, per ruleset (the game "realm" in the beta) and faction. Graphs are planned.
 - **Standalone**: no Auctionator, no other addon required. It also picks up the scans other addons start.
@@ -42,7 +42,7 @@ Developers can symlink the folder instead of copying it, see [CONTRIBUTING.md](C
 ## Quick start
 
 1. Open a profession window and select a recipe you know. The CraftProfit window appears on its right.
-2. Go to the auction house, press **Search prices** (prices the pinned recipes) or **Scan AH** (prices everything, once per 15 minutes).
+2. Go to the auction house, press **Refresh recipe** in the main window (the recipe on screen, a few seconds), **Refresh pinned** (the pinned recipes, about a minute for 20) or **Scan AH** (everything, once per 15 minutes).
 3. Pin the recipes you are interested in with the **Pin** button, then compare them from the pinned list.
 
 The full walkthrough, every option and the explanation of each number are in the [User guide](docs/user-guide.md).

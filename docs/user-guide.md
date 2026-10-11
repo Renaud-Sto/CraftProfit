@@ -37,16 +37,31 @@ For large quantities the total is an estimate: the price of a reagent is the med
 
 The **Track history** box (next to Crafts) makes CraftProfit keep the prices of this recipe's reagents and result over time. Up to 15 recipes can be tracked, independently of the pinned list. A point is recorded after every scan and every price search that touches one of the recipe's items, as long as all the needed prices are known. Unticking the box pauses recording and keeps what was recorded. `/cp history` lists the tracked recipes and `/cp history remove <n>` deletes one with its history. Prices are kept per ruleset (the game "realm" in the beta) and faction, so the history of one market never mixes with another. A view of the history (graphs, "cheaper than usual") is planned; for now the data is only being gathered.
 
-### Pin button
+### Pin and Refresh recipe buttons
+
+**Refresh recipe** (right of the Pin button) searches the auction house for the items of the recipe on screen only: its reagents, the crafted item and, when relevant, the disenchant materials. It takes a few seconds. It works only while the auction house is open, a recipe is shown and no other search is running; otherwise it is greyed out. Its result shows in the status line under the pinned list.
 
 **Pin** keeps the recipe in your pinned list, usable even with the profession window closed. **Unpin** removes it. A character can pin 20 recipes by default; change the limit (12, 20, 30 or 40) in the [options window](#options-window). When the list is full, the chat says "Pinned recipes limit reached (20). Raise it in /cp options."
 
 ## At the auction house
 
-When the auction house opens, the window shows the **Pinned recipes** panel under the recipe, with three buttons: **Search prices** (the main one), **Scan AH** and **Leveling**, and a status line below them.
+Three ways to update prices, from the quickest to the widest:
 
-- **Search prices** prices every reagent and every output of the pinned recipes, one item at a time, with a progress count: about a minute for 20 pinned recipes. With many recipes pinned, **Scan AH** is usually faster. Prices are saved with their date. If you close the auction house meanwhile, the search is cancelled and the prices already received are kept.
+- **Refresh recipe** (main window, Options panel): the recipe on screen only, a few seconds.
+- **Refresh pinned** (under the pinned list): every pinned recipe, one item at a time, about a minute for 20 recipes.
+- **Scan AH** (under the pinned list): the whole auction house in one full scan; the game allows one per 15 minutes per account.
+
+When the auction house opens, the window shows the **Pinned recipes** panel under the recipe, with three buttons: **Refresh pinned** (the main one), **Scan AH** and **Leveling**, and a status line below them.
+
+- **Refresh pinned** prices every reagent and every output of the pinned recipes, one item at a time, with a progress count: about a minute for 20 pinned recipes. With many recipes pinned, **Scan AH** is usually faster. Prices are saved with their date. If you close the auction house meanwhile, the search is cancelled and the prices already received are kept. A price that does not answer, or answers with no listing, is asked a second time automatically before the summary ("Retrying n/m"). Only one search runs at a time: Refresh recipe is greyed out while it runs.
 - **Scan AH** reads the entire auction house in one go (the game allows one full scan per 15 minutes per account). It prices thousands of items, so every recipe can be evaluated afterwards. If another addon starts a scan, CraftProfit uses its result without a second request. If the server does not answer, the status says so: the 15 minute cooldown is probably running.
+
+When a refresh ends, the status line says what happened. It counts prices: one per item searched, which is not only the materials but also the crafted item and, when it can be disenchanted, its disenchant materials. A recipe with 5 materials can therefore count 7 prices.
+
+- `Updated 7 prices`: every price was updated.
+- `Updated 6 of 7 prices · no answer: Silver Bar, try again`: the auction house did not answer in time for that item; press the button again. One or two missing items are named; with more, the line gives their number (`no answer: 3, try again`).
+- `Updated 5 of 7 prices · no listing: Copper Bar, Silver Bar (nobody is selling them now)`: those items answered, but nobody is selling them at the moment, so their old price (if any) is kept.
+- Both fragments can appear together; the three numbers always add up to the total (`Updated 0 of 3 prices · no listing: 3 ...` when nobody sells any of them). The line holds two lines at most: very long item names are cut with `...`. `Nothing to search` means the recipe has no item to price. A search stopped by closing the auction house says `Search cancelled`.
 
 ### The pinned list
 
@@ -110,7 +125,7 @@ With the material detail unfolded, click a reagent line, for example `20x Bronze
 
 A price comes from auction house listings. The price kept for an item is the **median unit price of the five cheapest units**. One absurdly cheap listing cannot drag the price down the way a plain minimum would, and quantities are handled properly (a listing of 20 units counts 20 times).
 
-Two sources feed it: the targeted search of **Search prices** and the full **Scan AH**. The most recent write wins; each price keeps its date. Prices older than two weeks are discarded.
+Two sources feed it: the targeted search of **Refresh pinned** and the full **Scan AH**. The most recent write wins; each price keeps its date. Prices older than two weeks are discarded.
 
 ### Auction house net
 
@@ -139,7 +154,7 @@ Open it with `/cp options`, a left click on the minimap button, or the CraftProf
 Where windows open: a CraftProfit window that has never been dragged opens just right of the rightmost CraftProfit window already on screen, so they never pile up on each other (the screen edge keeps it visible). With none shown, the main window opens beside the profession or auction house window, the leveling window beside the main window, the pinned recipes window left of the middle of the screen and the options window in the middle. Once dragged, a window always reopens where you left it. The window you open or click last comes to the front, above the other CraftProfit windows and the game's HUD panels.
 
 - **Appearance**: pick the *Header strip* of every section (Carved wood, Shade or Streaks) and the *Tile card* of the price tiles (Loot card or Inset). The two mix freely (6 looks); the lit button is your choice. It applies at once to every window, open or not, and is saved for your account. Default: Shade and Inset.
-- **Pinned recipes**: the *Limit per character*, 12, 20, 30 or 40 (default 20); the lit button is your choice, saved for your account and used from the next pin. A higher limit makes **Search prices** slower, because the auction house is searched one item at a time (about a minute for 20 recipes); with many recipes, **Scan AH** is usually faster. Lowering the limit never deletes a pin: pins over the new limit stay, and new pins are refused until you unpin enough of them.
+- **Pinned recipes**: the *Limit per character*, 12, 20, 30 or 40 (default 20); the lit button is your choice, saved for your account and used from the next pin. A higher limit makes **Refresh pinned** slower, because the auction house is searched one item at a time (about a minute for 20 recipes); with many recipes, **Scan AH** is usually faster. Lowering the limit never deletes a pin: pins over the new limit stay, and new pins are refused until you unpin enough of them.
 - **Minimap**: *Show the minimap button*. Untick it to hide the button; `/cp minimap` hides it or brings it back too.
 - **Windows**: open or close the main window and the leveling window (first row) and the pinned recipes window (second row).
 - **Controls**: the minimap clicks and every command, one per line: the command in gold, what it does in white.
@@ -183,7 +198,7 @@ The window follows the game language: English, French and Spanish (Latin America
 
 **The window does not appear.** Select a recipe in the profession window (a recipe you know). Try `/cp show`. Check the addon is enabled and run `/cp selftest`.
 
-**Every price shows `?`.** No price has been fetched yet. At the auction house, press **Search prices** for the pinned recipes or **Scan AH** for everything.
+**Every price shows `?`.** No price has been fetched yet. At the auction house, press **Refresh pinned** for the pinned recipes or **Scan AH** for everything.
 
 **The scan never finishes ("No reply from the server").** The game limits full scans to one per 15 minutes per account, and any addon's scan counts. Wait and try once.
 

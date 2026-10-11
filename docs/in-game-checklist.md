@@ -28,7 +28,7 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 
 ## Auction house
 - [ ] Opening the AH shows the window with the Pinned recipes section (first pin selected).
-- [ ] **Search prices** counts `1/N … N/N` and ends with `Prices updated`; prices and the verdict fill in; the age reads a few seconds.
+- [ ] **Refresh pinned** counts `1/N … N/N` and ends with `Updated N prices` (or the longer summary, see Refresh actions); prices and the verdict fill in; the age reads a few seconds.
 - [ ] Closing the AH during a search shows `Search cancelled` with no error.
 - [ ] **Scan AH** starts a scan, the client does not freeze, the status ends `Scan complete: N items priced`. A second press inside 15 minutes shows the cooldown message.
 - [ ] A scan started by another addon (if installed) is picked up (prices refresh) without pressing Scan.
@@ -61,7 +61,7 @@ Pinned list (open the AH with pinned recipes):
 - [ ] Pinned names are orange, yellow, green or grey, matching the profession window. The colour is the one known when the profession window was last open: gain skill points, open the profession window, and the colours follow (with the profession closed they can lag). A pin without a known difficulty shows the plain text colour.
 - [ ] The selected row is tinted gold, the row under the mouse is highlighted, and a hovered selected row still looks right. Values are green for a gain, red for a loss, muted when unknown.
 - [ ] The Sort button in the panel header takes clicks (profit and cost/point alternate) and does not overlap the title "RECETTES ÉPINGLÉES" under `/cp locale frFR`.
-- [ ] Search prices, Scan AH and Leveling work. The status line below them: the longest French and Spanish messages (for example the "no reply from the server ... 15 minute cooldown" one) stay inside the window. Known: a status wrapping to three lines still overruns the bottom margin by about 14 px.
+- [ ] Refresh pinned, Scan AH and Leveling work. The status line below them: the longest French and Spanish messages (for example the "no reply from the server ... 15 minute cooldown" one) stay inside the window. Known: a status wrapping to three lines still overruns the bottom margin by about 14 px.
 
 Leveling window (`/cp level`):
 - [ ] It opens beside the main window, with the native look; the profession button cycles through the professions read; the sort button toggles cost/point and speed.
@@ -89,7 +89,7 @@ Leveling window (`/cp level`):
 - [ ] Leveling up until a recipe changes colour: after the profession window updates, the ranking and the colour follow.
 
 ## Price history
-- [ ] The "Suivre l'historique" box sits to the right of the Crafts box in the Options panel. Ticking it on a recipe, then pressing **Scan AH** (or **Search prices** with that recipe or one sharing its reagents pinned) and `/reload`, leaves `series` entries for its items in `CraftProfit.lua` under `markets`.
+- [ ] The "Suivre l'historique" box sits to the right of the Crafts box in the Options panel. Ticking it on a recipe, then pressing **Scan AH** (or **Refresh pinned** with that recipe or one sharing its reagents pinned) and `/reload`, leaves `series` entries for its items in `CraftProfit.lua` under `markets`.
 - [ ] A recipe whose output is bind-on-pickup still records (its output is never priced).
 - [ ] Unticking pauses recording; `/cp history` lists it as paused; `/cp history remove 1` deletes it and its series.
 - [ ] A 16th tracked recipe is refused with "Trop de recettes suivies (15 maximum)".
@@ -144,7 +144,7 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] With more than 6 pins the thin game scroll bar shows at the right of the rows and never covers a value; with 6 or fewer it is hidden. The mouse wheel scrolls over the rows, over the bar and over the empty part of the list.
 - [ ] Scroll bar: click the track to jump; grab the thumb near its top or bottom edge: the list does not jump, then follows the pointer; a right click on the bar does nothing; start a drag, alt-tab out, release, come back: the drag has stopped (moving the mouse does not scroll). Hovering the bar lights the thumb, dragging darkens it.
 - [ ] The sort button in the panel header toggles Sort: profit / Sort: cost/point and the order changes; clicking the rest of the header does nothing else; the header has the same height as before; a long title (French) is cut before the button.
-- [ ] Search prices, Scan AH and Leveling work as before and the status line shows their messages (two lines for a long French message).
+- [ ] Refresh pinned, Scan AH and Leveling work as before and the status line shows their messages (two lines for a long French message).
 - [ ] Drag the main window from a pinned row: it moves, and the click that ends the drag selects nothing.
 - [ ] Leveling window: opens from the Leveling button and with `/cp level`; native frame with its title and red close button (Escape does not close it, as before); the rows scroll with the wheel and the bar (more than 12 recipes); clicking a row shows the recipe in the main window; a row drag moves the window.
 - [ ] Leveling window: the grey-recipes check box toggles from the box and from its label (game click sound); with grey recipes hidden, the "N hidden" text at the right never sits under the label. The profession button cycles professions; the sort button switches cost/point and speed; long labels are cut, not overflowing.
@@ -178,7 +178,7 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 ## Pinned window (PR 11)
 - [ ] With the profession window and the AH closed, `/cp pins` opens the "Pinned recipes" window (native frame; the first time, left of the middle of the screen when no other CraftProfit window is open); `/cp pins` again closes it; Escape closes it.
 - [ ] Rows: names in their difficulty colours, values with coin icons (green gain, red loss, grey `?` for a pin with a missing price, never an error).
-- [ ] Age line: the age of the oldest price the pins use; orange when older than an hour or never priced. After **Search prices** at the AH (no full scan), the line shows a recent age, not "never scanned".
+- [ ] Age line: the age of the oldest price the pins use; orange when older than an hour or never priced. After **Refresh pinned** at the AH (no full scan), the line shows a recent age, not "never scanned".
 - [ ] Sort button: switches profit and cost/point and relabels; the list under the main window at the AH follows the same choice.
 - [ ] The "x" of a row: tooltip "Unpin"; a click unpins the recipe, the rows below move up, the main window does not open and the selection does not change.
 - [ ] A click elsewhere on a row opens the main window on that recipe with its stored prices (with the profession window and the AH closed too); a row drag moves the window and selects nothing.
@@ -196,11 +196,26 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Click 30 in `/cp options` (window left open): the next pin works at once, up to 30; close and reopen the options window, `/reload`: 30 is still lit.
 - [ ] Lower the limit to 12 with more than 12 pins: no pin is deleted (count them in `/cp pins`, also after `/reload`), a new pin is refused with the message, unpinning still works from the main window and from the "x".
 - [ ] Set 40 and pin 40 recipes (or as many as you can): the list under the main window at the AH and the pinned recipes window both scroll with the wheel and the bar to the last pin; the "x" of the bottom row while scrolled to the end unpins it and the list moves up with no gap.
-- [ ] **Search prices** with many pins still completes. 20 pinned recipes: about a minute (measured 2026-10-11 on the beta); **Scan AH** as the faster option.
+- [ ] **Refresh pinned** with many pins still completes. 20 pinned recipes: about a minute (measured 2026-10-11 on the beta); **Scan AH** as the faster option.
 - [ ] The options window is now about 676 px tall (the note on three lines): at your usual UI scale it fits on screen whole (title bar to the bottom of CONTROLS), and again at a smaller resolution if you can.
 - [ ] The note under the limit buttons (search time, Scan AH) fits in three lines, nothing cut, the panel exactly as tall as its lines, in English, `/cp locale frFR` and `/cp locale esES`; the "Limit per character" label and the 12 / 20 / 30 / 40 buttons are not cut either.
 - [ ] The panel title of the list at the AH and of the pinned recipes window reads `PINNED RECIPES (n/limit)` and follows a pin, an unpin (main window and "x") and a limit change at once; in French and Spanish too; at the AH the title is cut before the sort button, never under it (check `RECETTES ÉPINGLÉES (40/40)`).
 - [ ] No Lua error, no `ADDON_ACTION_BLOCKED`.
+
+## Refresh actions
+- [ ] Main window Options panel: **Pin** and **Refresh recipe** share the last row, same width, nothing cut in English, `/cp locale frFR` ("Épingler" / "Actualiser recette") and `/cp locale esES` ("Fijar" / "Actualizar receta"); the window height is the same as before.
+- [ ] Away from the AH (profession window open, a recipe shown): Refresh recipe is greyed and a click does nothing. At the AH with a recipe shown: enabled. At the AH with the empty window ("Select a recipe"): greyed.
+- [ ] At the AH, pick a recipe with old prices, press **Refresh recipe**: the status counts `1/N … N/N` over that recipe's items only (reagents, output, disenchant materials when shown), ends within seconds (note how many), and only that recipe's prices and age change (another pin keeps its old age in the pinned window).
+- [ ] While any search runs (recipe or pinned), Refresh recipe is greyed; it comes back at the end. Pressing **Refresh pinned** during a recipe refresh does nothing; the recipe refresh finishes normally.
+- [ ] **Refresh pinned** right after a recipe refresh: counts all the pinned items and its summary does not carry the previous misses.
+- [ ] Summary lines: everything found shows `Updated N prices`; an item nobody sells (search a rare reagent) shows `Updated N-1 of N prices · no listing: <its name> (nobody is selling them now)` (the three numbers add up to N; a recipe nobody sells anything of shows `Updated 0 of N prices · no listing: N ...`); a slow server or a throttled search shows `· no answer: <name>, try again` (one or two names, a number from three on); both can show together; the line never goes past two lines (long names cut with `...`), also in French (`sans réponse : Barre d'argent, réessayez`, non-breaking space before the colon) and Spanish.
+- [ ] For a recipe with 5 materials whose item can be disenchanted, Refresh recipe counts 7 prices (5 materials, the crafted item, a disenchant material): note the counts and that the named missing item is one of these.
+- [ ] Close the AH mid-search (recipe or pinned): `Search cancelled`, no Lua error; reopen the AH: Refresh recipe is enabled again.
+- [ ] The options window note names **Refresh pinned** (and its French and Spanish names), still on three lines at most.
+
+- [ ] A recipe whose crafted item is bound on pickup (its AH tile shows `n/a`): Refresh recipe counts only its reagents (and disenchant materials when shown), the bound item is never searched (no `SEND` for it in the trace) and never named in the summary.
+- [ ] Retry: when a refresh misses prices, the status shows `Retrying 0/n … n/n` for only those items before the summary (n = the missed ones); a price found on the retry is counted as updated and not named. No third try. Close the AH during the retry: `Search cancelled`, no error. Refresh recipe stays greyed across both tries.
+- [ ] Search trace (probe, F13): with `probe/CraftProfitProbe` enabled, `/cpp clear`, `/cpp trace on`, run a Refresh pinned with 20 pins, `/cpp trace off`, `/reload`; nothing extra in chat while tracing; the log has `TRACE` lines for every `SEND` and search event. Note per missed item: number of events, `results` at the first event vs later, the gap from `SEND`, any throttle `QUEUED` / `DROPPED` and the time to `SYSTEM_READY`; copy the findings into probe-findings F13.
 
 ## Default placement (PR 19 fixes)
 - [ ] Delete the saved positions (`/run CraftProfitDB.settings.pinsWindow=nil CraftProfitDB.settings.levelWindow=nil CraftProfitDB.settings.optionsWindow=nil CraftProfitDB.settings.window=nil` then `/reload`).

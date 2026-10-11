@@ -1,5 +1,6 @@
 -- The pinned-recipes section of the window, on the native kit, shown while the AH is
--- open, with the "Search prices", "Scan AH" and "Leveling" buttons.
+-- open, with the "Refresh pinned", "Scan AH" and "Leveling" buttons. It also runs the
+-- main window's "Refresh recipe" search (startSearch with that one recipe).
 local _, ns = ...
 local L = ns.L
 local Native, Colors = ns.Native, ns.Colors
@@ -33,7 +34,8 @@ local parts = { rows = {} }
 local rows = parts.rows
 local offset = 0
 local queue, ticker
-local notFound = 0
+-- A miss of one kind is named when there are at most this many of it, else counted.
+local NAMED_MAX = 2
 
 PinsUI.parts = parts
 PinsUI.FOOTER_H = FOOTER_H
@@ -46,12 +48,31 @@ function PinsUI.setStatus(text)
 end
 local setStatus = PinsUI.setStatus
 
--- Item ids whose prices all the pinned recipes need, each listed once.
+-- Bind on pickup (C_Item.GetItemInfo's bindType), as Evaluate and Controller.historyItems.
+local BIND_ON_PICKUP = 1
+
+-- True when the recipe's crafted item can never be sold at the AH (bind on pickup): its
+-- price is not worth a search (the AH tile already says n/a). When the item info is not
+-- loaded yet, the binding is unknown: it is searched, as before.
+local function unsellableOutput(recipe, itemInfo)
+    local info = itemInfo(recipe.outputItemID)
+    if type(info) ~= "table" or info.bindType ~= BIND_ON_PICKUP then return false end
+    -- Also one of its own reagents (unlikely): the reagent still needs its price.
+    for _, r in ipairs(recipe.reagents or {}) do
+        if r.itemID == recipe.outputItemID then return false end
+    end
+    return true
+end
+
+-- Item ids whose prices all the given recipes need, each listed once. A crafted item bound
+-- on pickup is left out (it cannot be sold at the AH), so it is never searched nor counted
+-- in the summary; its reagents and disenchant materials are kept.
 function PinsUI.wantedFor(pins, itemInfo, lookup, knowsEnchanting)
     local ids, seen = {}, {}
     for _, recipe in ipairs(pins) do
+        local skip = unsellableOutput(recipe, itemInfo) and recipe.outputItemID or nil
         for _, id in ipairs(ns.Evaluate.wantedItems(recipe, itemInfo, lookup, knowsEnchanting)) do
-            if not seen[id] then
+            if id ~= skip and not seen[id] then
                 seen[id] = true
                 ids[#ids + 1] = id
             end
@@ -154,57 +175,164 @@ function PinsUI.refresh()
     ns.Window.relayout()
 end
 
-local function finishSearch(summary)
+-- What one kind of miss shows: the item names when there are at most NAMED_MAX of them
+-- (`ids`, named by `nameOf`, "#id" when it has no name yet), else the count.
+local function missText(count, ids, nameOf)
+    if type(ids) == "table" and #ids > 0 and #ids <= NAMED_MAX and #ids == count then
+        local names = {}
+        for i, id in ipairs(ids) do
+            local name = type(nameOf) == "function" and nameOf(id) or nil
+            names[i] = type(name) == "string" and name ~= "" and name or ("#" .. tostring(id))
+        end
+        return table.concat(names, ", ")
+    end
+    return tostring(count)
+end
+
+-- The status line after a search. The unit is a price: one per item searched (the reagents,
+-- the crafted item and its disenchant materials). counts: ok (items whose search returned,
+-- with or without listings), total, noListing (returned no usable listing), failed (did not
+-- answer), and optionally noListingIDs / failedIDs (their item ids, to name them through
+-- `nameOf(itemID)`). ok + failed = total for a search that ran to its end. "Updated" counts
+-- only the prices actually stored (ok - noListing), so updated + no listing + no answer =
+-- total. All stored: the short form; otherwise "x of y" and a fragment for each kind of miss.
+function PinsUI.searchSummary(locale, counts, nameOf)
+    local ok, total = counts.ok or 0, counts.total or 0
+    local noListing, failed = counts.noListing or 0, counts.failed or 0
+    local updated = math.max(0, ok - noListing)
+    if updated == total and noListing == 0 and failed == 0 then
+        return string.format(locale.SEARCH_UPDATED, updated)
+    end
+    local text = string.format(locale.SEARCH_UPDATED_OF, updated, total)
+    if noListing > 0 then
+        text = text .. string.format(locale.SEARCH_NO_LISTING, missText(noListing, counts.noListingIDs, nameOf))
+    end
+    if failed > 0 then
+        text = text .. string.format(locale.SEARCH_NO_ANSWER, missText(failed, counts.failedIDs, nameOf))
+    end
+    return text
+end
+
+-- One ticker drives whichever queue runs (first pass, then the retry).
+local function ensureTicker()
+    if ticker or PinsUI.state ~= "running" then return end
+    ticker = C_Timer.NewTicker(TICK_SECONDS, function()
+        if queue then queue:tick(GetTime()) end
+    end)
+end
+
+-- The whole search is over (both passes, or cancelled): one status, one history batch.
+local function endSearch(state, text)
     if ticker then
         ticker:Cancel()
         ticker = nil
     end
-    if summary.cancelled then
-        PinsUI.state = "cancelled"
-        setStatus(L.SEARCH_CANCELLED)
-    else
-        PinsUI.state = "done"
-        local missing = #summary.failed + notFound
-        if missing > 0 then
-            setStatus(string.format(L.SEARCH_PARTIAL, missing))
-        else
-            setStatus(L.SEARCH_DONE)
-        end
-    end
+    PinsUI.state = state
+    setStatus(text)
+    -- "Refresh recipe" comes back now that no search runs.
+    ns.Window.updateRefreshButton()
+    -- Once, at the very end: the prices stored by both passes make one batch.
     ctl.commitSearch()
     ctl.requestRefresh()
 end
 
--- Searches the AH, one item at a time, for everything the pinned recipes need.
-function PinsUI.startSearch()
-    if not ns.AH.isOpen then
-        setStatus(L.SEARCH_NEED_AH)
-        return
-    end
-    if queue and queue.state == "running" then return end
-    local ids = PinsUI.wantedFor(CraftProfitCharDB.pins, ctl.itemInfo, ns.Data.Disenchant.lookup,
-        ctl.knowsEnchanting())
-    if #ids == 0 then return end
-    notFound = 0
+-- The item ids of a finished queue that did not answer.
+local function failedOf(summary)
+    local ids = {}
+    for i, miss in ipairs(summary.failed) do ids[i] = miss.itemID end
+    return ids
+end
+
+-- Runs one pass over `ids`: a fresh queue, its own no-listing list, progress shown with
+-- `progressKey`, `onDone(summary, noListing)` at the end.
+local function runPass(ids, progressKey, onDone)
+    local noListing = {}
     queue = ns.PriceQueue.new({
         itemIDs = ids,
         timeout = SEARCH_TIMEOUT,
         send = ns.AH.search,
         onItem = function(itemID, listings, err)
-            if not err and not ctl.recordListings(itemID, listings) then notFound = notFound + 1 end
+            -- recordListings stores (and marks for history) only a usable listing, so an
+            -- item retried after a miss is never counted twice.
+            if not err and not ctl.recordListings(itemID, listings) then
+                noListing[#noListing + 1] = itemID
+            end
         end,
         onProgress = function(done, total)
-            setStatus(string.format(L.SEARCHING, done, total))
+            setStatus(string.format(L[progressKey], done, total))
             ctl.requestRefresh()
         end,
-        onDone = finishSearch,
+        onDone = function(summary) onDone(summary, noListing) end,
     })
-    PinsUI.state = "running"
-    setStatus(string.format(L.SEARCHING, 0, #ids))
+    setStatus(string.format(L[progressKey], 0, #ids))
     queue:start(GetTime())
-    if queue.state == "running" then
-        ticker = C_Timer.NewTicker(TICK_SECONDS, function() queue:tick(GetTime()) end)
+end
+
+-- Second pass over the prices the first one missed (no answer or no listing): a search the
+-- server dropped or answered too early often finds the price when asked again. The summary
+-- counts both passes over the first pass's total: an item found now counts as updated.
+local function retryPass(total, retry)
+    runPass(retry, "SEARCH_RETRYING", function(summary, noListing)
+        if summary.cancelled then
+            endSearch("cancelled", L.SEARCH_CANCELLED)
+            return
+        end
+        local failedIDs = failedOf(summary)
+        -- Names read now: the items were just searched, so the game usually has them.
+        endSearch("done", PinsUI.searchSummary(L, {
+            ok = total - #failedIDs, total = total, noListing = #noListing, failed = #failedIDs,
+            noListingIDs = noListing, failedIDs = failedIDs,
+        }, ctl.itemName))
+    end)
+    ensureTicker()
+end
+
+local function firstPassDone(ids)
+    return function(summary, noListing)
+        if summary.cancelled then
+            endSearch("cancelled", L.SEARCH_CANCELLED)
+            return
+        end
+        local failedIDs = failedOf(summary)
+        local missed = {}
+        for _, id in ipairs(failedIDs) do missed[id] = true end
+        for _, id in ipairs(noListing) do missed[id] = true end
+        -- In the first pass's order; no third pass.
+        local retry = {}
+        for _, id in ipairs(ids) do
+            if missed[id] then retry[#retry + 1] = id end
+        end
+        if #retry == 0 then
+            endSearch("done", PinsUI.searchSummary(L, { ok = summary.ok, total = summary.total }, ctl.itemName))
+        else
+            retryPass(summary.total, retry)
+        end
     end
+end
+
+-- Searches the AH, one item at a time, for everything `recipes` need: every pinned recipe
+-- when nil ("Refresh pinned"), or the recipe on screen ("Refresh recipe"); then once more for
+-- what that pass missed. Ignored while a search runs, so one never cancels or mixes into the
+-- other.
+function PinsUI.startSearch(recipes)
+    if not ns.AH.isOpen then
+        setStatus(L.SEARCH_NEED_AH)
+        return
+    end
+    if queue and queue.state == "running" then return end
+    if type(recipes) ~= "table" then recipes = CraftProfitCharDB.pins end
+    local ids = PinsUI.wantedFor(recipes, ctl.itemInfo, ns.Data.Disenchant.lookup,
+        ctl.knowsEnchanting())
+    if #ids == 0 then
+        -- Said rather than silent: the click did something, there was simply nothing to price.
+        setStatus(L.SEARCH_NOTHING)
+        return
+    end
+    PinsUI.state = "running"
+    ns.Window.updateRefreshButton()
+    -- wantedFor lists each item once, so the retry order follows the first pass's.
+    runPass(ids, "SEARCHING", firstPassDone(ids))
+    ensureTicker()
 end
 
 function PinsUI.scan()
@@ -295,15 +423,21 @@ function PinsUI.init(controller)
 
     -- UIPanelButtonTemplate is the game's red panel button: search keeps the primary
     -- place (first, top left), all three keep their half-width.
-    parts.search = Native.button(host, "", { width = half, onClick = PinsUI.startSearch })
+    parts.search = Native.button(host, "", { width = half, onClick = function() PinsUI.startSearch() end })
     parts.scan = Native.button(host, "", { width = half, onClick = PinsUI.scan })
     parts.level = Native.button(host, "", { width = half, onClick = function()
         if ns.LevelingUI then ns.LevelingUI.toggle() end
     end })
     statusText = host:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     statusText:SetWidth(inner)
+    -- Two lines in a fixed box: a longer status (long item names) is cut with "...", never
+    -- drawn past the window's bottom.
+    statusText:SetHeight(STATUS_H)
+    statusText:SetWordWrap(true)
+    if type(statusText.SetMaxLines) == "function" then statusText:SetMaxLines(2) end
     statusText:SetJustifyH("LEFT")
     statusText:SetJustifyV("TOP")
+    parts.status = statusText
 
     host:EnableMouseWheel(true)
     host:SetScript("OnMouseWheel", function(_, delta)

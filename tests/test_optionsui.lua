@@ -380,11 +380,11 @@ end
 
 H.test("the note under the limits says how slow a search gets and points to Scan AH, in three lines at most", function()
     local expected = {
-        enUS = "A higher limit makes Search prices slower: it searches the auction house one item at a time "
+        enUS = "A higher limit makes Refresh pinned slower: it searches the auction house one item at a time "
             .. "(about a minute for 20 recipes). With many recipes, Scan AH is usually faster.",
-        frFR = "Plus la limite est haute, plus Rechercher les prix est long : un objet à la fois (environ une "
+        frFR = "Plus la limite est haute, plus Actualiser épinglées est long : un objet à la fois (environ une "
             .. "minute pour 20 recettes). Avec beaucoup de recettes, Scanner l'HV va souvent plus vite.",
-        esES = "Un límite más alto ralentiza Buscar precios, que consulta objeto por objeto (cerca de un minuto "
+        esES = "Un límite más alto ralentiza Actualizar fijadas, que consulta objeto por objeto (cerca de un minuto "
             .. "para 20 recetas). Con muchas recetas, Escanear CS suele ser más rápido.",
     }
     for _, locale in ipairs({ "enUS", "frFR", "esES" }) do

@@ -69,3 +69,25 @@ Status marks: ✅ measured in game · ⚠️ not measured · ❌ unusable.
 - Addon compartment: does the CraftProfit entry (TOC `AddonCompartmentFunc: CraftProfit_OnCompartmentClick`, `IconTexture: Interface\Icons\INV_Misc_Coin_01`) show on Forever's minimap? Does left click open the options and right click the pinned recipes window? ⚠️
 - Minimap button icon: does `GetFileIDFromPath("Interface\Icons\INV_Misc_Coin_01")` return an id (the coin draws), or does the button fall back to `INV_Misc_QuestionMark`? ⚠️
 - Minimap art: `Interface\Minimap\MiniMap-TrackingBorder` (ring), `UI-Minimap-Background`, `UI-Minimap-ZoomButton-Highlight` draw and line up with the 24 px background and 18 px icon, both anchored CENTER (0, 1) as LibDBIcon does? ⚠️
+
+## F13. Search trace (to measure in game) ⚠️
+
+Why: some searches end as "no listing" or "no answer" and a second click finds the price. The trace shows what the client did for each item.
+
+How to run it:
+1. Enable `probe/CraftProfitProbe` (version 0.8.0 or later) next to CraftProfit, open the auction house.
+2. `/cpp clear`, then `/cpp trace on`. Nothing is printed in chat while it runs; each line goes to the probe's log.
+3. Press **Refresh recipe** or **Refresh pinned** in CraftProfit (and, to compare, search an item by hand in the AH window). Note the status line at the end.
+4. `/cpp trace off`, then `/reload` to write the log: `WTF/Account/<ACCOUNT>/SavedVariables/CraftProfitProbe.lua`, lines starting with `TRACE`.
+
+Each line has the `GetTime()` stamp in seconds:
+- `TRACE t SEND key <itemID>/<itemLevel> ready <true|false>`: every `C_AuctionHouse.SendSearchQuery` (from CraftProfit, the AH UI or another addon), with `IsThrottledMessageSystemReady()` at that instant.
+- `TRACE t EVENT <event> key <itemID or itemID/itemLevel> results <n> ready <...>`: `COMMODITY_SEARCH_RESULTS_UPDATED`, `ITEM_SEARCH_RESULTS_UPDATED`, `ITEM_SEARCH_RESULTS_ADDED` (with the result count read at that instant), and `AUCTION_HOUSE_THROTTLED_SYSTEM_READY` / `AUCTION_HOUSE_THROTTLED_MESSAGE_*` (sent, response received, queued, dropped). An event the client does not know is noted once at load as `trace: event rejected by client`.
+
+What to look for, per item:
+- How many result events arrive per search, and whether the first one says `results 0` while a later one (or `ITEM_SEARCH_RESULTS_ADDED`) brings the rows: CraftProfit currently reads the first event only.
+- The gap between `SEND` and the first event for that item, against the 6 s timeout; items marked "no answer" with an event after 6 s mean the timeout is too short.
+- `SEND` with `ready false`, `MESSAGE_QUEUED` or `MESSAGE_DROPPED`: the search was throttled; how long until `THROTTLED_SYSTEM_READY`.
+- Whether gear (item keys with an item level) behaves differently from commodities.
+
+Results: to fill in (date, build, what the trace showed and what changed in CraftProfit).

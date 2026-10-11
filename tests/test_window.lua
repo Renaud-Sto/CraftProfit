@@ -55,7 +55,7 @@ local function boot(opts)
     T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
     local calls = {}
     for _, name in ipairs({ "onPinClick", "onReagentClick", "onCraftsChange", "onTrackToggle",
-        "onPerPointToggle", "onCostToggle", "onMoved", "onOutputClick" }) do
+        "onPerPointToggle", "onCostToggle", "onMoved", "onOutputClick", "onRefreshRecipe" }) do
         T.ns.Window.lastHandlers[name] = function(...) calls[#calls + 1] = { name, ... } end
     end
     return T, T.ns.Window, calls
@@ -648,7 +648,7 @@ H.test("a click that ends a drag of the AH tile or the title searches nothing", 
     end
 end)
 
-H.test("the window is a native panel: named, with its title button and the pin button 120 px wide", function()
+H.test("the window is a native panel: named, with its title button and the pin and refresh buttons sharing a row", function()
     local T = W.boot(H)
     local made = {}
     local create = T.env.CreateFrame
@@ -665,7 +665,12 @@ H.test("the window is a native panel: named, with its title button and the pin b
     H.eq(Window.frame().frameName, "CraftProfitWindow")
     H.truthy(rawget(Window.frame(), "titleHit"))
     H.eq(Window.parts.pin.template, "UIPanelButtonTemplate")
-    H.eq(Window.parts.pin.size, { 120, 22 })
+    H.eq(Window.parts.refresh.template, "UIPanelButtonTemplate")
+    -- The body less 8 px each side, shared equally with a 6 px gap.
+    local bodyWidth = Window.INNER_WIDTH - T.ns.Native.PANEL_EDGE * 2
+    local half = math.floor((bodyWidth - 16 - 6) / 2)
+    H.eq(Window.parts.pin.size, { half, 22 })
+    H.eq(Window.parts.refresh.size, { half, 22 })
     H.eq(Window.parts.craftsBox.template, "InputBoxTemplate")
     H.eq(Window.parts.track.template, "UICheckButtonTemplate")
     H.eq(Window.parts.perPoint.template, "UICheckButtonTemplate")
@@ -686,4 +691,78 @@ H.test("attach uses the saved position, else sits beside the target, else near t
     H.eq(points, { { "TOPLEFT", target, "TOPRIGHT", 6, 0 } })
     Window.attach(nil, nil)
     H.eq(points, { { "CENTER", T.env.UIParent, "CENTER", 300, 0 } })
+end)
+
+-- Records the anchors of every frame made after boot.
+local function bootAnchored()
+    local T = W.boot(H)
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.shown = true
+        f.SetPoint = function(self, ...) self.point = { ... } end
+        f.SetEnabled = function(self, v) self.nativeEnabled = v end
+        return f
+    end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    local calls = {}
+    T.ns.Window.lastHandlers.onRefreshRecipe = function() calls[#calls + 1] = "refresh" end
+    return T, T.ns.Window, calls
+end
+
+H.test("the refresh button sits right of the pin button on the third option row", function()
+    local T, Window = bootAnchored()
+    local Native = T.ns.Native
+    local body = Window.parts.options.body
+    local bodyWidth = Window.INNER_WIDTH - Native.PANEL_EDGE * 2
+    local half = math.floor((bodyWidth - 16 - 6) / 2)
+    local rowH = math.max(Native.CHECK_SIZE, Native.BUTTON_H, Native.INPUT_H) + 2
+    local y = -(2 * rowH + math.floor((rowH - Native.BUTTON_H) / 2))
+    H.eq(Window.parts.pin.point, { "TOPLEFT", body, "TOPLEFT", 8, y })
+    H.eq(Window.parts.refresh.point, { "TOPLEFT", body, "TOPLEFT", 8 + half + 6, y })
+    -- Both end within the body's 8 px margin.
+    H.truthy(8 + half + 6 + half <= bodyWidth - 8)
+end)
+
+H.test("the refresh button is enabled only with the AH open and a recipe shown, and a click needs it enabled", function()
+    local T, Window, calls = bootAnchored()
+    local b = Window.parts.refresh
+    T.ns.AH.isOpen = false
+    Window.render(model())
+    H.eq(b.text, "Refresh recipe")
+    H.eq(b.enabled, false)
+    H.eq(b.nativeEnabled, false)
+    b.scripts.OnClick(b)
+    H.eq(#calls, 0)
+    T.ns.AH.isOpen = true
+    Window.render(model())
+    H.eq(b.enabled, true)
+    H.eq(b.nativeEnabled, true)
+    b.scripts.OnClick(b)
+    H.eq(calls, { "refresh" })
+    -- No recipe: the empty window.
+    Window.showEmpty("Select a recipe")
+    H.eq(b.enabled, false)
+    -- A recipe again, then the AH closes without a render.
+    Window.render(model())
+    H.eq(b.enabled, true)
+    T.ns.AH.isOpen = false
+    Window.updateRefreshButton()
+    H.eq(b.enabled, false)
+end)
+
+H.test("the pin and refresh labels fit their buttons in English, French and Spanish", function()
+    for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
+        local T = W.boot(H, { locale = locale })
+        T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+        local Window, Native, L = T.ns.Window, T.ns.Native, T.ns.L
+        local bodyWidth = Window.INNER_WIDTH - Native.PANEL_EDGE * 2
+        local half = math.floor((bodyWidth - 16 - 6) / 2)
+        for _, text in ipairs({ L.PIN, L.UNPIN, L.REFRESH_RECIPE }) do
+            local need = T.ns.Layout.textWidth(text, T.ns.OptionsUI.CHAR_W)
+            H.truthy(need <= half - 16 or error(locale .. ": " .. text .. " needs " .. need .. " px"))
+        end
+        if locale == "frFR" then H.eq(L.REFRESH_RECIPE, "Actualiser recette") end
+        if locale == "esES" then H.eq(L.REFRESH_RECIPE, "Actualizar receta") end
+    end
 end)

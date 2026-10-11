@@ -546,6 +546,19 @@ function Controller.togglePin()
     Controller.refresh()
 end
 
+-- "Refresh recipe": searches the AH for the items of the recipe on screen only (reagents,
+-- output, disenchant materials when relevant), through the pinned list's search. Ignored
+-- while a search runs; with the AH closed it says so in chat.
+function Controller.refreshRecipe()
+    local recipe = state.recipe
+    if not recipe then return end
+    if not ns.AH.isOpen then
+        say(L.SEARCH_NEED_AH)
+        return
+    end
+    if ns.PinsUI then ns.PinsUI.startSearch({ recipe }) end
+end
+
 -- The "x" of a row in the pinned window: removes that pin and refreshes every view; the
 -- selection stays as it was.
 function Controller.unpin(recipeID)
@@ -556,7 +569,7 @@ end
 -- What the pinned window shows: the pins in the pinned list's order with their
 -- evaluation, the sort, and how old their prices are (it never searches). The age is the
 -- main window's: the oldest price the evaluations used (result.oldestAge, whether it came
--- from a full scan or a "Search prices"), here over every pin; none -> never priced, stale.
+-- from a full scan or a "Refresh pinned" or "Refresh recipe"), here over every pin; none -> never priced, stale.
 function Controller.pinsData()
     local settings = CraftProfitDB.settings
     local sortMode = CraftProfitCharDB.sortMode
@@ -640,6 +653,8 @@ function Controller.onAHOpen(open)
         -- The profession window may still be open: let the watcher report it again.
         ns.Trade.invalidate()
     end
+    -- The hidden window keeps its last recipe: its button must still follow the AH.
+    if window.updateRefreshButton then window.updateRefreshButton() end
 end
 
 -- The profession window selection changed (or the window closed).
@@ -719,6 +734,7 @@ function Controller.init()
 
     ns.Window.create({
         onPinClick = Controller.togglePin,
+        onRefreshRecipe = Controller.refreshRecipe,
         onReagentClick = Controller.onReagentClick,
         onOutputClick = Controller.onOutputClick,
         onCraftsChange = Controller.setCrafts,

@@ -54,7 +54,7 @@ Pure modules under the fake environment with synthetic series (busy fortnight, g
 
 ## Delivery
 
-1. Retention and limit 30 (History, DB, docs, tests) plus pure computations (usual, compare, weekday, net result).
+1. Retention and limit 30 (History, DB, docs, tests) plus pure computations (usual, compare, weekday, net result). **Done** (branch `feat/price-history`): `History.lua`, `HistoryView.lua`, docs.
 2. Chart widget and probe.
 3. History window and entry points.
 4. Quick indicators in the main window.

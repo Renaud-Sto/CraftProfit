@@ -53,10 +53,10 @@ ns.Locale.register("esES", {
     SEARCHING = "Buscando %d/%d",
     -- Search summary: everything answered with listings, else "of" plus the fragments
     -- that apply (each starts with its middle-dot separator).
-    SEARCH_UPDATED = "%d objetos actualizados",
-    SEARCH_UPDATED_OF = "%d de %d objetos actualizados",
-    SEARCH_NO_LISTING = " · sin ofertas: %d (nadie las vende)",
-    SEARCH_NO_ANSWER = " · sin respuesta: %d, reintenta",
+    SEARCH_UPDATED = "%d precios actualizados",
+    SEARCH_UPDATED_OF = "%d de %d precios actualizados",
+    SEARCH_NO_LISTING = " · sin ofertas: %s (nadie las vende)",
+    SEARCH_NO_ANSWER = " · sin respuesta: %s, reintenta",
     SEARCH_NEED_AH = "Abre primero la casa de subastas",
     SEARCH_NOTHING = "Nada que buscar",
     SEARCH_UNSELLABLE = "Este objeto no se puede vender en la casa de subastas",

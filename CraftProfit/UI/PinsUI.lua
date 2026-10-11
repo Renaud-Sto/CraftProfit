@@ -34,7 +34,10 @@ local parts = { rows = {} }
 local rows = parts.rows
 local offset = 0
 local queue, ticker
-local notFound = 0
+-- Items of the running search that answered with no usable listing, in search order.
+local noListingIDs = {}
+-- A miss of one kind is named when there are at most this many of it, else counted.
+local NAMED_MAX = 2
 
 PinsUI.parts = parts
 PinsUI.FOOTER_H = FOOTER_H
@@ -155,12 +158,28 @@ function PinsUI.refresh()
     ns.Window.relayout()
 end
 
--- The status line after a search. counts: ok (items whose search returned, with or without
--- listings), total, noListing (returned no usable listing), failed (did not answer). ok +
--- failed = total for a search that ran to its end. "Updated" counts only the prices actually
--- stored (ok - noListing), so updated + no listing + no answer = total. All stored: the short
--- form; otherwise "x of y" and a fragment for each kind of miss.
-function PinsUI.searchSummary(locale, counts)
+-- What one kind of miss shows: the item names when there are at most NAMED_MAX of them
+-- (`ids`, named by `nameOf`, "#id" when it has no name yet), else the count.
+local function missText(count, ids, nameOf)
+    if type(ids) == "table" and #ids > 0 and #ids <= NAMED_MAX and #ids == count then
+        local names = {}
+        for i, id in ipairs(ids) do
+            local name = type(nameOf) == "function" and nameOf(id) or nil
+            names[i] = type(name) == "string" and name ~= "" and name or ("#" .. tostring(id))
+        end
+        return table.concat(names, ", ")
+    end
+    return tostring(count)
+end
+
+-- The status line after a search. The unit is a price: one per item searched (the reagents,
+-- the crafted item and its disenchant materials). counts: ok (items whose search returned,
+-- with or without listings), total, noListing (returned no usable listing), failed (did not
+-- answer), and optionally noListingIDs / failedIDs (their item ids, to name them through
+-- `nameOf(itemID)`). ok + failed = total for a search that ran to its end. "Updated" counts
+-- only the prices actually stored (ok - noListing), so updated + no listing + no answer =
+-- total. All stored: the short form; otherwise "x of y" and a fragment for each kind of miss.
+function PinsUI.searchSummary(locale, counts, nameOf)
     local ok, total = counts.ok or 0, counts.total or 0
     local noListing, failed = counts.noListing or 0, counts.failed or 0
     local updated = math.max(0, ok - noListing)
@@ -168,8 +187,12 @@ function PinsUI.searchSummary(locale, counts)
         return string.format(locale.SEARCH_UPDATED, updated)
     end
     local text = string.format(locale.SEARCH_UPDATED_OF, updated, total)
-    if noListing > 0 then text = text .. string.format(locale.SEARCH_NO_LISTING, noListing) end
-    if failed > 0 then text = text .. string.format(locale.SEARCH_NO_ANSWER, failed) end
+    if noListing > 0 then
+        text = text .. string.format(locale.SEARCH_NO_LISTING, missText(noListing, counts.noListingIDs, nameOf))
+    end
+    if failed > 0 then
+        text = text .. string.format(locale.SEARCH_NO_ANSWER, missText(failed, counts.failedIDs, nameOf))
+    end
     return text
 end
 
@@ -183,9 +206,13 @@ local function finishSearch(summary)
         setStatus(L.SEARCH_CANCELLED)
     else
         PinsUI.state = "done"
+        local failedIDs = {}
+        for i, miss in ipairs(summary.failed) do failedIDs[i] = miss.itemID end
+        -- Names read now: the items were just searched, so the game usually has them.
         setStatus(PinsUI.searchSummary(L, {
-            ok = summary.ok, total = summary.total, noListing = notFound, failed = #summary.failed,
-        }))
+            ok = summary.ok, total = summary.total, noListing = #noListingIDs, failed = #failedIDs,
+            noListingIDs = noListingIDs, failedIDs = failedIDs,
+        }, ctl.itemName))
     end
     -- "Refresh recipe" comes back now that no search runs.
     ns.Window.updateRefreshButton()
@@ -210,13 +237,15 @@ function PinsUI.startSearch(recipes)
         setStatus(L.SEARCH_NOTHING)
         return
     end
-    notFound = 0
+    noListingIDs = {}
     queue = ns.PriceQueue.new({
         itemIDs = ids,
         timeout = SEARCH_TIMEOUT,
         send = ns.AH.search,
         onItem = function(itemID, listings, err)
-            if not err and not ctl.recordListings(itemID, listings) then notFound = notFound + 1 end
+            if not err and not ctl.recordListings(itemID, listings) then
+                noListingIDs[#noListingIDs + 1] = itemID
+            end
         end,
         onProgress = function(done, total)
             setStatus(string.format(L.SEARCHING, done, total))
@@ -328,8 +357,14 @@ function PinsUI.init(controller)
     end })
     statusText = host:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     statusText:SetWidth(inner)
+    -- Two lines in a fixed box: a longer status (long item names) is cut with "...", never
+    -- drawn past the window's bottom.
+    statusText:SetHeight(STATUS_H)
+    statusText:SetWordWrap(true)
+    if type(statusText.SetMaxLines) == "function" then statusText:SetMaxLines(2) end
     statusText:SetJustifyH("LEFT")
     statusText:SetJustifyV("TOP")
+    parts.status = statusText
 
     host:EnableMouseWheel(true)
     host:SetScript("OnMouseWheel", function(_, delta)

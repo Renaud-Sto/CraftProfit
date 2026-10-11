@@ -1593,7 +1593,7 @@ H.test("refreshRecipe searches the items of the recipe on screen only", function
     H.eq(T.ns.PinsUI.state, "running")
     for _, id in ipairs({ 1, 2, 100 }) do T.ns.PinsUI.onSearchResults(id, { { unit = 10, qty = 1 } }) end
     H.eq(sent, { 1, 2, 100 })
-    H.eq(T.ns.PinsUI.status, "Updated 3 items")
+    H.eq(T.ns.PinsUI.status, "Updated 3 prices")
 end)
 
 H.test("refreshRecipe with the AH closed says to open it", function()

@@ -51,12 +51,13 @@ ns.Locale.register("enUS", {
     SORT_SPEED = "Sort: speed",
     PER_POINT_SHORT = "/pt",
     SEARCHING = "Searching %d/%d",
-    -- Search summary: everything answered with listings, else "of" plus the fragments
-    -- that apply (each starts with its middle-dot separator).
-    SEARCH_UPDATED = "Updated %d items",
-    SEARCH_UPDATED_OF = "Updated %d of %d items",
-    SEARCH_NO_LISTING = " · no listing: %d (nobody is selling them now)",
-    SEARCH_NO_ANSWER = " · no answer: %d, try again",
+    -- Search summary, counted in prices (one per item searched): all stored, else "of" plus
+    -- the fragments that apply (each starts with its middle-dot separator; %s is the item
+    -- names when there are one or two, else their count).
+    SEARCH_UPDATED = "Updated %d prices",
+    SEARCH_UPDATED_OF = "Updated %d of %d prices",
+    SEARCH_NO_LISTING = " · no listing: %s (nobody is selling them now)",
+    SEARCH_NO_ANSWER = " · no answer: %s, try again",
     SEARCH_NEED_AH = "Open the auction house first",
     SEARCH_NOTHING = "Nothing to search",
     SEARCH_UNSELLABLE = "This item cannot be sold at the auction house",

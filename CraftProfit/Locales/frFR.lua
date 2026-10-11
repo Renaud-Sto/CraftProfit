@@ -53,10 +53,10 @@ ns.Locale.register("frFR", {
     SEARCHING = "Recherche %d/%d",
     -- Search summary: everything answered with listings, else "of" plus the fragments
     -- that apply (each starts with its middle-dot separator).
-    SEARCH_UPDATED = "%d objets mis à jour",
-    SEARCH_UPDATED_OF = "%d objets sur %d mis à jour",
-    SEARCH_NO_LISTING = " · sans offre\194\160: %d (personne n'en vend)",
-    SEARCH_NO_ANSWER = " · sans réponse\194\160: %d, réessayez",
+    SEARCH_UPDATED = "%d prix mis à jour",
+    SEARCH_UPDATED_OF = "%d prix sur %d mis à jour",
+    SEARCH_NO_LISTING = " · sans offre\194\160: %s (personne n'en vend)",
+    SEARCH_NO_ANSWER = " · sans réponse\194\160: %s, réessayez",
     SEARCH_NEED_AH = "Ouvrez d'abord l'hôtel des ventes",
     SEARCH_NOTHING = "Rien à rechercher",
     SEARCH_UNSELLABLE = "Cet objet ne peut pas être vendu à l'hôtel des ventes",

@@ -52,7 +52,7 @@ H.test("a search walks every item and stores the median prices", function()
     end
     H.eq(T.sent, { 1, 2, 100, 3, 101 })
     H.eq(P.state, "done")
-    H.eq(P.status, "Updated 5 items")
+    H.eq(P.status, "Updated 5 prices")
     H.eq(T.ns.Controller.market().prices[1][1], 20)
     H.eq(T.ns.Controller.market().prices[101][1], 20)
     H.truthy(T.tickers[#T.tickers].cancelled)
@@ -71,7 +71,7 @@ H.test("an item that never answers is reported at the end", function()
     P.onSearchResults(3, listing)
     P.onSearchResults(101, listing)
     H.eq(P.state, "done")
-    H.eq(P.status, "Updated 4 of 5 items · no answer: 1, try again")
+    H.eq(P.status, "Updated 4 of 5 prices · no answer: Item100, try again")
     H.eq(T.ns.Controller.market().prices[100], nil)
 end)
 
@@ -175,10 +175,10 @@ H.test("an empty AH listing counts as answered with no listing", function()
     P.onSearchResults(1, {})
     for _, id in ipairs({ 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
     H.eq(P.state, "done")
-    H.eq(P.status, "Updated 4 of 5 items · no listing: 1 (nobody is selling them now)")
+    H.eq(P.status, "Updated 4 of 5 prices · no listing: #1 (nobody is selling them now)")
     P.startSearch()
     for _, id in ipairs({ 1, 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
-    H.eq(P.status, "Updated 5 items")
+    H.eq(P.status, "Updated 5 prices")
 end)
 
 H.test("a scan the server never answers reports it, a scan it answers does not", function()
@@ -613,16 +613,16 @@ H.test("searchSummary: every combination of answers, the counts adding up, readi
     local function s(ok, total, noListing, failed)
         return P.searchSummary(L, { ok = ok, total = total, noListing = noListing, failed = failed })
     end
-    H.eq(s(0, 0, 0, 0), "Updated 0 items")
-    H.eq(s(5, 5, 0, 0), "Updated 5 items")
-    H.eq(s(5, 5, 2, 0), "Updated 3 of 5 items · no listing: 2 (nobody is selling them now)")
-    H.eq(s(3, 5, 0, 2), "Updated 3 of 5 items · no answer: 2, try again")
-    H.eq(s(3, 5, 1, 2), "Updated 2 of 5 items · no listing: 1 (nobody is selling them now)"
+    H.eq(s(0, 0, 0, 0), "Updated 0 prices")
+    H.eq(s(5, 5, 0, 0), "Updated 5 prices")
+    H.eq(s(5, 5, 2, 0), "Updated 3 of 5 prices · no listing: 2 (nobody is selling them now)")
+    H.eq(s(3, 5, 0, 2), "Updated 3 of 5 prices · no answer: 2, try again")
+    H.eq(s(3, 5, 1, 2), "Updated 2 of 5 prices · no listing: 1 (nobody is selling them now)"
         .. " · no answer: 2, try again")
-    H.eq(s(5, 5, 5, 0), "Updated 0 of 5 items · no listing: 5 (nobody is selling them now)")
-    H.eq(s(0, 4, 0, 4), "Updated 0 of 4 items · no answer: 4, try again")
+    H.eq(s(5, 5, 5, 0), "Updated 0 of 5 prices · no listing: 5 (nobody is selling them now)")
+    H.eq(s(0, 4, 0, 4), "Updated 0 of 4 prices · no answer: 4, try again")
     -- Missing counts read as 0.
-    H.eq(P.searchSummary(L, {}), "Updated 0 items")
+    H.eq(P.searchSummary(L, {}), "Updated 0 prices")
     -- Updated + no listing + no answer = total, in every case above.
     for _, c in ipairs({ { 5, 5, 2, 0 }, { 3, 5, 1, 2 }, { 5, 5, 5, 0 }, { 0, 4, 0, 4 }, { 5, 5, 0, 0 } }) do
         local text = s(c[1], c[2], c[3], c[4])
@@ -640,13 +640,13 @@ H.test("the summary reads in French and Spanish and fits the two status lines", 
         local lines = Layout.wrapLines(longest, 6, T.ns.Window.INNER_WIDTH)
         H.truthy(lines <= 2 or error(locale .. ": " .. longest .. " takes " .. lines .. " lines"))
         if locale == "frFR" then
-            H.eq(longest, "26 objets sur 40 mis à jour · sans offre\194\160: 12 (personne n'en vend)"
+            H.eq(longest, "26 prix sur 40 mis à jour · sans offre\194\160: 12 (personne n'en vend)"
                 .. " · sans réponse\194\160: 2, réessayez")
-            H.eq(P.searchSummary(L, { ok = 5, total = 5 }), "5 objets mis à jour")
+            H.eq(P.searchSummary(L, { ok = 5, total = 5 }), "5 prix mis à jour")
         elseif locale == "esES" then
-            H.eq(longest, "26 de 40 objetos actualizados · sin ofertas: 12 (nadie las vende)"
+            H.eq(longest, "26 de 40 precios actualizados · sin ofertas: 12 (nadie las vende)"
                 .. " · sin respuesta: 2, reintenta")
-            H.eq(P.searchSummary(L, { ok = 5, total = 5 }), "5 objetos actualizados")
+            H.eq(P.searchSummary(L, { ok = 5, total = 5 }), "5 precios actualizados")
         end
     end
 end)
@@ -661,7 +661,7 @@ H.test("startSearch with a recipe list searches only those recipes' items", func
     for _, id in ipairs({ 3, 4, 101 }) do P.onSearchResults(id, listing) end
     H.eq(T.sent, { 3, 4, 101 })
     H.eq(P.state, "done")
-    H.eq(P.status, "Updated 3 items")
+    H.eq(P.status, "Updated 3 prices")
     H.eq(T.ns.Controller.market().prices[1], nil)
     H.eq(T.ns.Controller.market().prices[4][1], 20)
 end)
@@ -677,7 +677,7 @@ H.test("a recipe search is ignored while a pinned search runs, which carries on 
     H.eq(P.state, "running")
     for _, id in ipairs({ 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
     H.eq(T.sent, { 1, 2, 100, 3, 101 })
-    H.eq(P.status, "Updated 4 of 5 items · no listing: 1 (nobody is selling them now)")
+    H.eq(P.status, "Updated 4 of 5 prices · no listing: #1 (nobody is selling them now)")
 end)
 
 H.test("a pinned search right after a recipe search starts clean", function()
@@ -688,11 +688,11 @@ H.test("a pinned search right after a recipe search starts clean", function()
     P.startSearch({ recipe })
     P.onSearchResults(4, {})
     P.onSearchResults(101, {})
-    H.eq(P.status, "Updated 0 of 2 items · no listing: 2 (nobody is selling them now)")
+    H.eq(P.status, "Updated 0 of 2 prices · no listing: #4, Item101 (nobody is selling them now)")
     P.startSearch()
     H.eq(P.status, "Searching 0/5")
     for _, id in ipairs({ 1, 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
-    H.eq(P.status, "Updated 5 items")
+    H.eq(P.status, "Updated 5 prices")
 end)
 
 H.test("an empty recipe list or one with nothing to search starts nothing and says so", function()
@@ -755,4 +755,62 @@ H.test("the main window's Refresh recipe button is off while any search runs, ba
     T.ns.AH.isOpen = true
     C.onAHOpen(true)
     H.eq(b.enabled, true)
+end)
+
+H.test("one or two missing items of a kind are named, more are counted, each kind on its own", function()
+    local T = boot()
+    local P, L = T.ns.PinsUI, T.ns.L
+    local names = { [10] = "Silver Bar", [11] = "Copper Bar" }
+    local function nameOf(id) return names[id] end
+    local function s(counts) return P.searchSummary(L, counts, nameOf) end
+    -- One named.
+    H.eq(s({ ok = 6, total = 7, failed = 1, failedIDs = { 10 } }), "Updated 6 of 7 prices · no answer: Silver Bar, try again")
+    -- Two named, an unknown one by its id.
+    H.eq(s({ ok = 7, total = 7, noListing = 2, noListingIDs = { 11, 12 } }),
+        "Updated 5 of 7 prices · no listing: Copper Bar, #12 (nobody is selling them now)")
+    -- Three: counted.
+    H.eq(s({ ok = 4, total = 7, failed = 3, failedIDs = { 10, 11, 12 } }), "Updated 4 of 7 prices · no answer: 3, try again")
+    -- Mixed: two named for one kind, three counted for the other.
+    H.eq(s({ ok = 7, total = 10, noListing = 2, noListingIDs = { 10, 11 }, failed = 3, failedIDs = { 1, 2, 3 } }),
+        "Updated 5 of 10 prices · no listing: Silver Bar, Copper Bar (nobody is selling them now) · no answer: 3, try again")
+    -- No name function: ids; no id list: the count.
+    H.eq(P.searchSummary(L, { ok = 1, total = 2, failed = 1, failedIDs = { 10 } }), "Updated 1 of 2 prices · no answer: #10, try again")
+    H.eq(s({ ok = 1, total = 2, failed = 1 }), "Updated 1 of 2 prices · no answer: 1, try again")
+end)
+
+H.test("the names read in French and Spanish", function()
+    for locale, text in pairs({
+        frFR = "6 prix sur 7 mis à jour · sans réponse\194\160: Barre d'argent, réessayez",
+        esES = "6 de 7 precios actualizados · sin respuesta: Barra de plata, reintenta",
+    }) do
+        local T = W.boot(H, { items = ITEMS, locale = locale })
+        T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+        local name = locale == "frFR" and "Barre d'argent" or "Barra de plata"
+        H.eq(T.ns.PinsUI.searchSummary(T.ns.L, { ok = 6, total = 7, failed = 1, failedIDs = { 10 } },
+            function() return name end), text)
+    end
+end)
+
+H.test("the status is a fixed two-line box under the buttons: a long one is cut, never overflows", function()
+    local T = W.boot(H, { items = ITEMS })
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.CreateFontString = function()
+            local fs = W.frame()
+            fs.SetWidth = function(self, w) self.width = w end
+            fs.SetMaxLines = function(self, n) self.maxLines = n end
+            fs.SetWordWrap = function(self, v) self.wrap = v end
+            return fs
+        end
+        return f
+    end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    local status = T.ns.PinsUI.parts.status
+    H.eq(status.width, T.ns.Window.INNER_WIDTH)
+    H.eq(status.height, 28)
+    H.eq(status.maxLines, 2)
+    H.eq(status.wrap, true)
+    -- The footer keeps room for exactly that box.
+    H.eq(T.ns.PinsUI.FOOTER_H, 22 + 6 + 22 + 6 + 28)
 end)

@@ -417,13 +417,40 @@ H.test("pins are not evaluated while the list is hidden", function()
     H.truthy(calls > 0)
 end)
 
-H.test("the pinned panel title is the capitalised panel key", function()
+H.test("the pinned panel title is the capitalised panel key with the count over the limit", function()
     local T = boot()
     local parts = openList(T)
-    H.eq(parts.panel.title.text, "PINNED RECIPES")
+    H.eq(parts.panel.title.text, "PINNED RECIPES (2/20)")
     local F = W.boot(H, { items = ITEMS, locale = "frFR" })
     F.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
-    H.eq(F.ns.PinsUI.parts.panel.title.text, "RECETTES ÉPINGLÉES")
+    H.eq(F.ns.PinsUI.parts.panel.title.text, "RECETTES ÉPINGLÉES (0/20)")
+    local E = W.boot(H, { items = ITEMS, locale = "esES" })
+    E.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(E.ns.PinsUI.parts.panel.title.text, "RECETAS FIJADAS (0/20)")
+end)
+
+H.test("the pinned list title counts 0, 1 and 21 pins and follows pin, unpin and a limit change", function()
+    local T = W.boot(H, { items = ITEMS })
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    local C = T.ns.Controller
+    local parts = openList(T)
+    H.eq(parts.panel.title.text, "PINNED RECIPES (0/20)")
+    -- Pinned from the main window.
+    C.setRecipe(T.ns.Recipes.normalize(raw(1, 100, { { itemID = 1, qty = 1 } })), "profession")
+    C.togglePin()
+    H.eq(parts.panel.title.text, "PINNED RECIPES (1/20)")
+    C.setPinLimit(30)
+    H.eq(parts.panel.title.text, "PINNED RECIPES (1/30)")
+    for i = 2, 21 do T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(i, 100, { { itemID = 1, qty = 1 } }), 30) end
+    C.refresh()
+    H.eq(parts.panel.title.text, "PINNED RECIPES (21/30)")
+    -- Lowered below the count: the pins stay, the title says so.
+    C.setPinLimit(12)
+    H.eq(parts.panel.title.text, "PINNED RECIPES (21/12)")
+    C.unpin(21)
+    H.eq(parts.panel.title.text, "PINNED RECIPES (20/12)")
+    C.togglePin()
+    H.eq(parts.panel.title.text, "PINNED RECIPES (19/12)")
 end)
 
 H.test("the sort button sits two levels above the pinned panel frame", function()
@@ -548,4 +575,34 @@ H.test("pinned rows show the name in the game's current language and update the 
     H.eq(pins[1].locale, "enUS")
     -- Pinned without a language tag (an older save) in the same way.
     H.eq(byID[2], "Item101")
+end)
+
+H.test("forty pins saved before login load whole and scroll in the list under the main window", function()
+    local T = W.boot(H, { items = ITEMS })
+    T.env.CraftProfitDB = { settings = { maxPins = 40 } }
+    local saved = {}
+    for i = 1, 40 do saved[i] = raw(i, 100, { { itemID = 1, qty = 1 } }) end
+    T.env.CraftProfitCharDB = { pins = saved }
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(#T.env.CraftProfitCharDB.pins, 40)
+    local parts = openList(T)
+    H.truthy(parts.bar.frame.shown)
+    H.eq(parts.bar.total, 40)
+    H.eq(parts.bar.visible, 6)
+    local host = T.ns.Window.pinsHost()
+    host.scripts.OnMouseWheel(host, -1)
+    H.eq(parts.bar.offset, 1)
+    -- Past the end: clamped to the last six rows.
+    parts.bar.onScroll(999)
+    H.eq(parts.bar.offset, 34)
+    for _ = 1, 50 do host.scripts.OnMouseWheel(host, -1) end
+    H.eq(parts.bar.offset, 34)
+    H.truthy(parts.rows[6].shown)
+    H.truthy(parts.rows[6].recipeID ~= nil)
+    -- Unpinning from the bottom of the scrolled list clamps the offset.
+    T.ns.Controller.unpin(parts.rows[6].recipeID)
+    H.eq(#T.env.CraftProfitCharDB.pins, 39)
+    H.eq(parts.bar.offset, 33)
+    for _ = 1, 50 do host.scripts.OnMouseWheel(host, 1) end
+    H.eq(parts.bar.offset, 0)
 end)

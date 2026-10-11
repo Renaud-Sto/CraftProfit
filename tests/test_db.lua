@@ -15,7 +15,7 @@ H.test("initAccount fills defaults and returns the same table", function()
     H.truthy(DB.initAccount(db) == db)
     H.eq(db.dbVersion, 1)
     H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost",
-        appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 } })
+        appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 }, maxPins = 20 })
     H.eq(db.prices, {})
 end)
 
@@ -35,18 +35,18 @@ H.test("initAccount replaces invalid settings with defaults", function()
         window = { point = "NOPE", x = 1, y = 2 },
     } })
     H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost",
-        appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 } })
+        appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 }, maxPins = 20 })
 end)
 
 H.test("initAccount keeps valid settings and floors medianN", function()
     local DB = load()
     local db = DB.initAccount({ settings = {
         cut = 0.5, medianN = 7.9, staleAfter = 120, showPerPoint = true, costExpanded = false,
-        window = { point = "TOPLEFT", x = 100, y = -50, junk = 1 },
+        window = { point = "TOPLEFT", x = 100, y = -50, junk = 1 }, maxPins = 30,
     } })
     H.eq(db.settings, {
         cut = 0.5, medianN = 7, staleAfter = 120, showPerPoint = true, costExpanded = false, levelShowGrey = false, levelSort = "cost",
-        window = { point = "TOPLEFT", x = 100, y = -50 },
+        window = { point = "TOPLEFT", x = 100, y = -50 }, maxPins = 30,
         appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 },
     })
     H.eq(DB.initAccount({ settings = { cut = 0.51 } }).settings.cut, 0.05)
@@ -126,13 +126,79 @@ H.test("initChar keeps valid pins, drops junk and duplicates, repairs holes", fu
     H.eq(db.pins[1].difficulty, "easy")
 end)
 
-H.test("initChar caps the number of pins", function()
+H.test("the pin limits are 12, 20, 30 and 40, default 20, absolute maximum 40", function()
     local DB = load()
+    H.eq(DB.PIN_LIMITS, { 12, 20, 30, 40 })
+    H.eq(DB.PIN_LIMIT_DEFAULT, 20)
+    H.eq(DB.PINS_ABSOLUTE_MAX, 40)
+    H.eq(DB.MAX_PINS, nil)
+    for _, n in ipairs(DB.PIN_LIMITS) do H.eq(DB.isPinLimit(n), true) end
+    for _, n in ipairs({ 0, 7, 13, 25, 12.5, 41, "20", 0 / 0 }) do H.eq(DB.isPinLimit(n), false) end
+end)
+
+H.test("a saved pin limit: listed kept, hostile -> 20, unlisted in range -> next listed up", function()
+    local DB = load()
+    local function saved(v) return DB.initAccount({ settings = { maxPins = v } }).settings.maxPins end
+    for _, n in ipairs({ 12, 20, 30, 40 }) do H.eq(saved(n), n) end
+    -- Hostile values: the default.
+    for _, v in ipairs({ "30", 0 / 0, 1 / 0, -1 / 0, -12, 0, 7, 11.9, 40.5, 41, 1e9, true, {} }) do
+        H.eq(saved(v), 20)
+    end
+    H.eq(saved(nil), 20)
+    -- A number between two listed limits rounds up to the next one (never below what was asked).
+    H.eq(saved(12.5), 20)
+    H.eq(saved(13), 20)
+    H.eq(saved(21), 30)
+    H.eq(saved(25), 30)
+    H.eq(saved(35), 40)
+    H.eq(saved(39.99), 40)
+    H.eq(DB.pinLimit(nil), 20)
+    H.eq(DB.pinLimit(31), 40)
+end)
+
+H.test("initChar never drops saved pins below the absolute maximum, whatever the limit", function()
+    local DB = load()
+    -- An old save with 12 pins loads unchanged.
+    local old = {}
+    for i = 1, 12 do old[i] = raw(i) end
+    H.eq(#DB.initChar({ pins = old }).pins, 12)
+    -- 25 pins with a limit of 12: all 25 kept (a lower limit only blocks adding).
     local pins = {}
-    for i = 1, 20 do pins[i] = raw(i) end
+    for i = 1, 25 do pins[i] = raw(i) end
     local db = DB.initChar({ pins = pins })
-    H.eq(#db.pins, DB.MAX_PINS)
-    H.eq(db.pins[DB.MAX_PINS].recipeID, DB.MAX_PINS)
+    H.eq(#db.pins, 25)
+    H.eq({ DB.pinAdd(db, raw(100), 12) }, { false, "full" })
+    H.eq(#db.pins, 25)
+    -- Unpinning always works.
+    H.eq(DB.pinRemove(db, 25), true)
+    H.eq(#db.pins, 24)
+    -- More than the absolute maximum (a hand-edited save): cut at 40.
+    local many = {}
+    for i = 1, 50 do many[i] = raw(i) end
+    db = DB.initChar({ pins = many })
+    H.eq(#db.pins, DB.PINS_ABSOLUTE_MAX)
+    H.eq(db.pins[40].recipeID, 40)
+end)
+
+H.test("pinAdd follows the limit it is given; an invalid one counts as the default", function()
+    local DB = load()
+    for _, limit in ipairs({ 12, 20, 30, 40 }) do
+        local db = DB.initChar({})
+        for i = 1, limit do H.eq({ DB.pinAdd(db, raw(i), limit) }, { true }) end
+        H.eq({ DB.pinAdd(db, raw(100), limit) }, { false, "full" })
+        H.eq(#db.pins, limit)
+        -- A duplicate is still reported as such when full.
+        H.eq({ DB.pinAdd(db, raw(1), limit) }, { false, "exists" })
+    end
+    -- "nil" stands for a missing limit (ipairs would stop at a real nil).
+    local limits = { "nil", "junk", 0 / 0, 1e9, 7 }
+    for _, limit in ipairs(limits) do
+        if limit == "nil" then limit = nil end
+        local db = DB.initChar({})
+        for i = 1, 20 do DB.pinAdd(db, raw(i), limit) end
+        H.eq({ DB.pinAdd(db, raw(100), limit) }, { false, "full" })
+        H.eq(#db.pins, 20)
+    end
 end)
 
 H.test("initChar creates the pins table when missing or invalid", function()
@@ -160,8 +226,8 @@ H.test("pinAdd refuses duplicates, invalid recipes and a full list", function()
     DB.pinAdd(db, raw(1))
     H.eq({ DB.pinAdd(db, raw(1)) }, { false, "exists" })
     H.eq({ DB.pinAdd(db, { recipeID = 2 }) }, { false, "invalid" })
-    for i = 2, DB.MAX_PINS do DB.pinAdd(db, raw(i)) end
-    H.eq({ DB.pinAdd(db, raw(100)) }, { false, "full" })
+    for i = 2, 12 do DB.pinAdd(db, raw(i), 12) end
+    H.eq({ DB.pinAdd(db, raw(100), 12) }, { false, "full" })
 end)
 
 H.test("known recipes are stored per profession, repaired, and cycled", function()

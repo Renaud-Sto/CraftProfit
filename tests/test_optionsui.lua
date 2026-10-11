@@ -184,6 +184,7 @@ H.test("every options button label fits its button in English, French and Spanis
         local buttons = { parts.mainButton, parts.levelButton, parts.pinsButton }
         for _, b in pairs(parts.headerButtons) do buttons[#buttons + 1] = b end
         for _, b in pairs(parts.tileButtons) do buttons[#buttons + 1] = b end
+        for _, b in pairs(parts.pinButtons) do buttons[#buttons + 1] = b end
         for _, b in ipairs(buttons) do
             -- The label keeps 8 px from each end of the button.
             local need = Layout.textWidth(b.text, O.CHAR_W)
@@ -267,9 +268,9 @@ H.test("the controls panel and the window heights follow the line count", functi
     -- 8 px of air under the last line.
     H.eq(O.LIST_BOTTOM, 8)
     H.eq(p.controls.frame.height, Layout.panelHeight(O.LINE_COUNT, 14, 8))
-    local heights = p.appearance.frame.height + p.minimap.frame.height + p.windows.frame.height
-        + p.controls.frame.height
-    H.eq(O.frame():GetHeight(), Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + heights + 8 * 3)
+    local heights = p.appearance.frame.height + p.pins.frame.height + p.minimap.frame.height
+        + p.windows.frame.height + p.controls.frame.height
+    H.eq(O.frame():GetHeight(), Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + heights + 8 * 4)
 end)
 
 H.test("the command lines are translated and fit the panel in English, French and Spanish", function()
@@ -326,3 +327,146 @@ H.test("the minimap check follows /cp minimap while the window is open", functio
     H.eq(check.checked, true)
 end)
 
+
+H.test("the pinned recipes panel lights the saved limit and saves a click at once", function()
+    local T, _, slash = boot({ settings = { maxPins = 30 } })
+    slash("options")
+    local parts = T.ns.OptionsUI.parts
+    H.eq(parts.panels.pins.title.text, "PINNED RECIPES")
+    H.eq(parts.pinLabel.text, "Limit per character")
+    H.eq(lit(parts.pinButtons), "30")
+    for _, n in ipairs({ 12, 20, 30, 40 }) do H.eq(parts.pinButtons[n].text, tostring(n)) end
+    click(parts.pinButtons[12])
+    H.eq(lit(parts.pinButtons), "12")
+    H.eq(T.env.CraftProfitDB.settings.maxPins, 12)
+    H.eq(T.ns.Controller.pinLimit(), 12)
+    click(parts.pinButtons[40])
+    H.eq(lit(parts.pinButtons), "40")
+    H.eq(T.env.CraftProfitDB.settings.maxPins, 40)
+    -- The four buttons share the row like the appearance choices.
+    local width = math.floor((T.ns.OptionsUI.ROOM - 4 * 3) / 4)
+    H.eq(parts.pinButtons[12].point, { "TOPLEFT", parts.panels.pins.body, "TOPLEFT", 8, -16 })
+    H.eq(parts.pinButtons[40].point, { "TOPLEFT", parts.panels.pins.body, "TOPLEFT", 8 + 3 * (width + 4), -16 })
+end)
+
+H.test("the lit limit follows a change made while the window was closed, at each open", function()
+    local T, _, slash = boot()
+    slash("options")
+    local parts = T.ns.OptionsUI.parts
+    H.eq(lit(parts.pinButtons), "20")
+    slash("options")
+    T.ns.Controller.setPinLimit(40)
+    slash("options")
+    H.eq(lit(parts.pinButtons), "40")
+    -- And while it is open.
+    T.ns.Controller.setPinLimit(12)
+    H.eq(lit(parts.pinButtons), "12")
+end)
+
+-- Lines of `text` wrapped greedily at word boundaries into `width` px at `charW` per letter.
+local function wrappedLines(Layout, text, charW, width)
+    local lines, line = 0, nil
+    for word in text:gmatch("%S+") do
+        local candidate = line and (line .. " " .. word) or word
+        if line and Layout.textWidth(candidate, charW) > width then
+            lines, line = lines + 1, word
+        else
+            line = candidate
+        end
+    end
+    if line then lines = lines + 1 end
+    return lines
+end
+
+H.test("the note under the limits says how slow a search gets and points to Scan AH, in three lines at most", function()
+    local expected = {
+        enUS = "A higher limit makes Search prices slower: it searches the auction house one item at a time "
+            .. "(about a minute for 20 recipes). With many recipes, Scan AH is usually faster.",
+        frFR = "Plus la limite est haute, plus Rechercher les prix est long : un objet à la fois (environ une "
+            .. "minute pour 20 recettes). Avec beaucoup de recettes, Scanner l'HV va souvent plus vite.",
+        esES = "Un límite más alto ralentiza Buscar precios, que consulta objeto por objeto (cerca de un minuto "
+            .. "para 20 recetas). Con muchas recetas, Escanear CS suele ser más rápido.",
+    }
+    for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
+        local T, _, slash = boot(nil, locale)
+        slash("options")
+        local O, Layout = T.ns.OptionsUI, T.ns.Layout
+        local note = O.parts.pinNote
+        H.eq(note.text, expected[locale])
+        local lines = wrappedLines(Layout, note.text, O.SMALL_CHAR_W, O.ROOM)
+        H.truthy(lines <= O.NOTE_MAX_LINES or error(locale .. ": the note takes " .. lines .. " lines"))
+        H.eq(O.NOTE_MAX_LINES, 3)
+        -- The note names the two buttons as they read in that language.
+        H.truthy(note.text:find(T.ns.L.SEARCH_PRICES, 1, true))
+        H.truthy(note.text:find(T.ns.L.SCAN, 1, true))
+        -- Without a measure from the client, the panel is sized from the estimate.
+        H.eq(O.noteLines(), lines)
+        H.eq(O.parts.panels.pins.frame.height,
+            Layout.panelHeight(1, 14 + 2 + T.ns.Native.BUTTON_H + 4, lines * 14 + O.LIST_BOTTOM))
+        -- The label above the buttons fits on its line too.
+        local need = Layout.textWidth(O.parts.pinLabel.text, O.SMALL_CHAR_W)
+        H.truthy(need <= O.ROOM or error(locale .. ": " .. O.parts.pinLabel.text .. " needs " .. need .. " px"))
+    end
+end)
+
+H.test("the note is the small font across the panel, under the buttons, as tall as its measured lines", function()
+    local measured
+    local T = W.boot(H, {})
+    T.env.UISpecialFrames = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.CreateFontString = function(_, _, _, font)
+            local fs = W.frame()
+            fs.font = font
+            fs.SetWidth = function(self, w) self.width = w end
+            fs.SetHeight = function(self, h) self.height = h end
+            fs.SetWordWrap = function(self, v) self.wrap = v end
+            fs.SetPoint = function(self, ...) self.point = { ... } end
+            fs.SetMaxLines = function(self, n) self.maxLines = n end
+            fs.GetNumLines = function() return measured end
+            return fs
+        end
+        return f
+    end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    measured = 2
+    T.env.SlashCmdList.CRAFTPROFIT("options")
+    local O, Layout, Native = T.ns.OptionsUI, T.ns.Layout, T.ns.Native
+    local note, panel = O.parts.pinNote, O.parts.panels.pins
+    local rowH = 14 + 2 + Native.BUTTON_H + 4
+    H.eq(note.font, "GameFontHighlightSmall")
+    H.eq(note.width, O.ROOM)
+    H.eq(note.wrap, true)
+    H.eq(note.maxLines, 3)
+    -- Under the label (14), its gap (2), the buttons and their gap (4).
+    H.eq(note.point, { "TOPLEFT", panel.body, "TOPLEFT", 8, -rowH })
+    -- The client's measure wins: two lines.
+    H.eq(note.height, 2 * 14)
+    H.eq(panel.frame.height, Layout.panelHeight(1, rowH, 2 * 14 + O.LIST_BOTTOM))
+    local function windowHeight()
+        local p = O.parts.panels
+        local sum = 0
+        for _, k in ipairs({ "appearance", "pins", "minimap", "windows", "controls" }) do sum = sum + p[k].frame.height end
+        return Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + sum + 8 * 4
+    end
+    H.eq(O.frame():GetHeight(), windowHeight())
+    local twoLines = O.frame():GetHeight()
+    -- Three measured lines: the panel and the window grow by one line.
+    measured = 3
+    O.refresh()
+    H.eq(note.height, 3 * 14)
+    H.eq(panel.frame.height, Layout.panelHeight(1, rowH, 3 * 14 + O.LIST_BOTTOM))
+    H.eq(O.frame():GetHeight(), twoLines + 14)
+    -- More than three is capped (the text is cut by SetMaxLines); 0 or junk falls back to the
+    -- estimate.
+    measured = 5
+    O.refresh()
+    H.eq(note.height, 3 * 14)
+    measured = 0
+    O.refresh()
+    H.eq(O.noteLines(), Layout.wrapLines(note.text, O.SMALL_CHAR_W, O.ROOM))
+    measured = 0 / 0
+    O.refresh()
+    H.eq(O.noteLines(), Layout.wrapLines(note.text, O.SMALL_CHAR_W, O.ROOM))
+end)

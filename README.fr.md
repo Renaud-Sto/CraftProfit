@@ -22,11 +22,11 @@ CraftProfit est un addon pour **World of Warcraft: Forever**. Sélectionnez une 
 - **Coût par point de compétence** (optionnel) : ce que coûte vraiment chaque point, d'après la couleur de la recette, affiché comme un gain quand les crafts se paient d'eux-mêmes.
 - **Fenêtre de montée de métier** : toutes les recettes que vous connaissez dans un métier, classées par coût du point de compétence, pour voir quoi fabriquer ensuite.
 - **Plusieurs crafts d'un coup** : multipliez une recette de 1 à 9999 crafts.
-- **Recettes épinglées** (12 par personnage au maximum), triées par gain ou par coût par point, pour comparer quoi fabriquer ensuite ; sous la fenêtre principale à l'hôtel des ventes, et partout dans leur propre fenêtre (`/cp pins` ou un clic droit sur le bouton de la minicarte).
+- **Recettes épinglées** (20 par personnage par défaut ; 12, 20, 30 ou 40 dans la fenêtre d'options), triées par gain ou par coût par point, pour comparer quoi fabriquer ensuite (avec beaucoup d'épingles, **Scanner l'HV** va souvent plus vite que **Rechercher les prix**) ; sous la fenêtre principale à l'hôtel des ventes, et partout dans leur propre fenêtre (`/cp pins` ou un clic droit sur le bouton de la minicarte).
 - **Outils d'hôtel des ventes** : un bouton chiffre toutes les recettes épinglées, un autre scanne tout l'hôtel des ventes. Cliquez sur un composant pour le rechercher à l'hôtel des ventes, quantité déjà remplie. CraftProfit n'achète jamais rien à votre place.
 - **Historique des prix** (enregistrement) : cochez *Suivre l'historique* sur 15 recettes au plus et CraftProfit garde leurs prix scan après scan, par jeu de règles (le « royaume » de la bêta) et par faction. Les graphiques sont prévus pour plus tard.
 - **Autonome** : ni Auctionator ni aucun autre addon n'est nécessaire. Il récupère aussi les scans lancés par d'autres addons.
-- **Fenêtre d'options et bouton de la minicarte** : choisissez l'apparence des fenêtres (bandeau des sections et cases de prix), appliquée aussitôt ; ouvrez-la depuis le bouton de la minicarte, le compartiment d'addons ou `/cp options`.
+- **Fenêtre d'options et bouton de la minicarte** : choisissez l'apparence des fenêtres (bandeau des sections et cases de prix), appliquée aussitôt, et la limite de recettes épinglées ; ouvrez-la depuis le bouton de la minicarte, le compartiment d'addons ou `/cp options`.
 - **Anglais, français et espagnol** (selon la langue du jeu).
 
 ## Installation
@@ -54,7 +54,7 @@ Le pas-à-pas complet, toutes les options et l'explication de chaque chiffre son
 | `/cp` ou `/craftprofit` | Affiche la liste des commandes |
 | `/cp show` / `hide` | Affiche ou masque la fenêtre |
 | `/cp reset` | Remet la fenêtre à côté de la fenêtre de métier ou de l'hôtel des ventes |
-| `/cp options` | Ouvre ou ferme la fenêtre d'options (apparence des fenêtres, bouton de la minicarte, commandes) |
+| `/cp options` | Ouvre ou ferme la fenêtre d'options (apparence des fenêtres, limite de recettes épinglées, bouton de la minicarte, commandes) |
 | `/cp minimap` | Masque le bouton de la minicarte, ou le rétablit |
 | `/cp scan` | Lance un scan complet de l'hôtel des ventes (hôtel des ventes ouvert) |
 | `/cp history` | Liste les recettes suivies ; `/cp history remove <n>` en supprime une |

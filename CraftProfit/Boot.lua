@@ -350,6 +350,29 @@ function Controller.appearance()
     return appearance.header, appearance.tile
 end
 
+-- Pinned recipes limit -------------------------------------------------------------
+
+-- How many recipes a character may pin (account wide setting, one of DB.PIN_LIMITS).
+function Controller.pinLimit()
+    return DB.pinLimit(CraftProfitDB.settings.maxPins)
+end
+
+-- The pinned panels' title with the pin count over the limit, e.g. "PINNED RECIPES (21/30)".
+-- The count can exceed the limit after it was lowered (pins are never deleted for it).
+function Controller.pinsTitle()
+    return string.format(L.PANEL_PINS_COUNT, #CraftProfitCharDB.pins, Controller.pinLimit())
+end
+
+-- Saves a new limit and refreshes every view (the options window lights it). Anything but a
+-- listed limit is refused and changes nothing. Pins over a lower limit are kept: it only
+-- blocks new ones. Returns true when the limit was accepted.
+function Controller.setPinLimit(n)
+    if not DB.isPinLimit(n) then return false end
+    CraftProfitDB.settings.maxPins = n
+    Controller.refresh()
+    return true
+end
+
 -- Options window and minimap button ---------------------------------------------------
 
 function Controller.minimapHidden()
@@ -515,8 +538,10 @@ function Controller.togglePin()
     if DB.pinIndex(CraftProfitCharDB, recipe.recipeID) then
         DB.pinRemove(CraftProfitCharDB, recipe.recipeID)
     else
-        local ok, reason = DB.pinAdd(CraftProfitCharDB, recipe)
-        if not ok and reason == "full" then say(L.PINS_FULL) end
+        -- Read at each attempt: a limit changed in the options window applies at once.
+        local limit = Controller.pinLimit()
+        local ok, reason = DB.pinAdd(CraftProfitCharDB, recipe, limit)
+        if not ok and reason == "full" then say(string.format(L.PINS_LIMIT_REACHED, limit)) end
     end
     Controller.refresh()
 end

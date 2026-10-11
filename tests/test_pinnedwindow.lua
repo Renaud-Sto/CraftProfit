@@ -13,13 +13,14 @@ local function raw(id, output, difficulty, name)
 end
 
 -- Boots with frames that start shown (as on the client), records named frames, their
--- anchors and sizes. `saved`: CraftProfitDB before login. `pins`: raw recipes pinned
--- after login.
+-- anchors and sizes. `saved`: CraftProfitDB before login, `charSaved`: CraftProfitCharDB
+-- before login. `pins`: raw recipes pinned after login.
 local function boot(opts)
     opts = opts or {}
     local T = W.boot(H, { items = ITEMS, locale = opts.locale })
     T.env.GetMoneyString = function(c) return "<" .. c .. ">" end
     T.env.CraftProfitDB = opts.saved
+    T.env.CraftProfitCharDB = opts.charSaved
     T.env.UISpecialFrames = {}
     T.tooltip = {}
     T.env.GameTooltip = {
@@ -44,7 +45,7 @@ local function boot(opts)
         return f
     end
     T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
-    -- Written straight into the saved table: more than DB.MAX_PINS when a test asks.
+    -- Written straight into the saved table: more than the pin limit when a test asks.
     for _, r in ipairs(opts.pins or {}) do
         local pins = T.env.CraftProfitCharDB.pins
         pins[#pins + 1] = T.ns.Recipes.normalize(r)
@@ -91,7 +92,7 @@ H.test("the pinned window is not built at login, only on first open", function()
     H.eq(UI.frame(), f)
     H.truthy(UI.isShown())
     H.eq(f.titleText.text, "Pinned recipes")
-    H.eq(UI.parts.panel.title.text, "PINNED RECIPES")
+    H.eq(UI.parts.panel.title.text, "PINNED RECIPES (1/20)")
 end)
 
 H.test("toggle opens and closes it and Escape is registered once", function()
@@ -332,6 +333,25 @@ H.test("forty pins scroll with the wheel and the native bar", function()
     H.eq(p.bar.offset, 0)
 end)
 
+H.test("forty pins saved before login load whole; the x of the bottom row unpins at the end of the list", function()
+    local T, UI = boot({ saved = { settings = { maxPins = 40 } }, charSaved = { pins = manyPins(40) } })
+    H.eq(#T.env.CraftProfitCharDB.pins, 40)
+    UI.show()
+    local p = UI.parts
+    p.bar.onScroll(999)
+    H.eq(p.bar.offset, 28)
+    for _ = 1, 50 do UI.frame().scripts.OnMouseWheel(UI.frame(), -1) end
+    H.eq(p.bar.offset, 28)
+    H.truthy(p.rows[12].shown)
+    local last = p.rows[12].recipeID
+    click(p.rows[12].unpin)
+    H.eq(#T.env.CraftProfitCharDB.pins, 39)
+    H.eq(T.ns.DB.pinIndex(T.env.CraftProfitCharDB, last), nil)
+    H.eq(p.bar.offset, 27)
+    H.eq(p.bar.total, 39)
+    H.truthy(p.rows[12].shown)
+end)
+
 H.test("refresh does nothing while the window is hidden and follows pins changed elsewhere", function()
     local T, UI = boot({ pins = { raw(1) } })
     local C = T.ns.Controller
@@ -442,7 +462,7 @@ H.test("the window reads in French", function()
     local _, UI, named = boot({ locale = "frFR", pins = { raw(1) } })
     UI.show()
     H.eq(named.CraftProfitPinnedWindow.titleText.text, "Recettes épinglées")
-    H.eq(UI.parts.panel.title.text, "RECETTES ÉPINGLÉES")
+    H.eq(UI.parts.panel.title.text, "RECETTES ÉPINGLÉES (1/20)")
     H.eq(UI.parts.sort.text, "Tri : gain")
 end)
 
@@ -456,4 +476,36 @@ H.test("pinned window rows follow the game's language: the client's recipe name,
     UI.refresh()
     H.eq(UI.parts.rows[1].name.text, "Sword of R1")
     H.eq(T.env.CraftProfitCharDB.pins[1].name, "Sword of R1")
+end)
+
+H.test("the panel title counts 0, 1 and 21 pins and follows pin, unpin and a limit change", function()
+    local T, UI = boot()
+    local C = T.ns.Controller
+    UI.show()
+    local title = UI.parts.panel.title
+    H.eq(title.text, "PINNED RECIPES (0/20)")
+    C.setRecipe(T.ns.Recipes.normalize(raw(1, 100, "easy")), "profession")
+    C.togglePin()
+    H.eq(title.text, "PINNED RECIPES (1/20)")
+    C.setPinLimit(30)
+    H.eq(title.text, "PINNED RECIPES (1/30)")
+    for i = 2, 21 do T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(i, 101, "easy"), 30) end
+    C.refresh()
+    H.eq(title.text, "PINNED RECIPES (21/30)")
+    -- The "x" of a row.
+    click(UI.parts.rows[1].unpin)
+    H.eq(title.text, "PINNED RECIPES (20/30)")
+    C.setPinLimit(12)
+    H.eq(title.text, "PINNED RECIPES (20/12)")
+    -- Closed then reopened: repainted from the save.
+    UI.hide()
+    C.setPinLimit(40)
+    UI.show()
+    H.eq(title.text, "PINNED RECIPES (20/40)")
+end)
+
+H.test("the panel title reads in Spanish with the count", function()
+    local _, UI = boot({ locale = "esES", pins = manyPins(21) })
+    UI.show()
+    H.eq(UI.parts.panel.title.text, "RECETAS FIJADAS (21/20)")
 end)

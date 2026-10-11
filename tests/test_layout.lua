@@ -108,3 +108,17 @@ H.test("textWidth estimates a label from its letters, accents counting once", fu
     H.eq(Layout.textWidth("", 7), 0)
     H.eq(Layout.textWidth(nil, 7), 0)
 end)
+
+H.test("wrapLines estimates the lines of a text wrapped at word boundaries", function()
+    local Layout = load()
+    H.eq(Layout.wrapLines(nil, 6, 100), 0)
+    H.eq(Layout.wrapLines("", 6, 100), 0)
+    -- "aaaa bbbb" is 9 letters = 54 px.
+    H.eq(Layout.wrapLines("aaaa bbbb", 6, 54), 1)
+    H.eq(Layout.wrapLines("aaaa bbbb", 6, 53), 2)
+    H.eq(Layout.wrapLines("aaaa bbbb cccc", 6, 60), 2)
+    -- A word wider than the line takes a line of its own.
+    H.eq(Layout.wrapLines("a bbbbbbbbbbbb c", 6, 30), 3)
+    -- Accented letters count once.
+    H.eq(Layout.wrapLines("éé éé", 6, 30), 1)
+end)

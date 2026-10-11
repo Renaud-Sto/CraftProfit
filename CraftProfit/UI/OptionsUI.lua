@@ -1,6 +1,6 @@
 -- The options window: the look (header strip and tile card, applied at once to every
--- window), the minimap button, shortcuts to the other windows and the list of the controls.
--- Built on first open, never at login. Opened by /cp options, the minimap button and the
+-- window), the pinned recipes limit, the minimap button, shortcuts to the other windows and
+-- the list of the controls. Built on first open, never at login. Opened by /cp options, the minimap button and the
 -- addon compartment. Escape closes it.
 --
 -- Choices are rows of native buttons, the chosen one lit (LockHighlight): never a dropdown
@@ -63,19 +63,27 @@ local CONTROL_LINES = {
 -- The variants in button order, with their label keys (the order of the rulings).
 local HEADER_CHOICES = { { "a", "OPTIONS_HEADER_A" }, { "b", "OPTIONS_HEADER_B" }, { "c", "OPTIONS_HEADER_C" } }
 local TILE_CHOICES = { { "a", "OPTIONS_TILE_A" }, { "b", "OPTIONS_TILE_B" } }
+-- The pin limits, labelled with their number (no locale key).
+local PIN_CHOICES = {}
+for i, n in ipairs(ns.DB.PIN_LIMITS) do PIN_CHOICES[i] = { n } end
+-- The note under the pin limits: at most three lines of the small font. The panel is sized
+-- from the lines the text really takes (OptionsUI.noteLines).
+local NOTE_MAX_LINES = 3
 
 local ctl
 local frame, content, savedPosition
 local origin = { left = 0, right = 0, top = 0 }
 -- The widgets, exposed for tests: panels, headerButtons / tileButtons (by key), minimap,
--- mainButton, levelButton, pinsButton, headerLabel, tileLabel, lines (the controls list).
-local parts = { panels = {}, headerButtons = {}, tileButtons = {}, lines = {} }
+-- pinButtons (by limit), pinLabel, pinNote, mainButton, levelButton, pinsButton, headerLabel,
+-- tileLabel, lines (the controls list).
+local parts = { panels = {}, headerButtons = {}, tileButtons = {}, pinButtons = {}, lines = {} }
 OptionsUI.parts = parts
 OptionsUI.ROOM = ROOM
 OptionsUI.CHAR_W = CHAR_W
 OptionsUI.SMALL_CHAR_W = SMALL_CHAR_W
 OptionsUI.LINE_COUNT = #CONTROL_LINES
 OptionsUI.LIST_BOTTOM = LIST_BOTTOM
+OptionsUI.NOTE_MAX_LINES = NOTE_MAX_LINES
 
 -- Lights `button` (the chosen segment) or puts it out; `button.lit` mirrors the state.
 local function setLit(button, lit)
@@ -108,14 +116,32 @@ local function choiceRow(body, index, choices, buttons, onPick)
     return label
 end
 
--- Stacks the four panels and sizes the window (the controls list has a fixed line count).
+-- Lines the note takes, 1 to NOTE_MAX_LINES: what the client measured (GetNumLines, once the
+-- text is set on the sized font string), else the estimate at SMALL_CHAR_W per letter (a
+-- client without the method, or one that has not laid the text out yet and answers 0).
+function OptionsUI.noteLines()
+    local note = parts.pinNote
+    if not note then return NOTE_MAX_LINES end
+    local n
+    if type(note.GetNumLines) == "function" then n = note:GetNumLines() end
+    if type(n) ~= "number" or n ~= n or n < 1 then
+        n = Layout.wrapLines(L.OPTIONS_PIN_NOTE, SMALL_CHAR_W, ROOM)
+    end
+    return math.max(1, math.min(NOTE_MAX_LINES, math.floor(n)))
+end
+
+-- Stacks the five panels and sizes the window from them (the controls list has a fixed line
+-- count; the note's height is the lines it takes).
 local function layout()
     local p = parts.panels
+    local noteLines = OptionsUI.noteLines()
+    parts.pinNote:SetHeight(noteLines * LINE_H)
     p.appearance:setRows(2, CHOICE_ROW_H)
+    p.pins:setRows(1, CHOICE_ROW_H, noteLines * LINE_H + LIST_BOTTOM)
     p.minimap:setRows(1, LINE_ROW_H)
     p.windows:setRows(2, LINE_ROW_H)
     p.controls:setRows(#CONTROL_LINES, LINE_H, LIST_BOTTOM)
-    local order = { p.appearance, p.minimap, p.windows, p.controls }
+    local order = { p.appearance, p.pins, p.minimap, p.windows, p.controls }
     local heights = {}
     for i, panel in ipairs(order) do heights[i] = panel:height() end
     local offsets, total = Layout.stack(heights, GAP, PAD)
@@ -138,6 +164,12 @@ local function pickTile(key)
     OptionsUI.refresh()
 end
 
+-- Saved at once and used by the next pin attempt; the controller refreshes every view,
+-- this window included.
+local function pickPinLimit(n)
+    ctl.setPinLimit(n)
+end
+
 local function build()
     frame = Native.window(NAME, L.OPTIONS_TITLE, {
         width = WIDTH,
@@ -155,6 +187,20 @@ local function build()
     local body = panels.appearance.body
     parts.headerLabel = choiceRow(body, 1, HEADER_CHOICES, parts.headerButtons, pickHeader)
     parts.tileLabel = choiceRow(body, 2, TILE_CHOICES, parts.tileButtons, pickTile)
+
+    panels.pins = Native.panel(content, L.OPTIONS_PINS)
+    local pinBody = panels.pins.body
+    parts.pinLabel = choiceRow(pinBody, 1, PIN_CHOICES, parts.pinButtons, pickPinLimit)
+    -- Why a higher limit costs something, under the buttons: wrapped, three lines at most
+    -- (the tests keep every language within them; a longer text is cut, never overlaps).
+    parts.pinNote = pinBody:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    parts.pinNote:SetPoint("TOPLEFT", pinBody, "TOPLEFT", 8, -CHOICE_ROW_H)
+    parts.pinNote:SetWidth(ROOM)
+    parts.pinNote:SetHeight(NOTE_MAX_LINES * LINE_H)
+    if type(parts.pinNote.SetMaxLines) == "function" then parts.pinNote:SetMaxLines(NOTE_MAX_LINES) end
+    parts.pinNote:SetJustifyH("LEFT")
+    parts.pinNote:SetJustifyV("TOP")
+    parts.pinNote:SetWordWrap(true)
 
     panels.minimap = Native.panel(content, L.OPTIONS_MINIMAP)
     parts.minimap = Native.check(panels.minimap.body, "", function(checked)
@@ -203,6 +249,7 @@ function OptionsUI.refresh()
     frame:setTitle(L.OPTIONS_TITLE)
     local panels = parts.panels
     panels.appearance:setTitle(L.OPTIONS_APPEARANCE)
+    panels.pins:setTitle(L.OPTIONS_PINS)
     panels.minimap:setTitle(L.OPTIONS_MINIMAP)
     panels.windows:setTitle(L.OPTIONS_WINDOWS)
     panels.controls:setTitle(L.OPTIONS_CONTROLS)
@@ -217,6 +264,13 @@ function OptionsUI.refresh()
         button:setText(L[button.labelKey])
         setLit(button, key == tile)
     end
+    parts.pinLabel:SetText(L.OPTIONS_PIN_LIMIT)
+    local limit = ctl.pinLimit()
+    for n, button in pairs(parts.pinButtons) do
+        button:setText(tostring(n))
+        setLit(button, n == limit)
+    end
+    parts.pinNote:SetText(L.OPTIONS_PIN_NOTE)
     parts.minimap:setText(L.OPTIONS_SHOW_MINIMAP)
     parts.minimap:SetChecked(not ctl.minimapHidden())
     parts.mainButton:setText(L.OPTIONS_MAIN_WINDOW)

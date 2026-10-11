@@ -27,6 +27,20 @@ function Util.id(n)
     return nil
 end
 
+-- A non-empty plain string, or nil. The game may hand out "secret" strings that raise
+-- when used: `isSecret` (the caller's issecretvalue guard, optional) rejects them, and the
+-- copy is made under pcall as a second line, so a secret or a non-string gives nil.
+function Util.text(v, isSecret)
+    if type(v) ~= "string" then return nil end
+    if isSecret then
+        local ok, secret = pcall(isSecret, v)
+        if not ok or secret then return nil end
+    end
+    local ok, copy = pcall(function() return v .. "" end)
+    if ok and type(copy) == "string" and copy ~= "" then return copy end
+    return nil
+end
+
 function Util.clamp(n, lo, hi)
     if n < lo then return lo end
     if n > hi then return hi end

@@ -87,6 +87,33 @@ function Controller.itemName(itemID)
     return nil
 end
 
+-- The name shown for a stored recipe (pin, known recipe, tracked recipe), in the game's
+-- current language: names are stored when pinned or read and would stay in the old
+-- language after a language switch. Recipes.liveName picks the client's recipe name, else
+-- the crafted item's (loaded on demand: ITEM_DATA_LOAD_RESULT refreshes), else the stored
+-- one, and writes a newer name back into the stored recipe. Identity stays the recipe id.
+function Controller.recipeName(recipe)
+    if type(recipe) ~= "table" then return "" end
+    return Recipes.liveName(recipe, {
+        locale = ns.Trade.locale(),
+        recipeName = ns.Trade.recipeName,
+        itemName = Controller.itemName,
+    })
+end
+
+-- The name shown for a stored profession (a CraftProfitCharDB.known entry) in the game's
+-- current language, else the stored one; a newer name is written back.
+function Controller.professionName(prof)
+    if type(prof) ~= "table" then return "-" end
+    local live = ns.Trade.professionName(prof.key)
+    if live and #live <= 64 then
+        if live ~= prof.name then prof.name = live end
+        return live
+    end
+    if type(prof.name) == "string" and prof.name ~= "" then return prof.name end
+    return tostring(prof.key or "-")
+end
+
 function Controller.knowsEnchanting()
     return ns.Trade.hasProfession(ns.Trade.ENCHANTING_SKILL_LINE)
 end
@@ -167,11 +194,7 @@ function Controller.refresh()
     if recipe then
         local model = Present.build(Controller.evaluate(recipe, state.crafts), L, Controller.fmt,
             { staleAfter = settings.staleAfter, itemName = Controller.itemName })
-        if type(recipe.name) == "string" and recipe.name ~= "" then
-            model.title = recipe.name
-        else
-            model.title = Controller.itemName(recipe.outputItemID)
-        end
+        model.title = Controller.recipeName(recipe)
         for _, reagent in ipairs(recipe.reagents or {}) do Controller.itemInfo(reagent.itemID) end
         model.pinned = DB.pinIndex(CraftProfitCharDB, recipe.recipeID) ~= nil
         model.tracked = History.isActive(CraftProfitDB, recipe.recipeID)
@@ -273,9 +296,10 @@ function Controller.selectPin(recipeID)
 end
 
 -- Pinned recipes keep the difficulty they had when pinned; the open profession
--- window knows the current one, which changes as the skill rises.
+-- window knows the current one, which changes as the skill rises. Runs when the window
+-- opens, switches profession and updates its list.
 function Controller.refreshPinDifficulties()
-    if not ns.Trade.isShown() then return false end
+    if not ns.Trade.isShown() or ns.Trade.isDataSourceChanging() then return false end
     local changed = false
     for _, pin in ipairs(CraftProfitCharDB.pins) do
         local current = ns.Trade.difficultyOf(pin.recipeID)
@@ -408,9 +432,10 @@ end
 local knownBusy, knownLast = false, nil
 
 -- Reads the learned recipes of the open profession for the leveling list. Bursts of
--- TRADE_SKILL_LIST_UPDATE are coalesced: one read at most every few seconds.
+-- TRADE_SKILL_LIST_UPDATE are coalesced: one read at most every few seconds. Nothing is
+-- read while the game is switching profession (the list is the old one or empty).
 function Controller.refreshKnown()
-    if knownBusy or not ns.Trade.isShown() then return false end
+    if knownBusy or not ns.Trade.isShown() or ns.Trade.isDataSourceChanging() then return false end
     local now = GetTime()
     if knownLast and now - knownLast < 5 then return false end
     local key, name = ns.Trade.professionInfo()
@@ -418,11 +443,29 @@ function Controller.refreshKnown()
     knownBusy, knownLast = true, now
     local started = ns.Trade.scanKnown(function(raws)
         knownBusy = false
+        -- An empty read (the list was not built yet) never replaces a stored list, and the
+        -- next list update may read again at once.
+        if #raws == 0 then
+            knownLast = nil
+            return
+        end
         DB.setKnown(CraftProfitCharDB, key, name, raws, time())
         if ns.LevelingUI then ns.LevelingUI.refresh() end
     end, function() knownBusy = false end)
     if not started then knownBusy = false end
     return started
+end
+
+-- The profession window opened or switched profession (Forever's profession tabs switch
+-- inside the open window, firing TRADE_SKILL_SHOW and TRADE_SKILL_DATA_SOURCE_CHANGED but
+-- no close): the scan in progress reads the previous profession and is dropped, and the
+-- few seconds of coalescing, which belonged to the previous profession, start again.
+function Controller.onProfessionChanged()
+    ns.Trade.cancelScan()
+    knownBusy, knownLast = false, nil
+    Controller.refreshPinDifficulties()
+    Controller.refreshKnown()
+    ns.Trade.invalidate()
 end
 
 -- What the leveling window shows: the current profession, its known recipes ranked
@@ -728,6 +771,8 @@ function Controller.onEvent(event, arg1, arg2)
         Controller.refreshPinDifficulties()
         Controller.refreshKnown()
         ns.Trade.invalidate()
+    elseif event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_DATA_SOURCE_CHANGED" then
+        Controller.onProfessionChanged()
     end
 end
 
@@ -739,7 +784,7 @@ function Controller.historyCommand(arg)
         local entry = tracked[index]
         if History.remove(CraftProfitDB, index) then
             History.prune(CraftProfitDB, Controller.market(), Controller.historyItems)
-            say(string.format(L.HISTORY_REMOVED, entry.recipe.name ~= "" and entry.recipe.name or entry.recipe.recipeID))
+            say(string.format(L.HISTORY_REMOVED, Controller.recipeName(entry.recipe)))
             Controller.refresh()
         else
             say(L.HISTORY_NO_SUCH)
@@ -752,8 +797,8 @@ function Controller.historyCommand(arg)
     end
     say(string.format(L.HISTORY_HEADER, #tracked, History.MAX_TRACKED))
     for i, entry in ipairs(tracked) do
-        local name = entry.recipe.name ~= "" and entry.recipe.name or ("#" .. entry.recipe.recipeID)
-        say(string.format("%d. %s (%s)", i, name, entry.active and L.TRACK_ACTIVE or L.TRACK_PAUSED))
+        say(string.format("%d. %s (%s)", i, Controller.recipeName(entry.recipe),
+            entry.active and L.TRACK_ACTIVE or L.TRACK_PAUSED))
     end
 end
 
@@ -815,6 +860,7 @@ SlashCmdList.CRAFTPROFIT = slash
 local frame = CreateFrame("Frame")
 for _, event in ipairs({
     "ADDON_LOADED", "ITEM_DATA_LOAD_RESULT", "TRADE_SKILL_LIST_UPDATE",
+    "TRADE_SKILL_SHOW", "TRADE_SKILL_DATA_SOURCE_CHANGED",
     "ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN",
 }) do
     pcall(frame.RegisterEvent, frame, event)

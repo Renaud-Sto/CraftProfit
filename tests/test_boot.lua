@@ -8,7 +8,8 @@ local ITEMS = {
 }
 
 local RAW = {
-    recipeID = 5, name = "Sword", difficulty = 1, outputItemID = 100, qtyMin = 1, qtyMax = 1,
+    -- Read in the fake client's language (enUS): its stored name is the current one.
+    recipeID = 5, name = "Sword", locale = "enUS", difficulty = 1, outputItemID = 100, qtyMin = 1, qtyMax = 1,
     reagents = { { itemID = 1, qty = 2 }, { itemID = 2, qty = 1 } },
 }
 
@@ -239,7 +240,7 @@ local function mockProfession(T)
 end
 
 -- Fix wave item 1
-H.test("the window model carries the recipe name, or the output item name, or nil", function()
+H.test("the window model carries the recipe name, or the output item name, or #id", function()
     local T = boot()
     T.ns.Controller.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
     H.eq(T.ns.Window.lastModel.title, "Sword")
@@ -250,7 +251,7 @@ H.test("the window model carries the recipe name, or the output item name, or ni
     H.eq(T.ns.Window.lastModel.title, "Item100")
     local T2 = boot({ items = {} })
     T2.ns.Controller.setRecipe(T2.ns.Recipes.normalize(unnamed), "profession")
-    H.eq(T2.ns.Window.lastModel.title, nil)
+    H.eq(T2.ns.Window.lastModel.title, "#5")
     H.eq(T2.ns.Controller.itemName(100), nil)
 end)
 
@@ -1297,4 +1298,194 @@ H.test("the main window opens beside a shown CraftProfit window even with the tr
     measure(T.ns.PinnedWindow.frame(), 200, 700, 396)
     C.showMainWindow()
     H.eq(lastPoint(main), { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 602, 700 })
+end)
+
+-- Names follow the game's language
+local function frenchPin(T, items)
+    local pin = T.ns.Recipes.normalize({
+        recipeID = 3398, name = "Côtelettes de lion épicées", locale = "frFR", outputItemID = 3727,
+        reagents = { { itemID = 1, qty = 1 } },
+    })
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, pin)
+    if items then items[3727] = { quality = 1, ilvl = 25, sellPrice = 125, classID = 0, bindType = 0 } end
+    return T.env.CraftProfitCharDB.pins[1]
+end
+
+H.test("recipeName prefers the client's recipe name, then the item's, then the stored one", function()
+    local items = { [100] = ITEMS[100] }
+    local T = boot({ items = items })
+    local C = T.ns.Controller
+    local pin = frenchPin(T, nil)
+    -- Nothing current is known yet: the stored name, and the item is asked for.
+    H.eq(C.recipeName(pin), "Côtelettes de lion épicées")
+    local asked = false
+    for _, id in ipairs(T.loadRequests) do if id == 3727 then asked = true end end
+    H.truthy(asked)
+    -- The item arrives: its name, written back into the pin with the language.
+    items[3727] = { quality = 1, ilvl = 25, sellPrice = 125, classID = 0, bindType = 0 }
+    H.eq(C.recipeName(pin), "Item3727")
+    H.eq(pin.name, "Item3727")
+    H.eq(pin.locale, "enUS")
+    -- The client's recipe name wins over everything.
+    T.env.C_TradeSkillUI = { GetRecipeInfo = function(id) return { recipeID = id, name = "Hot Lion Chops" } end }
+    H.eq(C.recipeName(pin), "Hot Lion Chops")
+    H.eq(T.env.CraftProfitCharDB.pins[1].name, "Hot Lion Chops")
+    H.eq(C.recipeName(nil), "")
+end)
+
+H.test("recipeName skips a client recipe name that is secret, empty, not a string or raising", function()
+    local items = {}
+    local T = boot({ items = items })
+    local C = T.ns.Controller
+    local pin = frenchPin(T, items)
+    T.env.issecretvalue = function(v) return v == "SECRET" end
+    for _, bad in ipairs({ "SECRET", "", 5 }) do
+        T.env.C_TradeSkillUI = { GetRecipeInfo = function() return { name = bad } end }
+        H.eq(C.recipeName(pin), "Item3727")
+    end
+    T.env.C_TradeSkillUI = { GetRecipeInfo = function() error("boom") end }
+    H.eq(C.recipeName(pin), "Item3727")
+    T.env.C_TradeSkillUI = { GetRecipeInfo = function() return "not a table" end }
+    H.eq(C.recipeName(pin), "Item3727")
+end)
+
+H.test("the main window title follows the game's language and the item load refreshes it", function()
+    local items = { [100] = ITEMS[100] }
+    local T = boot({ items = items })
+    local C = T.ns.Controller
+    frenchPin(T, nil)
+    C.selectPin(3398)
+    H.eq(T.ns.Window.lastModel.title, "Côtelettes de lion épicées")
+    items[3727] = { quality = 1, ilvl = 25, sellPrice = 125, classID = 0, bindType = 0 }
+    C.onEvent("ITEM_DATA_LOAD_RESULT", 3727, true)
+    T.run()
+    H.eq(T.ns.Window.lastModel.title, "Item3727")
+end)
+
+H.test("/cp history lists tracked recipes by their current-language name", function()
+    local items = {}
+    local T = boot({ items = items })
+    local C = T.ns.Controller
+    C.selectPin(frenchPin(T, items).recipeID)
+    T.ns.Window.lastHandlers.onTrackToggle(true)
+    C.historyCommand("")
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r 1. Item3727 (tracking)")
+    C.historyCommand("remove 1")
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Removed from history: Item3727")
+end)
+
+H.test("professionName reads the current-language name and writes it back, else keeps the stored one", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local prof = { key = "185", name = "Cuisine" }
+    H.eq(C.professionName(prof), "Cuisine")
+    T.env.GetProfessions = function() return 1 end
+    T.env.GetProfessionInfo = function() return "Cooking", "icon", 60, 75, 0, 0, 185 end
+    H.eq(C.professionName(prof), "Cooking")
+    H.eq(prof.name, "Cooking")
+    H.eq(C.professionName({ key = "185", name = "" }), "Cooking")
+    H.eq(C.professionName({ key = "Forge", name = "" }), "Forge")
+    H.eq(C.professionName({ key = "Forge", name = "Forge" }), "Forge")
+    H.eq(C.professionName(nil), "-")
+    -- A live name too long to store is not used.
+    T.env.GetProfessionInfo = function() return string.rep("x", 65), "icon", 60, 75, 0, 0, 185 end
+    H.eq(C.professionName(prof), "Cooking")
+end)
+
+-- A profession window whose profession is `id`, with `ids` learned (names "R<id>").
+local function openProfessionWith(T, id, name, ids)
+    mockProfession(T)
+    T.env.C_TradeSkillUI.GetBaseProfessionInfo = function() return { professionID = id, professionName = name } end
+    T.env.C_TradeSkillUI.GetAllRecipeIDs = function() return ids end
+    T.env.C_TradeSkillUI.GetRecipeInfo = function(rid)
+        return { recipeID = rid, name = "R" .. rid, learned = true, relativeDifficulty = 1 }
+    end
+end
+
+H.test("switching profession in the open window reads the new one at once (Forever's profession tabs)", function()
+    local T = boot()
+    local C = T.ns.Controller
+    openProfessionWith(T, 164, "Blacksmithing", { 5, 6 })
+    C.onEvent("TRADE_SKILL_SHOW")
+    T.run()
+    -- The tab is switched a second later: the 5 s coalescing must not swallow it.
+    T.clock = T.clock + 1
+    openProfessionWith(T, 185, "Cooking", { 7 })
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    T.run()
+    H.eq(#T.env.CraftProfitCharDB.known, 1)
+    C.onEvent("TRADE_SKILL_DATA_SOURCE_CHANGED")
+    T.run()
+    local known = T.env.CraftProfitCharDB.known
+    H.eq(#known, 2)
+    H.eq(known[2].key, "185")
+    H.eq(known[2].name, "Cooking")
+    H.eq(known[2].recipes[1].recipeID, 7)
+    H.eq(T.env.CraftProfitCharDB.knownCurrent, "185")
+end)
+
+H.test("a scan of the previous profession is dropped when the window switches profession", function()
+    local T = boot()
+    local C = T.ns.Controller
+    openProfessionWith(T, 164, "Blacksmithing", { 5, 6, 8 })
+    T.ns.Trade.KNOWN_CHUNK = 1
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    -- One chunk read, then the player picks Cooking.
+    table.remove(T.timers, 1)()
+    openProfessionWith(T, 185, "Cooking", { 7 })
+    C.onEvent("TRADE_SKILL_DATA_SOURCE_CHANGED")
+    T.run()
+    local known = T.env.CraftProfitCharDB.known
+    H.eq(#known, 1)
+    H.eq(known[1].key, "185")
+    H.eq(#known[1].recipes, 1)
+end)
+
+H.test("nothing is read while the game is switching profession, nor stored from an empty list", function()
+    local T = boot()
+    local C = T.ns.Controller
+    openProfessionWith(T, 185, "Cooking", { 7 })
+    T.env.C_TradeSkillUI.IsDataSourceChanging = function() return true end
+    H.eq(C.refreshKnown(), false)
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    T.run()
+    H.eq(#T.env.CraftProfitCharDB.known, 0)
+    T.env.C_TradeSkillUI.IsDataSourceChanging = function() return false end
+    -- The list is not built yet: an empty read stores nothing and the next update reads again.
+    T.env.C_TradeSkillUI.GetAllRecipeIDs = function() return {} end
+    C.onEvent("TRADE_SKILL_DATA_SOURCE_CHANGED")
+    T.run()
+    H.eq(#T.env.CraftProfitCharDB.known, 0)
+    T.env.C_TradeSkillUI.GetAllRecipeIDs = function() return { 7 } end
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    T.run()
+    H.eq(#T.env.CraftProfitCharDB.known, 1)
+end)
+
+H.test("pinned difficulties follow a profession switch, and wait while the switch is in progress", function()
+    local T = boot()
+    mockProfession(T)
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, T.ns.Recipes.normalize(RAW))
+    T.env.C_TradeSkillUI.GetRecipeInfo = function(id) return { recipeID = id, learned = true, relativeDifficulty = 2 } end
+    T.env.C_TradeSkillUI.IsDataSourceChanging = function() return true end
+    T.ns.Controller.onEvent("TRADE_SKILL_SHOW")
+    H.eq(T.env.CraftProfitCharDB.pins[1].difficulty, "medium")
+    T.env.C_TradeSkillUI.IsDataSourceChanging = function() return false end
+    T.ns.Controller.onEvent("TRADE_SKILL_DATA_SOURCE_CHANGED")
+    H.eq(T.env.CraftProfitCharDB.pins[1].difficulty, "easy")
+end)
+
+H.test("the profession window events are registered", function()
+    local T = W.boot(H, { items = ITEMS })
+    local registered = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.RegisterEvent = function(_, e) registered[e] = true end
+        return f
+    end
+    H.loadModule("Boot", T.ns, T.env)
+    H.truthy(registered.TRADE_SKILL_LIST_UPDATE)
+    H.truthy(registered.TRADE_SKILL_SHOW)
+    H.truthy(registered.TRADE_SKILL_DATA_SOURCE_CHANGED)
 end)

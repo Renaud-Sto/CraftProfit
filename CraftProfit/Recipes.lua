@@ -68,6 +68,12 @@ local function reagents(list)
     return out
 end
 
+-- A client language code ("enUS", "frFR"), or nil.
+local function validLocale(v)
+    if type(v) == "string" and v:match("^%a%a%a%a$") then return v end
+    return nil
+end
+
 function Recipes.normalize(raw)
     if type(raw) ~= "table" then return nil end
     local recipeID, outputItemID = Util.id(raw.recipeID), Util.id(raw.outputItemID)
@@ -79,9 +85,45 @@ function Recipes.normalize(raw)
     return {
         recipeID = recipeID,
         name = name,
+        -- The client language the name was read in ("frFR"); absent on older saves.
+        locale = validLocale(raw.locale),
         difficulty = Skillup.name(raw.difficulty),
         outputItemID = outputItemID,
         outputQty = qty,
         reagents = list,
     }
+end
+
+-- The stored name, or "#<recipeID>" when there is none. No game call.
+function Recipes.label(recipe)
+    local name = recipe.name
+    if type(name) == "string" and name ~= "" then return name end
+    return "#" .. tostring(recipe.recipeID)
+end
+
+-- The name to show for a stored recipe, in the client's current language. Names are
+-- saved when a recipe is pinned or read, so they stay in the old language after the
+-- player switches the game's language. `live` gives the current facts (each function
+-- returns a plain non-empty string or nil, and must never raise):
+--   live.recipeName(recipeID)  the client's own recipe name
+--   live.itemName(itemID)      the crafted item's name (nil while not loaded)
+--   live.locale                the client language now ("enUS")
+-- Order: the client's recipe name; the stored name when it was read in this language
+-- (a recipe name can differ from its item's: "Smelt Copper" makes "Copper Bar"); the
+-- item name; the stored name; "#id". A live name that differs from the stored one is
+-- written back with the language, so the saved fallback follows the language too.
+function Recipes.liveName(recipe, live)
+    live = live or {}
+    local stored = type(recipe.name) == "string" and recipe.name ~= "" and recipe.name or nil
+    local locale = validLocale(live.locale)
+    local name = live.recipeName and live.recipeName(recipe.recipeID)
+    if not name and stored and locale and recipe.locale == locale then return stored end
+    if not name and live.itemName and recipe.outputItemID then name = live.itemName(recipe.outputItemID) end
+    if type(name) == "string" and name ~= "" and #name <= MAX_NAME_BYTES then
+        if name ~= recipe.name or recipe.locale ~= locale then
+            recipe.name, recipe.locale = name, locale
+        end
+        return name
+    end
+    return Recipes.label(recipe)
 end

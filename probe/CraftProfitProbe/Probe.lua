@@ -492,6 +492,30 @@ cmds.icon = function()
     end
 end
 
+-- Are recipe names re-readable in the current language without the profession window?
+-- For every pinned recipe (CraftProfitCharDB, a saved variable the probe can read): the
+-- stored name, the name from C_TradeSkillUI.GetRecipeInfo and the output item's name.
+cmds.rname = function()
+    local db = CraftProfitCharDB
+    out("profession window shown:", ProfessionsFrame and ProfessionsFrame:IsShown() or (TradeSkillFrame and TradeSkillFrame:IsShown()) or false)
+    if type(db) ~= "table" or type(db.pins) ~= "table" then out("no pins") return end
+    for i, pin in ipairs(db.pins) do
+        -- Called directly: try() turns the returned table into its address string.
+        local ok, info = pcall(C_TradeSkillUI.GetRecipeInfo, pin.recipeID)
+        local infoName
+        if not ok then
+            infoName = "ERR: " .. tostring(info)
+        elseif type(info) == "table" then
+            infoName = "name=" .. show(info.name) .. " learned=" .. show(info.learned)
+        else
+            infoName = show(info)
+        end
+        local itemName = try(C_Item.GetItemInfo, pin.outputItemID)
+        out(i, "recipe", pin.recipeID, "stored:", pin.name, "| GetRecipeInfo:", infoName, "| item:", itemName)
+        if i >= 12 then break end
+    end
+end
+
 SLASH_CPP1 = "/cpp"
 SlashCmdList.CPP = function(msg)
     local cmd, arg = (msg or ""):match("^(%S*)%s*(.-)$")
@@ -507,7 +531,7 @@ SlashCmdList.CPP = function(msg)
         out("== " .. cmd .. " " .. arg)
         fn(arg)
     else
-        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | qty | ruleset | known | skin | icon | log | clear")
+        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | qty | ruleset | known | skin | icon | rname | log | clear")
     end
 end
 out("loaded. /cpp for commands. Enable Lua errors: /console scriptErrors 1")

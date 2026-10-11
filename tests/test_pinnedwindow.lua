@@ -8,7 +8,7 @@ local ITEMS = {
 }
 
 local function raw(id, output, difficulty, name)
-    return { recipeID = id, name = name or ("R" .. id), difficulty = difficulty, outputItemID = output or 100,
+    return { recipeID = id, name = name or ("R" .. id), locale = "enUS", difficulty = difficulty, outputItemID = output or 100,
         reagents = { { itemID = 1, qty = 2 }, { itemID = 2, qty = 1 } } }
 end
 
@@ -444,4 +444,16 @@ H.test("the window reads in French", function()
     H.eq(named.CraftProfitPinnedWindow.titleText.text, "Recettes épinglées")
     H.eq(UI.parts.panel.title.text, "RECETTES ÉPINGLÉES")
     H.eq(UI.parts.sort.text, "Tri : gain")
+end)
+
+H.test("pinned window rows follow the game's language: the client's recipe name, else the item's", function()
+    local pin = raw(1, 100, "optimal", "Epee")
+    pin.locale = "frFR"
+    local T, UI = boot({ pins = { pin } })
+    UI.show()
+    H.eq(UI.parts.rows[1].name.text, "Item100")
+    T.env.C_TradeSkillUI = { GetRecipeInfo = function(id) return { recipeID = id, name = "Sword of R" .. id } end }
+    UI.refresh()
+    H.eq(UI.parts.rows[1].name.text, "Sword of R1")
+    H.eq(T.env.CraftProfitCharDB.pins[1].name, "Sword of R1")
 end)

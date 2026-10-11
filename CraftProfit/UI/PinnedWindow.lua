@@ -45,8 +45,10 @@ PinnedWindow.WIDTH = WIDTH
 PinnedWindow.INNER_WIDTH = INNER_WIDTH
 PinnedWindow.VALUE_W = VALUE_W
 
+-- The recipe's name in the game's current language (the controller's), else the stored one.
 local function name(recipe)
-    return recipe.name ~= "" and recipe.name or ("#" .. recipe.recipeID)
+    if ctl and ctl.recipeName then return ctl.recipeName(recipe) end
+    return ns.Recipes.label(recipe)
 end
 
 -- Repaints the list from the controller; does nothing while the window is closed or not

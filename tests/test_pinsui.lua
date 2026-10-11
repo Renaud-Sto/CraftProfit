@@ -533,3 +533,19 @@ H.test("rowValue gives the text and colour each pinned row shows, in both sort m
         { "+" .. fmt(40) .. "/pt", Colors.FIXED.profit })
     H.eq({ P.rowValue({ result = { net = 700 } }, true) }, { "?", Colors.text("muted") })
 end)
+
+H.test("pinned rows show the name in the game's current language and update the stored one", function()
+    local T = boot()
+    local pins = T.env.CraftProfitCharDB.pins
+    -- Pinned in a French client; the fake client is English and knows the items.
+    pins[1].name, pins[1].locale = "Epee", "frFR"
+    local parts = openList(T)
+    T.ns.PinsUI.refresh()
+    local byID = {}
+    for i = 1, 2 do byID[parts.rows[i].recipeID] = parts.rows[i].name.text end
+    H.eq(byID[1], "Item100")
+    H.eq(pins[1].name, "Item100")
+    H.eq(pins[1].locale, "enUS")
+    -- Pinned without a language tag (an older save) in the same way.
+    H.eq(byID[2], "Item101")
+end)

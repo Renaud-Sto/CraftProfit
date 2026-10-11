@@ -4,6 +4,9 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ## [Unreleased]
 
+### Fixed
+- Recipe and profession names follow the game language after a language change: pinned recipes, the leveling window, the main window title and `/cp history` no longer keep the names of the language they were saved in. Switching profession with the tabs of the open profession window now refreshes the leveling list and the pinned difficulties too.
+
 ## [1.0.0] - 2026-10-10
 
 First public release, for the WoW: Forever beta, build 1.60.1, Interface 16001.

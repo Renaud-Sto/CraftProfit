@@ -94,7 +94,7 @@ ns.Locale.register("enUS", {
     OPTIONS_TILE_B = "Inset",
     OPTIONS_PINS = "PINNED RECIPES",
     OPTIONS_PIN_LIMIT = "Limit per character",
-    OPTIONS_PIN_NOTE = "A higher limit makes Search prices take longer: the auction house is searched one item at a time.",
+    OPTIONS_PIN_NOTE = "A higher limit makes Search prices slower: it searches the auction house one item at a time (about a minute for 20 recipes). With many recipes, Scan AH is usually faster.",
     OPTIONS_MINIMAP = "MINIMAP",
     OPTIONS_SHOW_MINIMAP = "Show the minimap button",
     OPTIONS_WINDOWS = "WINDOWS",

@@ -378,11 +378,14 @@ local function wrappedLines(Layout, text, charW, width)
     return lines
 end
 
-H.test("the note under the limits says why a higher one is slower, in two lines at most", function()
+H.test("the note under the limits says how slow a search gets and points to Scan AH, in three lines at most", function()
     local expected = {
-        enUS = "A higher limit makes Search prices take longer: the auction house is searched one item at a time.",
-        frFR = "Une limite plus haute rallonge Rechercher les prix : l'hôtel des ventes est interrogé un objet à la fois.",
-        esES = "Un límite más alto alarga Buscar precios: la casa de subastas se consulta objeto por objeto.",
+        enUS = "A higher limit makes Search prices slower: it searches the auction house one item at a time "
+            .. "(about a minute for 20 recipes). With many recipes, Scan AH is usually faster.",
+        frFR = "Plus la limite est haute, plus Rechercher les prix est long : un objet à la fois (environ une "
+            .. "minute pour 20 recettes). Avec beaucoup de recettes, Scanner l'HV va souvent plus vite.",
+        esES = "Un límite más alto ralentiza Buscar precios, que consulta objeto por objeto (cerca de un minuto "
+            .. "para 20 recetas). Con muchas recetas, Escanear CS suele ser más rápido.",
     }
     for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
         local T, _, slash = boot(nil, locale)
@@ -391,14 +394,23 @@ H.test("the note under the limits says why a higher one is slower, in two lines 
         local note = O.parts.pinNote
         H.eq(note.text, expected[locale])
         local lines = wrappedLines(Layout, note.text, O.SMALL_CHAR_W, O.ROOM)
-        H.truthy(lines <= 2 or error(locale .. ": the note takes " .. lines .. " lines"))
+        H.truthy(lines <= O.NOTE_MAX_LINES or error(locale .. ": the note takes " .. lines .. " lines"))
+        H.eq(O.NOTE_MAX_LINES, 3)
+        -- The note names the two buttons as they read in that language.
+        H.truthy(note.text:find(T.ns.L.SEARCH_PRICES, 1, true))
+        H.truthy(note.text:find(T.ns.L.SCAN, 1, true))
+        -- Without a measure from the client, the panel is sized from the estimate.
+        H.eq(O.noteLines(), lines)
+        H.eq(O.parts.panels.pins.frame.height,
+            Layout.panelHeight(1, 14 + 2 + T.ns.Native.BUTTON_H + 4, lines * 14 + O.LIST_BOTTOM))
         -- The label above the buttons fits on its line too.
         local need = Layout.textWidth(O.parts.pinLabel.text, O.SMALL_CHAR_W)
         H.truthy(need <= O.ROOM or error(locale .. ": " .. O.parts.pinLabel.text .. " needs " .. need .. " px"))
     end
 end)
 
-H.test("the note is two lines of the small font across the panel, under the buttons", function()
+H.test("the note is the small font across the panel, under the buttons, as tall as its measured lines", function()
+    local measured
     local T = W.boot(H, {})
     T.env.UISpecialFrames = {}
     local create = T.env.CreateFrame
@@ -411,19 +423,50 @@ H.test("the note is two lines of the small font across the panel, under the butt
             fs.SetHeight = function(self, h) self.height = h end
             fs.SetWordWrap = function(self, v) self.wrap = v end
             fs.SetPoint = function(self, ...) self.point = { ... } end
+            fs.SetMaxLines = function(self, n) self.maxLines = n end
+            fs.GetNumLines = function() return measured end
             return fs
         end
         return f
     end
     T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    measured = 2
     T.env.SlashCmdList.CRAFTPROFIT("options")
     local O, Layout, Native = T.ns.OptionsUI, T.ns.Layout, T.ns.Native
     local note, panel = O.parts.pinNote, O.parts.panels.pins
+    local rowH = 14 + 2 + Native.BUTTON_H + 4
     H.eq(note.font, "GameFontHighlightSmall")
     H.eq(note.width, O.ROOM)
-    H.eq(note.height, 2 * 14)
     H.eq(note.wrap, true)
+    H.eq(note.maxLines, 3)
     -- Under the label (14), its gap (2), the buttons and their gap (4).
-    H.eq(note.point, { "TOPLEFT", panel.body, "TOPLEFT", 8, -(14 + 2 + Native.BUTTON_H + 4) })
-    H.eq(panel.frame.height, Layout.panelHeight(1, 14 + 2 + Native.BUTTON_H + 4, 2 * 14 + O.LIST_BOTTOM))
+    H.eq(note.point, { "TOPLEFT", panel.body, "TOPLEFT", 8, -rowH })
+    -- The client's measure wins: two lines.
+    H.eq(note.height, 2 * 14)
+    H.eq(panel.frame.height, Layout.panelHeight(1, rowH, 2 * 14 + O.LIST_BOTTOM))
+    local function windowHeight()
+        local p = O.parts.panels
+        local sum = 0
+        for _, k in ipairs({ "appearance", "pins", "minimap", "windows", "controls" }) do sum = sum + p[k].frame.height end
+        return Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + sum + 8 * 4
+    end
+    H.eq(O.frame():GetHeight(), windowHeight())
+    local twoLines = O.frame():GetHeight()
+    -- Three measured lines: the panel and the window grow by one line.
+    measured = 3
+    O.refresh()
+    H.eq(note.height, 3 * 14)
+    H.eq(panel.frame.height, Layout.panelHeight(1, rowH, 3 * 14 + O.LIST_BOTTOM))
+    H.eq(O.frame():GetHeight(), twoLines + 14)
+    -- More than three is capped (the text is cut by SetMaxLines); 0 or junk falls back to the
+    -- estimate.
+    measured = 5
+    O.refresh()
+    H.eq(note.height, 3 * 14)
+    measured = 0
+    O.refresh()
+    H.eq(O.noteLines(), Layout.wrapLines(note.text, O.SMALL_CHAR_W, O.ROOM))
+    measured = 0 / 0
+    O.refresh()
+    H.eq(O.noteLines(), Layout.wrapLines(note.text, O.SMALL_CHAR_W, O.ROOM))
 end)

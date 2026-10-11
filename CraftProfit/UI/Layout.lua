@@ -52,6 +52,24 @@ function Layout.textWidth(text, charW)
     return letters * charW
 end
 
+-- Estimated number of lines `text` takes when wrapped at word boundaries into `width` px at
+-- `charW` px per letter (as Layout.textWidth); 0 for an empty or missing text. A word wider
+-- than the line still takes one line of its own.
+function Layout.wrapLines(text, charW, width)
+    if type(text) ~= "string" then return 0 end
+    local lines, line = 0, nil
+    for word in text:gmatch("%S+") do
+        local candidate = line and (line .. " " .. word) or word
+        if line and Layout.textWidth(candidate, charW) > width then
+            lines, line = lines + 1, word
+        else
+            line = candidate
+        end
+    end
+    if line then lines = lines + 1 end
+    return lines
+end
+
 -- Largest of `sizes` (descending) at which a text measured `baseWidth` wide at
 -- `baseSize` fits `boxWidth`; the smallest size when none does, the first one when
 -- the width cannot be measured.

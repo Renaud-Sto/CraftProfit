@@ -94,7 +94,7 @@ ns.Locale.register("esES", {
     OPTIONS_TILE_B = "Recuadro",
     OPTIONS_PINS = "RECETAS FIJADAS",
     OPTIONS_PIN_LIMIT = "Límite por personaje",
-    OPTIONS_PIN_NOTE = "Un límite más alto alarga Buscar precios: la casa de subastas se consulta objeto por objeto.",
+    OPTIONS_PIN_NOTE = "Un límite más alto ralentiza Buscar precios, que consulta objeto por objeto (cerca de un minuto para 20 recetas). Con muchas recetas, Escanear CS suele ser más rápido.",
     OPTIONS_MINIMAP = "MINIMAPA",
     OPTIONS_SHOW_MINIMAP = "Mostrar el botón del minimapa",
     OPTIONS_WINDOWS = "VENTANAS",

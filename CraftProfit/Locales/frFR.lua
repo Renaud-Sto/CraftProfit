@@ -94,7 +94,7 @@ ns.Locale.register("frFR", {
     OPTIONS_TILE_B = "Encart",
     OPTIONS_PINS = "RECETTES ÉPINGLÉES",
     OPTIONS_PIN_LIMIT = "Limite par personnage",
-    OPTIONS_PIN_NOTE = "Une limite plus haute rallonge Rechercher les prix : l'hôtel des ventes est interrogé un objet à la fois.",
+    OPTIONS_PIN_NOTE = "Plus la limite est haute, plus Rechercher les prix est long : un objet à la fois (environ une minute pour 20 recettes). Avec beaucoup de recettes, Scanner l'HV va souvent plus vite.",
     OPTIONS_MINIMAP = "MINICARTE",
     OPTIONS_SHOW_MINIMAP = "Afficher le bouton de la minicarte",
     OPTIONS_WINDOWS = "FENÊTRES",

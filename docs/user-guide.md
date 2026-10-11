@@ -45,12 +45,12 @@ The **Track history** box (next to Crafts) makes CraftProfit keep the prices of 
 
 When the auction house opens, the window shows the **Pinned recipes** panel under the recipe, with three buttons: **Search prices** (the main one), **Scan AH** and **Leveling**, and a status line below them.
 
-- **Search prices** prices every reagent and every output of the pinned recipes, one item at a time, with a progress count. Prices are saved with their date. If you close the auction house meanwhile, the search is cancelled and the prices already received are kept.
+- **Search prices** prices every reagent and every output of the pinned recipes, one item at a time, with a progress count: about a minute for 20 pinned recipes. With many recipes pinned, **Scan AH** is usually faster. Prices are saved with their date. If you close the auction house meanwhile, the search is cancelled and the prices already received are kept.
 - **Scan AH** reads the entire auction house in one go (the game allows one full scan per 15 minutes per account). It prices thousands of items, so every recipe can be evaluated afterwards. If another addon starts a scan, CraftProfit uses its result without a second request. If the server does not answer, the status says so: the 15 minute cooldown is probably running.
 
 ### The pinned list
 
-The list shows 6 recipes at a time. With more pins, a thin scroll bar appears at its right edge: use the mouse wheel (over the rows, the bar or the empty space of the list), drag the bar, or click on it to jump. With 6 pins or fewer there is no bar.
+Its title shows how many recipes are pinned over the limit, for example **PINNED RECIPES (21/30)**. The list shows 6 recipes at a time. With more pins, a thin scroll bar appears at its right edge: use the mouse wheel (over the rows, the bar or the empty space of the list), drag the bar, or click on it to jump. With 6 pins or fewer there is no bar.
 
 Each recipe name is coloured by its difficulty: orange (optimal), yellow (medium), green (easy) or grey (trivial). The colour is the one known the last time the profession window was open, so after gaining skill points open the profession window to refresh it; with the profession closed it can lag. A pin whose difficulty is not known yet shows in the plain text colour. The value on the right is green for a gain, red for a loss and grey when unknown. The selected recipe has a gold tint; the row under the mouse is highlighted.
 
@@ -71,6 +71,7 @@ Click a recipe in the list to show it in the window above.
 - The sort button at the top switches **Sort: profit** and **Sort: cost/point**; it is the same choice as the list at the auction house.
 - The small **x** at the right of a row unpins that recipe (its tooltip says *Unpin*); the rows below move up and nothing else opens.
 - A click anywhere else on a row opens the main window on that recipe, with its stored prices.
+- The panel title shows the pin count over the limit, for example **PINNED RECIPES (21/30)**.
 - 12 rows show at a time; with more, use the mouse wheel or the scroll bar.
 - Escape or the close button closes it. Drag it anywhere: it reopens where you left it, also after `/reload`. The first time it opens just right of the rightmost CraftProfit window on screen, or left of the middle of the screen when none is shown.
 - Pinning or unpinning from the main window updates it at once while it is open.
@@ -138,7 +139,7 @@ Open it with `/cp options`, a left click on the minimap button, or the CraftProf
 Where windows open: a CraftProfit window that has never been dragged opens just right of the rightmost CraftProfit window already on screen, so they never pile up on each other (the screen edge keeps it visible). With none shown, the main window opens beside the profession or auction house window, the leveling window beside the main window, the pinned recipes window left of the middle of the screen and the options window in the middle. Once dragged, a window always reopens where you left it. The window you open or click last comes to the front, above the other CraftProfit windows and the game's HUD panels.
 
 - **Appearance**: pick the *Header strip* of every section (Carved wood, Shade or Streaks) and the *Tile card* of the price tiles (Loot card or Inset). The two mix freely (6 looks); the lit button is your choice. It applies at once to every window, open or not, and is saved for your account. Default: Shade and Inset.
-- **Pinned recipes**: the *Limit per character*, 12, 20, 30 or 40 (default 20); the lit button is your choice, saved for your account and used from the next pin. A higher limit makes **Search prices** take longer, because the auction house is searched one item at a time. Lowering the limit never deletes a pin: pins over the new limit stay, and new pins are refused until you unpin enough of them.
+- **Pinned recipes**: the *Limit per character*, 12, 20, 30 or 40 (default 20); the lit button is your choice, saved for your account and used from the next pin. A higher limit makes **Search prices** slower, because the auction house is searched one item at a time (about a minute for 20 recipes); with many recipes, **Scan AH** is usually faster. Lowering the limit never deletes a pin: pins over the new limit stay, and new pins are refused until you unpin enough of them.
 - **Minimap**: *Show the minimap button*. Untick it to hide the button; `/cp minimap` hides it or brings it back too.
 - **Windows**: open or close the main window and the leveling window (first row) and the pinned recipes window (second row).
 - **Controls**: the minimap clicks and every command, one per line: the command in gold, what it does in white.

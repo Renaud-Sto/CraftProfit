@@ -196,9 +196,10 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Click 30 in `/cp options` (window left open): the next pin works at once, up to 30; close and reopen the options window, `/reload`: 30 is still lit.
 - [ ] Lower the limit to 12 with more than 12 pins: no pin is deleted (count them in `/cp pins`, also after `/reload`), a new pin is refused with the message, unpinning still works from the main window and from the "x".
 - [ ] Set 40 and pin 40 recipes (or as many as you can): the list under the main window at the AH and the pinned recipes window both scroll with the wheel and the bar to the last pin; the "x" of the bottom row while scrolled to the end unpins it and the list moves up with no gap.
-- [ ] **Search prices** with many pins (30 to 40) still completes; note how long it takes and the pin count in the PR.
-- [ ] The options window is now about 662 px tall: at your usual UI scale it fits on screen whole (title bar to the bottom of CONTROLS), and again at a smaller resolution if you can.
-- [ ] The note under the limit buttons fits in two lines, nothing cut, in English, `/cp locale frFR` and `/cp locale esES`; the "Limit per character" label and the 12 / 20 / 30 / 40 buttons are not cut either.
+- [ ] **Search prices** with many pins still completes. 20 pinned recipes: about a minute (measured 2026-10-11 on the beta); **Scan AH** as the faster option.
+- [ ] The options window is now about 676 px tall (the note on three lines): at your usual UI scale it fits on screen whole (title bar to the bottom of CONTROLS), and again at a smaller resolution if you can.
+- [ ] The note under the limit buttons (search time, Scan AH) fits in three lines, nothing cut, the panel exactly as tall as its lines, in English, `/cp locale frFR` and `/cp locale esES`; the "Limit per character" label and the 12 / 20 / 30 / 40 buttons are not cut either.
+- [ ] The panel title of the list at the AH and of the pinned recipes window reads `PINNED RECIPES (n/limit)` and follows a pin, an unpin (main window and "x") and a limit change at once; in French and Spanish too; at the AH the title is cut before the sort button, never under it (check `RECETTES ÉPINGLÉES (40/40)`).
 - [ ] No Lua error, no `ADDON_ACTION_BLOCKED`.
 
 ## Default placement (PR 19 fixes)

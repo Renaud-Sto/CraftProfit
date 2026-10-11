@@ -5,7 +5,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 ## [Unreleased]
 
 ### Added
-- Pinned recipes limit in the options window: 12, 20, 30 or 40 recipes per character (account-wide setting), chosen with four buttons in the new **Pinned recipes** panel. A note under them says that a higher limit makes **Search prices** take longer, because the auction house is searched one item at a time. The change applies at once. When the list is full, pinning says "Pinned recipes limit reached (n). Raise it in /cp options." Lowering the limit never deletes a pin: the ones over the limit stay, and new pins are refused until the list is under the limit again.
+- Pinned recipes limit in the options window: 12, 20, 30 or 40 recipes per character (account-wide setting), chosen with four buttons in the new **Pinned recipes** panel. A note under them says that a higher limit makes **Search prices** slower, because the auction house is searched one item at a time (about a minute for 20 recipes), and that **Scan AH** is usually faster with many recipes. The pinned panels' title shows the count over the limit, e.g. "PINNED RECIPES (21/30)". The change applies at once. When the list is full, pinning says "Pinned recipes limit reached (n). Raise it in /cp options." Lowering the limit never deletes a pin: the ones over the limit stay, and new pins are refused until the list is under the limit again.
 
 ### Changed
 - The default pinned recipes limit is now 20 per character (it was 12 in 1.0.0). Saves from 1.0.0 load unchanged.

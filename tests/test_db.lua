@@ -99,18 +99,22 @@ H.test("initAccount drops an invalid snapshot time", function()
     H.eq(DB.initAccount({ snapshotTime = 500 }).snapshotTime, 500)
 end)
 
-H.test("prune drops old prices but keeps future-dated ones", function()
+H.test("prune drops old and far future prices, keeps the ones less than a day ahead", function()
     local DB = load()
     local now = 10 * DB.PRICE_MAX_AGE
     local db = DB.initAccount({ prices = {
         [1] = { 5, 1, now - DB.PRICE_MAX_AGE - 1 },
         [2] = { 5, 1, now - 10 },
         [3] = { 5, 1, now + 1000 },
-    } })
-    H.eq(DB.prune(db, now), 1)
+        [4] = { 5, 1, now + 86400 + 1 },
+    }, markets = { k = { prices = { [7] = { 5, 1, now + 365 * 86400 }, [8] = { 5, 1, now } } } } })
+    H.eq(DB.prune(db, now), 3)
     H.eq(db.prices[1], nil)
     H.truthy(db.prices[2])
     H.truthy(db.prices[3])
+    H.eq(db.prices[4], nil)
+    H.eq(db.markets.k.prices[7], nil)
+    H.truthy(db.markets.k.prices[8])
     H.eq(DB.prune(db, 0 / 0), 0)
 end)
 

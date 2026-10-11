@@ -194,14 +194,19 @@ function DB.market(db, key)
     return market
 end
 
--- Removes prices older than PRICE_MAX_AGE. A price dated in the future (clock
--- moved back) is kept: its age is simply unknown. Returns how many were removed.
+-- A price dated more than this ahead was written with a wrong clock: its age would stay
+-- unknown for good, so it is dropped. Less than this is clock drift and is kept.
+DB.PRICE_FUTURE_SLACK = 86400
+
+-- Removes prices older than PRICE_MAX_AGE. A price dated slightly in the future (clock
+-- moved back) is kept, its age simply unknown; one dated more than PRICE_FUTURE_SLACK
+-- ahead is removed. Returns how many were removed.
 function DB.prune(db, now)
     if not Util.isFinite(now) then return 0 end
     local removed = 0
     local function prune(prices)
         for itemID, row in pairs(prices) do
-            if now - row[3] > DB.PRICE_MAX_AGE then
+            if now - row[3] > DB.PRICE_MAX_AGE or row[3] - now > DB.PRICE_FUTURE_SLACK then
                 prices[itemID] = nil
                 removed = removed + 1
             end

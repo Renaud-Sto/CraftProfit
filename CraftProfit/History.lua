@@ -4,8 +4,9 @@
 -- db.tracked (at most MAX_TRACKED, paused ones included). Each price measurement of
 -- an item of an active tracked recipe becomes a point in market.series[itemID]:
 -- { t, unit, volume, low, high, n }. A raw point has low = high = unit and n = 1.
--- Older points are merged into one point per day, then one per week, so the saved
--- file stays small however many scans are kept.
+-- Older points are merged into one point per day, then one per week. Each of the three
+-- tiers has its own cap, so a busy fortnight can only drop raw points, never the daily
+-- and weekly history.
 local _, ns = ...
 local Util, Recipes = ns.Util, ns.Recipes
 
@@ -17,7 +18,16 @@ local DAY, WEEK = 86400, 7 * 86400
 History.RAW_SECONDS = 14 * DAY
 History.DAILY_SECONDS = 90 * DAY
 History.WEEKLY_SECONDS = 365 * DAY
-History.MAX_POINTS = 600 -- per item; far above what the retention windows allow
+-- Points kept per item in each tier. Raw points have no natural bound (one per operation
+-- that touches the item); 600 is the old cap on the whole series, so no save it kept loses
+-- a point. The daily tier spans 76 days (77 buckets at most) and the weekly one 275 days
+-- (41 buckets at most): their caps never bind on sane data. At most 725 points an item.
+History.MAX_RAW = 600
+History.MAX_DAILY = 80
+History.MAX_WEEKLY = 45
+-- A point dated further ahead than this was written with a wrong clock (or edited by hand):
+-- it is dropped, or it would block recording until real time caught up.
+History.FUTURE_SLACK = DAY
 
 -- Tracked list ----------------------------------------------------------------
 
@@ -76,12 +86,23 @@ local function bucketOf(t, size)
     return math.floor(t / size) * size
 end
 
--- Merges the points older than RAW_SECONDS into daily, then weekly points and drops
--- what is older than a year. Returns a new, time-ordered array. Safe to run again.
+-- The newest `max` points of a time-ordered array, in order.
+local function newest(points, max)
+    if #points <= max then return points end
+    local out = {}
+    for i = #points - max + 1, #points do out[#out + 1] = points[i] end
+    return out
+end
+
+local function byTime(a, c) return a[1] < c[1] end
+
+-- Merges the points older than RAW_SECONDS into daily, then weekly points, drops what is
+-- older than a year or dated more than FUTURE_SLACK ahead, and caps each tier to its newest
+-- points. Returns a new, time-ordered array. Safe to run again.
 function History.compact(series, now)
-    local keep, buckets, order = {}, {}, {}
+    local raw, buckets, order = {}, {}, {}
     for _, p in ipairs(series) do
-        if validPoint(p) then
+        if validPoint(p) and p[1] <= now + History.FUTURE_SLACK then
             local age = now - p[1]
             local size
             if age > History.WEEKLY_SECONDS then
@@ -92,13 +113,13 @@ function History.compact(series, now)
                 size = DAY
             end
             if size == nil then
-                keep[#keep + 1] = p
+                raw[#raw + 1] = p
             elseif size then
                 local t = bucketOf(p[1], size)
                 local key = size .. ":" .. t
                 local b = buckets[key]
                 if not b then
-                    b = { t, 0, 0, p[4], p[5], 0 }
+                    b = { t, 0, 0, p[4], p[5], 0, size }
                     buckets[key] = b
                     order[#order + 1] = key
                 end
@@ -111,12 +132,25 @@ function History.compact(series, now)
             end
         end
     end
+    local daily, weekly = {}, {}
     for _, key in ipairs(order) do
         local b = buckets[key]
-        keep[#keep + 1] = { b[1], Util.round(b[2] / b[6]), Util.round(b[3] / b[6]), b[4], b[5], b[6] }
+        local tier = b[7] == DAY and daily or weekly
+        tier[#tier + 1] = { b[1], Util.round(b[2] / b[6]), Util.round(b[3] / b[6]), b[4], b[5], b[6] }
     end
-    table.sort(keep, function(a, c) return a[1] < c[1] end)
-    while #keep > History.MAX_POINTS do table.remove(keep, 1) end
+    -- Each tier is sorted on its own so its cap keeps its newest points.
+    table.sort(raw, byTime)
+    table.sort(daily, byTime)
+    table.sort(weekly, byTime)
+    local keep = {}
+    for _, tier in ipairs({
+        newest(weekly, History.MAX_WEEKLY), newest(daily, History.MAX_DAILY), newest(raw, History.MAX_RAW),
+    }) do
+        for _, p in ipairs(tier) do keep[#keep + 1] = p end
+    end
+    -- A bucket is dated at the start of its day or week, before its own points, so two
+    -- tiers may interleave at their edge: the joined array is sorted once more.
+    table.sort(keep, byTime)
     return keep
 end
 
@@ -127,7 +161,15 @@ local function addPoint(market, itemID, now, unit, volume)
         market.series[itemID] = series
     end
     local last = series[#series]
-    if last and last[1] >= now then return false end
+    if last and last[1] >= now then
+        -- A point from a clock that ran ahead blocks the series: compacting drops it when it
+        -- is more than FUTURE_SLACK ahead. A point of this very second (or within the slack)
+        -- still wins, so the same instant is never recorded twice.
+        series = History.compact(series, now)
+        market.series[itemID] = series
+        last = series[#series]
+        if last and last[1] >= now then return false end
+    end
     series[#series + 1] = { now, unit, volume, unit, unit, 1 }
     market.series[itemID] = History.compact(series, now)
     return true
@@ -138,7 +180,7 @@ end
 -- itemsOf(recipe) returns the item ids to record and the ones that must have a
 -- price (the output of a bind-on-pickup recipe, for example, is never priced).
 -- A recipe is recorded only when every required item has a price. Returns how
--- many recipes were recorded.
+-- many recipes got at least one new point.
 function History.record(db, market, now, updated, itemsOf)
     if not Util.isCopper(now) or type(updated) ~= "table" then return 0 end
     local recorded = 0
@@ -154,13 +196,15 @@ function History.record(db, market, now, updated, itemsOf)
                 if type(row) ~= "table" or not Util.isCopper(row[1]) or row[1] <= 0 then complete = false end
             end
             if touched and complete then
+                local added = false
                 for _, id in ipairs(items) do
                     local row = market.prices[id]
-                    if type(row) == "table" and Util.isCopper(row[1]) and row[1] > 0 then
-                        addPoint(market, id, now, row[1], row[2])
+                    if type(row) == "table" and Util.isCopper(row[1]) and row[1] > 0
+                        and addPoint(market, id, now, row[1], row[2]) then
+                        added = true
                     end
                 end
-                recorded = recorded + 1
+                if added then recorded = recorded + 1 end
             end
         end
     end

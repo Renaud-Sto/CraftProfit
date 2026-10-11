@@ -5,7 +5,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 ## [Unreleased]
 
 ### Fixed
-- Price history keeps its long record: each tier (every point for 14 days, one a day, one a week) now has its own cap, so a busy fortnight can no longer erase the months and the year. Points or prices dated more than a day in the future are dropped instead of freezing an item's series, and the count of recorded items is exact.
+- Price history keeps its long record: each tier (every point for 14 days, one a day, one a week) now has its own cap, so a busy fortnight can no longer erase the months and the year. Points or prices dated more than a day in the future no longer freeze an item's series (a point is dropped only when a newer one is recorded, so a clock set back never erases history), and the count of recorded recipes is exact.
 - A recipe whose disenchant materials have no data in the tables (for example epic items above item level 60) shows *no data* instead of a permanent *PRICES MISSING* that no search could clear.
 - The leveling window reopens where it was dragged during the same session.
 - A scan that fails while being read no longer blocks the following scans, a pending quantity for the auction house search is cleared when the auction house closes, and values returned by the game are checked (secret values, failing calls) before use.

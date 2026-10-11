@@ -4,53 +4,33 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ## [Unreleased]
 
-### Added
-- Pinned recipes limit in the options window: 12, 20, 30 or 40 recipes per character (account-wide setting), chosen with four buttons in the new **Pinned recipes** panel. A note under them says that a higher limit makes **Refresh pinned** slower, because the auction house is searched one item at a time (about a minute for 20 recipes), and that **Scan AH** is usually faster with many recipes. The pinned panels' title shows the count over the limit, e.g. "PINNED RECIPES (21/30)". The change applies at once. When the list is full, pinning says "Pinned recipes limit reached (n). Raise it in /cp options." Lowering the limit never deletes a pin: the ones over the limit stay, and new pins are refused until the list is under the limit again.
-
-- **Refresh recipe** button in the main window's Options panel, beside Pin: searches the auction house for the items of the recipe on screen only (a few seconds). Enabled only while the auction house is open, a recipe is shown and no other search runs.
-
-- A price search asks a second time, automatically, for the prices that did not answer or came back with no listing, before showing the summary ("Retrying n/m"); the summary counts what both tries found.
-
-### Changed
-- **Search prices** is renamed **Refresh pinned** (FR "Actualiser épinglées", ES "Actualizar fijadas"); it still prices every pinned recipe, one item at a time (about a minute for 20 recipes). **Scan AH** is unchanged.
-- The search status says what happened, counted in prices (one per item searched: the materials, the crafted item and its disenchant materials): "Updated 7 prices" when every price was stored, else "Updated 6 of 7 prices" followed by "no listing: … (nobody is selling them now)" and/or "no answer: …, try again", naming the items when there are one or two of a kind (e.g. "no answer: Silver Bar, try again") and giving their number otherwise, instead of "n not found". The status line is cut at two lines.
-- The default pinned recipes limit is now 20 per character (it was 12 in 1.0.0). Saves from 1.0.0 load unchanged.
-
-### Fixed
-- Recipe and profession names follow the game language after a language change: pinned recipes, the leveling window, the main window title and `/cp history` no longer keep the names of the language they were saved in. Switching profession with the tabs of the open profession window now refreshes the leveling list and the pinned difficulties too.
-
-## [1.0.0] - 2026-10-10
+## [1.0.0] - 2026-10-11
 
 First public release, for the WoW: Forever beta, build 1.60.1, Interface 16001.
 
 ### Added
-- Floating window next to the profession window: reagent cost with a foldable detail, auction house net value (5 % commission), vendor value, expected disenchant value, best option and net result, age of the prices.
-- Optional cost (or gain) per skill point, from the recipe colour, with the chance used shown.
-- Crafts multiplier (1 to 9999) for the selected recipe.
-- Pinned recipes (12 per character), sortable by profit or by cost per point; pinned difficulties follow the recipe's current colour.
-- Auction house: **Search prices** for the pinned recipes, **Scan AH** for a full scan (also picks up scans started by other addons), click a reagent to search it with the quantity filled in.
-- Most probable disenchant outcome shown under the expected value; bind-on-pickup items only when the character knows Enchanting.
-- English, French and Spanish interface, following the game language; `/cp locale` to force one.
-- Slash commands `/cp` and `/craftprofit`: `show`, `hide`, `reset`, `scan`, `locale`, `selftest`, `level`, `pins`, `options`, `minimap`, `history`, `market`.
-- In-game probe addon (`probe/CraftProfitProbe`, not shipped) and an offline test suite.
-- Leveling window (`/cp level`, or the Leveling button under the pinned list): every learned recipe of a profession ranked by the cost of the next skill point from the last scan, with the crafts each point takes on average. Sort by cost per point or by speed (likeliest point first); grey recipes hidden unless asked. The recipes are stored per character, so the window works at the auction house with the profession window closed.
-- Pinned recipes window (`/cp pins`, a right click on the minimap button or the addon compartment entry, or the button in the options window): the pinned recipes with their last known prices, anywhere, without the auction house or the profession window. It shows how old the oldest price used is, shares the sort (profit or cost per point) with the list at the auction house, has an "x" on each row to unpin it, and a click on a row opens the main window on that recipe. It never searches prices. Escape closes it.
-- Options window (`/cp options`, a left click on the minimap button or the addon compartment entry): choose the look of every window at once, the header strip (Carved wood, Shade, Streaks) and the tile card (Loot card, Inset), default Shade and Inset, applied immediately and saved for the account. It also shows or hides the minimap button, opens the main, leveling and pinned recipes windows, and lists the minimap clicks and every command. No label is cut in English, French or Spanish. Escape closes it.
-- Minimap button (shown by default): left click opens the options, right click opens or closes the pinned recipes window, a left drag moves it around the minimap (round or square), and its place is saved. `/cp minimap` or the options window hides it or brings it back.
-- Addon compartment entry (when the client shows the addon list button): left click options, right click pinned recipes window.
-- Click the AH (NET) tile or the recipe title of the main window to search the crafted item at the auction house and see how many are for sale. A small magnifier marks both while the auction house is open. With the auction house closed it says to open it; an item bound when picked up says it cannot be sold there.
-- Price history: the *Track history* box records the prices of up to 15 recipes after every scan and price search (all points for 14 days, then daily, then weekly averages up to a year). `/cp history` lists the tracked recipes and `/cp history remove <n>` deletes one. Recording only: graphs are planned.
-- Prices are kept per market: ruleset (the game "realm" in the beta) and faction, hardcore apart. `/cp market` shows the market in use. Prices saved by earlier builds are adopted by the first market used.
-- Scroll bars on the pinned list (6 rows visible) and the leveling and pinned recipes windows (12 rows visible): mouse wheel, drag the bar or click it; hidden while everything fits.
-- Window placement: a window that was never dragged opens just right of the rightmost CraftProfit window on screen instead of on top of it; a dragged window always reopens where it was left. The window opened or clicked last comes to the front, above the game's HUD panels.
-- Every window uses the game's own frames, panels, buttons, check boxes, fonts and scroll bars. The main window shows a result banner (best way to sell and net result), three tiles for the auction house, vendor and disenchant values (the best one outlined in gold), and separate Materials and Options panels. When some prices are missing, the "PRICES MISSING" warning sits on the banner's label line so it is never cut off.
-- Amounts show the game's gold, silver and copper icons. From 100 gold up, copper is dropped (rounded to the nearest silver) so a large amount fits its tile.
-- Project documentation: README (English and French), user guide (English and French), technical documentation, contributing guide, CurseForge page text and submission checklist, issue and pull request templates, continuous integration.
+- Price evaluation of the selected recipe, in a window beside the profession window: reagent cost at auction house prices (median of the 5 cheapest units), with a foldable reagent detail; auction house value net of the 5 % commission, vendor value and expected disenchant value, with the most probable disenchant outcome; the best way to sell and the net result in a coloured banner; the age of the prices. An unknown price shows `?`, never zero.
+- Cost (or gain) per skill point, optional, from the recipe colour, with the chance used shown.
+- Crafts multiplier, 1 to 9999, for the selected recipe.
+- Pinned recipes: 20 per character by default, sorted by profit or by cost per point; their difficulty colour follows the profession window. Shown under the main window at the auction house, and anywhere in the pinned recipes window (`/cp pins`), with the last known prices and an "x" to unpin.
+- Auction house tools: **Refresh recipe** (the recipe on screen, a few seconds), **Refresh pinned** (every pinned recipe, about a minute for 20) and **Scan AH** (the whole auction house, once per 15 minutes; scans started by other addons are used too). A missed price is asked a second time before the summary, and the status says what was updated, what has no listing and what did not answer. A crafted item bound on pickup is never searched.
+- Click a reagent to search it at the auction house with the quantity filled in, or the AH tile or recipe title to search the crafted item. CraftProfit never buys anything.
+- Leveling window (`/cp level`): every known recipe of a profession ranked by the cost of the next skill point, or by speed, with the crafts each point takes; grey recipes hidden unless asked. Stored per character, so it works at the auction house with the profession window closed.
+- Options window (`/cp options`): look of every window (header strip and tile card), pinned recipes limit (12, 20, 30 or 40), minimap button, shortcuts to the other windows and the list of every command.
+- Minimap button (left click options, right click pinned recipes window, drag to move) and addon compartment entry.
+- Price history, recording only: *Track history* keeps the prices of up to 15 recipes after every scan and search (all points for 14 days, then daily, then weekly up to a year). `/cp history` lists them, `/cp history remove <n>` deletes one.
+- Prices kept per market: ruleset (the game "realm" in the beta) and faction, hardcore apart. `/cp market` shows the market in use.
+- Every window uses the game's own frames, buttons, fonts, scroll bars and coin icons. A window that was never dragged opens beside the others, never on top of them; dragged windows reopen where they were left.
+- English, French and Spanish, following the game language, recipe and profession names included; `/cp locale` forces one.
+- Slash commands `/cp` and `/craftprofit`: `show`, `hide`, `reset`, `options`, `pins`, `level`, `minimap`, `scan`, `history`, `market`, `locale`, `selftest`.
+- Documentation in English and French, offline test suite, continuous integration and an in-game probe addon for developers (not shipped).
 
 ### Known limitations
 - Disenchant tables are Classic data, tagged *beta*, with no table for epic items above item level 60.
 - Skill-up chances are estimates by recipe colour (100 / 75 / 25 / 0 %).
-- Known recipes only. Prices are recorded for up to 15 tracked recipes, but there is no history view or graph yet.
+- Known recipes only.
+- Price history is recorded but there is no history view or graph yet.
+- No sales speed: the game gives no sales history.
 
 [Unreleased]: https://github.com/Renaud-Sto/CraftProfit/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/Renaud-Sto/CraftProfit/releases/tag/v1.0.0

@@ -35,13 +35,25 @@ local function signed(fmt, n)
     return text
 end
 
+-- The text of an unknown value in a list row: "no data" when nothing is missing but the
+-- only way left to sell the item is a disenchant the data does not cover (a search would
+-- not change it), else "?". `result` is the Evaluate result, optional.
+function Present.unknownText(L, result)
+    if type(result) == "table" and result.net == nil and not result.incomplete then
+        local de = result.options and result.options.disenchant
+        if de and de.status == "nodata" then return L.NO_DATA end
+    end
+    return L.UNKNOWN
+end
+
 -- Short text and tone for a list row: "21g 29s/pt" (loss), "+9s 33c/pt" (profit),
--- n/a for a recipe that cannot give a point, ? when the cost is unknown.
-function Present.pointRow(L, fmt, perPoint)
-    if not perPoint or perPoint.chance == nil then return L.UNKNOWN, "muted" end
+-- n/a for a recipe that cannot give a point, ? (or "no data", see unknownText) when the
+-- cost is unknown. `result` (optional) is the evaluation the per-point figures come from.
+function Present.pointRow(L, fmt, perPoint, result)
+    if not perPoint or perPoint.chance == nil then return Present.unknownText(L, result), "muted" end
     if perPoint.chance == 0 then return L.NA, "muted" end
     local cost = perPoint.cost
-    if cost == nil then return L.UNKNOWN, "muted" end
+    if cost == nil then return Present.unknownText(L, result), "muted" end
     if cost > 0 then return fmt(cost) .. L.PER_POINT_SHORT, "loss" end
     return "+" .. fmt(-cost) .. L.PER_POINT_SHORT, "profit"
 end

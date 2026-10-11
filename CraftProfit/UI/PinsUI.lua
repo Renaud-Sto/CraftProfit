@@ -107,12 +107,12 @@ end
 function PinsUI.rowValue(item, byPoint)
     local result = item.result
     if byPoint then
-        local text, tone = ns.Present.pointRow(L, fmt, result.perPoint)
+        local text, tone = ns.Present.pointRow(L, fmt, result.perPoint, result)
         return text, Colors.tone(tone, "muted")
     elseif result.net ~= nil then
         return fmt(result.net), result.net >= 0 and Colors.FIXED.profit or Colors.FIXED.loss
     end
-    return L.UNKNOWN, Colors.text("muted")
+    return ns.Present.unknownText(L, result), Colors.text("muted")
 end
 
 function PinsUI.refresh()

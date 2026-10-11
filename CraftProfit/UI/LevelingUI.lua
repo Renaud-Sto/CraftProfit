@@ -117,7 +117,7 @@ function LevelingUI.refresh()
             row.name:SetTextColor(c[1], c[2], c[3], c[4])
             local perPoint = item.result.perPoint
             row.crafts:SetText(ns.Present.craftsPerPoint(perPoint and perPoint.chance) or "")
-            local text, tone = ns.Present.pointRow(L, ctl.fmt, perPoint)
+            local text, tone = ns.Present.pointRow(L, ctl.fmt, perPoint, item.result)
             row.value:SetText(text)
             local tc = Colors.tone(tone, "muted")
             row.value:SetTextColor(tc[1], tc[2], tc[3], tc[4])

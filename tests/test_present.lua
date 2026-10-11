@@ -307,3 +307,15 @@ H.test("a 99.5% disenchant outcome gets its sub-line with one decimal", function
     H.eq(m.lines[5].key, "likely")
     H.eq(m.lines[5].label, "99.5%: 1x Shard = 3s 80c")
 end)
+
+H.test("unknownText and pointRow say no data only for a disenchant data gap with nothing missing", function()
+    local ns = load()
+    local P, L, fmt = ns.Present, ns.L, ns.Format.money
+    local gap = { net = nil, incomplete = false, options = { disenchant = { status = "nodata" } } }
+    H.eq(P.unknownText(L, gap), "no data")
+    H.eq(P.unknownText(L, { net = nil, incomplete = true, options = gap.options }), "?")
+    H.eq(P.unknownText(L, nil), "?")
+    H.eq({ P.pointRow(L, fmt, nil, gap) }, { "no data", "muted" })
+    H.eq({ P.pointRow(L, fmt, { chance = 1 }, gap) }, { "no data", "muted" })
+    H.eq({ P.pointRow(L, fmt, { chance = 0 }, gap) }, { "n/a", "muted" })
+end)

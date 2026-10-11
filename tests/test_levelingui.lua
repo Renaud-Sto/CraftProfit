@@ -334,3 +334,14 @@ H.test("a non-finite leveling position is never saved", function()
     C.saveLevelPosition(5, 6)
     H.eq(T.env.CraftProfitDB.settings.levelWindow, { x = 5, y = 6 })
 end)
+
+H.test("a recipe only a disenchant without data could sell reads no data, not ?", function()
+    local T, UI = boot()
+    local it = item(1, "Reaper", "optimal", 1, nil)
+    it.result.options = { disenchant = { status = "nodata" } }
+    it.result.incomplete = false
+    feed(T, data({ items = { it, item(2, "Other", "easy", 0.25, nil) } }))
+    UI.show()
+    H.eq(UI.parts.rows[1].value.text, "no data")
+    H.eq(UI.parts.rows[2].value.text, "?")
+end)

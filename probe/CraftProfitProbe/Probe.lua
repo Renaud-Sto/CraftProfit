@@ -1,6 +1,6 @@
 -- CraftProfitProbe: THROWAWAY addon measuring what the Forever client exposes.
 -- Every output line starts with the version so a stale install is obvious.
-local VERSION = "0.7.0"
+local VERSION = "0.8.0"
 local TAG = "|cff66ccff[CPP " .. VERSION .. "]|r "
 
 local function isSecret(v)
@@ -378,6 +378,12 @@ local replicateEvents, lastDetail = 0, nil
 
 frame:SetScript("OnEvent", function(_, event, a1)
     if event == "ITEM_DATA_LOAD_RESULT" then return end
+    -- The profession events fire in bursts while the profession window is open: kept in
+    -- the log only, so the chat stays readable.
+    if event:find("^TRADE_SKILL") then
+        logLine("EVENT " .. event .. " arg1: " .. show(a1))
+        return
+    end
     if event == "REPLICATE_ITEM_LIST_UPDATE" then
         replicateEvents = replicateEvents + 1
         local now = GetTime()
@@ -420,6 +426,73 @@ frame:SetScript("OnEvent", function(_, event, a1)
         end
     end
 end)
+
+-- Search trace (/cpp trace on|off, off by default): every auction house search sent and
+-- every search or throttle event, stamped with GetTime(), written to the SavedVariables log
+-- only (never to chat). Used to see why a search sometimes ends with no listing or no answer
+-- and a second try finds the price (docs/probe-findings.md F13).
+local tracing = false
+local TRACE_EVENTS = {
+    "COMMODITY_SEARCH_RESULTS_UPDATED", "ITEM_SEARCH_RESULTS_UPDATED", "ITEM_SEARCH_RESULTS_ADDED",
+    "AUCTION_HOUSE_THROTTLED_SYSTEM_READY", "AUCTION_HOUSE_THROTTLED_MESSAGE_SENT",
+    "AUCTION_HOUSE_THROTTLED_MESSAGE_RESPONSE_RECEIVED", "AUCTION_HOUSE_THROTTLED_MESSAGE_QUEUED",
+    "AUCTION_HOUSE_THROTTLED_MESSAGE_DROPPED",
+}
+
+local function traceLine(...)
+    if not tracing then return end
+    local parts = { string.format("TRACE %.3f", GetTime()) }
+    for i = 1, select("#", ...) do parts[#parts + 1] = show((select(i, ...))) end
+    logLine(table.concat(parts, " "))
+end
+
+-- An item key as "itemID/itemLevel" (the commodity events pass a plain item id).
+local function keyText(key)
+    if type(key) == "table" then return show(key.itemID) .. "/" .. show(key.itemLevel) end
+    return show(key)
+end
+
+local function throttleReady()
+    local ah = C_AuctionHouse
+    if type(ah) ~= "table" or type(ah.IsThrottledMessageSystemReady) ~= "function" then return "n/a" end
+    return try(ah.IsThrottledMessageSystemReady)
+end
+
+local traceFrame = CreateFrame("Frame")
+for _, e in ipairs(TRACE_EVENTS) do
+    -- An event this client does not know is noted in the log, not in chat.
+    if not pcall(traceFrame.RegisterEvent, traceFrame, e) then logLine("trace: event rejected by client: " .. e) end
+end
+traceFrame:SetScript("OnEvent", function(_, event, a1)
+    if not tracing then return end
+    local ah = C_AuctionHouse
+    local count = ""
+    if event == "COMMODITY_SEARCH_RESULTS_UPDATED" then
+        count = "results " .. show(try(ah.GetNumCommoditySearchResults, a1))
+    elseif event == "ITEM_SEARCH_RESULTS_UPDATED" or event == "ITEM_SEARCH_RESULTS_ADDED" then
+        count = "results " .. show(type(a1) == "table" and try(ah.GetNumItemSearchResults, a1) or "?")
+    end
+    traceLine("EVENT", event, "key", keyText(a1), count, "ready", throttleReady())
+end)
+
+-- Every search sent, by anyone (CraftProfit, the AH UI, other addons). A post-hook on the
+-- C_AuctionHouse table field: acceptable in this throwaway probe only, never in the addon.
+if type(C_AuctionHouse) == "table" and type(C_AuctionHouse.SendSearchQuery) == "function" then
+    hooksecurefunc(C_AuctionHouse, "SendSearchQuery", function(itemKey)
+        traceLine("SEND", "key", keyText(itemKey), "ready", throttleReady())
+    end)
+end
+
+cmds.trace = function(arg)
+    if arg == "on" then
+        tracing = true
+        logLine(string.format("TRACE ON at %.3f", GetTime()))
+    elseif arg == "off" then
+        logLine(string.format("TRACE OFF at %.3f", GetTime()))
+        tracing = false
+    end
+    out("search trace:", tracing and "on (log only; /reload writes it to disk)" or "off")
+end
 
 -- What the UI rework needs from the client: fonts, solid-colour textures, gradients.
 cmds.skin = function()
@@ -531,7 +604,7 @@ SlashCmdList.CPP = function(msg)
         out("== " .. cmd .. " " .. arg)
         fn(arg)
     else
-        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | qty | ruleset | known | skin | icon | rname | log | clear")
+        out("commands: api | locale | item <id> | deposit <id> | search <id> | replicate | trade | prof | ahui | qty | ruleset | known | skin | icon | rname | trace on|off | log | clear")
     end
 end
 out("loaded. /cpp for commands. Enable Lua errors: /console scriptErrors 1")

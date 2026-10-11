@@ -55,8 +55,10 @@ H.test("recipeDays gives materials, sale after commission and net for each measu
     }
     local days = V.recipeDays(RECIPE, seriesOf(map), NOW, 7, CUT, itemsOf)
     H.eq(days, {
-        { day = NOW - 2 * DAY, materials = 250, sale = sale(1013), net = sale(1013) - 250, carried = false, n = 1 },
-        { day = NOW - DAY, materials = 260, sale = sale(1100), net = sale(1100) - 260, carried = false, n = 1 },
+        { day = NOW - 2 * DAY, materials = 250, sale = sale(1013), net = sale(1013) - 250, carried = false,
+            materialsCarried = false, saleCarried = false, n = 1 },
+        { day = NOW - DAY, materials = 260, sale = sale(1100), net = sale(1100) - 260, carried = false,
+            materialsCarried = false, saleCarried = false, n = 1 },
     })
 end)
 
@@ -89,8 +91,9 @@ H.test("a missing day carries the last known price and says so", function()
     H.eq(#days, 3)
     H.eq(days[1].carried, false)
     H.eq(days[2], { day = NOW - 2 * DAY, materials = 290, sale = sale(1000), net = sale(1000) - 290,
-        carried = true, n = 1 })
+        carried = true, materialsCarried = "some", saleCarried = "all", n = 1 })
     H.eq(days[3].carried, true)
+    H.eq(days[3].materialsCarried, false)
     H.eq(days[3].sale, sale(1000))
     -- A price from before the period is carried into it.
     local old = { [1] = { pt(10, 100), pt(1, 100) }, [2] = { pt(10, 50) }, [100] = { pt(1, 1000) } }
@@ -109,7 +112,7 @@ H.test("no price is invented before an item's first point", function()
     }
     local days = V.recipeDays(RECIPE, seriesOf(map), NOW, 7, CUT, itemsOf)
     H.eq(days[1], { day = NOW - 3 * DAY, carried = false, n = 1 })  -- incomplete: no result
-    H.eq(days[2], { day = NOW - 2 * DAY, materials = 250, carried = true, n = 1 })
+    H.eq(days[2], { day = NOW - 2 * DAY, materials = 250, carried = true, materialsCarried = "some", n = 1 })
     H.eq(days[3].net, sale(1000) - 250)
 end)
 
@@ -117,25 +120,22 @@ H.test("a bound crafted item gives the materials only", function()
     local V = load().HistoryView
     local map = { [1] = { pt(1, 100) }, [2] = { pt(1, 50) }, [100] = { pt(1, 1000) } }
     local days = V.recipeDays(RECIPE, seriesOf(map), NOW, 7, CUT, itemsOfBound)
-    H.eq(days, { { day = NOW - DAY, materials = 250, carried = false, n = 1 } })
+    H.eq(days, { { day = NOW - DAY, materials = 250, carried = false, materialsCarried = false, n = 1 } })
 end)
 
 H.test("recipeDays never mutates the saved series and survives hostile input", function()
     local V = load().HistoryView
     local map = {
-        [1] = { pt(2, 100), "junk", { NOW, 0 / 0, 1, 1, 1, 1 } },
+        [1] = { pt(2, 100), "junk", { NOW, math.huge, 1, 1, 1, 1 }, { NOW, -5, 1, 1, 1, 1 } },
         [2] = "junk",
-        [100] = { pt(2, 1000), pt(1, 1000) },
+        [100] = { pt(2, 1000), pt(1, 1000), { NOW - 60, 7, 1, 7, 7, 0 } },
     }
-    local saved = { [1] = copy(map[1]), [100] = copy(map[100]) }
-    saved[1][3] = nil
+    local saved = copy(map)
     local days = V.recipeDays(RECIPE, seriesOf(map), NOW, 7, CUT, itemsOf)
     H.eq(#days, 2)
     H.eq(days[1].materials, nil)
     H.eq(days[2].sale, sale(1000))
-    H.eq(map[100], saved[100])
-    H.eq(map[1][1], saved[1][1])
-    H.eq(#map[1], 3)
+    H.eq(map, saved)                            -- the whole saved tables, unchanged
     H.eq(V.recipeDays(nil, seriesOf(map), NOW, 7, CUT, itemsOf), {})
     H.eq(V.recipeDays(RECIPE, seriesOf(map), 0 / 0, 7, CUT, itemsOf), {})
     H.eq(V.recipeDays(RECIPE, seriesOf(map), NOW, 0, CUT, itemsOf), {})
@@ -198,4 +198,34 @@ H.test("indicators say whether materials are cheaper and the sale higher than us
     H.eq(V.indicators(RECIPE, seriesOf(map), NOW + 120, itemsOfBound, CUT).sale, nil)
     local few = { [1] = { pt(1, 100), pt(0, 90, 60) }, [2] = { pt(1, 50) }, [100] = { pt(1, 1000) } }
     H.eq(V.indicators(RECIPE, seriesOf(few), NOW + 120, itemsOf, CUT), {})
+end)
+
+H.test("a day measuring only the crafted item does not count as a materials price", function()
+    local V = load().HistoryView
+    local map = { [1] = {}, [2] = {}, [100] = {} }
+    for age = 10, 2, -1 do
+        map[1][#map[1] + 1] = pt(age, 100)
+        map[2][#map[2] + 1] = pt(age, 50)
+        map[100][#map[100] + 1] = pt(age, 1000)
+    end
+    map[1][#map[1] + 1] = pt(1, 80)                -- reagents last measured yesterday, cheaper
+    map[2][#map[2] + 1] = pt(1, 45)
+    map[100][#map[100] + 1] = pt(0, 1000, 60)      -- today: only the crafted item
+    local days = V.recipeDays(RECIPE, seriesOf(map), NOW + 120, 30, CUT, itemsOf)
+    local today = days[#days]
+    H.eq(today.day, NOW)
+    H.eq(today.materials, 205)
+    H.eq(today.materialsCarried, "all")
+    H.eq(today.saleCarried, false)
+    H.eq(today.carried, true)
+    -- Materials: today is yesterday's measure, and the carried day is not counted twice.
+    local m = V.summary(days, "materials")
+    H.eq(m.today, 205)
+    H.eq(m.daysCovered, 10)
+    H.eq(V.summary(days, "sale").daysCovered, 10)
+    H.eq(V.summary(days, "net").daysCovered, 11)
+    local ind = V.indicators(RECIPE, seriesOf(map), NOW + 120, itemsOf, CUT)
+    H.eq(ind.materials, { pct = -18, tone = "down", good = true })
+    -- The sale was carried on yesterday's row (only reagents measured): skipped too.
+    H.eq(days[#days - 1].saleCarried, "all")
 end)

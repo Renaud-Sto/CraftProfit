@@ -2,21 +2,28 @@
 -- and the main window arrows show. Pure Lua, no WoW API, no widgets.
 --
 -- HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf)
---   -> { { day, materials, sale, net, carried, n }, ... } ascending, one entry per local
---   day of the last `days` days on which at least one item of the recipe was measured.
---   itemSeriesOf(itemID) returns that item's saved series (or nil); itemsOf is the same
---   function History.record uses (Controller.historyItems): a crafted item it does not
---   require (bound on pickup) is never sold. An item without a point on a day takes its
---   last known daily price, from the whole daily tier, and the day is marked `carried`;
---   before an item's first point it has no price and whatever needs it stays nil.
---   materials = sum of qty x day price (Core.sumCost), sale = Core.netSale of the crafted
---   item (commission `cut`), net = sale - materials, as Evaluate computes them; n = the
---   most measures of one item that day. Never mutates the saved series.
+--   -> { { day, materials, sale, net, carried, materialsCarried, saleCarried, n }, ... }
+--   ascending, one entry per local day of the last `days` days on which at least one item
+--   of the recipe was measured. itemSeriesOf(itemID) returns that item's saved series (or
+--   nil); itemsOf is the same function History.record uses (Controller.historyItems): a
+--   crafted item it does not require (bound on pickup) is never sold. An item without a
+--   point on a day takes its last known daily price, from the whole daily tier; before an
+--   item's first point it has no price and whatever needs it stays nil.
+--   materials = sum of qty x day price (Core.sumCost); sale = the auction house sale of the
+--   crafted item after the commission `cut` (Core.netSale, Evaluate's AH option value);
+--   net = sale - materials. This is the AH result only: it is not Evaluate's net, which
+--   takes the best of the AH, vendor and disenchant options; vendor and disenchant values
+--   are not covered. `carried` is true when any price used that day was carried;
+--   materialsCarried (when materials is known) is false when every reagent was measured
+--   that day, "some" or "all" when some or all of their prices were carried; saleCarried
+--   (when sale is known) is false or "all". n = the most measures of one item that day.
+--   Never mutates the saved series.
 -- HistoryView.summary(days, field) -> { today, usual, low, high, measures, daysCovered,
 --   enough } for one view: `field` names the value of recipeDays entries ("net",
 --   "materials", "sale"); without it the entries are a History.dailySeries (avg, low,
---   high). today = the value of the newest day, usual = median of the days of the 30 days
---   up to it (nil under 3 days, then enough = false). Entries without a value are skipped.
+--   high). A day whose `<field>Carried` is "all" repeats older prices and is skipped, as
+--   are entries without a value. today = the value of the newest day kept, usual = median
+--   of the days of the 30 days up to it (nil under 3 days, then enough = false).
 -- HistoryView.indicators(recipe, itemSeriesOf, now, itemsOf, cut)
 --   -> { materials = { pct, tone, good } or nil, sale = { pct, tone, good } or nil }:
 --   today against the usual price over 30 days. Materials cheaper and a sale higher are
@@ -75,8 +82,8 @@ function HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf)
     table.sort(order)
 
     for _, day in ipairs(order) do
-        local carried, n = false, 0
-        local prices = {}
+        local n = 0
+        local prices, isCarried = {}, {}
         for _, id in ipairs(ids) do
             -- The newest entry on or before this day.
             local found
@@ -89,7 +96,7 @@ function HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf)
                 if found.day == day then
                     n = math.max(n, found.n)
                 else
-                    carried = true
+                    isCarried[id] = true
                 end
             end
         end
@@ -97,7 +104,18 @@ function HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf)
         local materials = Core.sumCost(recipe.reagents, priceOf)
         local sale = sells and Core.netSale(prices[recipe.outputItemID], recipe.outputQty, cut) or nil
         local net = (materials and sale) and sale - materials or nil
-        out[#out + 1] = { day = day, materials = materials, sale = sale, net = net, carried = carried, n = n }
+        local row = { day = day, materials = materials, sale = sale, net = net, carried = next(isCarried) ~= nil, n = n }
+        if materials then
+            local some, all = false, true
+            for _, r in ipairs(recipe.reagents) do
+                if isCarried[r.itemID] then some = true else all = false end
+            end
+            row.materialsCarried = all and "all" or (some and "some" or false)
+        end
+        if sale then
+            row.saleCarried = isCarried[recipe.outputItemID] and "all" or false
+        end
+        out[#out + 1] = row
     end
     return out
 end
@@ -110,7 +128,7 @@ function HistoryView.summary(days, field)
         if type(d) == "table" and Util.isFinite(d.day) then
             local value
             if field then value = d[field] else value = d.avg end
-            if Util.isFinite(value) then
+            if Util.isFinite(value) and not (field and d[field .. "Carried"] == "all") then
                 local low, high = value, value
                 if not field and Util.isFinite(d.low) and Util.isFinite(d.high) then low, high = d.low, d.high end
                 rows[#rows + 1] = { day = d.day, value = value, low = low, high = high,

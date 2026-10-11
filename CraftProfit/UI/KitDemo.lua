@@ -116,7 +116,7 @@ local function buildPage()
     end)
     check:SetPoint("TOPLEFT", options.body, "TOPLEFT", 70, -2)
     check:SetChecked(true)
-    local search = Native.button(options.body, "Search prices", { width = 120,
+    local search = Native.button(options.body, "Refresh pinned", { width = 120,
         onClick = function() say("search clicked") end })
     search:SetPoint("TOPLEFT", options.body, "TOPLEFT", 8, -31)
     local scan = Native.button(options.body, "Scan AH", { width = 120 })

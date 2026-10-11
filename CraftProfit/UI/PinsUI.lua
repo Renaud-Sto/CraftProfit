@@ -1,5 +1,6 @@
 -- The pinned-recipes section of the window, on the native kit, shown while the AH is
--- open, with the "Search prices", "Scan AH" and "Leveling" buttons.
+-- open, with the "Refresh pinned", "Scan AH" and "Leveling" buttons. It also runs the
+-- main window's "Refresh recipe" search (startSearch with that one recipe).
 local _, ns = ...
 local L = ns.L
 local Native, Colors = ns.Native, ns.Colors
@@ -46,7 +47,7 @@ function PinsUI.setStatus(text)
 end
 local setStatus = PinsUI.setStatus
 
--- Item ids whose prices all the pinned recipes need, each listed once.
+-- Item ids whose prices all the given recipes need, each listed once.
 function PinsUI.wantedFor(pins, itemInfo, lookup, knowsEnchanting)
     local ids, seen = {}, {}
     for _, recipe in ipairs(pins) do
@@ -154,6 +155,22 @@ function PinsUI.refresh()
     ns.Window.relayout()
 end
 
+-- The status line after a search. counts: ok (items whose search returned, with or without
+-- listings), total, noListing (returned an empty list), failed (did not answer). ok + failed
+-- = total for a search that ran to its end. Everything answered with listings: the short
+-- form; otherwise "x of y" and a fragment for each kind of miss.
+function PinsUI.searchSummary(locale, counts)
+    local ok, total = counts.ok or 0, counts.total or 0
+    local noListing, failed = counts.noListing or 0, counts.failed or 0
+    if ok == total and noListing == 0 and failed == 0 then
+        return string.format(locale.SEARCH_UPDATED, ok)
+    end
+    local text = string.format(locale.SEARCH_UPDATED_OF, ok, total)
+    if noListing > 0 then text = text .. string.format(locale.SEARCH_NO_LISTING, noListing) end
+    if failed > 0 then text = text .. string.format(locale.SEARCH_NO_ANSWER, failed) end
+    return text
+end
+
 local function finishSearch(summary)
     if ticker then
         ticker:Cancel()
@@ -164,25 +181,25 @@ local function finishSearch(summary)
         setStatus(L.SEARCH_CANCELLED)
     else
         PinsUI.state = "done"
-        local missing = #summary.failed + notFound
-        if missing > 0 then
-            setStatus(string.format(L.SEARCH_PARTIAL, missing))
-        else
-            setStatus(L.SEARCH_DONE)
-        end
+        setStatus(PinsUI.searchSummary(L, {
+            ok = summary.ok, total = summary.total, noListing = notFound, failed = #summary.failed,
+        }))
     end
     ctl.commitSearch()
     ctl.requestRefresh()
 end
 
--- Searches the AH, one item at a time, for everything the pinned recipes need.
-function PinsUI.startSearch()
+-- Searches the AH, one item at a time, for everything `recipes` need: every pinned recipe
+-- when nil ("Refresh pinned"), or the recipe on screen ("Refresh recipe"). Ignored while a
+-- search runs, so one never cancels or mixes into the other.
+function PinsUI.startSearch(recipes)
     if not ns.AH.isOpen then
         setStatus(L.SEARCH_NEED_AH)
         return
     end
     if queue and queue.state == "running" then return end
-    local ids = PinsUI.wantedFor(CraftProfitCharDB.pins, ctl.itemInfo, ns.Data.Disenchant.lookup,
+    if type(recipes) ~= "table" then recipes = CraftProfitCharDB.pins end
+    local ids = PinsUI.wantedFor(recipes, ctl.itemInfo, ns.Data.Disenchant.lookup,
         ctl.knowsEnchanting())
     if #ids == 0 then return end
     notFound = 0
@@ -295,7 +312,7 @@ function PinsUI.init(controller)
 
     -- UIPanelButtonTemplate is the game's red panel button: search keeps the primary
     -- place (first, top left), all three keep their half-width.
-    parts.search = Native.button(host, "", { width = half, onClick = PinsUI.startSearch })
+    parts.search = Native.button(host, "", { width = half, onClick = function() PinsUI.startSearch() end })
     parts.scan = Native.button(host, "", { width = half, onClick = PinsUI.scan })
     parts.level = Native.button(host, "", { width = half, onClick = function()
         if ns.LevelingUI then ns.LevelingUI.toggle() end

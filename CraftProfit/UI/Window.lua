@@ -28,6 +28,8 @@ local PER_POINT_X = 8
 local VALUE_MARGIN = 8 -- per-point value from the body's right edge
 local LABEL_GAP = 8 -- between the per-point label and its value
 local EMPTY_H = 24
+-- Between the pin and "Refresh recipe" buttons.
+local BUTTON_GAP = 6
 local MAX_DETAIL = 12 -- Recipes.MAX_REAGENTS
 -- A folded native panel: its header strip, inside the inset border at the top and at the
 -- bottom by Native.panel's edge.
@@ -204,8 +206,9 @@ local function rowY(row, height)
     return -((row - 1) * OPTION_ROW_H + math.floor((OPTION_ROW_H - height) / 2))
 end
 
--- Options: the crafts multiplier, history tracking, the cost-per-point option and the
--- pin button, one row each but the first, which also holds the track box.
+-- Options: the crafts multiplier, history tracking, the cost-per-point option, then the pin
+-- and "Refresh recipe" buttons sharing the last row; one row each but the first, which also
+-- holds the track box.
 local function buildOptions()
     local panel = Native.panel(content, L.PANEL_OPTIONS)
     parts.frames.options = panel.frame
@@ -256,14 +259,38 @@ local function buildOptions()
         paint(parts.perPointValue, c)
     end
 
+    -- The two buttons share the row equally: the body less 8 px on each side and a gap.
+    local half = math.floor((bodyWidth - 16 - BUTTON_GAP) / 2)
     local pin = Native.button(body, "", {
-        width = 120,
+        width = half,
         onClick = function()
             if handlers.onPinClick then handlers.onPinClick() end
         end,
     })
     pin:SetPoint("TOPLEFT", body, "TOPLEFT", 8, rowY(3, Native.BUTTON_H))
     parts.pin = pin
+    -- Searches the prices of this recipe only. Disabled (greyed by the template, no click)
+    -- unless the AH is open and a recipe is shown; `enabled` mirrors it and is checked here
+    -- too, so the rule holds whatever the template does.
+    local refresh = Native.button(body, "", {
+        width = half,
+        onClick = function(self)
+            if self.enabled and handlers.onRefreshRecipe then handlers.onRefreshRecipe() end
+        end,
+    })
+    refresh:SetPoint("TOPLEFT", body, "TOPLEFT", 8 + half + BUTTON_GAP, rowY(3, Native.BUTTON_H))
+    refresh.enabled = false
+    parts.refresh = refresh
+end
+
+-- "Refresh recipe" works while the AH is open and a recipe is displayed (lastModel is
+-- cleared by the empty window). Called on every render and when the AH opens or closes.
+function Window.updateRefreshButton()
+    local b = parts.refresh
+    if not b then return end
+    local on = ns.AH ~= nil and ns.AH.isOpen == true and Window.lastModel ~= nil
+    b.enabled = on
+    if type(b.SetEnabled) == "function" then b:SetEnabled(on) end
 end
 
 -- The AH tile and the title search the crafted item; the handler is looked up when
@@ -342,6 +369,7 @@ function Window.showEmpty(text)
     parts.empty:SetText(text)
     parts.empty:Show()
     showSearchIcons(false)
+    Window.updateRefreshButton()
     contentHeight = PAD + EMPTY_H + PAD
     Window.relayout()
 end
@@ -441,6 +469,8 @@ function Window.render(model)
     parts.perPoint:SetChecked(model.showPerPoint)
     setPerPoint(findLine(model.lines, "perpoint"))
     parts.pin:setText(model.pinned and L.UNPIN or L.PIN)
+    parts.refresh:setText(L.REFRESH_RECIPE)
+    Window.updateRefreshButton()
 
     layout(Window.sections({
         hasLikely = likely ~= nil,

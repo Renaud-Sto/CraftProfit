@@ -1153,7 +1153,7 @@ H.test("the pinned age is the oldest price the pins use, searched or scanned, ne
     data = C.pinsData()
     H.eq(data.ageText, "Prices: never scanned")
     H.eq(data.stale, true)
-    -- Prices from "Search prices" only (no full scan): their age counts.
+    -- Prices from "Refresh pinned" only (no full scan): their age counts.
     P.store(C.market(), 1, 100, 10, 1700000000 - 60)
     P.store(C.market(), 100, 1000, 10, 1700000000 - 300)
     H.eq(C.market().snapshotTime, nil)
@@ -1574,4 +1574,79 @@ H.test("the profession window events are registered", function()
     H.truthy(registered.TRADE_SKILL_LIST_UPDATE)
     H.truthy(registered.TRADE_SKILL_SHOW)
     H.truthy(registered.TRADE_SKILL_DATA_SOURCE_CHANGED)
+end)
+
+H.test("refreshRecipe searches the items of the recipe on screen only", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local sent = {}
+    T.ns.AH.search = function(id) sent[#sent + 1] = id; return true end
+    -- No recipe: nothing.
+    T.ns.AH.isOpen = true
+    C.refreshRecipe()
+    H.eq(sent, {})
+    -- A pinned recipe that is not shown is not searched.
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, { recipeID = 77, name = "Other", difficulty = 1, outputItemID = 100,
+        qtyMin = 1, qtyMax = 1, reagents = { { itemID = 9, qty = 1 } } })
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    C.refreshRecipe()
+    H.eq(T.ns.PinsUI.state, "running")
+    for _, id in ipairs({ 1, 2, 100 }) do T.ns.PinsUI.onSearchResults(id, { { unit = 10, qty = 1 } }) end
+    H.eq(sent, { 1, 2, 100 })
+    H.eq(T.ns.PinsUI.status, "Updated 3 items")
+end)
+
+H.test("refreshRecipe with the AH closed says to open it", function()
+    local T = boot()
+    local C = T.ns.Controller
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    T.ns.AH.isOpen = false
+    C.refreshRecipe()
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Open the auction house first")
+    H.eq(T.ns.PinsUI.state, "idle")
+end)
+
+H.test("the refresh button follows the AH opening and closing, with a recipe shown or not", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local b = T.ns.Window.parts.refresh
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    H.eq(b.enabled, false)
+    T.ns.AH.isOpen = true
+    C.onAHOpen(true)
+    H.eq(b.enabled, true)
+    -- Closed mid-search: the search is cancelled and the button goes off.
+    C.refreshRecipe()
+    H.eq(T.ns.PinsUI.state, "running")
+    T.ns.AH.isOpen = false
+    C.onAHOpen(false)
+    H.eq(T.ns.PinsUI.state, "cancelled")
+    H.eq(b.enabled, false)
+    -- Opened with no recipe and no pin: off.
+    local T2 = boot()
+    T2.ns.AH.isOpen = true
+    T2.ns.Controller.onAHOpen(true)
+    H.eq(T2.ns.Window.parts.refresh.enabled, false)
+    -- A pinned recipe shown at the AH (not from the profession window), then the AH closes.
+    local T3 = boot()
+    T3.ns.DB.pinAdd(T3.env.CraftProfitCharDB, RAW)
+    T3.ns.AH.isOpen = true
+    T3.ns.Controller.onAHOpen(true)
+    H.eq(T3.ns.Window.parts.refresh.enabled, true)
+    T3.ns.AH.isOpen = false
+    T3.ns.Controller.onAHOpen(false)
+    H.eq(T3.ns.Window.parts.refresh.enabled, false)
+end)
+
+H.test("the refresh button's click reaches refreshRecipe", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local sent = {}
+    T.ns.AH.search = function(id) sent[#sent + 1] = id; return true end
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    T.ns.AH.isOpen = true
+    C.onAHOpen(true)
+    local b = T.ns.Window.parts.refresh
+    b.scripts.OnClick(b)
+    H.eq(sent, { 1 })
 end)

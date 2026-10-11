@@ -9,7 +9,7 @@ ns.DB = DB
 
 DB.VERSION = 1
 -- How many recipes a character may pin: one of these, chosen in the options window
--- (settings.maxPins, account wide). Each pin adds its items to "Search prices", which asks
+-- (settings.maxPins, account wide). Each pin adds its items to "Refresh pinned", which asks
 -- the auction house one item at a time, so a higher limit makes that search longer.
 DB.PIN_LIMITS = { 12, 20, 30, 40 }
 DB.PIN_LIMIT_DEFAULT = 20

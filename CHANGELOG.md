@@ -5,9 +5,13 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 ## [Unreleased]
 
 ### Added
-- Pinned recipes limit in the options window: 12, 20, 30 or 40 recipes per character (account-wide setting), chosen with four buttons in the new **Pinned recipes** panel. A note under them says that a higher limit makes **Search prices** slower, because the auction house is searched one item at a time (about a minute for 20 recipes), and that **Scan AH** is usually faster with many recipes. The pinned panels' title shows the count over the limit, e.g. "PINNED RECIPES (21/30)". The change applies at once. When the list is full, pinning says "Pinned recipes limit reached (n). Raise it in /cp options." Lowering the limit never deletes a pin: the ones over the limit stay, and new pins are refused until the list is under the limit again.
+- Pinned recipes limit in the options window: 12, 20, 30 or 40 recipes per character (account-wide setting), chosen with four buttons in the new **Pinned recipes** panel. A note under them says that a higher limit makes **Refresh pinned** slower, because the auction house is searched one item at a time (about a minute for 20 recipes), and that **Scan AH** is usually faster with many recipes. The pinned panels' title shows the count over the limit, e.g. "PINNED RECIPES (21/30)". The change applies at once. When the list is full, pinning says "Pinned recipes limit reached (n). Raise it in /cp options." Lowering the limit never deletes a pin: the ones over the limit stay, and new pins are refused until the list is under the limit again.
+
+- **Refresh recipe** button in the main window's Options panel, beside Pin: searches the auction house for the items of the recipe on screen only (a few seconds). Enabled only while the auction house is open, a recipe is shown and no other search runs.
 
 ### Changed
+- **Search prices** is renamed **Refresh pinned** (FR "Actualiser épinglées", ES "Actualizar fijadas"); it still prices every pinned recipe, one item at a time (about a minute for 20 recipes). **Scan AH** is unchanged.
+- The search status says what happened: "Updated 12 items" when everything answered with listings, else "Updated 10 of 12 items" followed by "no listing: n (nobody is selling them now)" and/or "no answer: n, try again", instead of "n not found".
 - The default pinned recipes limit is now 20 per character (it was 12 in 1.0.0). Saves from 1.0.0 load unchanged.
 
 ### Fixed

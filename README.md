@@ -12,8 +12,6 @@ CraftProfit is an addon for **World of Warcraft: Forever**. Select a recipe you 
 
 > **Status: 1.0.0, for the WoW: Forever beta** (build 1.60.1, Interface 16001), where it was built and tested. Disenchant data still comes from the Classic tables and is marked *beta* in the window. See [Known limitations](docs/user-guide.md#known-limitations).
 
-<!-- Screenshots to come: docs/images/ -->
-
 ## Features
 
 - **Recipe cost** from live auction house prices, with the reagent detail unfolded under the total.
@@ -23,11 +21,11 @@ CraftProfit is an addon for **World of Warcraft: Forever**. Select a recipe you 
 - **Leveling window**: every recipe you know in a profession, ranked by the cost of a skill point, to see what to craft next.
 - **Several crafts at once**: multiply a recipe by 1 to 9999 crafts.
 - **Pinned recipes** (20 per character by default; 12, 20, 30 or 40 in the options window), sorted by profit or by cost per point, to compare what to craft next (with many pinned, **Scan AH** is usually faster than **Refresh pinned**); under the main window at the auction house, and anywhere in their own window (`/cp pins` or a right click on the minimap button).
-- **Auction house tools**: one button prices every pinned recipe, another scans the whole auction house. Click a reagent to search it in the auction house, quantity already filled in. CraftProfit never buys anything for you.
+- **Auction house tools**: **Refresh recipe** prices the recipe on screen in a few seconds, **Refresh pinned** prices every pinned recipe, **Scan AH** reads the whole auction house; a missed price is asked a second time automatically. Click a reagent to search it in the auction house, quantity already filled in, or the crafted item to see how many are for sale. CraftProfit never buys anything for you.
 - **Price history** (recording): tick *Track history* on up to 15 recipes and CraftProfit keeps their prices scan after scan, per ruleset (the game "realm" in the beta) and faction. Graphs are planned.
 - **Standalone**: no Auctionator, no other addon required. It also picks up the scans other addons start.
 - **Options window and minimap button**: pick the look of the windows (header strip and tile card), applied at once, and the pinned recipes limit; open it from the minimap button, the addon compartment or `/cp options`.
-- **English, French and Spanish** (follows the game language).
+- **English, French and Spanish** (follows the game language; saved recipe and profession names follow it too).
 
 ## Install
 
@@ -52,8 +50,8 @@ The full walkthrough, every option and the explanation of each number are in the
 | Command | Effect |
 | --- | --- |
 | `/cp` or `/craftprofit` | Show the command list |
-| `/cp show` / `hide` | Show or hide the window |
-| `/cp reset` | Put the window back next to the profession or auction house window |
+| `/cp show` / `hide` | Show or hide the main window |
+| `/cp reset` | Put the main window back next to the profession or auction house window |
 | `/cp options` | Open or close the options window (look of the windows, pinned recipes limit, minimap button, controls) |
 | `/cp minimap` | Hide the minimap button, or show it again |
 | `/cp scan` | Start a full auction house scan (auction house open) |

@@ -137,7 +137,7 @@ Valeur espérée = la somme, sur les résultats possibles, de *probabilité × q
 
 L'exception est un objet **lié quand ramassé** : il ne peut pas changer de mains, donc la tuile n'affiche une valeur (sinon `n/d`) que si votre personnage connaît l'enchantement.
 
-Les tables viennent du Classic et ne sont pas encore vérifiées dans Forever, d'où la mention *bêta*. Les objets épiques au-dessus du niveau d'objet 60 n'ont pas encore de table et affichent `?`. Le désenchantement est un pari : sur beaucoup d'objets, la moyenne est atteinte ; pour un objet seul, la ligne grise donne le résultat le plus probable.
+Les tables viennent du Classic et ne sont pas encore vérifiées dans Forever, d'où la mention *bêta*. Les objets épiques au-dessus du niveau d'objet 60 n'ont pas encore de table : leur tuile Désenchantement affiche *pas de données*, ce qui n'est pas un prix manquant (aucune recherche ne le change, et le résultat ne porte pas l'avertissement *PRIX MANQUANTS*). Le désenchantement est un pari : sur beaucoup d'objets, la moyenne est atteinte ; pour un objet seul, la ligne grise donne le résultat le plus probable.
 
 ### Coût par point de compétence
 

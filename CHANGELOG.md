@@ -4,6 +4,20 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ## [Unreleased]
 
+### Fixed
+- Price history keeps its long record: each tier (every point for 14 days, one a day, one a week) now has its own cap, so a busy fortnight can no longer erase the months and the year. Points or prices dated more than a day in the future are dropped instead of freezing an item's series, and the count of recorded items is exact.
+- A recipe whose disenchant materials have no data in the tables (for example epic items above item level 60) shows *no data* instead of a permanent *PRICES MISSING* that no search could clear.
+- The leveling window reopens where it was dragged during the same session.
+- A scan that fails while being read no longer blocks the following scans, a pending quantity for the auction house search is cleared when the auction house closes, and values returned by the game are checked (secret values, failing calls) before use.
+- The Spanish materials label is consistent, and the translation test now compares format specifiers in order, so a translation that swaps them is caught.
+- Reagent quantities and unit prices have an upper bound, so a corrupt save cannot produce absurd amounts.
+
+### Changed
+- The pinned list under the main window is no longer evaluated while it is hidden.
+
+### Removed
+- The `/cp kitdemo` developer window (it prints the command list like any unknown command).
+
 ## [1.0.0] - 2026-10-11
 
 First public release, for the WoW: Forever beta, build 1.60.1, Interface 16001.

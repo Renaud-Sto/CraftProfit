@@ -137,7 +137,7 @@ Expected value = the sum over the possible results of *chance × average quantit
 
 The exception is an item that is **bound when picked up**: it cannot change hands, so the tile only shows a value (`n/a` otherwise) if your character knows Enchanting.
 
-The tables come from Classic and are not yet checked in Forever, hence the *beta* tag. Epic items above item level 60 have no table yet and show `?`. Disenchanting is a gamble: over many items the average is reached, for one item the grey line tells you the most likely result.
+The tables come from Classic and are not yet checked in Forever, hence the *beta* tag. Epic items above item level 60 have no table yet: their Disenchant tile shows *no data*, which is not a missing price (no search changes it, and the result carries no *PRICES MISSING* warning). Disenchanting is a gamble: over many items the average is reached, for one item the grey line tells you the most likely result.
 
 ### Cost per skill point
 

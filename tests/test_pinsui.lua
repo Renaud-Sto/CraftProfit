@@ -6,6 +6,9 @@ local W = dofile("tests/fakewow.lua")
 local ITEMS = {
     [100] = { quality = 2, ilvl = 15, sellPrice = 200, classID = 0, bindType = 2 },
     [101] = { quality = 1, ilvl = 1, sellPrice = 10, classID = 0, bindType = 2 },
+    -- An epic weapon of item level 63, bound on pickup, no vendor price: only a disenchant
+    -- could sell it, and the tables have no row for it ("no data").
+    [102] = { quality = 4, ilvl = 63, sellPrice = 0, classID = 2, bindType = 1 },
 }
 
 local function raw(id, output, reagents)
@@ -987,4 +990,42 @@ H.test("the main window shows n/a on the AH tile of a bound-on-pickup item, as b
     local tile = T.ns.Window.lastModel.tiles[1]
     H.eq(tile.key, "ah")
     H.eq(tile.value, "n/a")
+end)
+
+H.test("the hidden pinned list (AH closed) evaluates nothing, and fills again when the AH opens", function()
+    local T = boot()
+    local parts = openList(T)
+    T.ns.AH.isOpen = false
+    T.ns.Controller.onAHOpen(false)
+    local Controller = T.ns.Controller
+    local evaluate, calls = Controller.evaluate, 0
+    Controller.evaluate = function(...) calls = calls + 1; return evaluate(...) end
+    Controller.refresh()
+    T.ns.PinsUI.refresh()
+    H.eq(calls, 0)
+    -- Pinned while hidden: the list shows it once the AH opens.
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(3, 102, { { itemID = 1, qty = 1 } }))
+    openList(T)
+    H.truthy(calls > 0)
+    H.eq(parts.panel.title.text, "PINNED RECIPES (3/20)")
+end)
+
+H.test("a pin only a disenchant without data could sell reads no data, not ?", function()
+    local T = boot()
+    local C, P = T.ns.Controller, T.ns.PinsUI
+    C.knowsEnchanting = function() return true end
+    local pins = T.env.CraftProfitCharDB.pins
+    for k in pairs(pins) do pins[k] = nil end
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(3, 102, { { itemID = 1, qty = 1 } }))
+    T.ns.Prices.store(C.market(), 1, 100, 10, 1699999940)
+    local parts = openList(T)
+    H.eq(parts.rows[1].value.text, "no data")
+    local ordered = P.orderedPins(pins, "net", C.evaluate)
+    H.eq((P.rowValue(ordered[1], false)), "no data")
+    -- A missing price still reads "?".
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(4, 102, { { itemID = 77, qty = 1 } }))
+    ordered = P.orderedPins(pins, "net", C.evaluate)
+    local texts = {}
+    for _, item in ipairs(ordered) do texts[item.recipe.recipeID] = (P.rowValue(item, false)) end
+    H.eq(texts, { [3] = "no data", [4] = "?" })
 end)

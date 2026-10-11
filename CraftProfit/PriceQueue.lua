@@ -41,7 +41,9 @@ function PriceQueue.new(opts)
     }, PriceQueue)
 end
 
-function PriceQueue:finish(cancelled)
+-- Internal steps: local functions taking the queue, not methods (nothing outside
+-- this file calls them).
+local function finish(self, cancelled)
     self.state = cancelled and "cancelled" or "done"
     self.current = nil
     if self.opts.onDone then
@@ -53,7 +55,7 @@ end
 
 -- Tries to send the current item. The answer may arrive before send returns
 -- (tests do this); then current has already moved on and we must not touch it.
-function PriceQueue:attempt(now)
+local function attempt(self, now)
     local id = self.current
     local ok = self.opts.send(id)
     if self.current ~= id or self.state ~= "running" then return end
@@ -67,20 +69,20 @@ function PriceQueue:attempt(now)
     end
 end
 
-function PriceQueue:advance(now)
+local function advance(self, now)
     self.index = self.index + 1
     local id = self.ids[self.index]
     if not id then
-        self:finish(false)
+        finish(self, false)
         return
     end
     self.current = id
     self.sent = false
     self.waitingSince = nil
-    self:attempt(now)
+    attempt(self, now)
 end
 
-function PriceQueue:complete(listings, err, now)
+local function complete(self, listings, err, now)
     local id = self.current
     self.done = self.done + 1
     if err then
@@ -91,14 +93,14 @@ function PriceQueue:complete(listings, err, now)
     if self.opts.onItem then self.opts.onItem(id, listings, err) end
     if self.opts.onProgress then self.opts.onProgress(self.done, self.total) end
     -- A callback may have cancelled the queue.
-    if self.state == "running" then self:advance(now) end
+    if self.state == "running" then advance(self, now) end
 end
 
 function PriceQueue:start(now)
     checkTime(now)
     if self.state ~= "idle" then return end
     self.state = "running"
-    self:advance(now)
+    advance(self, now)
 end
 
 -- Call regularly (about every 0.2 s) with a monotonic clock.
@@ -106,13 +108,13 @@ function PriceQueue:tick(now)
     checkTime(now)
     if self.state ~= "running" then return end
     if self.sent then
-        if now - self.sentAt >= self.timeout then self:complete(nil, "timeout", now) end
+        if now - self.sentAt >= self.timeout then complete(self, nil, "timeout", now) end
         return
     end
-    self:attempt(now)
+    attempt(self, now)
     if self.state == "running" and not self.sent and self.waitingSince
         and now - self.waitingSince > self.timeout * THROTTLE_FACTOR then
-        self:complete(nil, "throttled", now)
+        complete(self, nil, "throttled", now)
     end
 end
 
@@ -121,9 +123,9 @@ end
 function PriceQueue:results(itemID, listings, now)
     checkTime(now)
     if self.state ~= "running" or itemID ~= self.current then return end
-    self:complete(listings or {}, nil, now)
+    complete(self, listings or {}, nil, now)
 end
 
 function PriceQueue:cancel()
-    if self.state == "running" then self:finish(true) end
+    if self.state == "running" then finish(self, true) end
 end

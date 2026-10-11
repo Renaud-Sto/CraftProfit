@@ -1,8 +1,10 @@
 local H = ...
 
 local function setup()
-    local ns = H.newNS("Util", "Data/Skillup")
     local env = setmetatable({}, { __index = _G })
+    -- Util in the same environment: Util.isSecret reads the test's issecretvalue.
+    local ns = {}
+    for _, name in ipairs({ "Util", "Data/Skillup" }) do H.loadModule(name, ns, env) end
     local T = { tickers = {} }
     env.C_Timer = {
         NewTicker = function(interval, fn)
@@ -92,7 +94,7 @@ H.test("readSelected maps the Mainline schematic to a raw recipe", function()
     T.env.Enum = { CraftingReagentType = { Basic = BASIC } }
     T.env.C_TradeSkillUI = mainlineApi()
     H.eq(T.Trade.readSelected(), {
-        recipeID = 5, name = "Copper Sword", difficulty = 2, outputItemID = 2845,
+        recipeID = 5, name = "Copper Sword", difficulty = "easy", outputItemID = 2845,
         qtyMin = 1, qtyMax = 2,
         reagents = { { itemID = 2840, qty = 6 }, { itemID = 2841, qty = 2 } },
     })
@@ -246,7 +248,7 @@ H.test("scanKnown reads every learned recipe, grey ones included, in chunks and 
     local ids = {}
     for i, raw in ipairs(got) do ids[i] = raw.recipeID end
     H.eq(ids, { 10, 12, 13, 14 })
-    H.eq(got[2].difficulty, 3)
+    H.eq(got[2].difficulty, "trivial")
     H.eq(T.Trade.difficultyOf(12), "trivial")
     H.eq(got[1].reagents[1], { itemID = 2840, qty = 6 })
 end)
@@ -378,4 +380,60 @@ H.test("cancelScan drops the scan in progress without calling it back", function
     T.Trade.scanKnown(function() done = true end)
     T.drain()
     H.truthy(done)
+end)
+
+H.test("readSelected drops secret fields and turns the difficulty into a known name", function()
+    local T = setup()
+    T.env.ProfessionsFrame = professions(5)
+    T.env.Enum = { CraftingReagentType = { Basic = BASIC } }
+    local SECRET = setmetatable({}, { __index = function() error("secret indexed") end })
+    T.env.issecretvalue = function(v) return v == SECRET end
+    T.env.C_TradeSkillUI = mainlineApi({
+        GetRecipeInfo = function(id)
+            return { recipeID = id, name = "Copper Sword", learned = true, relativeDifficulty = SECRET }
+        end,
+        GetRecipeSchematic = function()
+            return { outputItemID = SECRET, quantityMin = SECRET, quantityMax = 2, reagentSlotSchematics = {
+                { reagentType = BASIC, quantityRequired = SECRET, reagents = { { itemID = SECRET } } } } }
+        end,
+    })
+    local raw = T.Trade.readSelected()
+    H.eq(raw.difficulty, nil)
+    H.eq(raw.outputItemID, nil)
+    H.eq(raw.qtyMin, nil)
+    H.eq(raw.reagents, { {} })
+    -- An unknown difficulty number is no difficulty either (never an arbitrary table key).
+    T.env.issecretvalue = nil
+    T.env.C_TradeSkillUI = mainlineApi({
+        GetRecipeInfo = function(id) return { recipeID = id, learned = true, relativeDifficulty = 42 } end,
+    })
+    H.eq(T.Trade.readSelected().difficulty, nil)
+end)
+
+H.test("a secret learned flag is not learned", function()
+    local T = setup()
+    T.env.ProfessionsFrame = professions(5)
+    T.env.issecretvalue = function(v) return v == "SECRET" end
+    T.env.C_TradeSkillUI = mainlineApi({
+        GetRecipeInfo = function(id) return { recipeID = id, learned = "SECRET" } end,
+    })
+    H.eq(T.Trade.readSelected(), nil)
+end)
+
+H.test("scanKnown asks GetRecipeInfo once per recipe", function()
+    local T = setup()
+    T.env.ProfessionsFrame = professions(5)
+    local asked = 0
+    T.env.C_TradeSkillUI = mainlineApi({
+        GetAllRecipeIDs = function() return { 1, 2, 3 } end,
+        GetRecipeInfo = function(id)
+            asked = asked + 1
+            return { recipeID = id, name = "x", learned = true, relativeDifficulty = 0 }
+        end,
+    })
+    T.env.C_Timer.After = function(_, fn) fn() end
+    local got
+    T.Trade.scanKnown(function(list) got = list end)
+    H.eq(#got, 3)
+    H.eq(asked, 3)
 end)

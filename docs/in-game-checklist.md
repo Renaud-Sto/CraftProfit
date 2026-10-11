@@ -15,6 +15,8 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] Selecting an orange recipe shows the result banner, the AH, Vendor and Disenchant tiles (Disenchant has a value when the product is armor or a weapon of uncommon quality or better) and the Materials panel.
 - [ ] When the disenchant has several possible results, a grey line below it shows the most probable one (`75%: 1-2x Soul Dust = 7s 30c`); a certain result shows no such line.
 - [ ] Selecting a recipe whose product cannot be sold on the AH (bind on pickup) shows `n/a` on the AH tile.
+- [ ] A crafted epic above item level 60 (for example Arcanite Reaper, item level 63): the Disenchant tile and line read "no data" ("pas de données", "sin datos"), greyed; the banner shows a normal "Best: ..." verdict with no PRICES MISSING warning, and Refresh recipe does not change that tile.
+- [ ] A rare item of item level 56-65: the grey disenchant line reads `99.5%: 1x Large Brilliant Shard = ...`, never `100%`.
 - [ ] A recipe you have not learned shows nothing (window hides or keeps the empty text).
 - [ ] The window opens on the right of the profession window; dragging it and `/reload` keeps the position; `/cp reset` puts it back.
 - [ ] Closing the profession window hides the window (outside the AH).
@@ -102,6 +104,7 @@ Leveling window (`/cp level`):
 ## Click a reagent to search it (quality of life, never buys)
 - [ ] With the materials detail unfolded at the AH, hovering a reagent row highlights it. Clicking "20x Bronze Bar" opens the AH's Buy view, types the item name in the AH search box and starts the search.
 - [ ] Clicking the matching result opens its buy view with the quantity already set to 20. (Best effort: if the quantity stays at 1, note the AH view; the search itself is the part that must work.)
+- [ ] Click a reagent, close the AH before opening its buy view, reopen the AH within a minute and open that item yourself: the quantity is NOT preset.
 - [ ] With the AH closed, clicking a reagent prints "Open the auction house first". No Lua error and no `ADDON_ACTION_BLOCKED` in any case. CraftProfit never presses Buy.
 
 ## Search the crafted item
@@ -115,20 +118,8 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] A recipe whose product is bind on pickup: clicking prints "This item cannot be sold at the auction house" and the search box is unchanged.
 - [ ] If no magnifier appears, report the `/cpp icon` lines. Known: the icon is optional, the click works without it.
 
-## Developer demo window (optional)
-A developer tool, not in the user help: `/cp kitdemo` shows the native widgets with each header strip and tile card.
-- [ ] `/cp kitdemo` opens a window that looks like the game's own panels (rock background, metal border, title bar, red close button, dark inset): three tiles (the first marked as best, the third greyed with a long amount that shrinks to fit), a MATERIALS panel with 3 rows and a right-hand total, an OPTIONS panel with a crafts box, a check box, two buttons (the second disabled) and a Sort button in its header, and a money line with coin icons. Chat prints the header and tile variants in use. Running it again hides it.
-- [ ] Clicking the title prints `title clicked`; hovering it lights the title up. Clicking the first tile prints `tile clicked`.
-- [ ] The window drags from the title bar and from the body (also from the first tile); a drag that ends on the title or the tile prints nothing.
-- [ ] The red cross closes it, and so does Escape (a second Escape does not touch other windows). With the cursor in the crafts box, Escape or Enter first releases the box.
-- [ ] In combat, click the red cross of the demo window and note what happens (it may do nothing in combat; report it either way, and whether Escape works then).
-- [ ] Clicking the words of the check box toggles it like the box itself, with the game's click sound; the disabled button does nothing.
-- [ ] The content starts right under the title bar (no empty band of rock between the title and the inset) and nothing covers the close button.
-- [ ] `/cp kitdemo b a` and `/cp kitdemo c b` rebuild the window with another header strip and tile background, without `/reload`; `/cp kitdemo` alone reopens the last choice; `/cp kitdemo x` prints one line and changes nothing.
-- [ ] No Lua error with any variant (`/console scriptErrors 1`).
-
 ## Main window look (native frames)
-- [ ] Open a recipe and compare the main window with `/cp kitdemo` and with the game's own panels (`C`, the profession window): rock background, metal border, title bar, red close button, dark inset, native header strips and tiles.
+- [ ] Open a recipe and compare the main window with the game's own panels (`C`, the profession window): rock background, metal border, title bar, red close button, dark inset, native header strips and tiles.
 - [ ] Banner tint follows the result: green for a profit, red for a loss, amber for an incomplete result (prices missing, with the amber warning after a dot on the label line). A long warning or a long "Best: ..." text never runs under the value. The value is at most 20 px (one step smaller than before) and shrinks for a long amount.
 - [ ] The best tile is outlined in gold. A long amount on a tile shrinks and never overflows its tile. With the AH open, the magnifier shows on the AH tile and after the title; with it closed, neither shows.
 - [ ] Materials: the header folds and unfolds the detail (folded, the panel is just its header strip, nothing sticks out under it). Reagent rows highlight on hover over the panel body, and a click searches the reagent at the AH.
@@ -151,12 +142,12 @@ A developer tool, not in the user help: `/cp kitdemo` shows the native widgets w
 - [ ] Leveling window: opens from the Leveling button and with `/cp level`; native frame with its title and red close button (Escape does not close it, as before); the rows scroll with the wheel and the bar (more than 12 recipes); clicking a row shows the recipe in the main window; a row drag moves the window.
 - [ ] Leveling window: the grey-recipes check box toggles from the box and from its label (game click sound); with grey recipes hidden, the "N hidden" text at the right never sits under the label. The profession button cycles professions; the sort button switches cost/point and speed; long labels are cut, not overflowing.
 - [ ] Drag the leveling window, `/reload`, reopen it: it is where you left it. Without a saved position it opens beside the main window.
+- [ ] Drag the leveling window, close it with its red cross (or `/cp level`) and reopen it in the same session, with the main window shown: it reopens where you dropped it, not beside the main window.
 - [ ] `/cp locale frFR`: no label of the pinned list or the leveling window overflows its button, panel or window.
-- [ ] `/cp theme` is gone: it prints the command list like any unknown command, and `/cp kitdemo old` prints the unknown-variant line.
+- [ ] `/cp theme` and `/cp kitdemo` are gone: each prints the command list like any unknown command, and no demo window opens.
 - [ ] Amounts show gold, silver and copper coin icons in the tiles, the banner, the reagent rows, the pinned list and the leveling window.
-- [ ] A large amount (for example 999g 99s 99c, on a costly recipe or with `/cp kitdemo`) shrinks and does not overflow its tile.
+- [ ] A large amount (for example 999g 99s 99c, on a costly recipe) shrinks and does not overflow its tile.
 - [ ] A large per-point value (for example 999g 99s 99c/pt) in the leveling window is not cut, and the crafts figure (`x4`) stays beside it.
-- [ ] `/cp kitdemo`: the money line shows coin icons.
 - [ ] No Lua error (`/console scriptErrors 1`), no `ADDON_ACTION_BLOCKED`, with the profession window and with the AH.
 
 ## Options window and minimap button

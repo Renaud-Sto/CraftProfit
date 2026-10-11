@@ -30,8 +30,6 @@ function Controller.fmt(copper)
     return Format.money(copper, coinString)
 end
 
--- Item facts, or nil while the game has not loaded the item yet. The request is
--- made once per item; ITEM_DATA_LOAD_RESULT triggers the refresh.
 -- Prices differ between markets, so each one has its own price table and history.
 -- Forever has rulesets (Normal, PvP, RP, Hardcore) instead of realms; in the beta the
 -- ruleset is the "realm" the character is on (for example "Classic Beta PvP 2", realm
@@ -63,8 +61,23 @@ function Controller.market()
     return DB.market(CraftProfitDB, Controller.marketKey())
 end
 
+local isSecret = Util.isSecret
+
+-- A game value, or nil when it is secret.
+local function plain(v)
+    if isSecret(v) then return nil end
+    return v
+end
+
+-- Item facts, or nil while the game has not loaded the item yet. The request is
+-- made once per item; ITEM_DATA_LOAD_RESULT triggers the refresh.
 function Controller.itemInfo(itemID)
-    local _, _, quality, ilvl, _, _, _, _, _, _, sellPrice, classID, _, bindType = C_Item.GetItemInfo(itemID)
+    local ok, _, _, quality, ilvl, _, _, _, _, _, _, sellPrice, classID, _, bindType = pcall(C_Item.GetItemInfo, itemID)
+    if not ok then return nil end
+    -- A secret field is dropped (nil): each one is compared or multiplied later. A secret
+    -- quality reads as "not loaded".
+    quality, ilvl, sellPrice = plain(quality), plain(ilvl), plain(sellPrice)
+    classID, bindType = plain(classID), plain(bindType)
     if quality == nil then
         if not requestedItems[itemID] then
             requestedItems[itemID] = true
@@ -75,14 +88,12 @@ function Controller.itemInfo(itemID)
     return { quality = quality, ilvl = ilvl, sellPrice = sellPrice, classID = classID, bindType = bindType }
 end
 
--- Item name read secret-safely (a secret value raises when concatenated), or
+-- Item name read secret-safely (Util.text: a secret value raises when concatenated), or
 -- nil while the game has not loaded the item.
 function Controller.itemName(itemID)
     local ok, name = pcall(C_Item.GetItemInfo, itemID)
-    if ok and type(name) == "string" then
-        local fine, text = pcall(function() return name .. "" end)
-        if fine and text ~= "" then return text end
-    end
+    local text = ok and Util.text(name, isSecret) or nil
+    if text then return text end
     Controller.itemInfo(itemID) -- not loaded yet: ask the game, the refresh follows
     return nil
 end
@@ -106,7 +117,7 @@ end
 function Controller.professionName(prof)
     if type(prof) ~= "table" then return "-" end
     local live = ns.Trade.professionName(prof.key)
-    if live and #live <= 64 then
+    if live and #live <= DB.MAX_PROFESSION_NAME then
         if live ~= prof.name then prof.name = live end
         return live
     end
@@ -144,8 +155,7 @@ function Controller.onOutputClick()
     end
     local itemID = recipe.outputItemID
     -- Same rule as Evaluate: an item bound when picked up cannot be auctioned.
-    local info = Controller.itemInfo(itemID)
-    if info and info.bindType == 1 then
+    if Evaluate.isBindOnPickup(Controller.itemInfo(itemID)) then
         say(L.SEARCH_UNSELLABLE)
         return
     end
@@ -418,6 +428,12 @@ function Controller.savePinsPosition(x, y)
     end
 end
 
+function Controller.saveLevelPosition(x, y)
+    if Util.isFinite(x) and Util.isFinite(y) then
+        CraftProfitDB.settings.levelWindow = { x = x, y = y }
+    end
+end
+
 -- The main window, as /cp show and /cp hide drive it.
 function Controller.showMainWindow()
     local window = ns.Window
@@ -593,7 +609,7 @@ end
 function Controller.historyItems(recipe)
     local all = Evaluate.wantedItems(recipe, Controller.itemInfo, Disenchant.lookup, Controller.knowsEnchanting())
     local info = Controller.itemInfo(recipe.outputItemID)
-    local optional = { [recipe.outputItemID] = info ~= nil and info.bindType == 1 or nil }
+    local optional = { [recipe.outputItemID] = Evaluate.isBindOnPickup(info) or nil }
     local isReagent = {}
     for _, r in ipairs(recipe.reagents) do isReagent[r.itemID] = true end
     local required = {}
@@ -737,6 +753,7 @@ function Controller.init()
         onRefreshRecipe = Controller.refreshRecipe,
         onReagentClick = Controller.onReagentClick,
         onOutputClick = Controller.onOutputClick,
+        itemName = Controller.itemName,
         onCraftsChange = Controller.setCrafts,
         onTrackToggle = Controller.setTracking,
         onPerPointToggle = function(checked)
@@ -758,7 +775,7 @@ function Controller.init()
     if ns.PinsUI then ns.PinsUI.init(Controller) end
     if ns.LevelingUI then
         ns.LevelingUI.init(Controller, {
-            onMoved = function(_, x, y) CraftProfitDB.settings.levelWindow = { x = x, y = y } end,
+            onMoved = function(_, x, y) Controller.saveLevelPosition(x, y) end,
         })
         ns.LevelingUI.attach(CraftProfitDB.settings.levelWindow)
     end
@@ -873,8 +890,6 @@ local function slash(msg)
         if ns.LevelingUI then ns.LevelingUI.toggle() end
     elseif cmd == "pins" then
         if ns.PinnedWindow then ns.PinnedWindow.toggle() end
-    elseif cmd == "kitdemo" then
-        if ns.KitDemo then ns.KitDemo.command(arg) end
     elseif cmd == "market" then
         local name = type(GetRealmName) == "function" and GetRealmName() or "?"
         say(string.format(L.MARKET_INFO, tostring(name), Controller.marketKey()))

@@ -22,8 +22,9 @@ D.excluded = {}
 --   https://warcraft.wiki.gg/wiki/Disenchanting_tables (wikitext, fetched 2026-10-08)
 -- Item IDs checked against the item pages on warcraft.wiki.gg (fetched 2026-10-08).
 -- The source gives no quantity for shards and Nexus Crystal from uncommon/rare
--- items: they are recorded as 1 (assumption, to confirm in game). Epic items below
--- item level 40 have no row (the UI shows "?").
+-- items: they are recorded as 1 (assumption, to confirm in game). Some item levels have
+-- no row (epic below 40 and above 60, uncommon above 60, rare above 65; the full list is
+-- in tests/test_disenchant_data.lua): the window shows "no data" for them.
 -- UNVERIFIED IN FOREVER
 D.brackets = {
     { kind = "armor", quality = 2, minIlvl = 5, maxIlvl = 15, results = {
@@ -212,7 +213,7 @@ function D.canDisenchant(itemID, quality, classID)
     return type(quality) == "number" and quality >= D.MIN_QUALITY and quality <= D.MAX_QUALITY
 end
 
--- Entries for an item, or nil when no bracket matches (shown as "?" by the UI).
+-- Entries for an item, or nil when no bracket matches (shown as "no data" by the UI).
 function D.lookup(kind, quality, ilvl, brackets)
     brackets = brackets or D.brackets
     if not Util.isFinite(ilvl) then return nil end

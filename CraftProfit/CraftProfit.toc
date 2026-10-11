@@ -39,5 +39,4 @@ UI/LevelingUI.lua
 UI/PinnedWindow.lua
 UI/OptionsUI.lua
 UI/MinimapButton.lua
-UI/KitDemo.lua
 Boot.lua

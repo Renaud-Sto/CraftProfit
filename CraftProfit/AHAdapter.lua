@@ -35,9 +35,7 @@ function AH.setHandlers(h)
     handlers = h or {}
 end
 
-local function isSecret(v)
-    return issecretvalue ~= nil and issecretvalue(v) or false
-end
+local isSecret = Util.isSecret
 
 -- Seconds before another full scan is allowed (Blizzard limits it account-wide).
 function AH.cooldownLeft(now)
@@ -166,17 +164,15 @@ end
 local function readSnapshot()
     local api = C_AuctionHouse
     if not api or not api.GetNumReplicateItems or not api.GetReplicateItemInfo then return end
-    local total = api.GetNumReplicateItems()
-    if isSecret(total) or not Util.count(total) then return end
+    local ok, total = pcall(api.GetNumReplicateItems)
+    if not ok or isSecret(total) or not Util.count(total) then return end
     snapshotToken = snapshotToken + 1
     local token = snapshotToken
     reading = true
     local agg = Prices.newAggregator()
     local index = 0
-    local function step()
-        if token ~= snapshotToken then return end
-        local last = math.min(index + AH.CHUNK, total)
-        for i = index + 1, last do
+    local function readRows(first, last)
+        for i = first, last do
             local _, _, count, _, _, _, _, _, _, buyout, _, _, _, _, _, _, itemID = api.GetReplicateItemInfo(i)
             if not (isSecret(count) or isSecret(buyout) or isSecret(itemID)) then
                 local qty = Util.count(count)
@@ -184,6 +180,17 @@ local function readSnapshot()
                     agg.add(itemID, AH.PER_UNIT_REPLICATE and buyout or buyout / qty, qty)
                 end
             end
+        end
+    end
+    local function step()
+        if token ~= snapshotToken then return end
+        local last = math.min(index + AH.CHUNK, total)
+        -- A read that raises ends this scan; `reading` must never stay true, or every later
+        -- scan of this AH session would be ignored.
+        if not pcall(readRows, index + 1, last) then
+            reading = false
+            lastRead = GetTime()
+            return
         end
         index = last
         if index < total then
@@ -205,6 +212,8 @@ function AH.onEvent(event, arg1)
         AH.isOpen = false
         snapshotToken = snapshotToken + 1
         replicatePending, reading = false, false
+        -- A preset asked for in this session must not apply in the next one.
+        pendingQuantity = nil
         if handlers.onOpen then handlers.onOpen(false) end
     elseif event == "COMMODITY_SEARCH_RESULTS_UPDATED" then
         local itemID = Util.id(arg1)

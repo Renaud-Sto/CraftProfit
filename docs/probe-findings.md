@@ -70,7 +70,7 @@ Status marks: ✅ measured in game · ⚠️ not measured · ❌ unusable.
 - Minimap button icon: does `GetFileIDFromPath("Interface\Icons\INV_Misc_Coin_01")` return an id (the coin draws), or does the button fall back to `INV_Misc_QuestionMark`? ⚠️
 - Minimap art: `Interface\Minimap\MiniMap-TrackingBorder` (ring), `UI-Minimap-Background`, `UI-Minimap-ZoomButton-Highlight` draw and line up with the 24 px background and 18 px icon, both anchored CENTER (0, 1) as LibDBIcon does? ⚠️
 
-## F13. Search trace (to measure in game) ⚠️
+## F13. Search trace (measured 2026-10-11, `/cpp trace`)
 
 Why: some searches end as "no listing" or "no answer" and a second click finds the price. The trace shows what the client did for each item.
 
@@ -90,4 +90,10 @@ What to look for, per item:
 - `SEND` with `ready false`, `MESSAGE_QUEUED` or `MESSAGE_DROPPED`: the search was throttled; how long until `THROTTLED_SYSTEM_READY`.
 - Whether gear (item keys with an item level) behaves differently from commodities.
 
-Results: to fill in (date, build, what the trace showed and what changed in CraftProfit).
+Results (2026-10-11, build 1.60.1, French client, about one minute of **Refresh recipe** and **Refresh pinned**: 36 searches, 31 commodities and 5 gear item keys):
+- **Every search was answered.** The first result event came 0.15 to 0.27 s after `SEND` (median 0.20 s), far below the 6 s timeout. No `MESSAGE_QUEUED` or `MESSAGE_DROPPED`.
+- **The first event already holds the rows.** Its result count never changed on a later event: no "0 first, rows later" pattern, and no `ITEM_SEARCH_RESULTS_ADDED`.
+- **Duplicate events.** 18 of 36 searches got a second, identical result event 0.13 to 0.41 s after the first: 16 of 31 commodity searches (`COMMODITY_SEARCH_RESULTS_UPDATED`) and 2 of 5 gear searches. The queue has moved on by then and ignores it, since it is not the current item.
+- **Throttle.** `THROTTLED_MESSAGE_SENT` fires at each `SEND` (so `ready` reads false at that instant). `AUCTION_HOUSE_THROTTLED_SYSTEM_READY` comes 0.37 to 0.39 s after the answer. CraftProfit's next `SEND` followed about 0.6 s after the previous one, which is roughly 6 s for 10 items.
+- **One genuine empty result.** Item 250528 (gear) answered `ITEM_SEARCH_RESULTS_UPDATED` with `results 0`: nobody was selling it. That is the "no listing" case, not a missed answer.
+- **What changed in CraftProfit.** Nothing was needed: it reads the first event, which is complete, and ignores the duplicate. The misses seen before this trace are not explained by the client's events in this sample. If they come back, trace again around them.

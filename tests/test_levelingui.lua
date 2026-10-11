@@ -310,3 +310,56 @@ H.test("the profession and recipe names come from the controller's current-langu
     H.eq(UI.parts.rows[1].name.text, "Hot Lion Chops")
     H.eq(UI.parts.rows[2].name.text, "Copper Helm")
 end)
+
+H.test("a dragged window reopens where it was left, in the same session", function()
+    local T, UI = boot()
+    feed(T, data())
+    UI.show()
+    UI.frame().scripts.OnDragStop(UI.frame())
+    local points = {}
+    UI.frame().SetPoint = function(_, ...) points[#points + 1] = { ... } end
+    UI.hide()
+    T.ns.Window.show()
+    UI.show()
+    H.eq(points[#points], { "TOPLEFT", T.env.UIParent, "BOTTOMLEFT", 100, 700 })
+end)
+
+H.test("a non-finite leveling position is never saved", function()
+    local T = boot()
+    local C = T.ns.Controller
+    T.env.CraftProfitDB.settings.levelWindow = nil
+    C.saveLevelPosition(0 / 0, 5)
+    C.saveLevelPosition(5, math.huge)
+    H.eq(T.env.CraftProfitDB.settings.levelWindow, nil)
+    C.saveLevelPosition(5, 6)
+    H.eq(T.env.CraftProfitDB.settings.levelWindow, { x = 5, y = 6 })
+end)
+
+H.test("a recipe only a disenchant without data could sell reads no data, not ?", function()
+    local T, UI = boot()
+    local it = item(1, "Reaper", "optimal", 1, nil)
+    it.result.options = { disenchant = { status = "nodata" } }
+    it.result.incomplete = false
+    feed(T, data({ items = { it, item(2, "Other", "easy", 0.25, nil) } }))
+    UI.show()
+    H.eq(UI.parts.rows[1].value.text, "no data")
+    H.eq(UI.parts.rows[2].value.text, "?")
+end)
+
+H.test("a drop at a non-finite position is not kept for the next open", function()
+    local T, UI = boot()
+    feed(T, data())
+    UI.show()
+    local frame = UI.frame()
+    frame.GetLeft = function() return 0 / 0 end
+    frame.scripts.OnDragStop(frame)
+    local points = {}
+    frame.SetPoint = function(_, ...) points[#points + 1] = { ... } end
+    UI.hide()
+    UI.show()
+    -- Reopened at its default place, never at a NaN offset.
+    H.truthy(#points > 0)
+    for _, p in ipairs(points) do
+        for i = 4, 5 do H.truthy(p[i] == nil or p[i] == p[i]) end
+    end
+end)

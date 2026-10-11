@@ -1,6 +1,7 @@
 -- Native widget kit: the window, buttons, check boxes and inputs drawn by Blizzard's own
 -- templates (ButtonFrameTemplate, UIPanelButtonTemplate, UICheckButtonTemplate,
--- InputBoxTemplate), so CraftProfit looks like a panel of the game (see
+-- InputBoxTemplate), plus the panels, tiles, result banner, list rows and scroll bar built
+-- on the game's atlases, so CraftProfit looks like a panel of the game (see
 -- docs/superpowers/specs/2026-10-10-native-ui-design.md). Layout maths: UI/Layout.lua.
 --
 -- Rules every function here keeps:
@@ -62,13 +63,15 @@ local function try(fn, ...)
     return (pcall(fn, ...))
 end
 
--- Width of a string at its natural size (an anchored font string can report a capped one).
-local function naturalWidth(fs)
+-- Width of a string at its natural size (an anchored font string can report a capped one);
+-- 0 when it cannot be measured. Shared by the windows (Window, LevelingUI).
+function Native.naturalWidth(fs)
     local width
     if type(fs.GetUnboundedStringWidth) == "function" then width = fs:GetUnboundedStringWidth() end
     if type(width) ~= "number" then width = fs:GetStringWidth() end
-    return width
+    return type(width) == "number" and width or 0
 end
+local naturalWidth = Native.naturalWidth
 
 -- Paints a font string with one of the game's colour objects (NORMAL_FONT_COLOR...);
 -- does nothing when the object is missing or not a colour.
@@ -440,7 +443,6 @@ function Native.check(parent, text, onToggle, maxWidth)
     function c:setText(value)
         label:SetText(value or "")
         local width = naturalWidth(label)
-        width = type(width) == "number" and width or 0
         if type(maxWidth) == "number" then width = math.min(width, maxWidth) end
         self:SetHitRectInsets(0, -(width + CHECK_LABEL_GAP), 0, 0)
     end
@@ -465,10 +467,9 @@ function Native.input(parent, width, maxLetters)
     box:SetSize(width or 52, Native.INPUT_H)
     box:SetAutoFocus(false)
     if maxLetters then box:SetMaxLetters(maxLetters) end
-    -- The template has no Enter handler; it already clears the focus on Escape, so that
-    -- one is hooked, not replaced (a second ClearFocus is harmless).
+    -- The template has no Enter handler. Escape is the template's own (InputBoxScriptTemplate:
+    -- OnEscapePressed = EditBox_ClearFocus), left alone.
     box:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
-    box:HookScript("OnEscapePressed", function(self) self:ClearFocus() end)
     return box
 end
 
@@ -500,7 +501,8 @@ local PANEL_SIDE = PANEL_EDGE + 2
 -- tables made here go in. Frames are never destroyed by the game, so nothing is removed.
 Native.registry = { panels = {}, tiles = {} }
 
--- The header strip and tile card in use: header, tile keys.
+-- The header strip and tile card in use: header, tile keys. Read by the tests only (the
+-- addon keeps the saved choice in CraftProfitDB.settings.appearance).
 function Native.appearance()
     return Native.headerVariant, Native.tileVariant
 end
@@ -529,7 +531,7 @@ end
 -- Shows the strip of the current variant on panel `p` and hides the others. Used at
 -- construction and by a live switch; never sets an atlas.
 local function paintHeader(p)
-    local key = p.fixedVariant or Native.headerVariant
+    local key = Native.headerVariant
     for k, tex in pairs(p.headerTextures) do tex:SetShown(k == key) end
     p.headerBg = p.headerTextures[key]
     p.headerAtlas = p.headerAtlases[key]
@@ -551,15 +553,10 @@ end
 -- height, onHeaderClick. Also: inset, head, headerTextures (one per variant, each with its
 -- own atlas for good), headerBg (the one shown), headerAtlas (nil when the fallback is
 -- drawn), divider (nil when its atlas is missing). Registered for
--- live appearance switches (Native.setHeaderVariant), unless `opts.variant` (a key of
--- HEADER_VARIANTS) fixes its strip: then it is drawn once with that one and never
--- registered (the /cp kitdemo previews, which must not repaint or outlive the real look).
-function Native.panel(parent, title, opts)
+-- live appearance switches (Native.setHeaderVariant).
+function Native.panel(parent, title)
     local Layout = ns.Layout
     local p = {}
-    if type(opts) == "table" and opts.variant ~= nil and Native.HEADER_VARIANTS[opts.variant] then
-        p.fixedVariant = opts.variant
-    end
     local f = CreateFrame("Frame", nil, parent)
     p.frame = f
     -- InsetFrameTemplate shares its parent's level (useParentLevel): everything else here is
@@ -574,12 +571,10 @@ function Native.panel(parent, title, opts)
     head:SetPoint("TOPRIGHT", f, "TOPRIGHT", -PANEL_SIDE, -PANEL_EDGE)
     head:SetHeight(Native.HEAD_H)
     p.head = head
-    -- One texture per variant (only the fixed one for a fixed panel).
+    -- One texture per variant: a live switch only shows another.
     p.headerTextures, p.headerAtlases = {}, {}
     for key in pairs(Native.HEADER_VARIANTS) do
-        if not p.fixedVariant or key == p.fixedVariant then
-            p.headerTextures[key], p.headerAtlases[key] = headerTexture(head, key)
-        end
+        p.headerTextures[key], p.headerAtlases[key] = headerTexture(head, key)
     end
     paintHeader(p)
     local divider = head:CreateTexture(nil, "ARTWORK")
@@ -593,10 +588,8 @@ function Native.panel(parent, title, opts)
     else
         divider:Hide()
     end
-    if not p.fixedVariant then
-        local panels = Native.registry.panels
-        panels[#panels + 1] = p
-    end
+    local panels = Native.registry.panels
+    panels[#panels + 1] = p
 
     p.right = head:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     p.right:SetPoint("RIGHT", head, "RIGHT", -8, 0)
@@ -657,6 +650,13 @@ Native.TILE_FONTS = {
     { "GameFontNormalMed2", 14 },
     { "GameFontNormal", 12 },
 }
+-- The heights of a font ladder, for Layout.fitSize; built once, not at every render.
+local function sizesOf(fonts)
+    local sizes = {}
+    for i, font in ipairs(fonts) do sizes[i] = font[2] end
+    return sizes
+end
+local TILE_SIZES = sizesOf(Native.TILE_FONTS)
 local TILE_OUTLINE = 2
 local HOVER_FILE = "Interface\\QuestFrame\\UI-QuestTitleHighlight"
 
@@ -706,14 +706,10 @@ end
 -- drawn: variant b, or the card atlas missing), outline (the best-tile marks in use), and
 -- both structures: cardBg and cardStroke (the loot card textures), inset and goldOutline
 -- (the nested inset and its 4 gold lines). applyVariant() shows the current variant's;
--- Native.setTileVariant calls it on every registered tile. `opts.variant` (a key of
--- TILE_VARIANTS) fixes the card instead: drawn once with it, never registered (as panels).
-function Native.tile(parent, width, height, opts)
+-- Native.setTileVariant calls it on every registered tile.
+function Native.tile(parent, width, height)
     local Layout = ns.Layout
     local tile = { best = false, muted = false, width = width }
-    if type(opts) == "table" and opts.variant ~= nil and Native.TILE_VARIANTS[opts.variant] then
-        tile.fixedVariant = opts.variant
-    end
     local f = CreateFrame("Frame", nil, parent)
     f:SetSize(width or 110, height or 52)
     tile.frame = f
@@ -763,7 +759,7 @@ function Native.tile(parent, width, height, opts)
     -- Shows the structure of the current variant and hides the other. The best mark: the
     -- card's own stroke when the card and its stroke exist, else gold.
     function tile:applyVariant()
-        self.variant = self.fixedVariant or Native.tileVariant
+        self.variant = Native.tileVariant
         local card = false
         if self.variant == "a" then
             if not cardOk then cardOk = applyAtlas(cardBg, cardAtlas) ~= nil end
@@ -792,9 +788,7 @@ function Native.tile(parent, width, height, opts)
             label = label .. " " .. tag
         end
         self.label:SetText(label)
-        local fonts = Native.TILE_FONTS
-        local sizes = {}
-        for i, font in ipairs(fonts) do sizes[i] = font[2] end
+        local fonts, sizes = Native.TILE_FONTS, TILE_SIZES
         self.value:SetFontObject(fonts[1][1])
         self.value:SetText(spec.value or "")
         local room = (f:GetWidth() or width or 110) - Native.TILE_PAD * 2
@@ -851,10 +845,8 @@ function Native.tile(parent, width, height, opts)
     end
 
     tile:applyVariant()
-    if not tile.fixedVariant then
-        local tiles = Native.registry.tiles
-        tiles[#tiles + 1] = tile
-    end
+    local tiles = Native.registry.tiles
+    tiles[#tiles + 1] = tile
     return tile
 end
 
@@ -871,6 +863,7 @@ Native.BANNER_EDGE_PX = 2
 Native.BANNER_VALUE_ROOM = 120
 -- Same game fonts as the tile values (never SetFont with a file).
 Native.BANNER_FONTS = Native.TILE_FONTS
+local BANNER_SIZES = sizesOf(Native.BANNER_FONTS)
 local BANNER_GAP = 8
 local BANNER_TONES = { profit = "profit", loss = "loss", incomplete = "incomplete" }
 
@@ -938,9 +931,7 @@ function Native.banner(parent, height, width)
         self.label:SetText(labelText)
         self.text:SetText(spec.text or "")
 
-        local fonts = Native.BANNER_FONTS
-        local sizes = {}
-        for i, font in ipairs(fonts) do sizes[i] = font[2] end
+        local fonts, sizes = Native.BANNER_FONTS, BANNER_SIZES
         self.value:SetFontObject(fonts[1][1])
         self.value:SetText(spec.value or "")
         local size = Layout.fitSize(naturalWidth(self.value), sizes[1], Native.BANNER_VALUE_ROOM, sizes)
@@ -958,7 +949,7 @@ function Native.banner(parent, height, width)
         local frameWidth = f:GetWidth()
         if type(frameWidth) ~= "number" or frameWidth <= 0 then frameWidth = self.width end
         local valueWidth, textWidth = naturalWidth(self.value), naturalWidth(self.text)
-        if type(frameWidth) == "number" and type(valueWidth) == "number" and type(textWidth) == "number"
+        if type(frameWidth) == "number" and textWidth > 0
             and textWidth > frameWidth - pad * 2 - valueWidth - BANNER_GAP then
             self.text:SetFontObject("GameFontNormalSmall")
         end

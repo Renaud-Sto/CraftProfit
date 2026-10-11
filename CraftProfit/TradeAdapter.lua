@@ -11,9 +11,7 @@ ns.Trade = Trade
 local POLL_SECONDS = 0.3
 local lastSeen
 
-local function isSecret(v)
-    return issecretvalue ~= nil and issecretvalue(v) or false
-end
+local isSecret = Util.isSecret
 
 -- First number following any of the given link kinds: "|Henchant:2018|h" -> 2018.
 function Trade.idFromLink(link, ...)
@@ -30,10 +28,9 @@ end
 Trade.ENCHANTING_SKILL_LINE = 333
 local ENCHANTING_SPELL = 7411
 
--- True when the character has the profession. GetProfessions lists the
--- professions' indices; GetProfessionInfo returns the skill line as 7th value.
 -- The character's professions as { name, line } (the name in the client's current
--- language; works with every profession window closed), possibly empty.
+-- language; works with every profession window closed), possibly empty. GetProfessions
+-- lists the professions' indices; GetProfessionInfo returns the skill line as 7th value.
 local function professions()
     local list = {}
     if type(GetProfessions) ~= "function" or type(GetProfessionInfo) ~= "function" then return list end
@@ -49,6 +46,7 @@ local function professions()
     return list
 end
 
+-- True when the character has the profession (its skill line).
 function Trade.hasProfession(skillLine)
     for _, prof in ipairs(professions()) do
         if prof.line == skillLine then return true end
@@ -160,29 +158,43 @@ function Trade.selectedRecipeID()
     return (selectedB())
 end
 
-local function readA(recipeID)
+-- A game value, or nil when it is secret: every field read below is compared or used as a
+-- key later (a secret raises then).
+local function plain(v)
+    if isSecret(v) then return nil end
+    return v
+end
+
+-- `info` is the GetRecipeInfo table when the caller already has it (scanKnown).
+local function readA(recipeID, info)
     local api = C_TradeSkillUI
     if not (api and api.GetRecipeInfo and api.GetRecipeSchematic) then return nil end
-    local ok, info, schematic = pcall(function()
-        return api.GetRecipeInfo(recipeID), api.GetRecipeSchematic(recipeID, false)
+    local ok, schematic = pcall(function()
+        info = info or api.GetRecipeInfo(recipeID)
+        return api.GetRecipeSchematic(recipeID, false)
     end)
     if not ok or type(info) ~= "table" or type(schematic) ~= "table" then return nil end
-    if info.learned ~= true then return nil end
+    if plain(info.learned) ~= true then return nil end
     local basic = Enum and Enum.CraftingReagentType and Enum.CraftingReagentType.Basic
     local reagents = {}
-    for _, slot in ipairs(schematic.reagentSlotSchematics or {}) do
+    local slots = plain(schematic.reagentSlotSchematics)
+    for _, slot in ipairs(type(slots) == "table" and slots or {}) do
         -- Only ordinary reagents; optional and finishing slots are not part of the cost.
-        if basic == nil or slot.reagentType == basic then
-            local first = slot.reagents and slot.reagents[1]
-            reagents[#reagents + 1] = { itemID = first and first.itemID, qty = slot.quantityRequired }
+        if type(slot) == "table" and (basic == nil or plain(slot.reagentType) == basic) then
+            local list = plain(slot.reagents)
+            local first = type(list) == "table" and plain(list[1]) or nil
+            reagents[#reagents + 1] = {
+                itemID = type(first) == "table" and plain(first.itemID) or nil, qty = plain(slot.quantityRequired),
+            }
         end
     end
-    local name = info.name
-    if isSecret(name) then name = nil end
+    local difficulty = plain(info.relativeDifficulty)
     return {
-        recipeID = recipeID, name = name, locale = Trade.locale(), difficulty = info.relativeDifficulty,
-        outputItemID = schematic.outputItemID,
-        qtyMin = schematic.quantityMin, qtyMax = schematic.quantityMax,
+        recipeID = recipeID, name = plain(info.name), locale = Trade.locale(),
+        -- A known name ("optimal"...) or nil: the difficulty becomes a table key later.
+        difficulty = difficulty ~= nil and ns.Data.Skillup.name(difficulty) or nil,
+        outputItemID = plain(schematic.outputItemID),
+        qtyMin = plain(schematic.quantityMin), qtyMax = plain(schematic.quantityMax),
         reagents = reagents,
     }
 end
@@ -273,7 +285,8 @@ function Trade.scanKnown(onDone, onAbort)
             if id and okInfo and type(info) == "table" and info.learned == true then
                 local difficulty = info.relativeDifficulty
                 if not isSecret(difficulty) then
-                    local raw = readA(id)
+                    -- The info just read is reused: one GetRecipeInfo per recipe, not two.
+                    local raw = readA(id, info)
                     if raw then found[#found + 1] = raw end
                 end
             end

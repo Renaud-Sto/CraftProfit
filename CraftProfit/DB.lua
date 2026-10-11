@@ -137,11 +137,12 @@ local function sanitizeSettings(s)
     end
 end
 
--- Rows are compact arrays { unit, volume, time } to keep the file small.
+-- Rows are compact arrays { unit, volume, time } to keep the file small. The unit has the
+-- same bounds as Prices.store.
 local function sanitizePrices(prices)
     for itemID, row in pairs(prices) do
         local valid = Util.id(itemID) == itemID and type(row) == "table"
-            and Util.isCopper(row[1]) and row[1] > 0
+            and Util.isCopper(row[1]) and row[1] > 0 and row[1] <= Util.MAX_COPPER
             and Util.count(row[2]) ~= nil and Util.isCopper(row[3])
         -- Clearing a field while iterating with pairs is allowed in Lua.
         if not valid then prices[itemID] = nil end
@@ -194,14 +195,19 @@ function DB.market(db, key)
     return market
 end
 
--- Removes prices older than PRICE_MAX_AGE. A price dated in the future (clock
--- moved back) is kept: its age is simply unknown. Returns how many were removed.
+-- A price dated more than this ahead was written with a wrong clock: its age would stay
+-- unknown for good, so it is dropped. Less than this is clock drift and is kept.
+DB.PRICE_FUTURE_SLACK = 86400
+
+-- Removes prices older than PRICE_MAX_AGE. A price dated slightly in the future (clock
+-- moved back) is kept, its age simply unknown; one dated more than PRICE_FUTURE_SLACK
+-- ahead is removed. Returns how many were removed.
 function DB.prune(db, now)
     if not Util.isFinite(now) then return 0 end
     local removed = 0
     local function prune(prices)
         for itemID, row in pairs(prices) do
-            if now - row[3] > DB.PRICE_MAX_AGE then
+            if now - row[3] > DB.PRICE_MAX_AGE or row[3] - now > DB.PRICE_FUTURE_SLACK then
                 prices[itemID] = nil
                 removed = removed + 1
             end
@@ -221,6 +227,8 @@ end
 
 DB.MAX_PROFESSIONS = 8
 DB.MAX_KNOWN = 400
+-- The longest profession name kept (bytes); a longer one is junk and the key is shown.
+DB.MAX_PROFESSION_NAME = 64
 
 -- Known recipes of each profession, kept per character so the leveling list works
 -- at the auction house with the profession window closed:
@@ -242,7 +250,7 @@ local function sanitizeKnown(db)
                 end
                 keep[#keep + 1] = {
                     key = prof.key,
-                    name = type(prof.name) == "string" and #prof.name <= 64 and prof.name or prof.key,
+                    name = type(prof.name) == "string" and #prof.name <= DB.MAX_PROFESSION_NAME and prof.name or prof.key,
                     updated = Util.isCopper(prof.updated) and prof.updated or 0,
                     recipes = recipes,
                 }
@@ -274,7 +282,7 @@ function DB.setKnown(db, key, name, recipes, now)
         entry = { key = key }
         db.known[#db.known + 1] = entry
     end
-    entry.name = type(name) == "string" and #name <= 64 and name or key
+    entry.name = type(name) == "string" and #name <= DB.MAX_PROFESSION_NAME and name or key
     entry.updated = Util.isCopper(now) and now or 0
     entry.recipes = clean
     db.knownCurrent = key

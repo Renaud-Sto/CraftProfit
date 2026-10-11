@@ -5,7 +5,8 @@ local Util = ns.Util
 local Prices = {}
 ns.Prices = Prices
 
-local DEFAULT_N = 5
+-- The saved default (DB loads first), for a caller that passes no valid n.
+local DEFAULT_N = ns.DB.DEFAULTS.medianN
 
 -- Median unit price of the n cheapest units among the listings, plus the total
 -- number of units listed. A single absurdly cheap listing cannot drag the price
@@ -72,9 +73,11 @@ function Prices.newAggregator()
     return agg
 end
 
--- db.prices rows are compact arrays { unit, volume, time }.
+-- db.prices rows are compact arrays { unit, volume, time }. A unit above Util.MAX_COPPER
+-- is refused: it could only come from corrupt data and would add up to an infinite cost.
 function Prices.store(db, itemID, unit, volume, now)
-    if not Util.id(itemID) or not Util.isCopper(unit) or unit <= 0 or not Util.isCopper(now) then
+    if not Util.id(itemID) or not Util.isCopper(unit) or unit <= 0 or unit > Util.MAX_COPPER
+        or not Util.isCopper(now) then
         return false
     end
     db.prices[itemID] = { Util.round(unit), Util.count(volume) or 1, now }
@@ -93,7 +96,8 @@ function Prices.merge(db, map, now)
 end
 
 -- Returns unit, age, volume. The age is nil when it cannot be trusted (clock
--- moved back, invalid now): a wrong age is worse than none.
+-- moved back, invalid now): a wrong age is worse than none. Only Prices.priceOf and the
+-- tests call it; it stays public so the tests can read a stored row with its age.
 function Prices.get(db, itemID, now)
     local row = db.prices[itemID]
     if type(row) ~= "table" or not Util.isCopper(row[1]) or row[1] <= 0 then return nil end

@@ -10,6 +10,11 @@ function Util.isFinite(n)
     return type(n) == "number" and n == n and n ~= math.huge and n ~= -math.huge
 end
 
+-- The largest copper amount the addon handles. WoW's gold cap is 99,999,999g = 1e12
+-- copper; this stays above it and below the point where tostring switches to exponent
+-- notation. A saved or measured unit price above it is corrupt (see Prices.store).
+Util.MAX_COPPER = 1e13
+
 -- A usable copper amount: finite and not negative.
 function Util.isCopper(n)
     return Util.isFinite(n) and n >= 0
@@ -25,6 +30,12 @@ end
 function Util.id(n)
     if Util.count(n) == n then return n end
     return nil
+end
+
+-- True for a "secret" value of the game (issecretvalue): it raises when compared, used as
+-- a table key or concatenated. Outside the game (no issecretvalue) nothing is secret.
+function Util.isSecret(v)
+    return issecretvalue ~= nil and issecretvalue(v) or false
 end
 
 -- A non-empty plain string, or nil. The game may hand out "secret" strings that raise

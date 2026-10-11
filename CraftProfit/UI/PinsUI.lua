@@ -48,15 +48,12 @@ function PinsUI.setStatus(text)
 end
 local setStatus = PinsUI.setStatus
 
--- Bind on pickup (C_Item.GetItemInfo's bindType), as Evaluate and Controller.historyItems.
-local BIND_ON_PICKUP = 1
-
 -- True when the recipe's crafted item can never be sold at the AH (bind on pickup): its
 -- price is not worth a search (the AH tile already says n/a). When the item info is not
 -- loaded yet, the binding is unknown: it is searched, as before.
 local function unsellableOutput(recipe, itemInfo)
-    local info = itemInfo(recipe.outputItemID)
-    if type(info) ~= "table" or info.bindType ~= BIND_ON_PICKUP then return false end
+    -- The same rule as Evaluate and Controller.historyItems.
+    if not ns.Evaluate.isBindOnPickup(itemInfo(recipe.outputItemID)) then return false end
     -- Also one of its own reagents (unlikely): the reagent still needs its price.
     for _, r in ipairs(recipe.reagents or {}) do
         if r.itemID == recipe.outputItemID then return false end
@@ -110,18 +107,18 @@ end
 function PinsUI.rowValue(item, byPoint)
     local result = item.result
     if byPoint then
-        local text, tone = ns.Present.pointRow(L, fmt, result.perPoint)
-        local colour = tone == "profit" and Colors.FIXED.profit or tone == "loss" and Colors.FIXED.loss
-            or Colors.text("muted")
-        return text, colour
+        local text, tone = ns.Present.pointRow(L, fmt, result.perPoint, result)
+        return text, Colors.tone(tone, "muted")
     elseif result.net ~= nil then
         return fmt(result.net), result.net >= 0 and Colors.FIXED.profit or Colors.FIXED.loss
     end
-    return L.UNKNOWN, Colors.text("muted")
+    return ns.Present.unknownText(L, result), Colors.text("muted")
 end
 
 function PinsUI.refresh()
-    if not host then return end
+    -- Hidden (AH closed): nothing to draw, so no pin is evaluated. onAHOpen refreshes the
+    -- list when it shows again.
+    if not host or not host:IsShown() then return end
     local pins = CraftProfitCharDB.pins
     local byPoint = CraftProfitCharDB.sortMode == ns.DB.SORT_POINT
     local ordered = PinsUI.orderedPins(pins, CraftProfitCharDB.sortMode, ctl.evaluate)
@@ -356,7 +353,12 @@ function PinsUI.onAHOpen(open)
     if not host then return end
     host:SetShown(open)
     if not open and queue and queue.state == "running" then queue:cancel() end
-    PinsUI.refresh()
+    if open then
+        PinsUI.refresh()
+    else
+        -- The hidden list no longer takes room: the window shrinks (refresh would skip it).
+        ns.Window.relayout()
+    end
 end
 
 function PinsUI.onSearchResults(itemID, listings)

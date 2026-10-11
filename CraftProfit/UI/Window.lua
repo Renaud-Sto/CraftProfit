@@ -30,7 +30,8 @@ local LABEL_GAP = 8 -- between the per-point label and its value
 local EMPTY_H = 24
 -- Between the pin and "Refresh recipe" buttons.
 local BUTTON_GAP = 6
-local MAX_DETAIL = 12 -- Recipes.MAX_REAGENTS
+-- One materials row per reagent a recipe may have (Recipes loads before the UI).
+local MAX_DETAIL = ns.Recipes.MAX_REAGENTS
 -- A folded native panel: its header strip, inside the inset border at the top and at the
 -- bottom by Native.panel's edge.
 local FOLDED_H = Native.HEAD_H + Native.PANEL_EDGE * 2
@@ -56,12 +57,6 @@ Window.parts = parts
 Window.lastModel = nil
 Window.lastHandlers = nil
 
--- Height of a panel with `rows` rows of `rowH` (Native.panel's geometry: edge, header,
--- body pad, rows, edge).
-local function panelHeight(rows, rowH)
-    return Layout.panelHeight(rows, rowH)
-end
-
 -- Blocks of the recipe view, top to bottom, with their heights. Pure.
 -- opts: hasLikely (a "likely outcome" line), expanded (Materials unfolded), reagents.
 function Window.sections(opts)
@@ -69,10 +64,10 @@ function Window.sections(opts)
     if opts.hasLikely then list[#list + 1] = { key = "likely", height = LIKELY_H } end
     list[#list + 1] = {
         key = "materials",
-        height = opts.expanded and panelHeight(opts.reagents, ROW_H) or FOLDED_H,
+        height = opts.expanded and Layout.panelHeight(opts.reagents, ROW_H) or FOLDED_H,
     }
     list[#list + 1] = { key = "age", height = AGE_H }
-    list[#list + 1] = { key = "options", height = panelHeight(OPTION_ROWS, OPTION_ROW_H) }
+    list[#list + 1] = { key = "options", height = Layout.panelHeight(OPTION_ROWS, OPTION_ROW_H) }
     return list
 end
 
@@ -93,14 +88,11 @@ local function paint(fontString, c)
     fontString:SetTextColor(c[1], c[2], c[3], c[4])
 end
 
--- Item name for the fold-out; "#id" while the game has not loaded it (or when
--- the name is a secret value, which raises when concatenated).
+-- Item name for the fold-out, from the controller (handlers.itemName: secret-safe, nil
+-- while the game has not loaded the item); "#id" until then.
 local function reagentName(itemID)
-    local ok, name = pcall(C_Item.GetItemInfo, itemID)
-    if ok and type(name) == "string" then
-        local fine, text = pcall(function() return name .. "" end)
-        if fine then return text end
-    end
+    local name = handlers.itemName and handlers.itemName(itemID)
+    if type(name) == "string" and name ~= "" then return name end
     return "#" .. itemID
 end
 
@@ -219,7 +211,8 @@ local function buildOptions()
     parts.craftsLabel:SetPoint("LEFT", body, "TOPLEFT", 8, -OPTION_ROW_H / 2)
     paint(parts.craftsLabel, Colors.text("main"))
     -- x = 70 leaves the 5 px the input's border art draws left of its frame.
-    local box = Native.input(body, 52, 4)
+    -- As many letters as the largest craft count Evaluate accepts (9999: 4).
+    local box = Native.input(body, 52, #tostring(ns.Evaluate.MAX_CRAFTS))
     box:SetNumeric(true)
     box:SetPoint("TOPLEFT", body, "TOPLEFT", 70, rowY(1, Native.INPUT_H))
     -- Applied when the box loses focus (Enter, Escape or a click elsewhere). Hooked: the
@@ -253,10 +246,7 @@ local function buildOptions()
     parts.perPointTone = nil
     -- A gain or a cost keeps its meaning colour; a neutral value is the game's white.
     parts.paintPerPoint = function()
-        local tone = parts.perPointTone
-        local c = tone == "profit" and Colors.FIXED.profit or tone == "loss" and Colors.FIXED.loss
-            or Colors.text("main")
-        paint(parts.perPointValue, c)
+        paint(parts.perPointValue, Colors.tone(parts.perPointTone, "main"))
     end
 
     -- The two buttons share the row equally: the body less 8 px on each side and a gap.
@@ -393,19 +383,11 @@ local function layout(list)
     Window.relayout()
 end
 
--- Width of a string at its natural size; 0 when it cannot be measured.
-local function naturalWidth(fs)
-    local width
-    if type(fs.GetUnboundedStringWidth) == "function" then width = fs:GetUnboundedStringWidth() end
-    if type(width) ~= "number" then width = fs:GetStringWidth() end
-    return type(width) == "number" and width or 0
-end
-
 -- The per-point label is cut before its value; its check box's hit area (widened over the
 -- label) must stop there too, or a click on the value would toggle the option.
 local function fitPerPointLabel()
     local value = parts.perPointValue
-    local valueWidth = value:IsShown() and naturalWidth(value) or 0
+    local valueWidth = value:IsShown() and Native.naturalWidth(value) or 0
     local bodyWidth = Window.INNER_WIDTH - Native.PANEL_EDGE * 2
     local labelLeft = PER_POINT_X + Native.CHECK_SIZE + Native.CHECK_LABEL_X
     parts.perPoint:setMaxWidth(bodyWidth - VALUE_MARGIN - valueWidth - LABEL_GAP - labelLeft)

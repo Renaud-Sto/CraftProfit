@@ -1650,3 +1650,39 @@ H.test("the refresh button's click reaches refreshRecipe", function()
     b.scripts.OnClick(b)
     H.eq(sent, { 1 })
 end)
+
+H.test("the removed kitdemo command only prints the help and builds no window", function()
+    local T = boot({ items = ITEMS })
+    local named = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(kind, name, ...)
+        if name then named[name] = true end
+        return create(kind, name, ...)
+    end
+    for _, arg in ipairs({ "kitdemo", "kitdemo b a" }) do
+        local before = #T.chat
+        T.env.SlashCmdList.CRAFTPROFIT(arg)
+        H.eq(#T.chat, before + 1)
+        H.eq(T.chat[#T.chat]:find(T.ns.L.SLASH_HELP, 1, true) ~= nil, true)
+    end
+    H.eq(named.CraftProfitNativeDemo, nil)
+    H.eq(T.ns.KitDemo, nil)
+end)
+
+H.test("itemInfo survives an erroring item API and drops secret fields", function()
+    local T = boot()
+    local C = T.ns.Controller
+    T.env.C_Item.GetItemInfo = function() error("boom") end
+    H.eq(C.itemInfo(100), nil)
+    local SECRET = setmetatable({}, { __eq = function() error("secret compared") end })
+    T.env.issecretvalue = function(v) return rawequal(v, SECRET) end
+    T.env.C_Item.GetItemInfo = function()
+        return "Item", "link", 2, 15, 1, "type", "sub", 1, "", 0, SECRET, 4, 0, SECRET
+    end
+    H.eq(C.itemInfo(100), { quality = 2, ilvl = 15, classID = 4 })
+    -- A secret quality reads as "not loaded": no crash, the item is asked for.
+    T.env.C_Item.GetItemInfo = function() return "Item", "link", SECRET end
+    H.eq(C.itemInfo(101), nil)
+    -- The window still renders with such an item.
+    C.setRecipe(RAW, "profession")
+end)

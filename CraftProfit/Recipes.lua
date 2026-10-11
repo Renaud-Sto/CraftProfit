@@ -10,6 +10,10 @@ ns.Recipes = Recipes
 Recipes.MAX_REAGENTS = 12
 local MAX_NAME_BYTES = 200
 local MAX_YIELD = 1000
+-- The most of one reagent a recipe may ask for (after merging duplicates). Real recipes
+-- ask for a few dozen at most; the bound keeps a corrupt save from making the cost
+-- infinite (12 reagents x 1000 x Util.MAX_COPPER stays finite).
+Recipes.MAX_REAGENT_QTY = 1000
 
 -- Average yield. Absent min/max means a single item; present but invalid means
 -- the whole recipe is unusable (nil).
@@ -34,7 +38,8 @@ local function reagents(list)
     local len = #list
     if len == 0 then return nil end
 
-    -- Verify table has exactly integer keys 1..len (no holes, no extra keys)
+    -- Exactly the integer keys 1..len: no hole, no extra key. Counting them is enough to
+    -- prove every slot 1..len is filled.
     local keyCount = 0
     for k, _ in pairs(list) do
         keyCount = keyCount + 1
@@ -43,11 +48,6 @@ local function reagents(list)
         end
     end
     if keyCount ~= len then return nil end
-
-    -- Verify no holes: each position 1..len exists
-    for i = 1, len do
-        if list[i] == nil then return nil end
-    end
 
     local merged, order = {}, {}
     for i = 1, len do
@@ -63,6 +63,9 @@ local function reagents(list)
         end
     end
     if #order > Recipes.MAX_REAGENTS then return nil end
+    for _, id in ipairs(order) do
+        if merged[id] > Recipes.MAX_REAGENT_QTY then return nil end
+    end
     local out = {}
     for i, id in ipairs(order) do out[i] = { itemID = id, qty = merged[id] } end
     return out

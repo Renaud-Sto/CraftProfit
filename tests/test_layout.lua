@@ -1,8 +1,7 @@
 local H = ...
-local W = dofile("tests/fakewow.lua")
 
 local function load()
-    return H.newNS("UI/Layout").Layout
+    return H.newNS("Util", "UI/Layout").Layout
 end
 
 H.test("panelHeight adds the header, the body padding and the rows", function()
@@ -37,11 +36,6 @@ H.test("fitSize picks the largest size that fits, the smallest when none does", 
     H.eq(Layout.fitSize(nil, 19, 120, sizes), 19)
     H.eq(Layout.fitSize("x", 19, 120, sizes), 19)
     H.eq(Layout.fitSize(150, 0, 120, sizes), 19)
-end)
-
-H.test("the layout file is loaded by the fake game environment", function()
-    local T = W.boot(H)
-    H.truthy(T.ns.Layout)
 end)
 
 H.test("scrollThumb sizes and places the thumb, nil when the list fits", function()

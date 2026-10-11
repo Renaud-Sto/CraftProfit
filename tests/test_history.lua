@@ -50,9 +50,133 @@ H.test("a point is recorded for every item of a touched, fully priced active rec
     H.eq(H2.record(db, m, NOW, { [1] = true }, itemsOf), 1)
     H.eq(m.series[1], { { NOW, 100, 5, 100, 100, 1 } })
     H.eq(m.series[100], { { NOW, 1000, 2, 1000, 1000, 1 } })
-    -- same instant twice: no duplicate point
-    H.eq(H2.record(db, m, NOW, { [1] = true }, itemsOf), 1)
+    -- same instant twice: no duplicate point, and the recipe is not counted as recorded
+    H.eq(H2.record(db, m, NOW, { [1] = true }, itemsOf), 0)
     H.eq(#m.series[1], 1)
+end)
+
+H.test("a far future point is dropped, so it cannot block recording for good", function()
+    local H2, db = load().History, newDB()
+    H2.track(db, recipe(1))
+    local m = market({ [1] = { 100, 5, NOW }, [2] = { 50, 3, NOW }, [100] = { 1000, 2, NOW } })
+    -- Written while the clock was a year ahead (or hand edited).
+    m.series[1] = { { NOW + 365 * DAY, 7, 1, 7, 7, 1 } }
+    H.eq(H2.record(db, m, NOW, { [1] = true }, itemsOf), 1)
+    H.eq(m.series[1], { { NOW, 100, 5, 100, 100, 1 } })
+    -- Loading keeps points ahead of the clock: a clock set back must not erase newer
+    -- history for good. Only adding a point drops the ones that block it.
+    local saved = { tracked = {}, markets = { k = { prices = {}, series = {
+        [5] = { { NOW - DAY, 3, 1, 3, 3, 1 }, { NOW + 2 * DAY, 9, 1, 9, 9, 1 } },
+        [6] = { { NOW + 3600, 4, 1, 4, 4, 1 } },
+    } } } }
+    H2.sanitize(saved, NOW)
+    H.eq(saved.markets.k.series[5], { { NOW - DAY, 3, 1, 3, 3, 1 }, { NOW + 2 * DAY, 9, 1, 9, 9, 1 } })
+    H.eq(saved.markets.k.series[6], { { NOW + 3600, 4, 1, 4, 4, 1 } })
+end)
+
+H.test("compact keeps points ahead of a smaller now, and an invalid now changes nothing", function()
+    local H2 = load().History
+    local series = { { NOW - 3 * DAY, 3, 1, 3, 3, 1 }, { NOW + 30 * DAY, 9, 1, 9, 9, 1 } }
+    H.eq(H2.compact(series, NOW), series)
+    for _, bad in ipairs({ 0 / 0, -1, nil, "x", math.huge }) do
+        H.eq(H2.compact(series, bad), series)
+    end
+end)
+
+H.test("a recipe blocked by a near future point is not counted as recorded", function()
+    local H2, db = load().History, newDB()
+    H2.track(db, recipe(1))
+    local m = market({ [1] = { 100, 5, NOW }, [2] = { 50, 3, NOW }, [100] = { 1000, 2, NOW } })
+    for _, id in ipairs({ 1, 2, 100 }) do m.series[id] = { { NOW + 60, 7, 1, 7, 7, 1 } } end
+    H.eq(H2.record(db, m, NOW, { [1] = true }, itemsOf), 0)
+    H.eq(#m.series[1], 1)
+end)
+
+-- One point a day for a year, as a quiet user leaves it.
+local function yearOfDays(H2)
+    local series = {}
+    for age = 364, 1, -1 do series[#series + 1] = { NOW - age * DAY, 100, 1, 100, 100, 1 } end
+    -- Twice: a first pass can date a weekly point (its week's start) over a year back,
+    -- and the next pass drops it, as the daily records of a real year did.
+    return H2.compact(H2.compact(series, NOW), NOW)
+end
+
+local function tiers(H2, series, now)
+    local raw, daily, weekly = 0, 0, 0
+    for _, p in ipairs(series) do
+        local age = (now or NOW) - p[1]
+        if age > H2.DAILY_SECONDS then weekly = weekly + 1
+        elseif age > H2.RAW_SECONDS then daily = daily + 1
+        else raw = raw + 1 end
+    end
+    return raw, daily, weekly
+end
+
+H.test("a busy fortnight never evicts the daily and weekly tiers", function()
+    local H2 = load().History
+    local year = yearOfDays(H2)
+    local _, daily, weekly = tiers(H2, year)
+    H.truthy(daily > 70)
+    H.truthy(weekly > 35)
+    -- 50 operations a day for the last 14 days.
+    local series = {}
+    for _, p in ipairs(year) do series[#series + 1] = p end
+    for i = 1, 14 * 50 do series[#series + 1] = { NOW - 14 * DAY + i * 1700, 200, 1, 200, 200, 1 } end
+    local out = H2.compact(series, NOW)
+    local raw, daily2, weekly2 = tiers(H2, out)
+    H.eq(raw, H2.MAX_RAW)
+    H.eq(daily2, daily)
+    H.eq(weekly2, weekly)
+    H.eq(out[1], year[1])                       -- the oldest point survives
+    H.eq(out[#out][1], NOW - 14 * DAY + 14 * 50 * 1700)  -- the newest raw point too
+    H.eq(H2.compact(out, NOW), out)             -- still idempotent
+end)
+
+H.test("every save the old 600 point cap kept loads unchanged", function()
+    local H2 = load().History
+    -- 600 raw points and nothing older: the most raw points the old cap allowed.
+    local raw = {}
+    for i = 1, 600 do raw[i] = { NOW - 13 * DAY + i * 60, 100, 1, 100, 100, 1 } end
+    H.eq(H2.compact(raw, NOW), raw)
+    -- A full year (daily and weekly tiers at their largest) plus raw points up to 600 in all.
+    local year = yearOfDays(H2)
+    local series = {}
+    for _, p in ipairs(year) do
+        if NOW - p[1] > H2.RAW_SECONDS then series[#series + 1] = p end
+    end
+    for i = 1, 600 - #series do series[#series + 1] = { NOW - 13 * DAY + i * 60, 100, 1, 100, 100, 1 } end
+    H.eq(#series, 600)
+    H.eq(H2.compact(series, NOW), series)
+end)
+
+H.test("the tier caps hold above the most points each tier can ever hold", function()
+    local H2 = load().History
+    -- One point every hour for a year: each daily and weekly bucket is filled.
+    local series = {}
+    for age = 365 * 24, 1, -1 do series[#series + 1] = { NOW - age * 3600, 100, 1, 100, 100, 1 } end
+    local out = H2.compact(series, NOW)
+    local raw, daily, weekly = tiers(H2, out)
+    H.eq(raw, 14 * 24)
+    H.truthy(daily >= 76 and daily <= H2.MAX_DAILY)
+    H.truthy(weekly >= 39 and weekly <= H2.MAX_WEEKLY)
+    -- At any time of the day or week the daily and weekly caps never bind: lifting them
+    -- changes nothing.
+    for _, shift in ipairs({ 0, 43210, 3 * DAY + 43210, 5 * DAY + 1 }) do
+        local capped = H2.compact(series, NOW + shift)
+        local maxDaily, maxWeekly = H2.MAX_DAILY, H2.MAX_WEEKLY
+        H2.MAX_DAILY, H2.MAX_WEEKLY = 1e9, 1e9
+        local free = H2.compact(series, NOW + shift)
+        H2.MAX_DAILY, H2.MAX_WEEKLY = maxDaily, maxWeekly
+        H.eq(capped, free)
+    end
+    -- Each cap applies to its own tier and keeps its newest points.
+    local caps = { H2.MAX_RAW, H2.MAX_DAILY, H2.MAX_WEEKLY }
+    H2.MAX_RAW, H2.MAX_DAILY, H2.MAX_WEEKLY = 3, 3, 3
+    out = H2.compact(series, NOW)
+    H2.MAX_RAW, H2.MAX_DAILY, H2.MAX_WEEKLY = caps[1], caps[2], caps[3]
+    H.eq(#out, 9)
+    H.eq(out[9], series[#series])
+    H.eq(out[1][6], 7 * 24)                     -- a full week, not the oldest partial one
 end)
 
 H.test("no point when nothing of the recipe was touched, a required price is missing, or it is paused", function()

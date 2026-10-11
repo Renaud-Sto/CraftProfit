@@ -13,7 +13,8 @@ local NAME_KEYS = { ah = "NAME_AH", vendor = "NAME_VENDOR", disenchant = "NAME_D
 local TILE_KEYS = { ah = "TILE_AH", vendor = "TILE_VENDOR", disenchant = "TILE_DISENCHANT" }
 local UNIT_KEYS = { sec = "AGE_SEC", min = "AGE_MIN", hour = "AGE_HOUR", day = "AGE_DAY" }
 
-local DEFAULT_STALE = 3600
+-- The saved default (DB loads first), for a caller that passes no staleAfter.
+local DEFAULT_STALE = ns.DB.DEFAULTS.staleAfter
 
 -- "5m", "3h"... in the client language; nil for an invalid duration.
 function Present.durationText(L, seconds)
@@ -34,13 +35,25 @@ local function signed(fmt, n)
     return text
 end
 
+-- The text of an unknown value in a list row: "no data" when nothing is missing but the
+-- only way left to sell the item is a disenchant the data does not cover (a search would
+-- not change it), else "?". `result` is the Evaluate result, optional.
+function Present.unknownText(L, result)
+    if type(result) == "table" and result.net == nil and not result.incomplete then
+        local de = result.options and result.options.disenchant
+        if de and de.status == "nodata" then return L.NO_DATA end
+    end
+    return L.UNKNOWN
+end
+
 -- Short text and tone for a list row: "21g 29s/pt" (loss), "+9s 33c/pt" (profit),
--- n/a for a recipe that cannot give a point, ? when the cost is unknown.
-function Present.pointRow(L, fmt, perPoint)
-    if not perPoint or perPoint.chance == nil then return L.UNKNOWN, "muted" end
+-- n/a for a recipe that cannot give a point, ? (or "no data", see unknownText) when the
+-- cost is unknown. `result` (optional) is the evaluation the per-point figures come from.
+function Present.pointRow(L, fmt, perPoint, result)
+    if not perPoint or perPoint.chance == nil then return Present.unknownText(L, result), "muted" end
     if perPoint.chance == 0 then return L.NA, "muted" end
     local cost = perPoint.cost
-    if cost == nil then return L.UNKNOWN, "muted" end
+    if cost == nil then return Present.unknownText(L, result), "muted" end
     if cost > 0 then return fmt(cost) .. L.PER_POINT_SHORT, "loss" end
     return "+" .. fmt(-cost) .. L.PER_POINT_SHORT, "profit"
 end
@@ -61,8 +74,8 @@ local function perPointLine(L, fmt, perPoint)
     if perPoint.chance == nil then line.value = L.UNKNOWN; return line end
     if perPoint.chance == 0 then line.value = L.NA; return line end
     if perPoint.cost == nil then line.value = L.UNKNOWN; return line end
-    local percent = math.floor(perPoint.chance * 100 + 0.5)
-    local suffix = " (" .. percent .. "%, " .. L.ESTIMATE .. ")"
+    -- Present.percent: a chance that is not whole keeps a decimal (99.5%, never 100%).
+    local suffix = " (" .. Present.percent(perPoint.chance) .. "%, " .. L.ESTIMATE .. ")"
     if perPoint.cost < 0 then
         line.label, line.value, line.tone = L.PER_POINT_GAIN, fmt(-perPoint.cost) .. suffix, "profit"
     else
@@ -79,7 +92,11 @@ end
 
 local function verdictFor(result, L, fmt)
     if result.net == nil and result.best == nil and not result.incomplete then
-        return { kind = "none", text = L.VERDICT_NONE, value = "" }
+        -- Nothing known, nothing missing: either no way to sell at all, or the only way left
+        -- is a disenchant the data does not cover.
+        local de = result.options and result.options.disenchant
+        local text = de and de.status == "nodata" and L.VERDICT_NO_DATA or L.VERDICT_NONE
+        return { kind = "none", text = text, value = "" }
     end
     if result.net == nil then
         return { kind = "incomplete", text = L.VERDICT_INCOMPLETE, value = "" }
@@ -99,24 +116,34 @@ local function verdictFor(result, L, fmt)
     }
 end
 
+-- A chance as a percentage: whole when it is ("75"), else one decimal ("99.5"), so an
+-- outcome that is not certain never reads as 100.
+function Present.percent(chance)
+    local p = chance * 100
+    local whole = math.floor(p + 0.5)
+    if math.abs(p - whole) < 0.05 then return tostring(whole) end
+    return string.format("%.1f", p)
+end
+
 -- Grey sub-line under the disenchant value: the most probable outcome, so the
 -- player sees the gamble behind the average ("75%: 1-2x Soul Dust = 7s 30c").
 local function likelyLine(likely, fmt, itemName)
     local name = itemName and itemName(likely.itemID) or ("#" .. likely.itemID)
     local qty = likely.min == likely.max and tostring(likely.min) or (likely.min .. "-" .. likely.max)
-    local percent = math.floor(likely.chance * 100 + 0.5)
     return {
-        label = string.format("%d%%: %sx %s = %s", percent, qty, name, fmt(likely.value)),
+        label = string.format("%s%%: %sx %s = %s", Present.percent(likely.chance), qty, name, fmt(likely.value)),
         value = "", key = "likely", best = false, muted = true,
     }
 end
 
--- Text shown for an option amount: the price, "n/a" or "?".
+-- Text shown for an option amount: the price, "n/a", "no data" or "?".
 local function optionText(option, L, fmt)
     if option.status == "ok" then
         return fmt(option.value)
     elseif option.status == "na" then
         return L.NA
+    elseif option.status == "nodata" then
+        return L.NO_DATA
     end
     return L.UNKNOWN
 end

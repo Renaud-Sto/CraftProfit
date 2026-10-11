@@ -5,6 +5,9 @@ local W = dofile("tests/fakewow.lua")
 local ITEMS = {
     [100] = { quality = 2, ilvl = 15, sellPrice = 200, classID = 0, bindType = 2 },
     [101] = { quality = 1, ilvl = 1, sellPrice = 10, classID = 0, bindType = 2 },
+    -- An epic weapon of item level 63, bound on pickup, no vendor price: only a disenchant
+    -- could sell it, and the tables have no row for it ("no data").
+    [102] = { quality = 4, ilvl = 63, sellPrice = 0, classID = 2, bindType = 1 },
 }
 
 local function raw(id, output, difficulty, name)
@@ -508,4 +511,12 @@ H.test("the panel title reads in Spanish with the count", function()
     local _, UI = boot({ locale = "esES", pins = manyPins(21) })
     UI.show()
     H.eq(UI.parts.panel.title.text, "RECETAS FIJADAS (21/20)")
+end)
+
+H.test("a pin only a disenchant without data could sell reads no data in the pinned window", function()
+    local T, UI = boot({ pins = { raw(3, 102, "easy") } })
+    T.ns.Controller.knowsEnchanting = function() return true end
+    stock(T)
+    UI.show()
+    H.eq(UI.parts.rows[1].value.text, "no data")
 end)

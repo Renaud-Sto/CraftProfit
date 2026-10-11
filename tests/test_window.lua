@@ -766,3 +766,21 @@ H.test("the pin and refresh labels fit their buttons in English, French and Span
         if locale == "esES" then H.eq(L.REFRESH_RECIPE, "Actualizar receta") end
     end
 end)
+
+H.test("reagent rows are named through the controller's item name, #id until it is loaded", function()
+    local T, Window = boot()
+    H.eq(Window.lastHandlers.itemName, T.ns.Controller.itemName)
+    T.env.C_Item.GetItemInfo = function(id) if id == 11 then return "Copper Bar" end end
+    Window.render(model())
+    H.eq(Window.parts.rows[1].name.text, "3x Copper Bar")
+    H.eq(Window.parts.rows[2].name.text, "1x #12")
+end)
+
+H.test("naturalWidth is 0 when a font string cannot be measured", function()
+    local T = boot()
+    local Native = T.ns.Native
+    H.eq(Native.naturalWidth({ GetStringWidth = function() return nil end }), 0)
+    H.eq(Native.naturalWidth({ GetStringWidth = function() return 40 end }), 40)
+    H.eq(Native.naturalWidth({ GetUnboundedStringWidth = function() return 90 end,
+        GetStringWidth = function() return 40 end }), 90)
+end)

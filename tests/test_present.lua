@@ -1,8 +1,8 @@
 local H = ...
 
 local function load()
-    local ns = H.newNS("Util", "Format", "Core", "Data/Skillup", "Data/Disenchant", "Evaluate", "Present",
-        "Locale", "Locales/enUS", "Locales/frFR")
+    local ns = H.newNS("Util", "Format", "Core", "Data/Skillup", "Data/Disenchant", "Recipes", "DB", "Evaluate", "Present",
+        "Locale", "Locales/enUS", "Locales/frFR", "Locales/esES")
     ns.Locale.select("enUS")
     return ns
 end
@@ -56,7 +56,8 @@ end)
 
 H.test("a loss gives a loss verdict", function()
     local ns = load()
-    local m = model(ns, { priceOf = function(id) if id == 100 then return 100, 1 end return 100, 1 end,
+    -- Every item at 1s: the crafted item sells for less than its three reagents.
+    local m = model(ns, { priceOf = function() return 100, 1 end,
         itemInfo = function() return { quality = 1, ilvl = 1, sellPrice = 0, classID = 0, bindType = 2 } end })
     H.eq(m.verdict.kind, "loss")
     H.eq(m.verdict.text, "Best: Auction house")
@@ -261,4 +262,75 @@ H.test("the French and Spanish models use their own panel and tile texts", funct
     H.eq(m.materials.title, "COMPOSANTS")
     H.eq(m.tiles[1].label, "HV (NET)")
     H.eq(m.tiles[3].tag, "bêta")
+    ns.Locale.select("esES")
+    m = model(ns, { crafts = 2 })
+    H.eq(m.banner.label, "RESULTADO")
+    H.eq(m.materials.title, "MATERIALES x2 (ESTIMADO)")
+    H.eq(m.lines[1].label, "Materiales x2 (estimación)")
+    H.eq(m.tiles[1].label, "CASA (NETO)")
+end)
+
+local EPIC_63 = function() return { quality = 4, ilvl = 63, sellPrice = 200, classID = 2, bindType = 2 } end
+
+H.test("a disenchant data gap shows no data and never the missing prices warning", function()
+    local ns = load()
+    local m = model(ns, { itemInfo = EPIC_63, lookupDisenchant = ns.Data.Disenchant.lookup })
+    H.eq(m.lines[4].value, "no data")
+    H.eq(m.tiles[3].value, "no data")
+    H.truthy(m.tiles[3].muted)
+    H.eq(m.banner, { label = "RESULT", text = "Best: Auction house", value = "+7s", kind = "profit" })
+    H.eq(m.verdict.kind, "profit")
+end)
+
+H.test("a data gap on an item nobody can sell otherwise says so in the banner", function()
+    local ns = load()
+    -- Bound on pickup (no auction house), no vendor price, epic above item level 60.
+    local m = model(ns, { knowsEnchanting = true, lookupDisenchant = ns.Data.Disenchant.lookup,
+        itemInfo = function() return { quality = 4, ilvl = 63, sellPrice = 0, classID = 2, bindType = 1 } end })
+    H.eq(m.verdict, { kind = "none", text = "No disenchant data for this item", value = "" })
+    H.eq(m.banner.warning, nil)
+    ns.Locale.select("frFR")
+    m = model(ns, { knowsEnchanting = true, lookupDisenchant = ns.Data.Disenchant.lookup,
+        itemInfo = function() return { quality = 4, ilvl = 63, sellPrice = 0, classID = 2, bindType = 1 } end })
+    H.eq(m.verdict.text, "Pas de données de désenchantement")
+    H.eq(m.lines[4].value, "pas de données")
+end)
+
+H.test("a 99.5% disenchant outcome gets its sub-line with one decimal", function()
+    local ns = load()
+    -- The real rare bracket of item level 56-65.
+    local m = model(ns, {
+        itemInfo = function() return { quality = 3, ilvl = 60, sellPrice = 200, classID = 2, bindType = 2 } end,
+        lookupDisenchant = ns.Data.Disenchant.lookup,
+        priceOf = function(id) return ({ [1] = 100, [2] = 50, [100] = 1000, [14344] = 400, [20725] = 9000 })[id] end,
+    }, { itemName = function() return "Shard" end })
+    H.eq(m.lines[5].key, "likely")
+    H.eq(m.lines[5].label, "99.5%: 1x Shard = 3s 80c")
+end)
+
+H.test("unknownText and pointRow say no data only for a disenchant data gap with nothing missing", function()
+    local ns = load()
+    local P, L, fmt = ns.Present, ns.L, ns.Format.money
+    local gap = { net = nil, incomplete = false, options = { disenchant = { status = "nodata" } } }
+    H.eq(P.unknownText(L, gap), "no data")
+    H.eq(P.unknownText(L, { net = nil, incomplete = true, options = gap.options }), "?")
+    H.eq(P.unknownText(L, nil), "?")
+    H.eq({ P.pointRow(L, fmt, nil, gap) }, { "no data", "muted" })
+    H.eq({ P.pointRow(L, fmt, { chance = 1 }, gap) }, { "no data", "muted" })
+    H.eq({ P.pointRow(L, fmt, { chance = 0 }, gap) }, { "n/a", "muted" })
+end)
+
+H.test("the per-point line shows a 99.5% chance with one decimal, never 100%", function()
+    local ns = load()
+    local P = ns.Present
+    local result = {
+        crafts = 1, cost = { total = 100, missing = {}, lines = {} }, options = {
+            ah = { status = "ok", value = 200 }, vendor = { status = "na" }, disenchant = { status = "na" } },
+        best = "ah", bestValue = 200, net = 100, incomplete = false,
+        perPoint = { chance = 0.995, cost = 500, estimate = true },
+    }
+    local m = P.build(result, ns.L, ns.Format.money)
+    local line = m.lines[#m.lines]
+    H.eq(line.key, "perpoint")
+    H.eq(line.value, "5s (99.5%, estimate)")
 end)

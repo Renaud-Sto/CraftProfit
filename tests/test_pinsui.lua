@@ -70,6 +70,12 @@ H.test("an item that never answers is reported at the end", function()
     T.tickers[#T.tickers].fn()
     P.onSearchResults(3, listing)
     P.onSearchResults(101, listing)
+    -- Asked a second time, and silent again.
+    H.eq(P.state, "running")
+    H.eq(P.status, "Retrying 0/1")
+    H.eq(T.sent, { 1, 2, 100, 3, 101, 100 })
+    T.clock = T.clock + 7
+    T.tickers[#T.tickers].fn()
     H.eq(P.state, "done")
     H.eq(P.status, "Updated 4 of 5 prices · no answer: Item100, try again")
     H.eq(T.ns.Controller.market().prices[100], nil)
@@ -174,6 +180,8 @@ H.test("an empty AH listing counts as answered with no listing", function()
     P.startSearch()
     P.onSearchResults(1, {})
     for _, id in ipairs({ 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
+    -- The retry finds no listing either.
+    P.onSearchResults(1, {})
     H.eq(P.state, "done")
     H.eq(P.status, "Updated 4 of 5 prices · no listing: #1 (nobody is selling them now)")
     P.startSearch()
@@ -676,7 +684,9 @@ H.test("a recipe search is ignored while a pinned search runs, which carries on 
     P.startSearch({ recipe })
     H.eq(P.state, "running")
     for _, id in ipairs({ 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
-    H.eq(T.sent, { 1, 2, 100, 3, 101 })
+    -- The retry of item 1 belongs to the pinned search; the recipe's item 4 is never sent.
+    P.onSearchResults(1, {})
+    H.eq(T.sent, { 1, 2, 100, 3, 101, 1 })
     H.eq(P.status, "Updated 4 of 5 prices · no listing: #1 (nobody is selling them now)")
 end)
 
@@ -686,6 +696,8 @@ H.test("a pinned search right after a recipe search starts clean", function()
     T.ns.AH.isOpen = true
     local recipe = T.ns.Recipes.normalize(raw(9, 101, { { itemID = 4, qty = 1 } }))
     P.startSearch({ recipe })
+    P.onSearchResults(4, {})
+    P.onSearchResults(101, {})
     P.onSearchResults(4, {})
     P.onSearchResults(101, {})
     H.eq(P.status, "Updated 0 of 2 prices · no listing: #4, Item101 (nobody is selling them now)")
@@ -813,4 +825,108 @@ H.test("the status is a fixed two-line box under the buttons: a long one is cut,
     H.eq(status.wrap, true)
     -- The footer keeps room for exactly that box.
     H.eq(T.ns.PinsUI.FOOTER_H, 22 + 6 + 22 + 6 + 28)
+end)
+
+-- Records commitSearch calls (one history batch per search).
+local function countCommits(T)
+    local C = T.ns.Controller
+    local commit, n = C.commitSearch, { 0 }
+    C.commitSearch = function(...) n[1] = n[1] + 1; return commit(...) end
+    return n
+end
+
+H.test("the second pass searches only the prices the first one missed, once, and counts what it finds", function()
+    local T = boot()
+    local P = T.ns.PinsUI
+    local commits = countCommits(T)
+    T.ns.AH.isOpen = true
+    P.startSearch()
+    -- First pass: 1 has no listing, 100 does not answer, the rest are found.
+    P.onSearchResults(1, {})
+    P.onSearchResults(2, listing)
+    T.clock = T.clock + 7
+    T.tickers[#T.tickers].fn()
+    P.onSearchResults(3, listing)
+    P.onSearchResults(101, listing)
+    H.eq(T.sent, { 1, 2, 100, 3, 101, 1 })
+    H.eq(P.status, "Retrying 0/2")
+    H.eq(commits[1], 0)
+    -- The refresh button stays off across both passes.
+    H.eq(T.ns.Window.parts.refresh.enabled, false)
+    -- Second pass: 1 is found now, 100 still has no listing.
+    P.onSearchResults(1, listing)
+    H.eq(P.status, "Retrying 1/2")
+    P.onSearchResults(100, {})
+    H.eq(T.sent, { 1, 2, 100, 3, 101, 1, 100 })
+    H.eq(P.state, "done")
+    H.eq(P.status, "Updated 4 of 5 prices · no listing: Item100 (nobody is selling them now)")
+    H.eq(T.ns.Controller.market().prices[1][1], 20)
+    -- History and the commit run once, at the very end; no third pass.
+    H.eq(commits[1], 1)
+    T.clock = T.clock + 30
+    T.tickers[#T.tickers].fn()
+    H.eq(#T.sent, 7)
+end)
+
+H.test("everything found in the second pass reads as all updated", function()
+    local T = boot()
+    local P = T.ns.PinsUI
+    T.ns.AH.isOpen = true
+    P.startSearch()
+    P.onSearchResults(1, {})
+    for _, id in ipairs({ 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
+    P.onSearchResults(1, listing)
+    H.eq(P.status, "Updated 5 prices")
+end)
+
+H.test("no second pass when the first one found everything", function()
+    local T = boot()
+    local P = T.ns.PinsUI
+    local commits = countCommits(T)
+    T.ns.AH.isOpen = true
+    P.startSearch()
+    for _, id in ipairs({ 1, 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
+    H.eq(#T.sent, 5)
+    H.eq(P.state, "done")
+    H.eq(P.status, "Updated 5 prices")
+    H.eq(commits[1], 1)
+end)
+
+H.test("closing the AH during the second pass cancels it, commits once, and the button follows", function()
+    local T = boot()
+    local P, C = T.ns.PinsUI, T.ns.Controller
+    local commits = countCommits(T)
+    C.setRecipe(T.ns.Recipes.normalize(raw(9, 101, { { itemID = 4, qty = 1 } })), "profession")
+    T.ns.AH.isOpen = true
+    C.onAHOpen(true)
+    C.refreshRecipe()
+    P.onSearchResults(4, {})
+    P.onSearchResults(101, listing)
+    H.eq(P.status, "Retrying 0/1")
+    H.eq(T.ns.Window.parts.refresh.enabled, false)
+    T.ns.AH.isOpen = false
+    C.onAHOpen(false)
+    H.eq(P.state, "cancelled")
+    H.eq(P.status, "Search cancelled")
+    H.eq(commits[1], 1)
+    -- A late answer for the retried item is ignored.
+    P.onSearchResults(4, listing)
+    H.eq(T.ns.Controller.market().prices[4], nil)
+    T.ns.AH.isOpen = true
+    C.onAHOpen(true)
+    H.eq(T.ns.Window.parts.refresh.enabled, true)
+end)
+
+H.test("the retry status reads in French and Spanish", function()
+    for locale, text in pairs({ frFR = "Nouvel essai 0/1", esES = "Reintentando 0/1" }) do
+        local F = W.boot(H, { items = ITEMS, locale = locale })
+        F.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+        F.ns.AH.search = function() return true end
+        F.ns.AH.isOpen = true
+        local recipe = F.ns.Recipes.normalize(raw(9, 101, { { itemID = 4, qty = 1 } }))
+        F.ns.PinsUI.startSearch({ recipe })
+        F.ns.PinsUI.onSearchResults(4, {})
+        F.ns.PinsUI.onSearchResults(101, listing)
+        H.eq(F.ns.PinsUI.status, text)
+    end
 end)

@@ -34,8 +34,6 @@ local parts = { rows = {} }
 local rows = parts.rows
 local offset = 0
 local queue, ticker
--- Items of the running search that answered with no usable listing, in search order.
-local noListingIDs = {}
 -- A miss of one kind is named when there are at most this many of it, else counted.
 local NAMED_MAX = 2
 
@@ -196,33 +194,107 @@ function PinsUI.searchSummary(locale, counts, nameOf)
     return text
 end
 
-local function finishSearch(summary)
+-- One ticker drives whichever queue runs (first pass, then the retry).
+local function ensureTicker()
+    if ticker or PinsUI.state ~= "running" then return end
+    ticker = C_Timer.NewTicker(TICK_SECONDS, function()
+        if queue then queue:tick(GetTime()) end
+    end)
+end
+
+-- The whole search is over (both passes, or cancelled): one status, one history batch.
+local function endSearch(state, text)
     if ticker then
         ticker:Cancel()
         ticker = nil
     end
-    if summary.cancelled then
-        PinsUI.state = "cancelled"
-        setStatus(L.SEARCH_CANCELLED)
-    else
-        PinsUI.state = "done"
-        local failedIDs = {}
-        for i, miss in ipairs(summary.failed) do failedIDs[i] = miss.itemID end
-        -- Names read now: the items were just searched, so the game usually has them.
-        setStatus(PinsUI.searchSummary(L, {
-            ok = summary.ok, total = summary.total, noListing = #noListingIDs, failed = #failedIDs,
-            noListingIDs = noListingIDs, failedIDs = failedIDs,
-        }, ctl.itemName))
-    end
+    PinsUI.state = state
+    setStatus(text)
     -- "Refresh recipe" comes back now that no search runs.
     ns.Window.updateRefreshButton()
+    -- Once, at the very end: the prices stored by both passes make one batch.
     ctl.commitSearch()
     ctl.requestRefresh()
 end
 
+-- The item ids of a finished queue that did not answer.
+local function failedOf(summary)
+    local ids = {}
+    for i, miss in ipairs(summary.failed) do ids[i] = miss.itemID end
+    return ids
+end
+
+-- Runs one pass over `ids`: a fresh queue, its own no-listing list, progress shown with
+-- `progressKey`, `onDone(summary, noListing)` at the end.
+local function runPass(ids, progressKey, onDone)
+    local noListing = {}
+    queue = ns.PriceQueue.new({
+        itemIDs = ids,
+        timeout = SEARCH_TIMEOUT,
+        send = ns.AH.search,
+        onItem = function(itemID, listings, err)
+            -- recordListings stores (and marks for history) only a usable listing, so an
+            -- item retried after a miss is never counted twice.
+            if not err and not ctl.recordListings(itemID, listings) then
+                noListing[#noListing + 1] = itemID
+            end
+        end,
+        onProgress = function(done, total)
+            setStatus(string.format(L[progressKey], done, total))
+            ctl.requestRefresh()
+        end,
+        onDone = function(summary) onDone(summary, noListing) end,
+    })
+    setStatus(string.format(L[progressKey], 0, #ids))
+    queue:start(GetTime())
+end
+
+-- Second pass over the prices the first one missed (no answer or no listing): a search the
+-- server dropped or answered too early often finds the price when asked again. The summary
+-- counts both passes over the first pass's total: an item found now counts as updated.
+local function retryPass(total, retry)
+    runPass(retry, "SEARCH_RETRYING", function(summary, noListing)
+        if summary.cancelled then
+            endSearch("cancelled", L.SEARCH_CANCELLED)
+            return
+        end
+        local failedIDs = failedOf(summary)
+        -- Names read now: the items were just searched, so the game usually has them.
+        endSearch("done", PinsUI.searchSummary(L, {
+            ok = total - #failedIDs, total = total, noListing = #noListing, failed = #failedIDs,
+            noListingIDs = noListing, failedIDs = failedIDs,
+        }, ctl.itemName))
+    end)
+    ensureTicker()
+end
+
+local function firstPassDone(ids)
+    return function(summary, noListing)
+        if summary.cancelled then
+            endSearch("cancelled", L.SEARCH_CANCELLED)
+            return
+        end
+        local failedIDs = failedOf(summary)
+        local missed = {}
+        for _, id in ipairs(failedIDs) do missed[id] = true end
+        for _, id in ipairs(noListing) do missed[id] = true end
+        -- In the first pass's order; no third pass.
+        local retry = {}
+        for _, id in ipairs(ids) do
+            if missed[id] then retry[#retry + 1] = id end
+        end
+        if #retry == 0 then
+            endSearch("done", PinsUI.searchSummary(L, { ok = summary.ok, total = summary.total }, ctl.itemName))
+        else
+            retryPass(summary.total, retry)
+        end
+    end
+end
+
 -- Searches the AH, one item at a time, for everything `recipes` need: every pinned recipe
--- when nil ("Refresh pinned"), or the recipe on screen ("Refresh recipe"). Ignored while a
--- search runs, so one never cancels or mixes into the other.
+-- when nil ("Refresh pinned"), or the recipe on screen ("Refresh recipe"); then once more for
+-- what that pass missed. Ignored while a search runs, so one never cancels or mixes into the
+-- other.
 function PinsUI.startSearch(recipes)
     if not ns.AH.isOpen then
         setStatus(L.SEARCH_NEED_AH)
@@ -237,29 +309,11 @@ function PinsUI.startSearch(recipes)
         setStatus(L.SEARCH_NOTHING)
         return
     end
-    noListingIDs = {}
-    queue = ns.PriceQueue.new({
-        itemIDs = ids,
-        timeout = SEARCH_TIMEOUT,
-        send = ns.AH.search,
-        onItem = function(itemID, listings, err)
-            if not err and not ctl.recordListings(itemID, listings) then
-                noListingIDs[#noListingIDs + 1] = itemID
-            end
-        end,
-        onProgress = function(done, total)
-            setStatus(string.format(L.SEARCHING, done, total))
-            ctl.requestRefresh()
-        end,
-        onDone = finishSearch,
-    })
     PinsUI.state = "running"
     ns.Window.updateRefreshButton()
-    setStatus(string.format(L.SEARCHING, 0, #ids))
-    queue:start(GetTime())
-    if queue.state == "running" then
-        ticker = C_Timer.NewTicker(TICK_SECONDS, function() queue:tick(GetTime()) end)
-    end
+    -- wantedFor lists each item once, so the retry order follows the first pass's.
+    runPass(ids, "SEARCHING", firstPassDone(ids))
+    ensureTicker()
 end
 
 function PinsUI.scan()

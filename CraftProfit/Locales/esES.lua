@@ -51,6 +51,7 @@ ns.Locale.register("esES", {
     SORT_SPEED = "Orden: velocidad",
     PER_POINT_SHORT = "/pt",
     SEARCHING = "Buscando %d/%d",
+    SEARCH_RETRYING = "Reintentando %d/%d",
     -- Search summary: everything answered with listings, else "of" plus the fragments
     -- that apply (each starts with its middle-dot separator).
     SEARCH_UPDATED = "%d precios actualizados",

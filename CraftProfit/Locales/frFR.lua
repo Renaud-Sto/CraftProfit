@@ -51,6 +51,7 @@ ns.Locale.register("frFR", {
     SORT_SPEED = "Tri : vitesse",
     PER_POINT_SHORT = "/pt",
     SEARCHING = "Recherche %d/%d",
+    SEARCH_RETRYING = "Nouvel essai %d/%d",
     -- Search summary: everything answered with listings, else "of" plus the fragments
     -- that apply (each starts with its middle-dot separator).
     SEARCH_UPDATED = "%d prix mis à jour",

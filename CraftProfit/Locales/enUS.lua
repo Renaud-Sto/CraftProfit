@@ -51,6 +51,7 @@ ns.Locale.register("enUS", {
     SORT_SPEED = "Sort: speed",
     PER_POINT_SHORT = "/pt",
     SEARCHING = "Searching %d/%d",
+    SEARCH_RETRYING = "Retrying %d/%d",
     -- Search summary, counted in prices (one per item searched): all stored, else "of" plus
     -- the fragments that apply (each starts with its middle-dot separator; %s is the item
     -- names when there are one or two, else their count).

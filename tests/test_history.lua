@@ -63,14 +63,24 @@ H.test("a far future point is dropped, so it cannot block recording for good", f
     m.series[1] = { { NOW + 365 * DAY, 7, 1, 7, 7, 1 } }
     H.eq(H2.record(db, m, NOW, { [1] = true }, itemsOf), 1)
     H.eq(m.series[1], { { NOW, 100, 5, 100, 100, 1 } })
-    -- sanitize drops it too, while a point less than a day ahead is kept (clock drift).
+    -- Loading keeps points ahead of the clock: a clock set back must not erase newer
+    -- history for good. Only adding a point drops the ones that block it.
     local saved = { tracked = {}, markets = { k = { prices = {}, series = {
         [5] = { { NOW - DAY, 3, 1, 3, 3, 1 }, { NOW + 2 * DAY, 9, 1, 9, 9, 1 } },
         [6] = { { NOW + 3600, 4, 1, 4, 4, 1 } },
     } } } }
     H2.sanitize(saved, NOW)
-    H.eq(saved.markets.k.series[5], { { NOW - DAY, 3, 1, 3, 3, 1 } })
+    H.eq(saved.markets.k.series[5], { { NOW - DAY, 3, 1, 3, 3, 1 }, { NOW + 2 * DAY, 9, 1, 9, 9, 1 } })
     H.eq(saved.markets.k.series[6], { { NOW + 3600, 4, 1, 4, 4, 1 } })
+end)
+
+H.test("compact keeps points ahead of a smaller now, and an invalid now changes nothing", function()
+    local H2 = load().History
+    local series = { { NOW - 3 * DAY, 3, 1, 3, 3, 1 }, { NOW + 30 * DAY, 9, 1, 9, 9, 1 } }
+    H.eq(H2.compact(series, NOW), series)
+    for _, bad in ipairs({ 0 / 0, -1, nil, "x", math.huge }) do
+        H.eq(H2.compact(series, bad), series)
+    end
 end)
 
 H.test("a recipe blocked by a near future point is not counted as recorded", function()

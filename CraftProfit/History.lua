@@ -25,8 +25,9 @@ History.WEEKLY_SECONDS = 365 * DAY
 History.MAX_RAW = 600
 History.MAX_DAILY = 80
 History.MAX_WEEKLY = 45
--- A point dated further ahead than this was written with a wrong clock (or edited by hand):
--- it is dropped, or it would block recording until real time caught up.
+-- A point dated further ahead than this blocks recording (written with a clock that ran
+-- ahead, or edited by hand): it is dropped when a new point is added. Loading and compacting
+-- keep it, so a clock set back for a while never erases newer history.
 History.FUTURE_SLACK = DAY
 
 -- Tracked list ----------------------------------------------------------------
@@ -97,12 +98,14 @@ end
 local function byTime(a, c) return a[1] < c[1] end
 
 -- Merges the points older than RAW_SECONDS into daily, then weekly points, drops what is
--- older than a year or dated more than FUTURE_SLACK ahead, and caps each tier to its newest
--- points. Returns a new, time-ordered array. Safe to run again.
+-- older than a year, and caps each tier to its newest points (a point ahead of `now` counts
+-- as raw). Returns a new, time-ordered array. Safe to run again. An invalid `now` changes
+-- nothing: the series is returned as it is.
 function History.compact(series, now)
+    if not Util.isCopper(now) then return series end
     local raw, buckets, order = {}, {}, {}
     for _, p in ipairs(series) do
-        if validPoint(p) and p[1] <= now + History.FUTURE_SLACK then
+        if validPoint(p) then
             local age = now - p[1]
             local size
             if age > History.WEEKLY_SECONDS then
@@ -162,10 +165,16 @@ local function addPoint(market, itemID, now, unit, volume)
     end
     local last = series[#series]
     if last and last[1] >= now then
-        -- A point from a clock that ran ahead blocks the series: compacting drops it when it
-        -- is more than FUTURE_SLACK ahead. A point of this very second (or within the slack)
-        -- still wins, so the same instant is never recorded twice.
-        series = History.compact(series, now)
+        -- A point from a clock that ran ahead blocks the series: the points more than
+        -- FUTURE_SLACK ahead are dropped now, as this one is added. A point of this very
+        -- second (or within the slack) still wins, so the same instant is never recorded twice.
+        local kept = {}
+        for _, p in ipairs(series) do
+            if not (type(p) == "table" and Util.isFinite(p[1]) and p[1] > now + History.FUTURE_SLACK) then
+                kept[#kept + 1] = p
+            end
+        end
+        series = kept
         market.series[itemID] = series
         last = series[#series]
         if last and last[1] >= now then return false end

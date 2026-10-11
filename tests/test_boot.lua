@@ -122,6 +122,92 @@ H.test("pinning toggles the recipe in the character's pins", function()
     H.eq(T.ns.Window.lastModel.pinned, false)
 end)
 
+-- `n` pins written straight into the saved table (recipe ids 1000 + i), then RAW selected.
+local function fillPins(T, n)
+    local pins = T.env.CraftProfitCharDB.pins
+    for i = 1, n do
+        pins[#pins + 1] = T.ns.Recipes.normalize({ recipeID = 1000 + i, name = "P" .. i, difficulty = 1,
+            outputItemID = 100, qtyMin = 1, qtyMax = 1, reagents = { { itemID = 1, qty = 1 } } })
+    end
+    T.ns.Controller.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+end
+
+H.test("the pin limit is 20 by default: the 21st pin is refused with the limit in the message", function()
+    local T = boot()
+    local C = T.ns.Controller
+    H.eq(C.pinLimit(), 20)
+    fillPins(T, 20)
+    local before = #T.chat
+    C.togglePin()
+    H.eq(#T.env.CraftProfitCharDB.pins, 20)
+    H.eq(T.ns.Window.lastModel.pinned, false)
+    H.eq(#T.chat, before + 1)
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Pinned recipes limit reached (20). Raise it in /cp options.")
+end)
+
+H.test("setPinLimit saves a listed limit, refuses anything else, and applies at the next pin", function()
+    local T = boot()
+    local C = T.ns.Controller
+    local settings = T.env.CraftProfitDB.settings
+    fillPins(T, 20)
+    for _, bad in ipairs({ 7, 25, "30", 0 / 0, 1e9 }) do
+        H.eq(C.setPinLimit(bad), false)
+        H.eq(settings.maxPins, 20)
+    end
+    H.eq(C.setPinLimit(30), true)
+    H.eq(settings.maxPins, 30)
+    H.eq(C.pinLimit(), 30)
+    C.togglePin()
+    H.eq(#T.env.CraftProfitCharDB.pins, 21)
+    H.eq(T.ns.Window.lastModel.pinned, true)
+end)
+
+H.test("lowering the limit below the pin count keeps every pin, blocks new ones, unpin still works", function()
+    local T = boot()
+    local C = T.ns.Controller
+    fillPins(T, 25)
+    H.eq(C.setPinLimit(12), true)
+    H.eq(#T.env.CraftProfitCharDB.pins, 25)
+    C.togglePin()
+    H.eq(#T.env.CraftProfitCharDB.pins, 25)
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Pinned recipes limit reached (12). Raise it in /cp options.")
+    C.unpin(1001)
+    H.eq(#T.env.CraftProfitCharDB.pins, 24)
+    -- A pinned recipe can always be unpinned with the main window's button.
+    C.selectPin(1002)
+    C.togglePin()
+    H.eq(#T.env.CraftProfitCharDB.pins, 23)
+    H.eq(T.ns.DB.pinIndex(T.env.CraftProfitCharDB, 1002), nil)
+end)
+
+H.test("a save with 25 pins and a limit of 12 loads with all 25", function()
+    local T = W.boot(H, { items = ITEMS })
+    T.env.GetMoneyString = function(c) return "<" .. c .. ">" end
+    T.env.CraftProfitDB = { settings = { maxPins = 12 } }
+    local pins = {}
+    for i = 1, 25 do
+        pins[i] = { recipeID = i, name = "P" .. i, difficulty = 1, outputItemID = 100, qtyMin = 1, qtyMax = 1,
+            reagents = { { itemID = 1, qty = 1 } } }
+    end
+    T.env.CraftProfitCharDB = { pins = pins }
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(#T.env.CraftProfitCharDB.pins, 25)
+    H.eq(T.ns.Controller.pinLimit(), 12)
+end)
+
+H.test("the limit message is translated with the number in French and Spanish", function()
+    for locale, text in pairs({
+        frFR = "Limite de recettes épinglées atteinte (12). Augmentez-la dans /cp options.",
+        esES = "Límite de recetas fijadas alcanzado (12). Auméntalo en /cp options.",
+    }) do
+        local T = boot({ locale = locale, items = ITEMS })
+        T.ns.Controller.setPinLimit(12)
+        fillPins(T, 12)
+        T.ns.Controller.togglePin()
+        H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r " .. text)
+    end
+end)
+
 H.test("togglePin with no recipe selected does nothing", function()
     local T = boot()
     T.ns.Controller.togglePin()

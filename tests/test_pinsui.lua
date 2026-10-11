@@ -549,3 +549,33 @@ H.test("pinned rows show the name in the game's current language and update the 
     -- Pinned without a language tag (an older save) in the same way.
     H.eq(byID[2], "Item101")
 end)
+
+H.test("forty pins saved before login load whole and scroll in the list under the main window", function()
+    local T = W.boot(H, { items = ITEMS })
+    T.env.CraftProfitDB = { settings = { maxPins = 40 } }
+    local saved = {}
+    for i = 1, 40 do saved[i] = raw(i, 100, { { itemID = 1, qty = 1 } }) end
+    T.env.CraftProfitCharDB = { pins = saved }
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(#T.env.CraftProfitCharDB.pins, 40)
+    local parts = openList(T)
+    H.truthy(parts.bar.frame.shown)
+    H.eq(parts.bar.total, 40)
+    H.eq(parts.bar.visible, 6)
+    local host = T.ns.Window.pinsHost()
+    host.scripts.OnMouseWheel(host, -1)
+    H.eq(parts.bar.offset, 1)
+    -- Past the end: clamped to the last six rows.
+    parts.bar.onScroll(999)
+    H.eq(parts.bar.offset, 34)
+    for _ = 1, 50 do host.scripts.OnMouseWheel(host, -1) end
+    H.eq(parts.bar.offset, 34)
+    H.truthy(parts.rows[6].shown)
+    H.truthy(parts.rows[6].recipeID ~= nil)
+    -- Unpinning from the bottom of the scrolled list clamps the offset.
+    T.ns.Controller.unpin(parts.rows[6].recipeID)
+    H.eq(#T.env.CraftProfitCharDB.pins, 39)
+    H.eq(parts.bar.offset, 33)
+    for _ = 1, 50 do host.scripts.OnMouseWheel(host, 1) end
+    H.eq(parts.bar.offset, 0)
+end)

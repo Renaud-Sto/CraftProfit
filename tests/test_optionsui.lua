@@ -184,6 +184,7 @@ H.test("every options button label fits its button in English, French and Spanis
         local buttons = { parts.mainButton, parts.levelButton, parts.pinsButton }
         for _, b in pairs(parts.headerButtons) do buttons[#buttons + 1] = b end
         for _, b in pairs(parts.tileButtons) do buttons[#buttons + 1] = b end
+        for _, b in pairs(parts.pinButtons) do buttons[#buttons + 1] = b end
         for _, b in ipairs(buttons) do
             -- The label keeps 8 px from each end of the button.
             local need = Layout.textWidth(b.text, O.CHAR_W)
@@ -267,9 +268,9 @@ H.test("the controls panel and the window heights follow the line count", functi
     -- 8 px of air under the last line.
     H.eq(O.LIST_BOTTOM, 8)
     H.eq(p.controls.frame.height, Layout.panelHeight(O.LINE_COUNT, 14, 8))
-    local heights = p.appearance.frame.height + p.minimap.frame.height + p.windows.frame.height
-        + p.controls.frame.height
-    H.eq(O.frame():GetHeight(), Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + heights + 8 * 3)
+    local heights = p.appearance.frame.height + p.pins.frame.height + p.minimap.frame.height
+        + p.windows.frame.height + p.controls.frame.height
+    H.eq(O.frame():GetHeight(), Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + heights + 8 * 4)
 end)
 
 H.test("the command lines are translated and fit the panel in English, French and Spanish", function()
@@ -326,3 +327,103 @@ H.test("the minimap check follows /cp minimap while the window is open", functio
     H.eq(check.checked, true)
 end)
 
+
+H.test("the pinned recipes panel lights the saved limit and saves a click at once", function()
+    local T, _, slash = boot({ settings = { maxPins = 30 } })
+    slash("options")
+    local parts = T.ns.OptionsUI.parts
+    H.eq(parts.panels.pins.title.text, "PINNED RECIPES")
+    H.eq(parts.pinLabel.text, "Limit per character")
+    H.eq(lit(parts.pinButtons), "30")
+    for _, n in ipairs({ 12, 20, 30, 40 }) do H.eq(parts.pinButtons[n].text, tostring(n)) end
+    click(parts.pinButtons[12])
+    H.eq(lit(parts.pinButtons), "12")
+    H.eq(T.env.CraftProfitDB.settings.maxPins, 12)
+    H.eq(T.ns.Controller.pinLimit(), 12)
+    click(parts.pinButtons[40])
+    H.eq(lit(parts.pinButtons), "40")
+    H.eq(T.env.CraftProfitDB.settings.maxPins, 40)
+    -- The four buttons share the row like the appearance choices.
+    local width = math.floor((T.ns.OptionsUI.ROOM - 4 * 3) / 4)
+    H.eq(parts.pinButtons[12].point, { "TOPLEFT", parts.panels.pins.body, "TOPLEFT", 8, -16 })
+    H.eq(parts.pinButtons[40].point, { "TOPLEFT", parts.panels.pins.body, "TOPLEFT", 8 + 3 * (width + 4), -16 })
+end)
+
+H.test("the lit limit follows a change made while the window was closed, at each open", function()
+    local T, _, slash = boot()
+    slash("options")
+    local parts = T.ns.OptionsUI.parts
+    H.eq(lit(parts.pinButtons), "20")
+    slash("options")
+    T.ns.Controller.setPinLimit(40)
+    slash("options")
+    H.eq(lit(parts.pinButtons), "40")
+    -- And while it is open.
+    T.ns.Controller.setPinLimit(12)
+    H.eq(lit(parts.pinButtons), "12")
+end)
+
+-- Lines of `text` wrapped greedily at word boundaries into `width` px at `charW` per letter.
+local function wrappedLines(Layout, text, charW, width)
+    local lines, line = 0, nil
+    for word in text:gmatch("%S+") do
+        local candidate = line and (line .. " " .. word) or word
+        if line and Layout.textWidth(candidate, charW) > width then
+            lines, line = lines + 1, word
+        else
+            line = candidate
+        end
+    end
+    if line then lines = lines + 1 end
+    return lines
+end
+
+H.test("the note under the limits says why a higher one is slower, in two lines at most", function()
+    local expected = {
+        enUS = "A higher limit makes Search prices take longer: the auction house is searched one item at a time.",
+        frFR = "Une limite plus haute rallonge Rechercher les prix : l'hôtel des ventes est interrogé un objet à la fois.",
+        esES = "Un límite más alto alarga Buscar precios: la casa de subastas se consulta objeto por objeto.",
+    }
+    for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
+        local T, _, slash = boot(nil, locale)
+        slash("options")
+        local O, Layout = T.ns.OptionsUI, T.ns.Layout
+        local note = O.parts.pinNote
+        H.eq(note.text, expected[locale])
+        local lines = wrappedLines(Layout, note.text, O.SMALL_CHAR_W, O.ROOM)
+        H.truthy(lines <= 2 or error(locale .. ": the note takes " .. lines .. " lines"))
+        -- The label above the buttons fits on its line too.
+        local need = Layout.textWidth(O.parts.pinLabel.text, O.SMALL_CHAR_W)
+        H.truthy(need <= O.ROOM or error(locale .. ": " .. O.parts.pinLabel.text .. " needs " .. need .. " px"))
+    end
+end)
+
+H.test("the note is two lines of the small font across the panel, under the buttons", function()
+    local T = W.boot(H, {})
+    T.env.UISpecialFrames = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.CreateFontString = function(_, _, _, font)
+            local fs = W.frame()
+            fs.font = font
+            fs.SetWidth = function(self, w) self.width = w end
+            fs.SetHeight = function(self, h) self.height = h end
+            fs.SetWordWrap = function(self, v) self.wrap = v end
+            fs.SetPoint = function(self, ...) self.point = { ... } end
+            return fs
+        end
+        return f
+    end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    T.env.SlashCmdList.CRAFTPROFIT("options")
+    local O, Layout, Native = T.ns.OptionsUI, T.ns.Layout, T.ns.Native
+    local note, panel = O.parts.pinNote, O.parts.panels.pins
+    H.eq(note.font, "GameFontHighlightSmall")
+    H.eq(note.width, O.ROOM)
+    H.eq(note.height, 2 * 14)
+    H.eq(note.wrap, true)
+    -- Under the label (14), its gap (2), the buttons and their gap (4).
+    H.eq(note.point, { "TOPLEFT", panel.body, "TOPLEFT", 8, -(14 + 2 + Native.BUTTON_H + 4) })
+    H.eq(panel.frame.height, Layout.panelHeight(1, 14 + 2 + Native.BUTTON_H + 4, 2 * 14 + O.LIST_BOTTOM))
+end)

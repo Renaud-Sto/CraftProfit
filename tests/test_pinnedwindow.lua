@@ -13,13 +13,14 @@ local function raw(id, output, difficulty, name)
 end
 
 -- Boots with frames that start shown (as on the client), records named frames, their
--- anchors and sizes. `saved`: CraftProfitDB before login. `pins`: raw recipes pinned
--- after login.
+-- anchors and sizes. `saved`: CraftProfitDB before login, `charSaved`: CraftProfitCharDB
+-- before login. `pins`: raw recipes pinned after login.
 local function boot(opts)
     opts = opts or {}
     local T = W.boot(H, { items = ITEMS, locale = opts.locale })
     T.env.GetMoneyString = function(c) return "<" .. c .. ">" end
     T.env.CraftProfitDB = opts.saved
+    T.env.CraftProfitCharDB = opts.charSaved
     T.env.UISpecialFrames = {}
     T.tooltip = {}
     T.env.GameTooltip = {
@@ -44,7 +45,7 @@ local function boot(opts)
         return f
     end
     T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
-    -- Written straight into the saved table: more than DB.MAX_PINS when a test asks.
+    -- Written straight into the saved table: more than the pin limit when a test asks.
     for _, r in ipairs(opts.pins or {}) do
         local pins = T.env.CraftProfitCharDB.pins
         pins[#pins + 1] = T.ns.Recipes.normalize(r)
@@ -330,6 +331,25 @@ H.test("forty pins scroll with the wheel and the native bar", function()
     H.eq(p.bar.offset, 27)
     for _ = 1, 50 do UI.frame().scripts.OnMouseWheel(UI.frame(), 1) end
     H.eq(p.bar.offset, 0)
+end)
+
+H.test("forty pins saved before login load whole; the x of the bottom row unpins at the end of the list", function()
+    local T, UI = boot({ saved = { settings = { maxPins = 40 } }, charSaved = { pins = manyPins(40) } })
+    H.eq(#T.env.CraftProfitCharDB.pins, 40)
+    UI.show()
+    local p = UI.parts
+    p.bar.onScroll(999)
+    H.eq(p.bar.offset, 28)
+    for _ = 1, 50 do UI.frame().scripts.OnMouseWheel(UI.frame(), -1) end
+    H.eq(p.bar.offset, 28)
+    H.truthy(p.rows[12].shown)
+    local last = p.rows[12].recipeID
+    click(p.rows[12].unpin)
+    H.eq(#T.env.CraftProfitCharDB.pins, 39)
+    H.eq(T.ns.DB.pinIndex(T.env.CraftProfitCharDB, last), nil)
+    H.eq(p.bar.offset, 27)
+    H.eq(p.bar.total, 39)
+    H.truthy(p.rows[12].shown)
 end)
 
 H.test("refresh does nothing while the window is hidden and follows pins changed elsewhere", function()

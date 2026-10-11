@@ -8,7 +8,14 @@ local DB = {}
 ns.DB = DB
 
 DB.VERSION = 1
-DB.MAX_PINS = 12
+-- How many recipes a character may pin: one of these, chosen in the options window
+-- (settings.maxPins, account wide). Each pin adds its items to "Search prices", which asks
+-- the auction house one item at a time, so a higher limit makes that search longer.
+DB.PIN_LIMITS = { 12, 20, 30, 40 }
+DB.PIN_LIMIT_DEFAULT = 20
+-- What a saved pin list is cut to on load, whatever the limit: a lower limit only blocks
+-- new pins and never deletes saved ones.
+DB.PINS_ABSOLUTE_MAX = 40
 DB.PRICE_MAX_AGE = 14 * 86400
 
 DB.DEFAULTS = {
@@ -21,6 +28,7 @@ DB.DEFAULTS = {
     appearance = { header = "b", tile = "b" },
     -- The minimap button: hidden or not, and its place around the minimap in degrees.
     minimap = { hide = false, angle = 225 },
+    maxPins = DB.PIN_LIMIT_DEFAULT,
 }
 
 -- The appearance keys a save may hold; the same as Native.HEADER_VARIANTS and
@@ -64,6 +72,26 @@ function DB.angle(v)
     return v
 end
 
+-- True when `n` is exactly one of DB.PIN_LIMITS.
+function DB.isPinLimit(n)
+    for _, limit in ipairs(DB.PIN_LIMITS) do
+        if n == limit then return true end
+    end
+    return false
+end
+
+-- A usable pin limit from any value: a listed limit is kept; a number between the smallest
+-- and the largest listed limit becomes the next listed one up (never fewer pins than it
+-- asked for); anything else (not a number, NaN, below 12, above 40) is the default.
+function DB.pinLimit(v)
+    local limits = DB.PIN_LIMITS
+    if not Util.isFinite(v) or v < limits[1] or v > limits[#limits] then return DB.PIN_LIMIT_DEFAULT end
+    for _, limit in ipairs(limits) do
+        if v <= limit then return limit end
+    end
+    return DB.PIN_LIMIT_DEFAULT
+end
+
 -- Rebuilt as fresh tables: unknown fields go, and a save never shares a table with the
 -- defaults.
 local function sanitizeAppearance(s)
@@ -86,6 +114,7 @@ local function sanitizeSettings(s)
     number(s, "staleAfter", 60, 30 * 86400, DB.DEFAULTS.staleAfter)
     if type(s.showPerPoint) ~= "boolean" then s.showPerPoint = DB.DEFAULTS.showPerPoint end
     if type(s.costExpanded) ~= "boolean" then s.costExpanded = DB.DEFAULTS.costExpanded end
+    s.maxPins = DB.pinLimit(s.maxPins)
     if type(s.levelShowGrey) ~= "boolean" then s.levelShowGrey = false end
     if s.levelSort ~= "speed" then s.levelSort = "cost" end
     -- The colour themes are gone: an old save's choice is dropped.
@@ -287,7 +316,8 @@ function DB.initChar(db)
     local keep, seen = {}, {}
     for _, k in ipairs(keys) do
         local recipe = Recipes.normalize(pins[k])
-        if recipe and not seen[recipe.recipeID] and #keep < DB.MAX_PINS then
+        -- The absolute maximum, never the current limit: lowering the limit keeps every pin.
+        if recipe and not seen[recipe.recipeID] and #keep < DB.PINS_ABSOLUTE_MAX then
             seen[recipe.recipeID] = true
             keep[#keep + 1] = recipe
         end
@@ -304,11 +334,14 @@ function DB.pinIndex(db, recipeID)
     return nil
 end
 
-function DB.pinAdd(db, recipe)
+-- Pins `recipe` unless the list already holds `limit` pins or more (a list saved under a
+-- higher limit stays as it is). An invalid `limit` counts as DB.pinLimit makes it.
+-- Returns true, or false and "invalid" / "exists" / "full".
+function DB.pinAdd(db, recipe, limit)
     local clean = Recipes.normalize(recipe)
     if not clean then return false, "invalid" end
     if DB.pinIndex(db, clean.recipeID) then return false, "exists" end
-    if #db.pins >= DB.MAX_PINS then return false, "full" end
+    if #db.pins >= DB.pinLimit(limit) then return false, "full" end
     db.pins[#db.pins + 1] = clean
     return true
 end

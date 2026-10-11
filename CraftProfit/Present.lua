@@ -13,7 +13,8 @@ local NAME_KEYS = { ah = "NAME_AH", vendor = "NAME_VENDOR", disenchant = "NAME_D
 local TILE_KEYS = { ah = "TILE_AH", vendor = "TILE_VENDOR", disenchant = "TILE_DISENCHANT" }
 local UNIT_KEYS = { sec = "AGE_SEC", min = "AGE_MIN", hour = "AGE_HOUR", day = "AGE_DAY" }
 
-local DEFAULT_STALE = 3600
+-- The saved default (DB loads first), for a caller that passes no staleAfter.
+local DEFAULT_STALE = ns.DB.DEFAULTS.staleAfter
 
 -- "5m", "3h"... in the client language; nil for an invalid duration.
 function Present.durationText(L, seconds)

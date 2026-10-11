@@ -1,6 +1,7 @@
 -- Pure layout arithmetic shared by the native windows: panel heights, stacking, font
 -- fitting and scroll bar maths. No WoW API, unit tested in tests/test_layout.lua.
 local _, ns = ...
+local Util = ns.Util
 
 local Layout = {}
 ns.Layout = Layout
@@ -37,8 +38,7 @@ function Layout.rightmost(entries)
     local best, bestRight
     for i, e in ipairs(entries) do
         local r = e.right
-        local measured = type(r) == "number" and r == r and r ~= math.huge and r ~= -math.huge
-        if e.shown == true and measured and (best == nil or r > bestRight) then best, bestRight = i, r end
+        if e.shown == true and Util.isFinite(r) and (best == nil or r > bestRight) then best, bestRight = i, r end
     end
     return best
 end

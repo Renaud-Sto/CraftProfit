@@ -227,6 +227,8 @@ end
 
 DB.MAX_PROFESSIONS = 8
 DB.MAX_KNOWN = 400
+-- The longest profession name kept (bytes); a longer one is junk and the key is shown.
+DB.MAX_PROFESSION_NAME = 64
 
 -- Known recipes of each profession, kept per character so the leveling list works
 -- at the auction house with the profession window closed:
@@ -248,7 +250,7 @@ local function sanitizeKnown(db)
                 end
                 keep[#keep + 1] = {
                     key = prof.key,
-                    name = type(prof.name) == "string" and #prof.name <= 64 and prof.name or prof.key,
+                    name = type(prof.name) == "string" and #prof.name <= DB.MAX_PROFESSION_NAME and prof.name or prof.key,
                     updated = Util.isCopper(prof.updated) and prof.updated or 0,
                     recipes = recipes,
                 }
@@ -280,7 +282,7 @@ function DB.setKnown(db, key, name, recipes, now)
         entry = { key = key }
         db.known[#db.known + 1] = entry
     end
-    entry.name = type(name) == "string" and #name <= 64 and name or key
+    entry.name = type(name) == "string" and #name <= DB.MAX_PROFESSION_NAME and name or key
     entry.updated = Util.isCopper(now) and now or 0
     entry.recipes = clean
     db.knownCurrent = key

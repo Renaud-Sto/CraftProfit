@@ -7,7 +7,14 @@ local Skillup, Disenchant = ns.Data.Skillup, ns.Data.Disenchant
 local Evaluate = {}
 ns.Evaluate = Evaluate
 
-local BIND_ON_PICKUP = 1
+-- C_Item.GetItemInfo's bindType for an item bound when picked up (Enum.ItemBind.OnAcquire).
+-- It cannot change hands, so it is never sold at the auction house.
+Evaluate.BIND_ON_PICKUP = 1
+
+-- True when `info` (an item info table) says the item is bound on pickup.
+function Evaluate.isBindOnPickup(info)
+    return type(info) == "table" and info.bindType == Evaluate.BIND_ON_PICKUP
+end
 
 -- Returns "ok", entries | "na" | "unknown" | "nodata" for the disenchant results of an
 -- item. A bind-on-pickup item cannot change hands, so only a character who knows
@@ -16,7 +23,7 @@ local BIND_ON_PICKUP = 1
 -- No search can fill that gap, so it is not a missing price (see Core.bestOption).
 local function disenchantEntries(info, lookup, knowsEnchanting)
     if not info then return "unknown" end
-    if info.bindType == BIND_ON_PICKUP and not knowsEnchanting then return "na" end
+    if Evaluate.isBindOnPickup(info) and not knowsEnchanting then return "na" end
     if not Disenchant.canDisenchant(info.itemID, info.quality, info.classID) then return "na" end
     if not Util.isFinite(info.ilvl) then return "unknown" end
     local entries = lookup(Disenchant.kindOf(info.classID), info.quality, info.ilvl)
@@ -68,7 +75,7 @@ function Evaluate.run(ctx)
     local qty = recipe.outputQty
     local options = {}
 
-    if info and info.bindType == BIND_ON_PICKUP then
+    if Evaluate.isBindOnPickup(info) then
         options.ah = { status = "na" }
     else
         local value = Core.netSale(priceOf(recipe.outputItemID), qty, cut)

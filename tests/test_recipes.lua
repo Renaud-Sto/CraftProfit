@@ -200,13 +200,18 @@ H.test("liveName falls back to the stored name, then #id, and changes nothing", 
     H.eq(R.liveName({ recipeID = 9, name = "Old" }), "Old")
 end)
 
-H.test("liveName ignores empty, non-string and oversized live names", function()
+H.test("liveName never shows an empty, non-string or oversized live name", function()
     local R = load()
     for _, bad in ipairs({ "", 42, {}, string.rep("x", 201) }) do
+        -- A bad item name (no recipe name): the stored name is kept.
         local recipe = french()
-        H.eq(R.liveName(recipe, live({ recipeName = function() return bad end, itemName = function() return bad end })),
+        H.eq(R.liveName(recipe, live({ recipeName = NIL, itemName = function() return bad end })),
             "Côtelettes de lion épicées")
         H.eq(recipe.locale, "frFR")
+        -- A bad recipe name (it breaks the "string or nil" contract): never shown, never saved.
+        recipe = french()
+        H.eq(R.liveName(recipe, live({ recipeName = function() return bad end })), "Côtelettes de lion épicées")
+        H.eq(recipe.name, "Côtelettes de lion épicées")
     end
 end)
 

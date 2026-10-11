@@ -10,8 +10,9 @@ ns.Data.Skillup = Skillup
 -- estimates. Replace with measured values once known.
 Skillup.CHANCE = { optimal = 1, medium = 0.75, easy = 0.25, trivial = 0 }
 
--- Enum.TradeskillRelativeDifficulty on the Mainline API (confirm in
--- docs/probe-findings.md, F3/F7).
+-- Enum.TradeskillRelativeDifficulty: Optimal 0, Medium 1, Easy 2, Trivial 3 (the Forever
+-- UI source, Blizzard_APIDocumentationGenerated/TradeSkillUITypesDocumentation.lua).
+-- Which colour each value gets in game is not measured yet (docs/probe-findings.md F3).
 local BY_NUMBER = { [0] = "optimal", [1] = "medium", [2] = "easy", [3] = "trivial" }
 
 -- Accepts an Enum number or a name; returns the canonical lowercase name or nil.

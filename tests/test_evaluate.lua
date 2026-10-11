@@ -275,3 +275,12 @@ H.test("an unknown item level is still unknown, not no data", function()
     H.eq(r.options.disenchant, { status = "unknown" })
     H.eq(r.incomplete, true)
 end)
+
+H.test("isBindOnPickup is the one bind-on-pickup rule", function()
+    local E = load().Evaluate
+    H.truthy(E.isBindOnPickup({ bindType = E.BIND_ON_PICKUP }))
+    H.falsy(E.isBindOnPickup({ bindType = 2 }))
+    H.falsy(E.isBindOnPickup({}))
+    H.falsy(E.isBindOnPickup(nil))
+    H.falsy(E.isBindOnPickup("x"))
+end)

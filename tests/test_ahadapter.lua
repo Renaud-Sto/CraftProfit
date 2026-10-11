@@ -3,7 +3,7 @@ local H = ...
 -- Loads AHAdapter in a fake game environment. Returns a table with the adapter,
 -- what the handlers received, the calls the adapter made, and helpers.
 local function setup(apiOver)
-    local ns = H.newNS("Util", "Prices")
+    local ns = H.newNS("Util", "Data/Skillup", "Recipes", "DB", "Prices")
     local env = setmetatable({}, { __index = _G })
     local T = { clock = 100, queued = {}, calls = {}, frames = {}, opens = {}, searches = {}, snapshots = {} }
     env.GetTime = function() return T.clock end

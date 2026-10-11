@@ -38,7 +38,8 @@ local function reagents(list)
     local len = #list
     if len == 0 then return nil end
 
-    -- Verify table has exactly integer keys 1..len (no holes, no extra keys)
+    -- Exactly the integer keys 1..len: no hole, no extra key. Counting them is enough to
+    -- prove every slot 1..len is filled.
     local keyCount = 0
     for k, _ in pairs(list) do
         keyCount = keyCount + 1
@@ -47,11 +48,6 @@ local function reagents(list)
         end
     end
     if keyCount ~= len then return nil end
-
-    -- Verify no holes: each position 1..len exists
-    for i = 1, len do
-        if list[i] == nil then return nil end
-    end
 
     local merged, order = {}, {}
     for i = 1, len do

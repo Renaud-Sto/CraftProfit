@@ -1,6 +1,6 @@
 local H = ...
 
-local function load() return H.newNS("Util", "Prices").Prices end
+local function load() return H.newNS("Util", "Data/Skillup", "Recipes", "DB", "Prices").Prices end
 
 H.test("summarize takes the median of the cheapest units", function()
     local P = load()

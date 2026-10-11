@@ -48,15 +48,12 @@ function PinsUI.setStatus(text)
 end
 local setStatus = PinsUI.setStatus
 
--- Bind on pickup (C_Item.GetItemInfo's bindType), as Evaluate and Controller.historyItems.
-local BIND_ON_PICKUP = 1
-
 -- True when the recipe's crafted item can never be sold at the AH (bind on pickup): its
 -- price is not worth a search (the AH tile already says n/a). When the item info is not
 -- loaded yet, the binding is unknown: it is searched, as before.
 local function unsellableOutput(recipe, itemInfo)
-    local info = itemInfo(recipe.outputItemID)
-    if type(info) ~= "table" or info.bindType ~= BIND_ON_PICKUP then return false end
+    -- The same rule as Evaluate and Controller.historyItems.
+    if not ns.Evaluate.isBindOnPickup(itemInfo(recipe.outputItemID)) then return false end
     -- Also one of its own reagents (unlikely): the reagent still needs its price.
     for _, r in ipairs(recipe.reagents or {}) do
         if r.itemID == recipe.outputItemID then return false end

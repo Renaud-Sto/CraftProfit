@@ -1,7 +1,7 @@
 local H = ...
 
 local function load()
-    local ns = H.newNS("Util", "Format", "Core", "Data/Skillup", "Data/Disenchant", "Evaluate", "Present",
+    local ns = H.newNS("Util", "Format", "Core", "Data/Skillup", "Data/Disenchant", "Recipes", "DB", "Evaluate", "Present",
         "Locale", "Locales/enUS", "Locales/frFR", "Locales/esES")
     ns.Locale.select("enUS")
     return ns
@@ -56,7 +56,8 @@ end)
 
 H.test("a loss gives a loss verdict", function()
     local ns = load()
-    local m = model(ns, { priceOf = function(id) if id == 100 then return 100, 1 end return 100, 1 end,
+    -- Every item at 1s: the crafted item sells for less than its three reagents.
+    local m = model(ns, { priceOf = function() return 100, 1 end,
         itemInfo = function() return { quality = 1, ilvl = 1, sellPrice = 0, classID = 0, bindType = 2 } end })
     H.eq(m.verdict.kind, "loss")
     H.eq(m.verdict.text, "Best: Auction house")

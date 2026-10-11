@@ -219,7 +219,8 @@ local function buildOptions()
     parts.craftsLabel:SetPoint("LEFT", body, "TOPLEFT", 8, -OPTION_ROW_H / 2)
     paint(parts.craftsLabel, Colors.text("main"))
     -- x = 70 leaves the 5 px the input's border art draws left of its frame.
-    local box = Native.input(body, 52, 4)
+    -- As many letters as the largest craft count Evaluate accepts (9999: 4).
+    local box = Native.input(body, 52, #tostring(ns.Evaluate.MAX_CRAFTS))
     box:SetNumeric(true)
     box:SetPoint("TOPLEFT", body, "TOPLEFT", 70, rowY(1, Native.INPUT_H))
     -- Applied when the box loses focus (Enter, Escape or a click elsewhere). Hooked: the

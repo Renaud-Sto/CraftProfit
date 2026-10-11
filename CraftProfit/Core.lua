@@ -116,29 +116,44 @@ function Core.bestOption(options)
     return bestKey, bestValue, incomplete
 end
 
+-- Indices of `entries` sorted by `less` on the decorated rows (decorate(entry) returns a
+-- table of sort keys); ties keep their original order. table.sort is not stable, so the
+-- index is the last key.
+local function stableOrder(entries, decorate, less)
+    local order = {}
+    for i, e in ipairs(entries) do
+        local row = decorate(e)
+        row.index = i
+        order[i] = row
+    end
+    table.sort(order, function(a, b)
+        local result = less(a, b)
+        if result ~= nil then return result end
+        return a.index < b.index
+    end)
+    local result = {}
+    for i, o in ipairs(order) do result[i] = o.index end
+    return result
+end
+
 -- Display order for recipes by cost per point: entries = { { cost = copper|nil, chance = 0..1|nil } }.
 -- Returns the entry indices, cheapest first (a negative cost, meaning the crafts pay
 -- for themselves, comes first). Recipes that cannot give a point (chance 0) follow,
 -- then the ones whose cost is unknown. Ties keep their original order.
 function Core.rankByPointCost(entries)
-    local order = {}
-    for i, e in ipairs(entries) do
+    return stableOrder(entries, function(e)
         local group = 3
         if Util.isFinite(e.cost) then
             group = 1
         elseif e.chance == 0 then
             group = 2
         end
-        order[#order + 1] = { index = i, group = group, cost = group == 1 and e.cost or 0 }
-    end
-    table.sort(order, function(a, b)
+        return { group = group, cost = group == 1 and e.cost or 0 }
+    end, function(a, b)
         if a.group ~= b.group then return a.group < b.group end
         if a.cost ~= b.cost then return a.cost < b.cost end
-        return a.index < b.index
+        return nil
     end)
-    local result = {}
-    for i, o in ipairs(order) do result[i] = o.index end
-    return result
 end
 
 -- Display order by speed of levelling: entries = { { chance = 0..1|nil, cost = copper|nil } }.
@@ -146,46 +161,36 @@ end
 -- cheapest point first. Recipes that cannot give a point (chance 0) follow, then the
 -- ones whose chance is unknown. Ties keep their original order.
 function Core.rankBySpeed(entries)
-    local order = {}
-    for i, e in ipairs(entries) do
+    return stableOrder(entries, function(e)
         local group = 3
         if Util.isFinite(e.chance) and e.chance > 0 then
             group = 1
         elseif e.chance == 0 then
             group = 2
         end
-        order[#order + 1] = {
-            index = i, group = group, chance = group == 1 and e.chance or 0,
+        return {
+            group = group, chance = group == 1 and e.chance or 0,
             cost = Util.isFinite(e.cost) and e.cost or math.huge,
         }
-    end
-    table.sort(order, function(a, b)
+    end, function(a, b)
         if a.group ~= b.group then return a.group < b.group end
         if a.chance ~= b.chance then return a.chance > b.chance end
         if a.cost ~= b.cost then return a.cost < b.cost end
-        return a.index < b.index
+        return nil
     end)
-    local result = {}
-    for i, o in ipairs(order) do result[i] = o.index end
-    return result
 end
 
 -- Display order by net result: entries = { { net = copper|nil } }. Most profitable
 -- (or least lossy) first, unknown results last, ties keep their original order.
 function Core.rankByNet(entries)
-    local order = {}
-    for i, e in ipairs(entries) do
+    return stableOrder(entries, function(e)
         local known = Util.isFinite(e.net)
-        order[#order + 1] = { index = i, known = known, net = known and e.net or 0 }
-    end
-    table.sort(order, function(a, b)
+        return { known = known, net = known and e.net or 0 }
+    end, function(a, b)
         if a.known ~= b.known then return a.known end
         if a.net ~= b.net then return a.net > b.net end
-        return a.index < b.index
+        return nil
     end)
-    local result = {}
-    for i, o in ipairs(order) do result[i] = o.index end
-    return result
 end
 
 -- Net cost of one skill point: (cost - what the result recovers) / chance.

@@ -75,14 +75,16 @@ function Controller.itemInfo(itemID)
     return { quality = quality, ilvl = ilvl, sellPrice = sellPrice, classID = classID, bindType = bindType }
 end
 
--- Item name read secret-safely (a secret value raises when concatenated), or
+local function isSecret(v)
+    return issecretvalue ~= nil and issecretvalue(v) or false
+end
+
+-- Item name read secret-safely (Util.text: a secret value raises when concatenated), or
 -- nil while the game has not loaded the item.
 function Controller.itemName(itemID)
     local ok, name = pcall(C_Item.GetItemInfo, itemID)
-    if ok and type(name) == "string" then
-        local fine, text = pcall(function() return name .. "" end)
-        if fine and text ~= "" then return text end
-    end
+    local text = ok and Util.text(name, isSecret) or nil
+    if text then return text end
     Controller.itemInfo(itemID) -- not loaded yet: ask the game, the refresh follows
     return nil
 end
@@ -106,7 +108,7 @@ end
 function Controller.professionName(prof)
     if type(prof) ~= "table" then return "-" end
     local live = ns.Trade.professionName(prof.key)
-    if live and #live <= 64 then
+    if live and #live <= DB.MAX_PROFESSION_NAME then
         if live ~= prof.name then prof.name = live end
         return live
     end
@@ -144,8 +146,7 @@ function Controller.onOutputClick()
     end
     local itemID = recipe.outputItemID
     -- Same rule as Evaluate: an item bound when picked up cannot be auctioned.
-    local info = Controller.itemInfo(itemID)
-    if info and info.bindType == 1 then
+    if Evaluate.isBindOnPickup(Controller.itemInfo(itemID)) then
         say(L.SEARCH_UNSELLABLE)
         return
     end
@@ -593,7 +594,7 @@ end
 function Controller.historyItems(recipe)
     local all = Evaluate.wantedItems(recipe, Controller.itemInfo, Disenchant.lookup, Controller.knowsEnchanting())
     local info = Controller.itemInfo(recipe.outputItemID)
-    local optional = { [recipe.outputItemID] = info ~= nil and info.bindType == 1 or nil }
+    local optional = { [recipe.outputItemID] = Evaluate.isBindOnPickup(info) or nil }
     local isReagent = {}
     for _, r in ipairs(recipe.reagents) do isReagent[r.itemID] = true end
     local required = {}

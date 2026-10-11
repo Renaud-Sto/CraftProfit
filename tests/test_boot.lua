@@ -1391,3 +1391,101 @@ H.test("professionName reads the current-language name and writes it back, else 
     T.env.GetProfessionInfo = function() return string.rep("x", 65), "icon", 60, 75, 0, 0, 185 end
     H.eq(C.professionName(prof), "Cooking")
 end)
+
+-- A profession window whose profession is `id`, with `ids` learned (names "R<id>").
+local function openProfessionWith(T, id, name, ids)
+    mockProfession(T)
+    T.env.C_TradeSkillUI.GetBaseProfessionInfo = function() return { professionID = id, professionName = name } end
+    T.env.C_TradeSkillUI.GetAllRecipeIDs = function() return ids end
+    T.env.C_TradeSkillUI.GetRecipeInfo = function(rid)
+        return { recipeID = rid, name = "R" .. rid, learned = true, relativeDifficulty = 1 }
+    end
+end
+
+H.test("switching profession in the open window reads the new one at once (Forever's profession tabs)", function()
+    local T = boot()
+    local C = T.ns.Controller
+    openProfessionWith(T, 164, "Blacksmithing", { 5, 6 })
+    C.onEvent("TRADE_SKILL_SHOW")
+    T.run()
+    -- The tab is switched a second later: the 5 s coalescing must not swallow it.
+    T.clock = T.clock + 1
+    openProfessionWith(T, 185, "Cooking", { 7 })
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    T.run()
+    H.eq(#T.env.CraftProfitCharDB.known, 1)
+    C.onEvent("TRADE_SKILL_DATA_SOURCE_CHANGED")
+    T.run()
+    local known = T.env.CraftProfitCharDB.known
+    H.eq(#known, 2)
+    H.eq(known[2].key, "185")
+    H.eq(known[2].name, "Cooking")
+    H.eq(known[2].recipes[1].recipeID, 7)
+    H.eq(T.env.CraftProfitCharDB.knownCurrent, "185")
+end)
+
+H.test("a scan of the previous profession is dropped when the window switches profession", function()
+    local T = boot()
+    local C = T.ns.Controller
+    openProfessionWith(T, 164, "Blacksmithing", { 5, 6, 8 })
+    T.ns.Trade.KNOWN_CHUNK = 1
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    -- One chunk read, then the player picks Cooking.
+    table.remove(T.timers, 1)()
+    openProfessionWith(T, 185, "Cooking", { 7 })
+    C.onEvent("TRADE_SKILL_DATA_SOURCE_CHANGED")
+    T.run()
+    local known = T.env.CraftProfitCharDB.known
+    H.eq(#known, 1)
+    H.eq(known[1].key, "185")
+    H.eq(#known[1].recipes, 1)
+end)
+
+H.test("nothing is read while the game is switching profession, nor stored from an empty list", function()
+    local T = boot()
+    local C = T.ns.Controller
+    openProfessionWith(T, 185, "Cooking", { 7 })
+    T.env.C_TradeSkillUI.IsDataSourceChanging = function() return true end
+    H.eq(C.refreshKnown(), false)
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    T.run()
+    H.eq(#T.env.CraftProfitCharDB.known, 0)
+    T.env.C_TradeSkillUI.IsDataSourceChanging = function() return false end
+    -- The list is not built yet: an empty read stores nothing and the next update reads again.
+    T.env.C_TradeSkillUI.GetAllRecipeIDs = function() return {} end
+    C.onEvent("TRADE_SKILL_DATA_SOURCE_CHANGED")
+    T.run()
+    H.eq(#T.env.CraftProfitCharDB.known, 0)
+    T.env.C_TradeSkillUI.GetAllRecipeIDs = function() return { 7 } end
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    T.run()
+    H.eq(#T.env.CraftProfitCharDB.known, 1)
+end)
+
+H.test("pinned difficulties follow a profession switch, and wait while the switch is in progress", function()
+    local T = boot()
+    mockProfession(T)
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, T.ns.Recipes.normalize(RAW))
+    T.env.C_TradeSkillUI.GetRecipeInfo = function(id) return { recipeID = id, learned = true, relativeDifficulty = 2 } end
+    T.env.C_TradeSkillUI.IsDataSourceChanging = function() return true end
+    T.ns.Controller.onEvent("TRADE_SKILL_SHOW")
+    H.eq(T.env.CraftProfitCharDB.pins[1].difficulty, "medium")
+    T.env.C_TradeSkillUI.IsDataSourceChanging = function() return false end
+    T.ns.Controller.onEvent("TRADE_SKILL_DATA_SOURCE_CHANGED")
+    H.eq(T.env.CraftProfitCharDB.pins[1].difficulty, "easy")
+end)
+
+H.test("the profession window events are registered", function()
+    local T = W.boot(H, { items = ITEMS })
+    local registered = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.RegisterEvent = function(_, e) registered[e] = true end
+        return f
+    end
+    H.loadModule("Boot", T.ns, T.env)
+    H.truthy(registered.TRADE_SKILL_LIST_UPDATE)
+    H.truthy(registered.TRADE_SKILL_SHOW)
+    H.truthy(registered.TRADE_SKILL_DATA_SOURCE_CHANGED)
+end)

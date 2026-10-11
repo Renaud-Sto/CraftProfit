@@ -296,9 +296,10 @@ function Controller.selectPin(recipeID)
 end
 
 -- Pinned recipes keep the difficulty they had when pinned; the open profession
--- window knows the current one, which changes as the skill rises.
+-- window knows the current one, which changes as the skill rises. Runs when the window
+-- opens, switches profession and updates its list.
 function Controller.refreshPinDifficulties()
-    if not ns.Trade.isShown() then return false end
+    if not ns.Trade.isShown() or ns.Trade.isDataSourceChanging() then return false end
     local changed = false
     for _, pin in ipairs(CraftProfitCharDB.pins) do
         local current = ns.Trade.difficultyOf(pin.recipeID)
@@ -431,9 +432,10 @@ end
 local knownBusy, knownLast = false, nil
 
 -- Reads the learned recipes of the open profession for the leveling list. Bursts of
--- TRADE_SKILL_LIST_UPDATE are coalesced: one read at most every few seconds.
+-- TRADE_SKILL_LIST_UPDATE are coalesced: one read at most every few seconds. Nothing is
+-- read while the game is switching profession (the list is the old one or empty).
 function Controller.refreshKnown()
-    if knownBusy or not ns.Trade.isShown() then return false end
+    if knownBusy or not ns.Trade.isShown() or ns.Trade.isDataSourceChanging() then return false end
     local now = GetTime()
     if knownLast and now - knownLast < 5 then return false end
     local key, name = ns.Trade.professionInfo()
@@ -441,11 +443,29 @@ function Controller.refreshKnown()
     knownBusy, knownLast = true, now
     local started = ns.Trade.scanKnown(function(raws)
         knownBusy = false
+        -- An empty read (the list was not built yet) never replaces a stored list, and the
+        -- next list update may read again at once.
+        if #raws == 0 then
+            knownLast = nil
+            return
+        end
         DB.setKnown(CraftProfitCharDB, key, name, raws, time())
         if ns.LevelingUI then ns.LevelingUI.refresh() end
     end, function() knownBusy = false end)
     if not started then knownBusy = false end
     return started
+end
+
+-- The profession window opened or switched profession (Forever's profession tabs switch
+-- inside the open window, firing TRADE_SKILL_SHOW and TRADE_SKILL_DATA_SOURCE_CHANGED but
+-- no close): the scan in progress reads the previous profession and is dropped, and the
+-- few seconds of coalescing, which belonged to the previous profession, start again.
+function Controller.onProfessionChanged()
+    ns.Trade.cancelScan()
+    knownBusy, knownLast = false, nil
+    Controller.refreshPinDifficulties()
+    Controller.refreshKnown()
+    ns.Trade.invalidate()
 end
 
 -- What the leveling window shows: the current profession, its known recipes ranked
@@ -751,6 +771,8 @@ function Controller.onEvent(event, arg1, arg2)
         Controller.refreshPinDifficulties()
         Controller.refreshKnown()
         ns.Trade.invalidate()
+    elseif event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_DATA_SOURCE_CHANGED" then
+        Controller.onProfessionChanged()
     end
 end
 
@@ -838,6 +860,7 @@ SlashCmdList.CRAFTPROFIT = slash
 local frame = CreateFrame("Frame")
 for _, event in ipairs({
     "ADDON_LOADED", "ITEM_DATA_LOAD_RESULT", "TRADE_SKILL_LIST_UPDATE",
+    "TRADE_SKILL_SHOW", "TRADE_SKILL_DATA_SOURCE_CHANGED",
     "ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN",
 }) do
     pcall(frame.RegisterEvent, frame, event)

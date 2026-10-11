@@ -5,18 +5,12 @@ local DAY = 86400
 local NOW = 500 * DAY
 local CUT = 0.05
 
-local function stubDate(fmt, t)
-    assert(fmt == "*t")
-    local days = math.floor(t / DAY)
-    local secs = t - days * DAY
-    return { hour = math.floor(secs / 3600), min = math.floor(secs % 3600 / 60), sec = secs % 60,
-        wday = (days + 4) % 7 + 1 }
-end
+local stubClock = dofile("tests/stubclock.lua")
 
 local function load()
     local ns = H.newNS("Util", "Core", "Data/Skillup", "Data/Disenchant", "Recipes", "History", "Evaluate",
         "HistoryView")
-    ns.History.setDateFn(stubDate)
+    ns.History.setDateFn(stubClock(0))
     return ns
 end
 

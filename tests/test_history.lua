@@ -1,7 +1,12 @@
 local H = ...
 
+local stubClock = dofile("tests/stubclock.lua")
+
+-- Every test runs with a local clock at UTC unless it sets its own.
 local function load()
-    return H.newNS("Util", "Data/Skillup", "Recipes", "History")
+    local ns = H.newNS("Util", "Data/Skillup", "Recipes", "History")
+    ns.History.setDateFn(stubClock(0))
+    return ns
 end
 
 local DAY = 86400
@@ -311,23 +316,10 @@ H.test("sanitize keeps the first 30 tracked recipes", function()
 end)
 
 -- Daily views ---------------------------------------------------------------------
--- A local date function `offset` seconds ahead of UTC, without daylight saving, so the
--- tests never depend on the machine's time zone. NOW (day 500 since the epoch) is a
--- Sunday at 00:00 UTC.
-local function stubDate(offset)
-    return function(fmt, t)
-        assert(fmt == "*t")
-        local s = t + offset
-        local days = math.floor(s / DAY)
-        local secs = s - days * DAY
-        return { hour = math.floor(secs / 3600), min = math.floor(secs % 3600 / 60), sec = secs % 60,
-            wday = (days + 4) % 7 + 1 }
-    end
-end
-
-local function withDate(offset)
+-- NOW (day 500 since the epoch) is a Sunday at 00:00 UTC.
+local function withDate(offset, dstFrom, dstTo)
     local H2 = load().History
-    H2.setDateFn(stubDate(offset))
+    H2.setDateFn(stubClock(offset, dstFrom, dstTo))
     return H2
 end
 
@@ -343,7 +335,7 @@ H.test("dayOf and weekday follow the local date function", function()
     H.eq(H2.dayOf(NOW), NOW - 2 * 3600)          -- Sunday 02:00 local
     H.eq(H2.weekday(NOW), 7)
     H.eq(H2.weekday(NOW + DAY), 1)               -- Monday
-    H2.setDateFn(stubDate(-5 * 3600))
+    H2.setDateFn(stubClock(-5 * 3600))
     H.eq(H2.dayOf(NOW), NOW - DAY + 5 * 3600)    -- Saturday 19:00 local
     H.eq(H2.weekday(NOW), 6)
 end)
@@ -351,7 +343,7 @@ end)
 H.test("dailySeries folds raw points per local day and keeps merged points on their date", function()
     local H2 = withDate(2 * 3600)
     local series = {
-        { NOW - 20 * DAY, 300, 1, 250, 380, 4 },     -- a merged daily point
+        { NOW - 20 * DAY - 2 * 3600, 300, 1, 250, 380, 4 },  -- a merged daily point
         { NOW - 3 * 3600, 100, 1, 100, 100, 1 },     -- Saturday 23:00 local
         { NOW - 3600, 200, 1, 200, 200, 1 },         -- Sunday 01:00 local
         { NOW - 1800, 300, 1, 300, 300, 2 },         -- Sunday 01:30 local, two measures
@@ -366,11 +358,8 @@ H.test("dailySeries folds raw points per local day and keeps merged points on th
         { day = NOW - 2 * 3600, avg = 267, low = 200, high = 300, n = 3 },
     })
     H.eq(series, saved)                          -- never mutated
-    -- West of UTC the merged point keeps its calendar date.
-    H2.setDateFn(stubDate(-5 * 3600))
-    H.eq(H2.dailySeries({ { NOW - 20 * DAY, 300, 1, 250, 380, 4 } }, NOW, 30)[1].day, NOW - 20 * DAY + 5 * 3600)
     -- The period: 7 days is today and the 6 days before.
-    H2.setDateFn(stubDate(0))
+    H2.setDateFn(stubClock(0))
     local week = H2.dailySeries({ { NOW - 7 * DAY + 1, 5, 1, 5, 5, 1 }, { NOW - 6 * DAY, 6, 1, 6, 6, 1 } }, NOW, 7)
     H.eq(#week, 1)
     H.eq(week[1].avg, 6)
@@ -437,4 +426,108 @@ H.test("weekdayProfile shows a rising weekend and a falling Monday", function()
     for _, usual in ipairs({ 0, -1, 0 / 0 }) do H.eq(H2.weekdayProfile(days, usual)[1], { n = 4 }) end
     H.eq(H2.weekdayProfile(nil, 100)[3], { n = 0 })
     H.eq(H2.weekdayProfile({ "junk", { day = 0 / 0, avg = 5 }, { day = NOW, avg = "x" } }, 100)[7], { n = 0 })
+end)
+
+-- Paris-like zone (UTC+1, UTC+2 in summer). Spring forward on local day SF at 02:00 local
+-- (01:00 UTC): a 23 hour day. Fall back on local day FB at 03:00 summer time (01:00 UTC):
+-- a 25 hour day.
+local SF, FB = NOW - 20 * DAY, NOW - 6 * DAY
+local function paris() return withDate(3600, SF + 3600, FB + 3600) end
+
+H.test("a 23 hour day (spring forward) is one day with the right weekday", function()
+    local H2 = paris()
+    local midnight = SF - 3600                   -- 00:00 local, winter time
+    -- 01:00 local (winter), 05:00 and 11:00 local (summer time), 23:30 local.
+    local times = { SF, SF + 3 * 3600, SF + 9 * 3600, SF + 21 * 3600 + 1800 }
+    for _, t in ipairs(times) do
+        H.eq(H2.dayOf(t), midnight)
+        H.eq(H2.weekday(t), H2.weekday(midnight))
+    end
+    H.eq(H2.dayOf(SF + 22 * 3600), SF + 22 * 3600)  -- 00:00 local the next day
+    H.eq(H2.weekday(SF + 22 * 3600), H2.weekday(midnight) % 7 + 1)
+    local series = {}
+    for _, t in ipairs(times) do series[#series + 1] = { t, 100, 1, 100, 100, 1 } end
+    series[#series + 1] = { SF - 2 * 3600, 100, 1, 100, 100, 1 }  -- the day before, 23:00
+    series[#series + 1] = { SF + 23 * 3600, 100, 1, 100, 100, 1 } -- the day after, 01:00
+    local daily = H2.dailySeries(series, SF + 2 * DAY, 30)
+    H.eq(#daily, 3)
+    H.eq(daily[2], { day = midnight, avg = 100, low = 100, high = 100, n = 4 })
+    H.eq(H2.usual(series, SF + 2 * DAY), { price = 100, days = 3, measures = 6 })
+    -- Merged once older than 7 days, and compacting again changes nothing.
+    local out = H2.compact(series, SF + 10 * DAY)
+    H.eq(#out, 3)
+    H.eq(out[2], { midnight, 100, 1, 100, 100, 4 })
+    H.eq(H2.compact(out, SF + 10 * DAY), out)
+end)
+
+H.test("a 25 hour day (fall back) is one day with the right weekday", function()
+    local H2 = paris()
+    local midnight = FB - 7200                   -- 00:00 local, summer time
+    -- 01:00 local (summer), 02:30 local twice (summer, then winter), 23:30 local (winter).
+    local times = { FB - 3600, FB + 1800, FB + 5400, FB + 22 * 3600 + 1800 }
+    for _, t in ipairs(times) do
+        H.eq(H2.dayOf(t), midnight)
+        H.eq(H2.weekday(t), H2.weekday(midnight))
+    end
+    H.eq(H2.dayOf(FB + 23 * 3600), FB + 23 * 3600)  -- 00:00 local the next day
+    local series = {}
+    for _, t in ipairs(times) do series[#series + 1] = { t, 100, 1, 100, 100, 1 } end
+    local daily = H2.dailySeries(series, FB + DAY + 3600, 7)
+    H.eq(#daily, 1)
+    H.eq(daily[1].day, midnight)
+    H.eq(daily[1].n, 4)
+end)
+
+H.test("an unusable date or time function never raises", function()
+    local H2 = load().History
+    local series = { { NOW - DAY, 100, 1, 100, 100, 1 }, { NOW - 3600, 50, 1, 50, 50, 1 } }
+    for _, bad in ipairs({
+        function() return nil end, function() error("boom") end, function() return { hour = 1 } end,
+        function() return { year = 1970, month = 1, day = 1, hour = 0 / 0, min = 0, sec = 0, wday = 1 } end,
+    }) do
+        H2.setDateFn(bad)
+        H.eq(H2.dayOf(NOW), nil)
+        H.eq(H2.weekday(NOW), nil)
+        H.eq(H2.dailySeries(series, NOW, 7), {})
+        H.eq(H2.usual(series, NOW), nil)
+        H.eq(H2.weekdayProfile({ { day = NOW, avg = 1 } }, 1)[7], { n = 0 })
+    end
+    H.eq(H2.dayOf(0 / 0), nil)
+    -- A time function that ignores its argument (as the fake game clock does) or fails:
+    -- the start comes from the clock fields.
+    local dateFn = stubClock(2 * 3600)
+    for _, timeFn in ipairs({ function() return 1700000000 end, function() error("boom") end, function() end }) do
+        H2.setDateFn(dateFn, timeFn)
+        H.eq(H2.dayOf(NOW + 5000), NOW - 2 * 3600)
+    end
+end)
+
+H.test("west of UTC a scan at 20:00 stays on its local day once merged", function()
+    local H2 = withDate(-8 * 3600)
+    local X = NOW - 20 * DAY                     -- a UTC day; its local day starts 8 hours later
+    local localStart = X + 8 * 3600
+    -- 10:00 and 20:00 local on the same local day: two different UTC days.
+    local series = { { localStart + 10 * 3600, 100, 1, 100, 100, 1 }, { localStart + 20 * 3600, 300, 1, 300, 300, 1 } }
+    local out = H2.compact(series, NOW)
+    H.eq(out, { { localStart, 200, 1, 100, 300, 2 } })
+    H.eq(H2.compact(out, NOW), out)
+    local daily = H2.dailySeries(out, NOW, 30)
+    H.eq(daily, { { day = localStart, avg = 200, low = 100, high = 300, n = 2 } })
+    H.eq(H2.weekday(daily[1].day), H2.weekday(localStart + 20 * 3600))
+end)
+
+H.test("old daily points dated at UTC midnight load once onto a local day, then stay", function()
+    -- Saved by the earlier compaction, which dated a daily point at the start of its UTC day.
+    local old = { { NOW - 20 * DAY, 300, 1, 250, 380, 5 }, { NOW - 19 * DAY, 310, 1, 300, 320, 2 } }
+    -- East of UTC (UTC+2) midnight UTC is 02:00 local: the same date.
+    local east = withDate(2 * 3600)
+    local saved = { tracked = {}, markets = { k = { prices = {}, series = { [7] = old } } } }
+    east.sanitize(saved, NOW)
+    H.eq(saved.markets.k.series[7], { { NOW - 20 * DAY - 7200, 300, 1, 250, 380, 5 }, { NOW - 19 * DAY - 7200, 310, 1, 300, 320, 2 } })
+    -- West of UTC (UTC-8) it is 16:00 the day before: each point moves to that date, once.
+    local west = withDate(-8 * 3600)
+    local out = west.compact(old, NOW)
+    H.eq(out, { { NOW - 21 * DAY + 8 * 3600, 300, 1, 250, 380, 5 }, { NOW - 20 * DAY + 8 * 3600, 310, 1, 300, 320, 2 } })
+    H.eq(west.compact(out, NOW), out)
+    H.eq(west.dailySeries(out, NOW, 30)[1], { day = NOW - 21 * DAY + 8 * 3600, avg = 300, low = 250, high = 380, n = 5 })
 end)

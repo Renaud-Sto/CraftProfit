@@ -4,7 +4,7 @@
 -- db.tracked (at most MAX_TRACKED, paused ones included). Each price measurement of
 -- an item of an active tracked recipe becomes a point in market.series[itemID]:
 -- { t, unit, volume, low, high, n }. A raw point has low = high = unit and n = 1.
--- Points older than 7 days are merged into one point per day, and a day is dropped once
+-- Points older than 7 days are merged into one point per local day, and a day is dropped once
 -- it ended more than 60 days ago. Each tier has its own cap, so a busy week can only drop
 -- raw points, never the daily history.
 local _, ns = ...
@@ -71,6 +71,60 @@ function History.remove(db, index)
     return true
 end
 
+-- Local days ---------------------------------------------------------------------
+--
+-- The local calendar date comes from a function like the game's date("*t", t) and the
+-- start of a day from a function like time(fields): History.setDateFn(dateFn, timeFn)
+-- injects both (nil restores the game's). A day start is built from the date fields
+-- (year, month, day at 00:00), so a day with a daylight saving change (23 or 25 hours)
+-- is still one day. If the time function gives something that is not that day's start
+-- (missing, or a stub that ignores its argument), the start is derived from the clock
+-- fields, which is exact except after the change hour of a daylight saving day.
+
+local dateFn, timeFn
+
+function History.setDateFn(dateF, timeF)
+    dateFn, timeFn = dateF, timeF
+end
+
+local DATE_FIELDS = { "year", "month", "day", "hour", "min", "sec", "wday" }
+
+-- The local date fields of t, or nil when the date function gives nothing usable.
+local function localDate(t)
+    if not Util.isFinite(t) then return nil end
+    -- `date` and `time` are the game's globals (os.date and os.time in plain Lua).
+    local fn = dateFn or date or (os and os.date)
+    if type(fn) ~= "function" then return nil end
+    local ok, d = pcall(fn, "*t", t)
+    if not ok or type(d) ~= "table" then return nil end
+    for _, k in ipairs(DATE_FIELDS) do
+        if not Util.isFinite(d[k]) then return nil end
+    end
+    return d
+end
+
+-- Start of the local calendar day holding t, or nil when the local date is unknown.
+function History.dayOf(t)
+    local d = localDate(t)
+    if not d then return nil end
+    local approx = t - ((d.hour * 60 + d.min) * 60 + d.sec)
+    local fn = timeFn or time or (os and os.time)
+    if type(fn) == "function" then
+        local ok, s = pcall(fn, { year = d.year, month = d.month, day = d.day, hour = 0, min = 0, sec = 0 })
+        -- The real start equals the clock-field estimate, or differs from it by the
+        -- daylight saving shift (one hour) after the change, and never comes after t.
+        if ok and Util.isFinite(s) and s <= t and (s == approx or math.abs(s - approx) == 3600) then return s end
+    end
+    return approx
+end
+
+-- Day of the week of t, local time: 1 Monday .. 7 Sunday, or nil when unknown.
+function History.weekday(t)
+    local d = localDate(t)
+    if not d then return nil end
+    return (d.wday + 5) % 7 + 1
+end
+
 -- Points -----------------------------------------------------------------------
 
 local function validPoint(p)
@@ -78,10 +132,6 @@ local function validPoint(p)
         and Util.isCopper(p[1]) and Util.isCopper(p[2]) and p[2] > 0
         and Util.isCopper(p[3]) and Util.isCopper(p[4]) and Util.isCopper(p[5])
         and Util.count(p[6]) ~= nil
-end
-
-local function dayOf(t)
-    return math.floor(t / DAY) * DAY
 end
 
 -- The newest `max` points of a time-ordered array, in order.
@@ -94,8 +144,8 @@ end
 
 local function byTime(a, c) return a[1] < c[1] end
 
--- Merges the points older than RAW_SECONDS into one point per day (dated at the start of
--- its day), drops a day once it ended DAILY_SECONDS ago or more, and caps each tier to its
+-- Merges the points older than RAW_SECONDS into one point per local calendar day (dated
+-- at the start of that local day, History.dayOf), drops a day once it ended DAILY_SECONDS ago or more, and caps each tier to its
 -- newest points (a point ahead of `now` counts as raw). Whether a day is kept depends only
 -- on its start, never on the date of a point in it, so a daily point is never dropped by a
 -- later pass while its day is still in the window: running it again changes nothing.
@@ -110,7 +160,8 @@ function History.compact(series, now)
             if now - p[1] <= History.RAW_SECONDS then
                 raw[#raw + 1] = p
             else
-                local t = dayOf(p[1])
+                -- Unknown local date: the point stays alone, dated as it is.
+                local t = History.dayOf(p[1]) or p[1]
                 if t + DAY > oldestEnd then
                     local b = buckets[t]
                     if not b then
@@ -263,10 +314,9 @@ end
 -- History.dailySeries(series, now, days) -> { { day, avg, low, high, n }, ... }
 --   One entry per local calendar day of the last `days` days (today included) that has
 --   at least one point, ascending; days without data are absent. `day` is the epoch of
---   the start of that local day. Raw points are folded per local day (average weighted
---   by their count). A merged daily point (older than RAW_SECONDS, dated at the start of
---   its UTC day) is placed on the local day holding the middle of its UTC day, so it keeps
---   its calendar date in any time zone. Points after `now` are ignored. Never mutates
+--   the start of that local day. Every point goes to the local day holding its date (a
+--   merged daily point is dated at the start of its local day), weighted by its count.
+--   Points after `now`, and points whose local date is unknown, are ignored. Never mutates
 --   `series`; a hostile series or argument gives an empty array.
 -- History.usual(series, now) -> { price, days, measures } or nil
 --   Median of the daily averages of the last 30 days; nil under 3 distinct days.
@@ -277,39 +327,16 @@ end
 --   From dailySeries entries (or any entries with `day` and `avg` or `value`): the mean of
 --   the daily values of that weekday against `usual`, as a rounded percentage; pct is nil
 --   with fewer than 2 days or without a usable usual price.
--- History.dayOf(t), History.weekday(t) (1 Monday .. 7 Sunday) read the local date
--- through History.setDateFn(fn) (a function like date("*t", t); nil restores the game's).
+-- History.dayOf(t), History.weekday(t) (1 Monday .. 7 Sunday): see Local days above.
 
 History.USUAL_DAYS = 30
 History.USUAL_MIN_DAYS = 3
 History.FLAT_PERCENT = 3
 History.WEEKDAY_MIN_DAYS = 2
 
-local dateFn
-
-function History.setDateFn(fn)
-    dateFn = fn
-end
-
-local function localDate(t)
-    -- `date` is the game's global (os.date in plain Lua).
-    local fn = dateFn or date or os.date
-    return fn("*t", t)
-end
-
--- Start of the local calendar day holding t.
-function History.dayOf(t)
-    local d = localDate(t)
-    return t - ((d.hour * 60 + d.min) * 60 + d.sec)
-end
-
--- Day of the week of t, local time: 1 Monday .. 7 Sunday.
-function History.weekday(t)
-    return (localDate(t).wday + 5) % 7 + 1
-end
-
--- Start of the local day `k` days before the local day starting at `day` (DST safe:
--- one hour more or less never crosses the middle of a day).
+-- Start of the local day `k` days before the local day starting at `day`. Local days are
+-- 23 to 25 hours long, and the shifts of 60 days add up to an hour at most, so the middle
+-- of the target day is never missed.
 local function daysBefore(day, k)
     return History.dayOf(day - k * DAY + DAY / 2)
 end
@@ -319,13 +346,14 @@ function History.dailySeries(series, now, days)
     if type(series) ~= "table" or not Util.isCopper(now) then return out end
     days = Util.count(days)
     if not days then return out end
-    local first = daysBefore(History.dayOf(now), days - 1)
+    local today = History.dayOf(now)
+    local first = today and daysBefore(today, days - 1)
+    if not first then return out end
     local byDay, order = {}, {}
     for _, p in ipairs(series) do
         if validPoint(p) and p[1] <= now then
-            local merged = now - p[1] > History.RAW_SECONDS and p[1] % DAY == 0
-            local day = History.dayOf(merged and p[1] + DAY / 2 or p[1])
-            if day >= first then
+            local day = History.dayOf(p[1])
+            if day and day >= first then
                 local b = byDay[day]
                 if not b then
                     b = { day = day, sum = 0, low = p[4], high = p[5], n = 0 }
@@ -382,8 +410,8 @@ function History.weekdayProfile(days, usual)
     if type(days) == "table" then
         for _, d in ipairs(days) do
             local value = type(d) == "table" and (d.value or d.avg) or nil
-            if Util.isFinite(value) and Util.isFinite(d.day) then
-                local w = History.weekday(d.day)
+            local w = Util.isFinite(value) and History.weekday(d.day) or nil
+            if w then
                 sums[w] = sums[w] + value
                 counts[w] = counts[w] + 1
             end

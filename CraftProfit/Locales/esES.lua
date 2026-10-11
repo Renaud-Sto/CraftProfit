@@ -3,7 +3,7 @@ local _, ns = ...
 ns.Locale.register("esES", {
     TITLE = "CraftProfit",
     MATERIALS = "Materiales",
-    MATERIALS_MULTI = "Componentes x%d (estimación)",
+    MATERIALS_MULTI = "Materiales x%d (estimación)",
     RESULT = "RESULTADO",
     TILE_AH = "CASA (NETO)",
     TILE_VENDOR = "VENDEDOR",

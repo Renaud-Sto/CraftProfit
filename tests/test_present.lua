@@ -2,7 +2,7 @@ local H = ...
 
 local function load()
     local ns = H.newNS("Util", "Format", "Core", "Data/Skillup", "Data/Disenchant", "Evaluate", "Present",
-        "Locale", "Locales/enUS", "Locales/frFR")
+        "Locale", "Locales/enUS", "Locales/frFR", "Locales/esES")
     ns.Locale.select("enUS")
     return ns
 end
@@ -261,6 +261,12 @@ H.test("the French and Spanish models use their own panel and tile texts", funct
     H.eq(m.materials.title, "COMPOSANTS")
     H.eq(m.tiles[1].label, "HV (NET)")
     H.eq(m.tiles[3].tag, "bêta")
+    ns.Locale.select("esES")
+    m = model(ns, { crafts = 2 })
+    H.eq(m.banner.label, "RESULTADO")
+    H.eq(m.materials.title, "MATERIALES x2 (ESTIMADO)")
+    H.eq(m.lines[1].label, "Materiales x2 (estimación)")
+    H.eq(m.tiles[1].label, "CASA (NETO)")
 end)
 
 local EPIC_63 = function() return { quality = 4, ilvl = 63, sellPrice = 200, classID = 2, bindType = 2 } end

@@ -4,11 +4,12 @@ local function load()
     return H.newNS("Locale", "Locales/enUS", "Locales/frFR", "Locales/esES", "Locales/esMX")
 end
 
--- Sorted list of the format specifiers in a string, e.g. "%d/%s" -> "%d,%s".
+-- The format specifiers of a string in order, e.g. "%d/%s" -> "%d,%s". Never sorted: Lua 5.1
+-- has no positional arguments, so a translation that swaps "%s" and "%d" raises in
+-- string.format.
 local function specifiers(s)
     local found = {}
     for spec in s:gmatch("%%[%-%d%.]*[sdfxX%%]") do found[#found + 1] = spec end
-    table.sort(found)
     return table.concat(found, ",")
 end
 
@@ -69,6 +70,20 @@ H.test("every translation keeps the enUS format specifiers", function()
         for key, text in pairs(ns.Locale.tables.enUS) do
             H.eq(specifiers(ns.Locale.tables[code][key]), specifiers(text))
         end
+    end
+end)
+
+H.test("the specifier check catches swapped arguments", function()
+    H.eq(specifiers("%d of %s"), "%d,%s")
+    H.falsy(specifiers("%s of %d") == specifiers("%d of %s"))
+end)
+
+H.test("the materials label keeps its noun when a craft count is typed", function()
+    local ns = load()
+    for _, code in ipairs({ "enUS", "frFR", "esES" }) do
+        local t = ns.Locale.tables[code]
+        H.eq(string.format(t.MATERIALS_MULTI, 3):sub(1, #t.MATERIALS + 1), t.MATERIALS .. " ")
+        H.eq(string.format(t.PANEL_MATERIALS_MULTI, 3):sub(1, #t.PANEL_MATERIALS + 1), t.PANEL_MATERIALS .. " ")
     end
 end)
 

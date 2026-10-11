@@ -71,7 +71,7 @@ H.test("an item that never answers is reported at the end", function()
     P.onSearchResults(3, listing)
     P.onSearchResults(101, listing)
     H.eq(P.state, "done")
-    H.eq(P.status, "Updated 4 of 5 items · 1 did not answer, try again")
+    H.eq(P.status, "Updated 4 of 5 items · no answer: 1, try again")
     H.eq(T.ns.Controller.market().prices[100], nil)
 end)
 
@@ -175,7 +175,7 @@ H.test("an empty AH listing counts as answered with no listing", function()
     P.onSearchResults(1, {})
     for _, id in ipairs({ 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
     H.eq(P.state, "done")
-    H.eq(P.status, "Updated 5 of 5 items · 1 have no listing (nobody is selling them now)")
+    H.eq(P.status, "Updated 5 of 5 items · no listing: 1 (nobody is selling them now)")
     P.startSearch()
     for _, id in ipairs({ 1, 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
     H.eq(P.status, "Updated 5 items")
@@ -607,7 +607,7 @@ H.test("forty pins saved before login load whole and scroll in the list under th
     H.eq(parts.bar.offset, 0)
 end)
 
-H.test("searchSummary: every combination of answers, the counts adding up", function()
+H.test("searchSummary: every combination of answers, the counts adding up, reading right for 1 and many", function()
     local T = boot()
     local P, L = T.ns.PinsUI, T.ns.L
     local function s(ok, total, noListing, failed)
@@ -615,12 +615,12 @@ H.test("searchSummary: every combination of answers, the counts adding up", func
     end
     H.eq(s(0, 0, 0, 0), "Updated 0 items")
     H.eq(s(5, 5, 0, 0), "Updated 5 items")
-    H.eq(s(5, 5, 2, 0), "Updated 5 of 5 items · 2 have no listing (nobody is selling them now)")
-    H.eq(s(3, 5, 0, 2), "Updated 3 of 5 items · 2 did not answer, try again")
-    H.eq(s(3, 5, 1, 2), "Updated 3 of 5 items · 1 have no listing (nobody is selling them now)"
-        .. " · 2 did not answer, try again")
-    H.eq(s(5, 5, 5, 0), "Updated 5 of 5 items · 5 have no listing (nobody is selling them now)")
-    H.eq(s(0, 4, 0, 4), "Updated 0 of 4 items · 4 did not answer, try again")
+    H.eq(s(5, 5, 2, 0), "Updated 5 of 5 items · no listing: 2 (nobody is selling them now)")
+    H.eq(s(3, 5, 0, 2), "Updated 3 of 5 items · no answer: 2, try again")
+    H.eq(s(3, 5, 1, 2), "Updated 3 of 5 items · no listing: 1 (nobody is selling them now)"
+        .. " · no answer: 2, try again")
+    H.eq(s(5, 5, 5, 0), "Updated 5 of 5 items · no listing: 5 (nobody is selling them now)")
+    H.eq(s(0, 4, 0, 4), "Updated 0 of 4 items · no answer: 4, try again")
     -- Missing counts read as 0.
     H.eq(P.searchSummary(L, {}), "Updated 0 items")
 end)
@@ -634,12 +634,12 @@ H.test("the summary reads in French and Spanish and fits the two status lines", 
         local lines = Layout.wrapLines(longest, 6, T.ns.Window.INNER_WIDTH)
         H.truthy(lines <= 2 or error(locale .. ": " .. longest .. " takes " .. lines .. " lines"))
         if locale == "frFR" then
-            H.eq(longest, "38 objets sur 40 mis à jour · 12 sans annonce (personne n'en vend en ce moment)"
-                .. " · 2 sans réponse, réessayez")
+            H.eq(longest, "38 objets sur 40 mis à jour · sans offre\194\160: 12 (personne n'en vend)"
+                .. " · sans réponse\194\160: 2, réessayez")
             H.eq(P.searchSummary(L, { ok = 5, total = 5 }), "5 objets mis à jour")
         elseif locale == "esES" then
-            H.eq(longest, "38 de 40 objetos actualizados · 12 sin anuncios (nadie los vende ahora)"
-                .. " · 2 sin respuesta, inténtalo de nuevo")
+            H.eq(longest, "38 de 40 objetos actualizados · sin ofertas: 12 (nadie las vende)"
+                .. " · sin respuesta: 2, reintenta")
             H.eq(P.searchSummary(L, { ok = 5, total = 5 }), "5 objetos actualizados")
         end
     end
@@ -671,7 +671,7 @@ H.test("a recipe search is ignored while a pinned search runs, which carries on 
     H.eq(P.state, "running")
     for _, id in ipairs({ 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
     H.eq(T.sent, { 1, 2, 100, 3, 101 })
-    H.eq(P.status, "Updated 5 of 5 items · 1 have no listing (nobody is selling them now)")
+    H.eq(P.status, "Updated 5 of 5 items · no listing: 1 (nobody is selling them now)")
 end)
 
 H.test("a pinned search right after a recipe search starts clean", function()
@@ -682,7 +682,7 @@ H.test("a pinned search right after a recipe search starts clean", function()
     P.startSearch({ recipe })
     P.onSearchResults(4, {})
     P.onSearchResults(101, {})
-    H.eq(P.status, "Updated 2 of 2 items · 2 have no listing (nobody is selling them now)")
+    H.eq(P.status, "Updated 2 of 2 items · no listing: 2 (nobody is selling them now)")
     P.startSearch()
     H.eq(P.status, "Searching 0/5")
     for _, id in ipairs({ 1, 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
@@ -711,4 +711,34 @@ H.test("the footer button labels fit their half-width buttons in English, French
         if locale == "frFR" then H.eq(parts.search.text, "Actualiser épinglées") end
         if locale == "esES" then H.eq(parts.search.text, "Actualizar fijadas") end
     end
+end)
+
+H.test("the main window's Refresh recipe button is off while any search runs, back on at done or cancel", function()
+    local T = boot()
+    local P, C = T.ns.PinsUI, T.ns.Controller
+    local b = T.ns.Window.parts.refresh
+    C.setRecipe(T.ns.Recipes.normalize(raw(9, 101, { { itemID = 4, qty = 1 } })), "profession")
+    T.ns.AH.isOpen = true
+    C.onAHOpen(true)
+    H.eq(b.enabled, true)
+    -- A pinned search: off until it is done.
+    P.startSearch()
+    H.eq(b.enabled, false)
+    -- A render meanwhile (prices arriving) keeps it off.
+    C.refresh()
+    H.eq(b.enabled, false)
+    for _, id in ipairs({ 1, 2, 100, 3, 101 }) do P.onSearchResults(id, listing) end
+    H.eq(P.state, "done")
+    H.eq(b.enabled, true)
+    -- A recipe search: off; the AH closing cancels it and the button stays off (AH closed),
+    -- then comes back when the AH opens again.
+    C.refreshRecipe()
+    H.eq(b.enabled, false)
+    T.ns.AH.isOpen = false
+    C.onAHOpen(false)
+    H.eq(P.state, "cancelled")
+    H.eq(b.enabled, false)
+    T.ns.AH.isOpen = true
+    C.onAHOpen(true)
+    H.eq(b.enabled, true)
 end)

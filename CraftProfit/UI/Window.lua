@@ -283,12 +283,14 @@ local function buildOptions()
     parts.refresh = refresh
 end
 
--- "Refresh recipe" works while the AH is open and a recipe is displayed (lastModel is
--- cleared by the empty window). Called on every render and when the AH opens or closes.
+-- "Refresh recipe" works while the AH is open, a recipe is displayed (lastModel is cleared
+-- by the empty window) and no search runs (pinned or recipe: one at a time). Called on every
+-- render, when the AH opens or closes, and when a search starts or ends.
 function Window.updateRefreshButton()
     local b = parts.refresh
     if not b then return end
-    local on = ns.AH ~= nil and ns.AH.isOpen == true and Window.lastModel ~= nil
+    local searching = ns.PinsUI ~= nil and ns.PinsUI.state == "running"
+    local on = ns.AH ~= nil and ns.AH.isOpen == true and Window.lastModel ~= nil and not searching
     b.enabled = on
     if type(b.SetEnabled) == "function" then b:SetEnabled(on) end
 end

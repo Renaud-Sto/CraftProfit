@@ -55,8 +55,8 @@ ns.Locale.register("frFR", {
     -- that apply (each starts with its middle-dot separator).
     SEARCH_UPDATED = "%d objets mis à jour",
     SEARCH_UPDATED_OF = "%d objets sur %d mis à jour",
-    SEARCH_NO_LISTING = " · %d sans annonce (personne n'en vend en ce moment)",
-    SEARCH_NO_ANSWER = " · %d sans réponse, réessayez",
+    SEARCH_NO_LISTING = " · sans offre\194\160: %d (personne n'en vend)",
+    SEARCH_NO_ANSWER = " · sans réponse\194\160: %d, réessayez",
     SEARCH_NEED_AH = "Ouvrez d'abord l'hôtel des ventes",
     SEARCH_UNSELLABLE = "Cet objet ne peut pas être vendu à l'hôtel des ventes",
     ITEM_NOT_LOADED = "Objet pas encore chargé, réessayez dans un instant",

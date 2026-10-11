@@ -185,6 +185,8 @@ local function finishSearch(summary)
             ok = summary.ok, total = summary.total, noListing = notFound, failed = #summary.failed,
         }))
     end
+    -- "Refresh recipe" comes back now that no search runs.
+    ns.Window.updateRefreshButton()
     ctl.commitSearch()
     ctl.requestRefresh()
 end
@@ -217,6 +219,7 @@ function PinsUI.startSearch(recipes)
         onDone = finishSearch,
     })
     PinsUI.state = "running"
+    ns.Window.updateRefreshButton()
     setStatus(string.format(L.SEARCHING, 0, #ids))
     queue:start(GetTime())
     if queue.state == "running" then

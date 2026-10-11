@@ -55,8 +55,8 @@ ns.Locale.register("enUS", {
     -- that apply (each starts with its middle-dot separator).
     SEARCH_UPDATED = "Updated %d items",
     SEARCH_UPDATED_OF = "Updated %d of %d items",
-    SEARCH_NO_LISTING = " · %d have no listing (nobody is selling them now)",
-    SEARCH_NO_ANSWER = " · %d did not answer, try again",
+    SEARCH_NO_LISTING = " · no listing: %d (nobody is selling them now)",
+    SEARCH_NO_ANSWER = " · no answer: %d, try again",
     SEARCH_NEED_AH = "Open the auction house first",
     SEARCH_UNSELLABLE = "This item cannot be sold at the auction house",
     ITEM_NOT_LOADED = "Item not loaded yet, try again in a moment",

@@ -295,8 +295,9 @@ H.test("an input is an InputBoxTemplate without auto focus that gives up its foc
     local cleared = 0
     box.ClearFocus = function() cleared = cleared + 1 end
     box.scripts.OnEnterPressed(box)
-    box.scripts.OnEscapePressed(box)
-    H.eq(cleared, 2)
+    H.eq(cleared, 1)
+    -- Escape is the template's own handler: nothing of ours is added to it.
+    H.eq(box.scripts.OnEscapePressed, nil)
 end)
 
 H.test("searchIcon uses the game's magnifier atlas when the client knows it", function()

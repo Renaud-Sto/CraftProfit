@@ -988,3 +988,21 @@ H.test("the main window shows n/a on the AH tile of a bound-on-pickup item, as b
     H.eq(tile.key, "ah")
     H.eq(tile.value, "n/a")
 end)
+
+H.test("the hidden pinned list (AH closed) evaluates nothing, and fills again when the AH opens", function()
+    local T = boot()
+    local parts = openList(T)
+    T.ns.AH.isOpen = false
+    T.ns.Controller.onAHOpen(false)
+    local Controller = T.ns.Controller
+    local evaluate, calls = Controller.evaluate, 0
+    Controller.evaluate = function(...) calls = calls + 1; return evaluate(...) end
+    Controller.refresh()
+    T.ns.PinsUI.refresh()
+    H.eq(calls, 0)
+    -- Pinned while hidden: the list shows it once the AH opens.
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(3, 102, { { itemID = 1, qty = 1 } }))
+    openList(T)
+    H.truthy(calls > 0)
+    H.eq(parts.panel.title.text, "PINNED RECIPES (3/20)")
+end)

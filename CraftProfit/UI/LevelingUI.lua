@@ -52,17 +52,9 @@ LevelingUI.EMPTY_WIDTH = EMPTY_WIDTH
 LevelingUI.VALUE_W = VALUE_W
 LevelingUI.CRAFTS_W = CRAFTS_W
 
--- Width of a string at its natural size; 0 when it cannot be measured.
-local function textWidth(fs)
-    local width
-    if type(fs.GetUnboundedStringWidth) == "function" then width = fs:GetUnboundedStringWidth() end
-    if type(width) ~= "number" then width = fs:GetStringWidth() end
-    return type(width) == "number" and width or 0
-end
-
 -- The grey-recipes label stops before the hidden count beside it: cut, never under it.
 local function fitGreyLabel()
-    local hiddenW = textWidth(parts.hidden)
+    local hiddenW = Native.naturalWidth(parts.hidden)
     local room = INNER_WIDTH - GREY_LABEL_X - HIDDEN_RIGHT
     if hiddenW > 0 then room = room - hiddenW - HIDDEN_GAP end
     parts.grey:setMaxWidth(room)
@@ -127,8 +119,7 @@ function LevelingUI.refresh()
             row.crafts:SetText(ns.Present.craftsPerPoint(perPoint and perPoint.chance) or "")
             local text, tone = ns.Present.pointRow(L, ctl.fmt, perPoint)
             row.value:SetText(text)
-            local tc = tone == "profit" and Colors.FIXED.profit or tone == "loss" and Colors.FIXED.loss
-                or Colors.text("muted")
+            local tc = Colors.tone(tone, "muted")
             row.value:SetTextColor(tc[1], tc[2], tc[3], tc[4])
             row.selected:SetShown(recipe.recipeID == currentID)
             row:Show()

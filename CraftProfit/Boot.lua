@@ -30,8 +30,6 @@ function Controller.fmt(copper)
     return Format.money(copper, coinString)
 end
 
--- Item facts, or nil while the game has not loaded the item yet. The request is
--- made once per item; ITEM_DATA_LOAD_RESULT triggers the refresh.
 -- Prices differ between markets, so each one has its own price table and history.
 -- Forever has rulesets (Normal, PvP, RP, Hardcore) instead of realms; in the beta the
 -- ruleset is the "realm" the character is on (for example "Classic Beta PvP 2", realm
@@ -71,6 +69,8 @@ local function plain(v)
     return v
 end
 
+-- Item facts, or nil while the game has not loaded the item yet. The request is
+-- made once per item; ITEM_DATA_LOAD_RESULT triggers the refresh.
 function Controller.itemInfo(itemID)
     local ok, _, _, quality, ilvl, _, _, _, _, _, _, sellPrice, classID, _, bindType = pcall(C_Item.GetItemInfo, itemID)
     if not ok then return nil end
@@ -753,6 +753,7 @@ function Controller.init()
         onRefreshRecipe = Controller.refreshRecipe,
         onReagentClick = Controller.onReagentClick,
         onOutputClick = Controller.onOutputClick,
+        itemName = Controller.itemName,
         onCraftsChange = Controller.setCrafts,
         onTrackToggle = Controller.setTracking,
         onPerPointToggle = function(checked)

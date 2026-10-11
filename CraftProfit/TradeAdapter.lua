@@ -28,10 +28,9 @@ end
 Trade.ENCHANTING_SKILL_LINE = 333
 local ENCHANTING_SPELL = 7411
 
--- True when the character has the profession. GetProfessions lists the
--- professions' indices; GetProfessionInfo returns the skill line as 7th value.
 -- The character's professions as { name, line } (the name in the client's current
--- language; works with every profession window closed), possibly empty.
+-- language; works with every profession window closed), possibly empty. GetProfessions
+-- lists the professions' indices; GetProfessionInfo returns the skill line as 7th value.
 local function professions()
     local list = {}
     if type(GetProfessions) ~= "function" or type(GetProfessionInfo) ~= "function" then return list end
@@ -47,6 +46,7 @@ local function professions()
     return list
 end
 
+-- True when the character has the profession (its skill line).
 function Trade.hasProfession(skillLine)
     for _, prof in ipairs(professions()) do
         if prof.line == skillLine then return true end

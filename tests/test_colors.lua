@@ -74,3 +74,11 @@ H.test("escape turns a colour into a chat colour escape and clamps out-of-range 
     H.eq(Colors.escape({ 2, -1, 0.5 }), "|cffff0080")
     H.eq(Colors.escape(Colors.FIXED.best), "|cffffd100")
 end)
+
+H.test("tone gives the meaning colour of a gain or a loss, else the asked text colour", function()
+    local C = load()
+    H.eq(C.tone("profit", "muted"), C.FIXED.profit)
+    H.eq(C.tone("loss", "main"), C.FIXED.loss)
+    H.eq(C.tone("muted", "muted"), C.text("muted"))
+    H.eq(C.tone(nil, "main"), C.text("main"))
+end)

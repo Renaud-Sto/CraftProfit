@@ -108,9 +108,7 @@ function PinsUI.rowValue(item, byPoint)
     local result = item.result
     if byPoint then
         local text, tone = ns.Present.pointRow(L, fmt, result.perPoint)
-        local colour = tone == "profit" and Colors.FIXED.profit or tone == "loss" and Colors.FIXED.loss
-            or Colors.text("muted")
-        return text, colour
+        return text, Colors.tone(tone, "muted")
     elseif result.net ~= nil then
         return fmt(result.net), result.net >= 0 and Colors.FIXED.profit or Colors.FIXED.loss
     end
@@ -118,7 +116,9 @@ function PinsUI.rowValue(item, byPoint)
 end
 
 function PinsUI.refresh()
-    if not host then return end
+    -- Hidden (AH closed): nothing to draw, so no pin is evaluated. onAHOpen refreshes the
+    -- list when it shows again.
+    if not host or not host:IsShown() then return end
     local pins = CraftProfitCharDB.pins
     local byPoint = CraftProfitCharDB.sortMode == ns.DB.SORT_POINT
     local ordered = PinsUI.orderedPins(pins, CraftProfitCharDB.sortMode, ctl.evaluate)
@@ -353,7 +353,12 @@ function PinsUI.onAHOpen(open)
     if not host then return end
     host:SetShown(open)
     if not open and queue and queue.state == "running" then queue:cancel() end
-    PinsUI.refresh()
+    if open then
+        PinsUI.refresh()
+    else
+        -- The hidden list no longer takes room: the window shrinks (refresh would skip it).
+        ns.Window.relayout()
+    end
 end
 
 function PinsUI.onSearchResults(itemID, listings)

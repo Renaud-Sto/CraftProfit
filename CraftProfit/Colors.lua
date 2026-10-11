@@ -45,6 +45,14 @@ function Colors.text(kind)
     return { f[1], f[2], f[3], f[4] }
 end
 
+-- The colour of a value's tone (Present.pointRow, a per-point line): "profit" and "loss"
+-- keep their meaning colours; anything else is the game's text colour `neutral` ("muted"
+-- in the lists, "main" in the main window).
+function Colors.tone(tone, neutral)
+    if tone == "profit" or tone == "loss" then return Colors.FIXED[tone] end
+    return Colors.text(neutral)
+end
+
 -- "|cffRRGGBB" for a { r, g, b } colour, to colour part of a string (close with "|r").
 function Colors.escape(c)
     local function byte(v) return math.floor(math.max(0, math.min(1, v)) * 255 + 0.5) end

@@ -1,6 +1,7 @@
 -- Native widget kit: the window, buttons, check boxes and inputs drawn by Blizzard's own
 -- templates (ButtonFrameTemplate, UIPanelButtonTemplate, UICheckButtonTemplate,
--- InputBoxTemplate), so CraftProfit looks like a panel of the game (see
+-- InputBoxTemplate), plus the panels, tiles, result banner, list rows and scroll bar built
+-- on the game's atlases, so CraftProfit looks like a panel of the game (see
 -- docs/superpowers/specs/2026-10-10-native-ui-design.md). Layout maths: UI/Layout.lua.
 --
 -- Rules every function here keeps:
@@ -62,13 +63,15 @@ local function try(fn, ...)
     return (pcall(fn, ...))
 end
 
--- Width of a string at its natural size (an anchored font string can report a capped one).
-local function naturalWidth(fs)
+-- Width of a string at its natural size (an anchored font string can report a capped one);
+-- 0 when it cannot be measured. Shared by the windows (Window, LevelingUI).
+function Native.naturalWidth(fs)
     local width
     if type(fs.GetUnboundedStringWidth) == "function" then width = fs:GetUnboundedStringWidth() end
     if type(width) ~= "number" then width = fs:GetStringWidth() end
-    return width
+    return type(width) == "number" and width or 0
 end
+local naturalWidth = Native.naturalWidth
 
 -- Paints a font string with one of the game's colour objects (NORMAL_FONT_COLOR...);
 -- does nothing when the object is missing or not a colour.
@@ -440,7 +443,6 @@ function Native.check(parent, text, onToggle, maxWidth)
     function c:setText(value)
         label:SetText(value or "")
         local width = naturalWidth(label)
-        width = type(width) == "number" and width or 0
         if type(maxWidth) == "number" then width = math.min(width, maxWidth) end
         self:SetHitRectInsets(0, -(width + CHECK_LABEL_GAP), 0, 0)
     end
@@ -465,10 +467,9 @@ function Native.input(parent, width, maxLetters)
     box:SetSize(width or 52, Native.INPUT_H)
     box:SetAutoFocus(false)
     if maxLetters then box:SetMaxLetters(maxLetters) end
-    -- The template has no Enter handler; it already clears the focus on Escape, so that
-    -- one is hooked, not replaced (a second ClearFocus is harmless).
+    -- The template has no Enter handler. Escape is the template's own (InputBoxScriptTemplate:
+    -- OnEscapePressed = EditBox_ClearFocus), left alone.
     box:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
-    box:HookScript("OnEscapePressed", function(self) self:ClearFocus() end)
     return box
 end
 
@@ -500,7 +501,8 @@ local PANEL_SIDE = PANEL_EDGE + 2
 -- tables made here go in. Frames are never destroyed by the game, so nothing is removed.
 Native.registry = { panels = {}, tiles = {} }
 
--- The header strip and tile card in use: header, tile keys.
+-- The header strip and tile card in use: header, tile keys. Read by the tests only (the
+-- addon keeps the saved choice in CraftProfitDB.settings.appearance).
 function Native.appearance()
     return Native.headerVariant, Native.tileVariant
 end
@@ -648,6 +650,13 @@ Native.TILE_FONTS = {
     { "GameFontNormalMed2", 14 },
     { "GameFontNormal", 12 },
 }
+-- The heights of a font ladder, for Layout.fitSize; built once, not at every render.
+local function sizesOf(fonts)
+    local sizes = {}
+    for i, font in ipairs(fonts) do sizes[i] = font[2] end
+    return sizes
+end
+local TILE_SIZES = sizesOf(Native.TILE_FONTS)
 local TILE_OUTLINE = 2
 local HOVER_FILE = "Interface\\QuestFrame\\UI-QuestTitleHighlight"
 
@@ -779,9 +788,7 @@ function Native.tile(parent, width, height)
             label = label .. " " .. tag
         end
         self.label:SetText(label)
-        local fonts = Native.TILE_FONTS
-        local sizes = {}
-        for i, font in ipairs(fonts) do sizes[i] = font[2] end
+        local fonts, sizes = Native.TILE_FONTS, TILE_SIZES
         self.value:SetFontObject(fonts[1][1])
         self.value:SetText(spec.value or "")
         local room = (f:GetWidth() or width or 110) - Native.TILE_PAD * 2
@@ -856,6 +863,7 @@ Native.BANNER_EDGE_PX = 2
 Native.BANNER_VALUE_ROOM = 120
 -- Same game fonts as the tile values (never SetFont with a file).
 Native.BANNER_FONTS = Native.TILE_FONTS
+local BANNER_SIZES = sizesOf(Native.BANNER_FONTS)
 local BANNER_GAP = 8
 local BANNER_TONES = { profit = "profit", loss = "loss", incomplete = "incomplete" }
 
@@ -923,9 +931,7 @@ function Native.banner(parent, height, width)
         self.label:SetText(labelText)
         self.text:SetText(spec.text or "")
 
-        local fonts = Native.BANNER_FONTS
-        local sizes = {}
-        for i, font in ipairs(fonts) do sizes[i] = font[2] end
+        local fonts, sizes = Native.BANNER_FONTS, BANNER_SIZES
         self.value:SetFontObject(fonts[1][1])
         self.value:SetText(spec.value or "")
         local size = Layout.fitSize(naturalWidth(self.value), sizes[1], Native.BANNER_VALUE_ROOM, sizes)
@@ -943,7 +949,7 @@ function Native.banner(parent, height, width)
         local frameWidth = f:GetWidth()
         if type(frameWidth) ~= "number" or frameWidth <= 0 then frameWidth = self.width end
         local valueWidth, textWidth = naturalWidth(self.value), naturalWidth(self.text)
-        if type(frameWidth) == "number" and type(valueWidth) == "number" and type(textWidth) == "number"
+        if type(frameWidth) == "number" and textWidth > 0
             and textWidth > frameWidth - pad * 2 - valueWidth - BANNER_GAP then
             self.text:SetFontObject("GameFontNormalSmall")
         end

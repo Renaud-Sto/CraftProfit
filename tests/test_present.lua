@@ -319,3 +319,18 @@ H.test("unknownText and pointRow say no data only for a disenchant data gap with
     H.eq({ P.pointRow(L, fmt, { chance = 1 }, gap) }, { "no data", "muted" })
     H.eq({ P.pointRow(L, fmt, { chance = 0 }, gap) }, { "n/a", "muted" })
 end)
+
+H.test("the per-point line shows a 99.5% chance with one decimal, never 100%", function()
+    local ns = load()
+    local P = ns.Present
+    local result = {
+        crafts = 1, cost = { total = 100, missing = {}, lines = {} }, options = {
+            ah = { status = "ok", value = 200 }, vendor = { status = "na" }, disenchant = { status = "na" } },
+        best = "ah", bestValue = 200, net = 100, incomplete = false,
+        perPoint = { chance = 0.995, cost = 500, estimate = true },
+    }
+    local m = P.build(result, ns.L, ns.Format.money)
+    local line = m.lines[#m.lines]
+    H.eq(line.key, "perpoint")
+    H.eq(line.value, "5s (99.5%, estimate)")
+end)

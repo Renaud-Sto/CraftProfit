@@ -74,8 +74,8 @@ local function perPointLine(L, fmt, perPoint)
     if perPoint.chance == nil then line.value = L.UNKNOWN; return line end
     if perPoint.chance == 0 then line.value = L.NA; return line end
     if perPoint.cost == nil then line.value = L.UNKNOWN; return line end
-    local percent = math.floor(perPoint.chance * 100 + 0.5)
-    local suffix = " (" .. percent .. "%, " .. L.ESTIMATE .. ")"
+    -- Present.percent: a chance that is not whole keeps a decimal (99.5%, never 100%).
+    local suffix = " (" .. Present.percent(perPoint.chance) .. "%, " .. L.ESTIMATE .. ")"
     if perPoint.cost < 0 then
         line.label, line.value, line.tone = L.PER_POINT_GAIN, fmt(-perPoint.cost) .. suffix, "profit"
     else

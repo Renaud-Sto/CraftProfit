@@ -36,8 +36,10 @@ H.test("tracking is capped, resumable, and keeps the recipe copy", function()
     H.truthy(H2.track(db, recipe(1)))
     H.truthy(H2.isActive(db, 1))
     H.eq(#db.tracked, 1)
-    for id = 2, H2.MAX_TRACKED do H.truthy(H2.track(db, recipe(id))) end
+    for id = 2, 30 do H.truthy(H2.track(db, recipe(id))) end
+    H.eq(#db.tracked, 30)
     H.eq({ H2.track(db, recipe(999)) }, { false, "full" })
+    H.eq(#db.tracked, 30)
     H.truthy(H2.remove(db, 1))
     H.falsy(H2.remove(db, 99))
     H.truthy(H2.track(db, recipe(999)))
@@ -92,91 +94,133 @@ H.test("a recipe blocked by a near future point is not counted as recorded", fun
     H.eq(#m.series[1], 1)
 end)
 
--- One point a day for a year, as a quiet user leaves it.
-local function yearOfDays(H2)
+H.test("retention is 7 days raw and 60 days daily, with no weekly tier, for 30 recipes", function()
+    local H2 = load().History
+    H.eq(H2.RAW_SECONDS, 7 * DAY)
+    H.eq(H2.DAILY_SECONDS, 60 * DAY)
+    H.eq(H2.MAX_RAW, 150)
+    H.eq(H2.MAX_DAILY, 62)
+    H.eq(H2.MAX_TRACKED, 30)
+    H.eq(H2.WEEKLY_SECONDS, nil)
+    H.eq(H2.MAX_WEEKLY, nil)
+end)
+
+-- One point a day (an hour into the day) for `days` days, as a quiet user leaves it.
+local function quietDays(days)
     local series = {}
-    for age = 364, 1, -1 do series[#series + 1] = { NOW - age * DAY, 100, 1, 100, 100, 1 } end
-    -- Twice: a first pass can date a weekly point (its week's start) over a year back,
-    -- and the next pass drops it, as the daily records of a real year did.
-    return H2.compact(H2.compact(series, NOW), NOW)
+    for age = days, 1, -1 do series[#series + 1] = { NOW - age * DAY + 3600, 100, 1, 100, 100, 1 } end
+    return series
 end
 
+-- Counts the points of each tier. A daily point is dated at the start of its day, so the
+-- oldest kept day may start up to a day before the 60 day limit.
 local function tiers(H2, series, now)
-    local raw, daily, weekly = 0, 0, 0
+    local raw, daily, older = 0, 0, 0
     for _, p in ipairs(series) do
         local age = (now or NOW) - p[1]
-        if age > H2.DAILY_SECONDS then weekly = weekly + 1
+        if age >= H2.DAILY_SECONDS + DAY then older = older + 1
         elseif age > H2.RAW_SECONDS then daily = daily + 1
         else raw = raw + 1 end
     end
-    return raw, daily, weekly
+    return raw, daily, older
 end
 
-H.test("a busy fortnight never evicts the daily and weekly tiers", function()
+H.test("a busy week never evicts the daily tier", function()
     local H2 = load().History
-    local year = yearOfDays(H2)
-    local _, daily, weekly = tiers(H2, year)
-    H.truthy(daily > 70)
-    H.truthy(weekly > 35)
-    -- 50 operations a day for the last 14 days.
+    local quiet = H2.compact(quietDays(60), NOW)
+    local raw0, daily, older = tiers(H2, quiet)
+    H.eq(raw0, 7)
+    H.eq(daily, 53)
+    H.eq(older, 0)
+    -- 50 operations a day for the last 7 days.
     local series = {}
-    for _, p in ipairs(year) do series[#series + 1] = p end
-    for i = 1, 14 * 50 do series[#series + 1] = { NOW - 14 * DAY + i * 1700, 200, 1, 200, 200, 1 } end
+    for _, p in ipairs(quiet) do series[#series + 1] = p end
+    for i = 1, 7 * 50 do series[#series + 1] = { NOW - 7 * DAY + i * 1700, 200, 1, 200, 200, 1 } end
     local out = H2.compact(series, NOW)
-    local raw, daily2, weekly2 = tiers(H2, out)
+    local raw, daily2 = tiers(H2, out)
     H.eq(raw, H2.MAX_RAW)
     H.eq(daily2, daily)
-    H.eq(weekly2, weekly)
-    H.eq(out[1], year[1])                       -- the oldest point survives
-    H.eq(out[#out][1], NOW - 14 * DAY + 14 * 50 * 1700)  -- the newest raw point too
+    H.eq(out[1], quiet[1])                      -- the oldest daily point survives
+    H.eq(out[#out][1], NOW - 7 * DAY + 7 * 50 * 1700)  -- the newest raw point too
     H.eq(H2.compact(out, NOW), out)             -- still idempotent
-end)
-
-H.test("every save the old 600 point cap kept loads unchanged", function()
-    local H2 = load().History
-    -- 600 raw points and nothing older: the most raw points the old cap allowed.
-    local raw = {}
-    for i = 1, 600 do raw[i] = { NOW - 13 * DAY + i * 60, 100, 1, 100, 100, 1 } end
-    H.eq(H2.compact(raw, NOW), raw)
-    -- A full year (daily and weekly tiers at their largest) plus raw points up to 600 in all.
-    local year = yearOfDays(H2)
-    local series = {}
-    for _, p in ipairs(year) do
-        if NOW - p[1] > H2.RAW_SECONDS then series[#series + 1] = p end
-    end
-    for i = 1, 600 - #series do series[#series + 1] = { NOW - 13 * DAY + i * 60, 100, 1, 100, 100, 1 } end
-    H.eq(#series, 600)
-    H.eq(H2.compact(series, NOW), series)
 end)
 
 H.test("the tier caps hold above the most points each tier can ever hold", function()
     local H2 = load().History
-    -- One point every hour for a year: each daily and weekly bucket is filled.
+    -- One point every hour for 90 days: each daily bucket is filled.
     local series = {}
-    for age = 365 * 24, 1, -1 do series[#series + 1] = { NOW - age * 3600, 100, 1, 100, 100, 1 } end
+    for age = 90 * 24, 1, -1 do series[#series + 1] = { NOW - age * 3600, 100, 1, 100, 100, 1 } end
     local out = H2.compact(series, NOW)
-    local raw, daily, weekly = tiers(H2, out)
-    H.eq(raw, 14 * 24)
-    H.truthy(daily >= 76 and daily <= H2.MAX_DAILY)
-    H.truthy(weekly >= 39 and weekly <= H2.MAX_WEEKLY)
-    -- At any time of the day or week the daily and weekly caps never bind: lifting them
-    -- changes nothing.
-    for _, shift in ipairs({ 0, 43210, 3 * DAY + 43210, 5 * DAY + 1 }) do
+    local raw, daily, older = tiers(H2, out)
+    H.eq(raw, H2.MAX_RAW)                       -- 168 raw points in 7 days: the cap binds
+    H.eq(daily, 53)
+    H.eq(older, 0)
+    -- At any time of the day the daily cap never binds: lifting it changes nothing.
+    for _, shift in ipairs({ 0, 43210, 3 * DAY + 43210, 5 * DAY + 1, DAY - 1 }) do
         local capped = H2.compact(series, NOW + shift)
-        local maxDaily, maxWeekly = H2.MAX_DAILY, H2.MAX_WEEKLY
-        H2.MAX_DAILY, H2.MAX_WEEKLY = 1e9, 1e9
+        local _, d = tiers(H2, capped, NOW + shift)
+        H.truthy(d >= 53 and d <= 55)
+        local maxDaily = H2.MAX_DAILY
+        H2.MAX_DAILY = 1e9
         local free = H2.compact(series, NOW + shift)
-        H2.MAX_DAILY, H2.MAX_WEEKLY = maxDaily, maxWeekly
+        H2.MAX_DAILY = maxDaily
         H.eq(capped, free)
     end
     -- Each cap applies to its own tier and keeps its newest points.
-    local caps = { H2.MAX_RAW, H2.MAX_DAILY, H2.MAX_WEEKLY }
-    H2.MAX_RAW, H2.MAX_DAILY, H2.MAX_WEEKLY = 3, 3, 3
+    local caps = { H2.MAX_RAW, H2.MAX_DAILY }
+    H2.MAX_RAW, H2.MAX_DAILY = 3, 3
     out = H2.compact(series, NOW)
-    H2.MAX_RAW, H2.MAX_DAILY, H2.MAX_WEEKLY = caps[1], caps[2], caps[3]
-    H.eq(#out, 9)
-    H.eq(out[9], series[#series])
-    H.eq(out[1][6], 7 * 24)                     -- a full week, not the oldest partial one
+    H2.MAX_RAW, H2.MAX_DAILY = caps[1], caps[2]
+    H.eq(#out, 6)
+    H.eq(out[6], series[#series])
+    H.eq(out[1], { NOW - 10 * DAY, 100, 1, 100, 100, 24 })  -- a full day, the newest three kept
+end)
+
+H.test("an old save (raw 14 days, daily 90, weekly 365) compacts to the new tiers without loss", function()
+    local H2 = load().History
+    local WEEK = 7 * DAY
+    local series = {}
+    -- Weekly points of the old tier, dated at the start of their week.
+    for age = 365, 91, -7 do
+        local t = math.floor((NOW - age * DAY) / WEEK) * WEEK
+        series[#series + 1] = { t, 50, 2, 40, 60, 7 }
+    end
+    -- Daily points of the old tier, 15 to 90 days back.
+    for age = 90, 15, -1 do series[#series + 1] = { NOW - age * DAY, 100 + age, 3, 90, 200, 5 } end
+    -- Raw points every 3 hours for the last 14 days.
+    for i = 1, 112 do
+        series[#series + 1] = { NOW - 14 * DAY + i * 10800 - 60, 300 + 2 * i, 1, 300 + 2 * i, 300 + 2 * i, 1 }
+    end
+    local expected = {}
+    for age = 60, 15, -1 do expected[#expected + 1] = { NOW - age * DAY, 100 + age, 3, 90, 200, 5 } end
+    -- Raw points 8 to 14 days old become one daily point a day (8 points a day).
+    for k = 0, 6 do
+        expected[#expected + 1] = { NOW - (14 - k) * DAY, 309 + 16 * k, 1, 302 + 16 * k, 316 + 16 * k, 8 }
+    end
+    for i = 57, 112 do
+        expected[#expected + 1] = { NOW - 14 * DAY + i * 10800 - 60, 300 + 2 * i, 1, 300 + 2 * i, 300 + 2 * i, 1 }
+    end
+    local out = H2.compact(series, NOW)
+    H.eq(out, expected)                         -- weekly points and days over 60 are gone
+    H.eq(H2.compact(out, NOW), out)             -- idempotent
+    H.eq(H2.compact(H2.compact(out, NOW + 3600), NOW + 3600), H2.compact(out, NOW + 3600))
+    -- Loading the save goes through the same compaction.
+    local saved = { tracked = {}, markets = { k = { prices = {}, series = { [7] = series } } } }
+    H2.sanitize(saved, NOW)
+    H.eq(saved.markets.k.series[7], expected)
+end)
+
+H.test("a day is kept while any of it is within 60 days, at any time of day", function()
+    local H2 = load().History
+    for _, shift in ipairs({ 0, 1, 43210, DAY - 1 }) do
+        local now = NOW + shift
+        -- The point exactly 60 days old is kept: its day ends within the window.
+        local series = { { now - 60 * DAY, 100, 1, 100, 100, 1 }, { now - 60 * DAY - DAY - 1, 9, 1, 9, 9, 1 } }
+        local out = H2.compact(series, now)
+        H.eq(#out, 1)
+        H.eq(out[1][2], 100)
+        H.eq(H2.compact(out, now), out)
+    end
 end)
 
 H.test("no point when nothing of the recipe was touched, a required price is missing, or it is paused", function()
@@ -204,26 +248,25 @@ H.test("optional items are recorded when priced and never required", function()
     H.eq(m.series[100], nil)
 end)
 
-H.test("old points are merged by day then by week, keeping low, high and count", function()
+H.test("points older than 7 days are merged by day, keeping low, high and count; over 60 days dropped", function()
     local H2 = load().History
     local series = {}
     local function add(age, unit) series[#series + 1] = { NOW - age, unit, 10, unit, unit, 1 } end
     add(1 * DAY, 100)                         -- raw
+    add(7 * DAY - 60, 40)                     -- still raw
     add(20 * DAY + 100, 100)                  -- same day as the next one
     add(20 * DAY + 5000, 300)
-    add(120 * DAY + 100, 50)                  -- same week as the next
-    add(120 * DAY + 90000, 150)
-    add(400 * DAY, 77)                        -- too old: dropped
+    add(59 * DAY + 100, 70)                   -- its day starts 60 days back: kept
+    add(60 * DAY + 100, 60)                   -- its day ended 60 days back: dropped
+    add(120 * DAY + 100, 50)                  -- a former weekly age: dropped
+    add(400 * DAY, 77)
     local out = H2.compact(series, NOW)
-    H.eq(#out, 3)
-    H.eq(out[1][6], 2)                        -- the two weekly points were merged
-    H.eq(out[1][2], 100)
-    H.eq(out[1][4], 50)
-    H.eq(out[1][5], 150)
-    H.eq(out[2][2], 200)                      -- daily average of 100 and 300
-    H.eq(out[2][4], 100)
-    H.eq(out[2][5], 300)
-    H.eq(out[3], { NOW - 1 * DAY, 100, 10, 100, 100, 1 })
+    H.eq(out, {
+        { NOW - 60 * DAY, 70, 10, 70, 70, 1 },
+        { NOW - 21 * DAY, 200, 10, 100, 300, 2 },  -- daily average of 100 and 300
+        { NOW - 7 * DAY + 60, 40, 10, 40, 40, 1 },
+        { NOW - 1 * DAY, 100, 10, 100, 100, 1 },
+    })
     -- running it again changes nothing
     H.eq(H2.compact(out, NOW), out)
 end)
@@ -256,4 +299,13 @@ H.test("prune drops the series nobody needs, sanitize repairs the saved tables",
     H2.sanitize(empty, NOW)
     H.eq(empty.tracked, {})
     H.eq(empty.markets, {})
+end)
+
+H.test("sanitize keeps the first 30 tracked recipes", function()
+    local H2 = load().History
+    local saved = { tracked = {}, markets = {} }
+    for id = 1, 31 do saved.tracked[id] = { recipe = recipe(id), active = true } end
+    H2.sanitize(saved, NOW)
+    H.eq(#saved.tracked, 30)
+    H.eq(saved.tracked[30].recipe.recipeID, 30)
 end)

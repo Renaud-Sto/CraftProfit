@@ -4,27 +4,24 @@
 -- db.tracked (at most MAX_TRACKED, paused ones included). Each price measurement of
 -- an item of an active tracked recipe becomes a point in market.series[itemID]:
 -- { t, unit, volume, low, high, n }. A raw point has low = high = unit and n = 1.
--- Older points are merged into one point per day, then one per week. Each of the three
--- tiers has its own cap, so a busy fortnight can only drop raw points, never the daily
--- and weekly history.
+-- Points older than 7 days are merged into one point per day, and a day is dropped once
+-- it ended more than 60 days ago. Each tier has its own cap, so a busy week can only drop
+-- raw points, never the daily history.
 local _, ns = ...
 local Util, Recipes = ns.Util, ns.Recipes
 
 local History = {}
 ns.History = History
 
-History.MAX_TRACKED = 15
-local DAY, WEEK = 86400, 7 * 86400
-History.RAW_SECONDS = 14 * DAY
-History.DAILY_SECONDS = 90 * DAY
-History.WEEKLY_SECONDS = 365 * DAY
+History.MAX_TRACKED = 30
+local DAY = 86400
+History.RAW_SECONDS = 7 * DAY
+History.DAILY_SECONDS = 60 * DAY
 -- Points kept per item in each tier. Raw points have no natural bound (one per operation
--- that touches the item); 600 is the old cap on the whole series, so no save it kept loses
--- a point. The daily tier spans 76 days (77 buckets at most) and the weekly one 275 days
--- (41 buckets at most): their caps never bind on sane data. At most 725 points an item.
-History.MAX_RAW = 600
-History.MAX_DAILY = 80
-History.MAX_WEEKLY = 45
+-- that touches the item): the newest 150 are kept. The daily tier spans 53 days (55 buckets
+-- at most), so its cap never binds on sane data. At most 212 points an item.
+History.MAX_RAW = 150
+History.MAX_DAILY = 62
 -- A point dated further ahead than this blocks recording (written with a clock that ran
 -- ahead, or edited by hand): it is dropped when a new point is added. Loading and compacting
 -- keep it, so a clock set back for a while never erases newer history.
@@ -83,8 +80,8 @@ local function validPoint(p)
         and Util.count(p[6]) ~= nil
 end
 
-local function bucketOf(t, size)
-    return math.floor(t / size) * size
+local function dayOf(t)
+    return math.floor(t / DAY) * DAY
 end
 
 -- The newest `max` points of a time-ordered array, in order.
@@ -97,61 +94,53 @@ end
 
 local function byTime(a, c) return a[1] < c[1] end
 
--- Merges the points older than RAW_SECONDS into daily, then weekly points, drops what is
--- older than a year, and caps each tier to its newest points (a point ahead of `now` counts
--- as raw). Returns a new, time-ordered array. Safe to run again. An invalid `now` changes
--- nothing: the series is returned as it is.
+-- Merges the points older than RAW_SECONDS into one point per day (dated at the start of
+-- its day), drops a day once it ended DAILY_SECONDS ago or more, and caps each tier to its
+-- newest points (a point ahead of `now` counts as raw). Whether a day is kept depends only
+-- on its start, never on the date of a point in it, so a daily point is never dropped by a
+-- later pass while its day is still in the window: running it again changes nothing.
+-- Returns a new, time-ordered array. An invalid `now` changes nothing: the series is
+-- returned as it is.
 function History.compact(series, now)
     if not Util.isCopper(now) then return series end
     local raw, buckets, order = {}, {}, {}
+    local oldestEnd = now - History.DAILY_SECONDS
     for _, p in ipairs(series) do
         if validPoint(p) then
-            local age = now - p[1]
-            local size
-            if age > History.WEEKLY_SECONDS then
-                size = false
-            elseif age > History.DAILY_SECONDS then
-                size = WEEK
-            elseif age > History.RAW_SECONDS then
-                size = DAY
-            end
-            if size == nil then
+            if now - p[1] <= History.RAW_SECONDS then
                 raw[#raw + 1] = p
-            elseif size then
-                local t = bucketOf(p[1], size)
-                local key = size .. ":" .. t
-                local b = buckets[key]
-                if not b then
-                    b = { t, 0, 0, p[4], p[5], 0, size }
-                    buckets[key] = b
-                    order[#order + 1] = key
+            else
+                local t = dayOf(p[1])
+                if t + DAY > oldestEnd then
+                    local b = buckets[t]
+                    if not b then
+                        b = { t, 0, 0, p[4], p[5], 0 }
+                        buckets[t] = b
+                        order[#order + 1] = t
+                    end
+                    -- Weighted by the number of measurements merged into each point.
+                    b[2] = b[2] + p[2] * p[6]
+                    b[3] = b[3] + p[3] * p[6]
+                    b[4] = math.min(b[4], p[4])
+                    b[5] = math.max(b[5], p[5])
+                    b[6] = b[6] + p[6]
                 end
-                -- Weighted by the number of measurements merged into each point.
-                b[2] = b[2] + p[2] * p[6]
-                b[3] = b[3] + p[3] * p[6]
-                b[4] = math.min(b[4], p[4])
-                b[5] = math.max(b[5], p[5])
-                b[6] = b[6] + p[6]
             end
         end
     end
-    local daily, weekly = {}, {}
-    for _, key in ipairs(order) do
-        local b = buckets[key]
-        local tier = b[7] == DAY and daily or weekly
-        tier[#tier + 1] = { b[1], Util.round(b[2] / b[6]), Util.round(b[3] / b[6]), b[4], b[5], b[6] }
+    local daily = {}
+    for _, t in ipairs(order) do
+        local b = buckets[t]
+        daily[#daily + 1] = { b[1], Util.round(b[2] / b[6]), Util.round(b[3] / b[6]), b[4], b[5], b[6] }
     end
     -- Each tier is sorted on its own so its cap keeps its newest points.
     table.sort(raw, byTime)
     table.sort(daily, byTime)
-    table.sort(weekly, byTime)
     local keep = {}
-    for _, tier in ipairs({
-        newest(weekly, History.MAX_WEEKLY), newest(daily, History.MAX_DAILY), newest(raw, History.MAX_RAW),
-    }) do
+    for _, tier in ipairs({ newest(daily, History.MAX_DAILY), newest(raw, History.MAX_RAW) }) do
         for _, p in ipairs(tier) do keep[#keep + 1] = p end
     end
-    -- A bucket is dated at the start of its day or week, before its own points, so two
+    -- A daily point is dated at the start of its day, before its own points, so the two
     -- tiers may interleave at their edge: the joined array is sorted once more.
     table.sort(keep, byTime)
     return keep

@@ -723,7 +723,7 @@ H.test("a bind-on-pickup output does not have to be priced for a point to be rec
     H.eq(C.market().series[100], nil)
 end)
 
-H.test("the tracking box starts and pauses recording and refuses a sixteenth recipe", function()
+H.test("the tracking box starts and pauses recording and refuses a thirty-first recipe", function()
     local T = boot()
     local C = T.ns.Controller
     C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
@@ -734,18 +734,19 @@ H.test("the tracking box starts and pauses recording and refuses a sixteenth rec
     T.ns.Window.lastHandlers.onTrackToggle(false)
     H.falsy(T.ns.Window.lastModel.tracked)
     H.eq(#T.env.CraftProfitDB.tracked, 1)
-    for id = 1000, 1013 do
+    for id = 1000, 1028 do
         local r = T.ns.Recipes.normalize(RAW)
         r.recipeID = id
         H.truthy(T.ns.History.track(T.env.CraftProfitDB, r))
     end
-    H.eq(#T.env.CraftProfitDB.tracked, 15)
+    H.eq(#T.env.CraftProfitDB.tracked, 30)
     local extra = T.ns.Recipes.normalize(RAW)
     extra.recipeID = 2000
     C.setRecipe(extra, "profession")
     T.ns.Window.lastHandlers.onTrackToggle(true)
     H.falsy(T.ns.Window.lastModel.tracked)
-    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Too many tracked recipes (15 max)")
+    H.eq(#T.env.CraftProfitDB.tracked, 30)
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Too many tracked recipes (30 max)")
 end)
 
 H.test("/cp history lists the tracked recipes and removes one with its history", function()

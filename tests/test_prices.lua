@@ -114,3 +114,12 @@ H.test("priceOf and snapshotAge read through the same rules", function()
     H.eq(P.snapshotAge(db, 1060), 60)
     H.eq(P.snapshotAge(db, 900), nil)
 end)
+
+H.test("store refuses a unit above the largest amount the addon shows", function()
+    local P = load()
+    local db = { prices = {} }
+    H.eq(P.store(db, 1, 1e300, 1, 100), false)
+    H.eq(P.store(db, 1, 1e13 + 1, 1, 100), false)
+    H.eq(db.prices[1], nil)
+    H.eq(P.store(db, 1, 1e13, 1, 100), true)
+end)

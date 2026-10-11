@@ -99,6 +99,15 @@ H.test("initAccount drops an invalid snapshot time", function()
     H.eq(DB.initAccount({ snapshotTime = 500 }).snapshotTime, 500)
 end)
 
+H.test("initAccount drops a saved unit above the largest amount the addon shows", function()
+    local DB = load()
+    local db = DB.initAccount({ prices = { [1] = { 1e300, 1, 5 }, [2] = { 1e13, 1, 5 } },
+        markets = { k = { prices = { [3] = { 1e14, 1, 5 } } } } })
+    H.eq(db.prices[1], nil)
+    H.truthy(db.prices[2])
+    H.eq(db.markets.k.prices[3], nil)
+end)
+
 H.test("prune drops old and far future prices, keeps the ones less than a day ahead", function()
     local DB = load()
     local now = 10 * DB.PRICE_MAX_AGE

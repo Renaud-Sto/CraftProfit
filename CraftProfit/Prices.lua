@@ -72,9 +72,11 @@ function Prices.newAggregator()
     return agg
 end
 
--- db.prices rows are compact arrays { unit, volume, time }.
+-- db.prices rows are compact arrays { unit, volume, time }. A unit above Util.MAX_COPPER
+-- is refused: it could only come from corrupt data and would add up to an infinite cost.
 function Prices.store(db, itemID, unit, volume, now)
-    if not Util.id(itemID) or not Util.isCopper(unit) or unit <= 0 or not Util.isCopper(now) then
+    if not Util.id(itemID) or not Util.isCopper(unit) or unit <= 0 or unit > Util.MAX_COPPER
+        or not Util.isCopper(now) then
         return false
     end
     db.prices[itemID] = { Util.round(unit), Util.count(volume) or 1, now }

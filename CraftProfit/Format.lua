@@ -5,9 +5,8 @@ local Util = ns.Util
 local Format = {}
 ns.Format = Format
 
--- WoW's gold cap is 99,999,999g = 1e12 copper; stay above it, below the point
--- where tostring switches to exponent notation.
-Format.MAX_COPPER = 1e13
+-- Amounts above this are shown clamped (Util.MAX_COPPER explains the value).
+Format.MAX_COPPER = Util.MAX_COPPER
 
 -- "12g 3s 4c": fallback for tests and chat. The window passes
 -- GetMoneyString instead, which draws coin icons in any language.

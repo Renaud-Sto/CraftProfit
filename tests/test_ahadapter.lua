@@ -3,8 +3,10 @@ local H = ...
 -- Loads AHAdapter in a fake game environment. Returns a table with the adapter,
 -- what the handlers received, the calls the adapter made, and helpers.
 local function setup(apiOver)
-    local ns = H.newNS("Util", "Data/Skillup", "Recipes", "DB", "Prices")
     local env = setmetatable({}, { __index = _G })
+    -- Util in the same environment: Util.isSecret reads the test's issecretvalue.
+    local ns = {}
+    for _, name in ipairs({ "Util", "Data/Skillup", "Recipes", "DB", "Prices" }) do H.loadModule(name, ns, env) end
     local T = { clock = 100, queued = {}, calls = {}, frames = {}, opens = {}, searches = {}, snapshots = {} }
     env.GetTime = function() return T.clock end
     env.CreateFrame = function()
@@ -363,4 +365,43 @@ H.test("the preset quantity is announced to the buy view like typed input", func
     T.run()
     H.eq(f.quantity, { 20 })
     H.eq(typed, { true })
+end)
+
+H.test("closing the AH drops a pending quantity preset", function()
+    local T = setup()
+    local f = fakeAHFrame(T)
+    T.AH.onEvent("AUCTION_HOUSE_SHOW")
+    T.AH.browse("Bronze Bar", 2841, 20)
+    T.AH.onEvent("AUCTION_HOUSE_CLOSED")
+    T.AH.onEvent("AUCTION_HOUSE_SHOW")
+    -- Reopened within the 60 s: the player opens the item without asking for 20.
+    f.onShow()
+    T.run()
+    H.eq(f.quantity, {})
+end)
+
+H.test("an error while reading a scan never blocks the next scan", function()
+    local fail = true
+    local T = setup({
+        GetNumReplicateItems = function() return 2 end,
+        GetReplicateItemInfo = function(i)
+            if fail then error("boom") end
+            return "name", 0, 1, 1, true, 1, 0, 0, 0, 100, 0, false, "", "o", "o", 0, i, true
+        end,
+    })
+    T.AH.onEvent("REPLICATE_ITEM_LIST_UPDATE")
+    T.run()
+    H.eq(#T.snapshots, 0)
+    fail = false
+    T.clock = T.clock + T.AH.REREAD_QUIET + 1
+    T.AH.onEvent("REPLICATE_ITEM_LIST_UPDATE")
+    T.run()
+    H.eq(#T.snapshots, 1)
+end)
+
+H.test("an erroring scan count is no scan, not an error", function()
+    local T = setup({ GetNumReplicateItems = function() error("boom") end })
+    T.AH.onEvent("REPLICATE_ITEM_LIST_UPDATE")
+    T.run()
+    H.eq(#T.snapshots, 0)
 end)

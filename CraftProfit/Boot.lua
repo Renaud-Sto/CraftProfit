@@ -63,8 +63,21 @@ function Controller.market()
     return DB.market(CraftProfitDB, Controller.marketKey())
 end
 
+local isSecret = Util.isSecret
+
+-- A game value, or nil when it is secret.
+local function plain(v)
+    if isSecret(v) then return nil end
+    return v
+end
+
 function Controller.itemInfo(itemID)
-    local _, _, quality, ilvl, _, _, _, _, _, _, sellPrice, classID, _, bindType = C_Item.GetItemInfo(itemID)
+    local ok, _, _, quality, ilvl, _, _, _, _, _, _, sellPrice, classID, _, bindType = pcall(C_Item.GetItemInfo, itemID)
+    if not ok then return nil end
+    -- A secret field is dropped (nil): each one is compared or multiplied later. A secret
+    -- quality reads as "not loaded".
+    quality, ilvl, sellPrice = plain(quality), plain(ilvl), plain(sellPrice)
+    classID, bindType = plain(classID), plain(bindType)
     if quality == nil then
         if not requestedItems[itemID] then
             requestedItems[itemID] = true
@@ -73,10 +86,6 @@ function Controller.itemInfo(itemID)
         return nil
     end
     return { quality = quality, ilvl = ilvl, sellPrice = sellPrice, classID = classID, bindType = bindType }
-end
-
-local function isSecret(v)
-    return issecretvalue ~= nil and issecretvalue(v) or false
 end
 
 -- Item name read secret-safely (Util.text: a secret value raises when concatenated), or

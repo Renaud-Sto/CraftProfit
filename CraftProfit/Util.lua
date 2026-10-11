@@ -32,6 +32,12 @@ function Util.id(n)
     return nil
 end
 
+-- True for a "secret" value of the game (issecretvalue): it raises when compared, used as
+-- a table key or concatenated. Outside the game (no issecretvalue) nothing is secret.
+function Util.isSecret(v)
+    return issecretvalue ~= nil and issecretvalue(v) or false
+end
+
 -- A non-empty plain string, or nil. The game may hand out "secret" strings that raise
 -- when used: `isSecret` (the caller's issecretvalue guard, optional) rejects them, and the
 -- copy is made under pcall as a second line, so a secret or a non-string gives nil.

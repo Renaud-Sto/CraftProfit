@@ -1668,3 +1668,21 @@ H.test("the removed kitdemo command only prints the help and builds no window", 
     H.eq(named.CraftProfitNativeDemo, nil)
     H.eq(T.ns.KitDemo, nil)
 end)
+
+H.test("itemInfo survives an erroring item API and drops secret fields", function()
+    local T = boot()
+    local C = T.ns.Controller
+    T.env.C_Item.GetItemInfo = function() error("boom") end
+    H.eq(C.itemInfo(100), nil)
+    local SECRET = setmetatable({}, { __eq = function() error("secret compared") end })
+    T.env.issecretvalue = function(v) return rawequal(v, SECRET) end
+    T.env.C_Item.GetItemInfo = function()
+        return "Item", "link", 2, 15, 1, "type", "sub", 1, "", 0, SECRET, 4, 0, SECRET
+    end
+    H.eq(C.itemInfo(100), { quality = 2, ilvl = 15, classID = 4 })
+    -- A secret quality reads as "not loaded": no crash, the item is asked for.
+    T.env.C_Item.GetItemInfo = function() return "Item", "link", SECRET end
+    H.eq(C.itemInfo(101), nil)
+    -- The window still renders with such an item.
+    C.setRecipe(RAW, "profession")
+end)

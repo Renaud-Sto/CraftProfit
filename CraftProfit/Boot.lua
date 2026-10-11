@@ -874,8 +874,6 @@ local function slash(msg)
         if ns.LevelingUI then ns.LevelingUI.toggle() end
     elseif cmd == "pins" then
         if ns.PinnedWindow then ns.PinnedWindow.toggle() end
-    elseif cmd == "kitdemo" then
-        if ns.KitDemo then ns.KitDemo.command(arg) end
     elseif cmd == "market" then
         local name = type(GetRealmName) == "function" and GetRealmName() or "?"
         say(string.format(L.MARKET_INFO, tostring(name), Controller.marketKey()))

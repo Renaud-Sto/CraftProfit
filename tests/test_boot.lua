@@ -1650,3 +1650,21 @@ H.test("the refresh button's click reaches refreshRecipe", function()
     b.scripts.OnClick(b)
     H.eq(sent, { 1 })
 end)
+
+H.test("the removed kitdemo command only prints the help and builds no window", function()
+    local T = boot({ items = ITEMS })
+    local named = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(kind, name, ...)
+        if name then named[name] = true end
+        return create(kind, name, ...)
+    end
+    for _, arg in ipairs({ "kitdemo", "kitdemo b a" }) do
+        local before = #T.chat
+        T.env.SlashCmdList.CRAFTPROFIT(arg)
+        H.eq(#T.chat, before + 1)
+        H.eq(T.chat[#T.chat]:find(T.ns.L.SLASH_HELP, 1, true) ~= nil, true)
+    end
+    H.eq(named.CraftProfitNativeDemo, nil)
+    H.eq(T.ns.KitDemo, nil)
+end)

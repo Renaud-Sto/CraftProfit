@@ -38,7 +38,7 @@ Select a recipe you know and a small window appears next to your profession wind
 - **Price history** (recording): tick *Track history* on up to 15 recipes to keep their prices scan after scan. Graphs are planned.
 - **Options window and minimap button**: pick the look of the windows and the pinned recipes limit, open the other windows, see every command.
 - **Standalone**: no Auctionator or other addon needed.
-- **English, French and Spanish**, following the game language.
+- **English, French and Spanish**, following the game language (saved recipe names follow it too).
 
 ### Usage
 
@@ -64,7 +64,7 @@ Made for **World of Warcraft: Forever** (beta build 1.60.1, Interface 16001). No
 ### FAQ
 
 **The window does not appear.** Select a recipe you know in the profession window, or type `/cp show`.
-**Prices show `?`.** Press *Refresh pinned* or *Scan AH* at the auction house.
+**Prices show `?`.** Press *Refresh recipe*, *Refresh pinned* or *Scan AH* at the auction house.
 **The scan never finishes.** The game allows one full scan per 15 minutes per account, including those of other addons. Wait and try once.
 **Does it buy for me?** No. It searches; you press Buy.
 
@@ -78,16 +78,8 @@ Made for **World of Warcraft: Forever** (beta build 1.60.1, Interface 16001). No
 
 ## Gallery (needed before submission)
 
-Prepare 3 to 5 screenshots of the real client:
-
-1. A recipe selected in the profession window with the CraftProfit window beside it.
-2. The material detail unfolded and the best option highlighted.
-3. The pinned list at the auction house, sorted by cost per point.
-4. Clicking a reagent: the auction house search with the quantity filled in.
-5. The same window in French or Spanish.
-
-Avoid other players' names in the shot (crop or choose a quiet spot).
+Upload the screenshots listed in [docs/screenshots/README.md](../screenshots/README.md) (English client, real game images), with their titles: the main window, the pinned recipes window, the leveling window, the options window and, optionally, all windows together. Avoid other players' names in the shot (crop or choose a quiet spot).
 
 ## Project icon
 
-400 × 400 px minimum, square, PNG (avoid WebP), original artwork, not a solid colour and not a Blizzard asset. See the [submission checklist](submission-checklist.md).
+[icon.png](icon.png): 512 × 512 px, square PNG, original artwork (CurseForge asks for 400 × 400 px minimum, not a solid colour, not a Blizzard asset). See the [submission checklist](submission-checklist.md).

@@ -59,3 +59,17 @@ H.test("round goes half away from zero", function()
     H.eq(ns.Util.round(-2.5), -3)
     H.eq(ns.Util.round(0), 0)
 end)
+
+H.test("text gives a non-empty plain string, nil for anything else or a secret", function()
+    local U = H.newNS("Util").Util
+    H.eq(U.text("Forge"), "Forge")
+    H.eq(U.text(""), nil)
+    H.eq(U.text(nil), nil)
+    H.eq(U.text(5), nil)
+    H.eq(U.text({}), nil)
+    local function isSecret(v) return v == "SECRET" end
+    H.eq(U.text("SECRET", isSecret), nil)
+    H.eq(U.text("Forge", isSecret), "Forge")
+    -- A guard that raises counts as a secret.
+    H.eq(U.text("Forge", function() error("boom") end), nil)
+end)

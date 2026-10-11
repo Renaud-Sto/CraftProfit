@@ -120,3 +120,99 @@ H.test("normalize accepts ordinary contiguous reagent lists", function()
     H.truthy(r)
     H.eq(#r.reagents, 2)
 end)
+
+H.test("normalize keeps a client language code and drops anything else", function()
+    local R = load()
+    H.eq(R.normalize(raw({ locale = "frFR" })).locale, "frFR")
+    H.eq(R.normalize(raw()).locale, nil)
+    H.eq(R.normalize(raw({ locale = "french" })).locale, nil)
+    H.eq(R.normalize(raw({ locale = 7 })).locale, nil)
+    local once = R.normalize(raw({ locale = "enUS" }))
+    H.eq(R.normalize(once), once)
+end)
+
+H.test("label is the stored name, else #id", function()
+    local R = load()
+    H.eq(R.label({ recipeID = 5, name = "Copper Sword" }), "Copper Sword")
+    H.eq(R.label({ recipeID = 5, name = "" }), "#5")
+    H.eq(R.label({ recipeID = 5 }), "#5")
+end)
+
+-- A stored French recipe and the client's current (English) facts.
+local function french() return { recipeID = 3398, name = "Côtelettes de lion épicées", locale = "frFR", outputItemID = 3727 } end
+local function live(over)
+    local l = {
+        locale = "enUS",
+        recipeName = function() return "Hot Lion Chops (recipe)" end,
+        itemName = function() return "Hot Lion Chops" end,
+    }
+    for k, v in pairs(over or {}) do
+        if v == NIL then l[k] = nil else l[k] = v end
+    end
+    return l
+end
+
+H.test("liveName prefers the client's recipe name and writes it back with the language", function()
+    local R = load()
+    local recipe = french()
+    local asked
+    H.eq(R.liveName(recipe, live({ recipeName = function(id) asked = id return "Hot Lion Chops (recipe)" end })),
+        "Hot Lion Chops (recipe)")
+    H.eq(asked, 3398)
+    H.eq(recipe.name, "Hot Lion Chops (recipe)")
+    H.eq(recipe.locale, "enUS")
+end)
+
+H.test("liveName falls back to the crafted item's name when the client gives no recipe name", function()
+    local R = load()
+    local recipe = french()
+    local asked
+    H.eq(R.liveName(recipe, live({ recipeName = function() return nil end,
+        itemName = function(id) asked = id return "Hot Lion Chops" end })), "Hot Lion Chops")
+    H.eq(asked, 3727)
+    H.eq(recipe.name, "Hot Lion Chops")
+    H.eq(recipe.locale, "enUS")
+    -- Without the recipe-name source at all, the same.
+    local other = french()
+    H.eq(R.liveName(other, live({ recipeName = NIL })), "Hot Lion Chops")
+end)
+
+H.test("liveName keeps a name stored in the current language rather than the item's", function()
+    local R = load()
+    local recipe = { recipeID = 2657, name = "Smelt Copper", locale = "enUS", outputItemID = 2840 }
+    local itemAsked = false
+    H.eq(R.liveName(recipe, live({ recipeName = function() return nil end,
+        itemName = function() itemAsked = true return "Copper Bar" end })), "Smelt Copper")
+    H.falsy(itemAsked)
+    H.eq(recipe.name, "Smelt Copper")
+    -- The client's own recipe name still wins over it.
+    H.eq(R.liveName(recipe, live({ recipeName = function() return "Smelt Copper!" end })), "Smelt Copper!")
+end)
+
+H.test("liveName falls back to the stored name, then #id, and changes nothing", function()
+    local R = load()
+    local none = live({ recipeName = function() return nil end, itemName = function() return nil end })
+    local recipe = french()
+    H.eq(R.liveName(recipe, none), "Côtelettes de lion épicées")
+    H.eq(recipe.name, "Côtelettes de lion épicées")
+    H.eq(recipe.locale, "frFR")
+    H.eq(R.liveName({ recipeID = 9, name = "", outputItemID = 1 }, none), "#9")
+    H.eq(R.liveName({ recipeID = 9, name = "Old" }), "Old")
+end)
+
+H.test("liveName ignores empty, non-string and oversized live names", function()
+    local R = load()
+    for _, bad in ipairs({ "", 42, {}, string.rep("x", 201) }) do
+        local recipe = french()
+        H.eq(R.liveName(recipe, live({ recipeName = function() return bad end, itemName = function() return bad end })),
+            "Côtelettes de lion épicées")
+        H.eq(recipe.locale, "frFR")
+    end
+end)
+
+H.test("liveName leaves a name that is already current untouched", function()
+    local R = load()
+    local recipe = { recipeID = 1, name = "Hot Lion Chops (recipe)", locale = "enUS", outputItemID = 3727 }
+    H.eq(R.liveName(recipe, live()), "Hot Lion Chops (recipe)")
+    H.eq(recipe, { recipeID = 1, name = "Hot Lion Chops (recipe)", locale = "enUS", outputItemID = 3727 })
+end)

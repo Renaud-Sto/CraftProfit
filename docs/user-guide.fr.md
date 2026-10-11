@@ -19,7 +19,7 @@ De haut en bas :
 | *ligne grise* | Sous les tuiles : le résultat de désenchantement le plus probable, par exemple `75%: 1-2x Poussière d'âme = 7s 30c`. Affichée seulement quand le désenchantement a plusieurs résultats possibles. |
 | Panneau **Composants** | Le coût de tous les composants aux prix de l'hôtel des ventes. Cliquez sur l'en-tête pour replier ou déplier le détail (`-` déplié, `+` replié) ; le choix est mémorisé. Cliquez sur un composant pour le chercher à l'hôtel des ventes (voir [Rechercher un composant](#rechercher-un-composant)). |
 | **Prix : il y a 5min** | L'âge du prix le plus ancien utilisé. Passe en orange au-delà d'une heure. |
-| Panneau **Options** | **Crafts**, **Suivre l'historique**, **Coût par point** avec sa valeur à droite (voir [Coût par point de compétence](#coût-par-point-de-compétence)), et le bouton **Épingler** / **Désépingler**. |
+| Panneau **Options** | **Crafts**, **Suivre l'historique**, **Coût par point** avec sa valeur à droite (voir [Coût par point de compétence](#coût-par-point-de-compétence)), puis les boutons **Épingler** / **Désépingler** et **Actualiser recette**. |
 
 Le titre de la recette, en haut de la fenêtre, est cliquable lui aussi, avec le même effet, et déplace toujours la fenêtre. Un prix inconnu s'affiche `?`, jamais zéro. Le bandeau a trois cas particuliers :
 
@@ -39,7 +39,7 @@ La case **Suivre l'historique** (à côté de Crafts) fait garder à CraftProfit
 
 ### Boutons Épingler et Actualiser recette
 
-**Actualiser recette** (à droite du bouton Épingler) interroge l'hôtel des ventes pour les seuls objets de la recette affichée : ses composants, l'objet obtenu et, si besoin, les matériaux de désenchantement. Cela prend quelques secondes. Il ne marche que si l'hôtel des ventes est ouvert, qu'une recette est affichée et qu'aucune autre recherche n'est en cours ; sinon il est grisé. Son résultat s'affiche dans la ligne de statut sous la liste des épingles.
+**Actualiser recette** (à droite du bouton Épingler) interroge l'hôtel des ventes pour les seuls objets de la recette affichée : ses composants, l'objet obtenu et, si besoin, les matériaux de désenchantement. Un objet obtenu lié quand ramassé n'est pas recherché, puisqu'il ne peut pas y être vendu. Cela prend quelques secondes. Il ne marche que si l'hôtel des ventes est ouvert, qu'une recette est affichée et qu'aucune autre recherche n'est en cours ; sinon il est grisé. Son résultat s'affiche dans la ligne de statut sous la liste des épingles.
 
 **Épingler** garde la recette dans votre liste d'épingles, utilisable même fenêtre de métier fermée. **Désépingler** la retire. Un personnage peut épingler 20 recettes par défaut ; changez la limite (12, 20, 30 ou 40) dans la [fenêtre d'options](#fenêtre-doptions). Quand la liste est pleine, le chat indique « Limite de recettes épinglées atteinte (20). Augmentez-la dans /cp options. »
 
@@ -53,7 +53,7 @@ Trois façons de mettre les prix à jour, de la plus rapide à la plus large :
 
 À l'ouverture de l'hôtel des ventes, la fenêtre affiche le panneau **RECETTES ÉPINGLÉES** sous la recette, avec trois boutons : **Actualiser épinglées** (le bouton principal), **Scanner l'HV** et **Montée de métier**, et une ligne de statut en dessous.
 
-- **Actualiser épinglées** chiffre tous les composants et tous les objets obtenus des recettes épinglées, un objet à la fois, avec un compteur de progression : environ une minute pour 20 recettes épinglées. Avec beaucoup de recettes épinglées, **Scanner l'HV** va souvent plus vite. Les prix sont enregistrés avec leur date. Si vous fermez l'hôtel des ventes en cours de route, la recherche est annulée et les prix déjà reçus sont conservés. Un prix qui ne répond pas, ou qui répond sans offre, est redemandé une seconde fois automatiquement avant le résumé (« Nouvel essai n/m »). Une seule recherche à la fois : Actualiser recette est grisé pendant qu'elle tourne.
+- **Actualiser épinglées** chiffre tous les composants, tous les objets obtenus (sauf ceux liés quand ramassés) et, si besoin, les matériaux de désenchantement des recettes épinglées, un objet à la fois, avec un compteur de progression : environ une minute pour 20 recettes épinglées. Avec beaucoup de recettes épinglées, **Scanner l'HV** va souvent plus vite. Les prix sont enregistrés avec leur date. Si vous fermez l'hôtel des ventes en cours de route, la recherche est annulée et les prix déjà reçus sont conservés. Un prix qui ne répond pas, ou qui répond sans offre, est redemandé une seconde fois automatiquement avant le résumé (« Nouvel essai n/m »). Une seule recherche à la fois : Actualiser recette est grisé pendant qu'elle tourne.
 - **Scanner l'HV** lit tout l'hôtel des ventes d'un coup (le jeu autorise un scan complet par tranche de 15 minutes et par compte). Il chiffre des milliers d'objets, ce qui permet d'évaluer ensuite n'importe quelle recette. Si un autre addon lance un scan, CraftProfit utilise son résultat sans refaire de demande. Si le serveur ne répond pas, le statut le dit : le délai de 15 minutes est probablement en cours.
 
 À la fin d'une actualisation, la ligne de statut dit ce qui s'est passé. Elle compte des prix : un par objet recherché, c'est-à-dire pas seulement les composants, mais aussi l'objet obtenu et, s'il peut être désenchanté, ses matériaux de désenchantement. Une recette à 5 composants peut donc compter 7 prix.
@@ -93,7 +93,7 @@ Cliquez sur une recette de la liste pour l'afficher dans la fenêtre au-dessus.
 
 ### La fenêtre de montée de métier
 
-**Montée de métier** (bouton sous la liste des épingles, ou `/cp level`) ouvre une fenêtre séparée et déplaçable, à côté de la fenêtre principale, avec l'apparence du jeu, comme la fenêtre principale. Sa position est mémorisée et la croix la ferme. Elle montre **toutes les recettes que vous connaissez** dans un métier, le point de compétence le moins cher en premier : vous voyez d'un coup d'œil quoi fabriquer ensuite pour monter en perdant le moins possible.
+**Montée de métier** (bouton sous la liste des épingles ou dans la fenêtre d'options, ou `/cp level`) ouvre une fenêtre séparée et déplaçable, à côté de la fenêtre principale, avec l'apparence du jeu, comme la fenêtre principale. Sa position est mémorisée et la croix la ferme. Elle montre **toutes les recettes que vous connaissez** dans un métier, le point de compétence le moins cher en premier : vous voyez d'un coup d'œil quoi fabriquer ensuite pour monter en perdant le moins possible.
 
 - Chaque ligne montre la recette (colorée selon la difficulté), puis le coût par point, avec les mêmes écritures que la liste des épingles (les montants s'affichent avec les icônes de pièces d'or, d'argent et de cuivre du jeu ; ils sont écrits en lettres ici) : `21g 29s/pt` en rouge, `+9s 33c/pt` en vert quand les crafts se paient d'eux-mêmes, `?` quand un prix manque (ces recettes restent en bas).
 - Le petit chiffre gris avant le montant, comme `x4`, est le nombre de crafts qu'un point demande en moyenne (100 % = `x1`, 75 % = `x1.3`, 25 % = `x4`). Le montant est la perte (ou le gain) d'un craft multipliée par ce chiffre, donc facile à relire : un craft qui perd 5s et demande 4 crafts par point affiche environ `20s/pt`.
@@ -125,7 +125,7 @@ Avec le détail des composants déplié, cliquez sur la ligne d'un composant, pa
 
 Un prix vient des offres de l'hôtel des ventes. Le prix retenu pour un objet est la **médiane du prix unitaire des cinq unités les moins chères**. Une seule offre absurdement basse ne peut pas tirer le prix vers le bas comme le ferait un simple minimum, et les quantités sont bien prises en compte (une offre de 20 unités compte 20 fois).
 
-Deux sources l'alimentent : la recherche ciblée de **Actualiser épinglées** et le **Scanner l'HV** complet. L'écriture la plus récente l'emporte ; chaque prix garde sa date. Les prix de plus de deux semaines sont supprimés.
+Trois boutons l'alimentent : les recherches ciblées d'**Actualiser recette** et d'**Actualiser épinglées**, et le scan complet de **Scanner l'HV**. L'écriture la plus récente l'emporte ; chaque prix garde sa date. Les prix de plus de deux semaines sont supprimés.
 
 ### Hôtel des ventes (net)
 
@@ -177,12 +177,18 @@ L'entrée CraftProfit du compartiment d'addons (si votre client l'affiche) march
 | Tri de la liste des épingles | Bouton dans l'en-tête du panneau des épingles, ou en haut de la fenêtre des recettes épinglées | Gain |
 | Bandeau des sections et cases de prix | [Fenêtre d'options](#fenêtre-doptions) ; enregistré pour le compte | Ombre, Encart |
 | Bouton de la minicarte affiché, et sa place | Fenêtre d'options ou `/cp minimap` ; le faire glisser | Affiché, en bas à gauche |
+| Limite de recettes épinglées | [Fenêtre d'options](#fenêtre-doptions) ; enregistrée pour le compte | 20 par personnage |
+| Ordre de la liste de montée de métier | Bouton de tri de la fenêtre de montée de métier | Coût par point |
+| Recettes grises de la montée de métier | *Afficher les recettes grises* dans la fenêtre de montée de métier | Masquées |
+| Position des fenêtres de montée de métier, des recettes épinglées et d'options | Les déplacer | À côté de la fenêtre CraftProfit la plus à droite à l'écran (voir [Fenêtre d'options](#fenêtre-doptions)) |
+
+Ce qui est enregistré : les réglages ci-dessus, les prix (par marché) et l'historique des prix le sont pour le compte ; les recettes épinglées, le tri de leur liste et les recettes lues pour la montée de métier le sont pour chaque personnage.
 
 Commandes : `/cp` (ou `/craftprofit`) avec `show`, `hide`, `reset`, `options`, `pins`, `minimap`, `scan`, `history`, `market`, `level`, `locale <code>` et `selftest`. Voir le [README](../README.fr.md#commandes).
 
 ## Langues
 
-La fenêtre suit la langue du jeu : anglais, français et espagnol (l'espagnol d'Amérique latine utilise les textes espagnols). Toute autre langue retombe sur l'anglais. `/cp locale frFR` force une langue pour tester et `/cp locale` revient à la langue du jeu. Les noms d'objets et de recettes viennent toujours du jeu, dans la langue de votre client.
+La fenêtre suit la langue du jeu : anglais, français et espagnol (l'espagnol d'Amérique latine utilise les textes espagnols). Toute autre langue retombe sur l'anglais. `/cp locale frFR` force une langue pour tester et `/cp locale` revient à la langue du jeu. Les noms d'objets et de recettes viennent toujours du jeu, dans la langue de votre client. Les noms de recettes et de métiers enregistrés par CraftProfit (recettes épinglées, fenêtre de montée de métier, `/cp history`) suivent aussi un changement de langue du jeu.
 
 ## Limites connues
 
@@ -191,6 +197,7 @@ La fenêtre suit la langue du jeu : anglais, français et espagnol (l'espagnol d
 - **Les grandes quantités sont estimées.** Voir [Crafts](#crafts).
 - **Les données de désenchantement viennent du Classic**, marquées *bêta*, sans table pour les épiques au-dessus du niveau d'objet 60.
 - **Les chances de point sont des estimations** fondées sur la couleur de la recette.
+- **L'historique des prix est enregistré, pas encore affiché.** Il n'y a ni graphique ni vue de l'historique ; `/cp history` liste seulement les recettes suivies.
 - **Aucun historique ni fréquence de vente.** Le jeu ne fournit pas ces données : CraftProfit ne peut pas dire à quelle vitesse un objet se vend.
 - **L'hôtel des ventes seul pour les prix.** Les prix marchand viennent du jeu.
 
@@ -198,7 +205,7 @@ La fenêtre suit la langue du jeu : anglais, français et espagnol (l'espagnol d
 
 **La fenêtre n'apparaît pas.** Sélectionnez une recette dans la fenêtre de métier (une recette que vous connaissez). Essayez `/cp show`. Vérifiez que l'addon est activé et lancez `/cp selftest`.
 
-**Tous les prix affichent `?`.** Aucun prix n'a encore été récupéré. À l'hôtel des ventes, appuyez sur **Actualiser épinglées** pour les recettes épinglées ou sur **Scanner l'HV** pour tout.
+**Tous les prix affichent `?`.** Aucun prix n'a encore été récupéré. À l'hôtel des ventes, appuyez sur **Actualiser recette** pour la recette affichée, sur **Actualiser épinglées** pour les recettes épinglées ou sur **Scanner l'HV** pour tout.
 
 **Le scan ne se termine jamais (« Pas de réponse du serveur »).** Le jeu limite les scans complets à un par tranche de 15 minutes et par compte, et le scan de n'importe quel addon compte. Attendez et réessayez une seule fois.
 

@@ -6,6 +6,7 @@
 | [Technical documentation](technical.md) | Architecture, data flow, price model, saved variables, game API, measured beta behaviour, tests |
 | [In-game checklist](in-game-checklist.md) | What to verify in the client before a release |
 | [Probe findings](probe-findings.md) | What the in-game probe measured on the beta |
+| [Screenshots](screenshots/README.md) | The screenshots the project needs and what each must show |
 | [CurseForge material](curseforge/) | [Project page text](curseforge/project-page.md) and [submission checklist](curseforge/submission-checklist.md) |
 | [Design history](superpowers/) | First [design spec](superpowers/specs/2026-10-08-craftprofit-design.md) (French) and [implementation plan](superpowers/plans/2026-10-08-craftprofit.md), then the specs and plans of the later steps |
 

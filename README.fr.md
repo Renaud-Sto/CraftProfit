@@ -12,7 +12,14 @@ CraftProfit est un addon pour **World of Warcraft: Forever**. Sélectionnez une 
 
 > **État : version 1.0.0, pour la bêta de WoW: Forever** (build 1.60.1, Interface 16001), sur laquelle elle a été développée et testée. Les données de désenchantement viennent encore des tables du Classic et sont marquées *bêta* dans la fenêtre. Voir les [limites connues](docs/user-guide.fr.md#limites-connues).
 
-<!-- Captures d'écran à venir : docs/images/ -->
+## Captures d'écran
+
+![La fenêtre principale à l'hôtel des ventes, avec la liste épinglée dessous](docs/screenshots/01-main-window.png)
+![La fenêtre des recettes épinglées](docs/screenshots/02-pinned-window.png)
+![La fenêtre de montée de métier](docs/screenshots/03-leveling.png)
+![La fenêtre d'options](docs/screenshots/04-options.png)
+
+(Captures du client en anglais.)
 
 ## Fonctionnalités
 
@@ -23,11 +30,11 @@ CraftProfit est un addon pour **World of Warcraft: Forever**. Sélectionnez une 
 - **Fenêtre de montée de métier** : toutes les recettes que vous connaissez dans un métier, classées par coût du point de compétence, pour voir quoi fabriquer ensuite.
 - **Plusieurs crafts d'un coup** : multipliez une recette de 1 à 9999 crafts.
 - **Recettes épinglées** (20 par personnage par défaut ; 12, 20, 30 ou 40 dans la fenêtre d'options), triées par gain ou par coût par point, pour comparer quoi fabriquer ensuite (avec beaucoup d'épingles, **Scanner l'HV** va souvent plus vite que **Actualiser épinglées**) ; sous la fenêtre principale à l'hôtel des ventes, et partout dans leur propre fenêtre (`/cp pins` ou un clic droit sur le bouton de la minicarte).
-- **Outils d'hôtel des ventes** : un bouton chiffre toutes les recettes épinglées, un autre scanne tout l'hôtel des ventes. Cliquez sur un composant pour le rechercher à l'hôtel des ventes, quantité déjà remplie. CraftProfit n'achète jamais rien à votre place.
+- **Outils d'hôtel des ventes** : **Actualiser recette** chiffre la recette affichée en quelques secondes, **Actualiser épinglées** chiffre toutes les recettes épinglées, **Scanner l'HV** lit tout l'hôtel des ventes ; un prix manqué est redemandé une seconde fois automatiquement. Cliquez sur un composant pour le rechercher à l'hôtel des ventes, quantité déjà remplie, ou sur l'objet obtenu pour voir combien sont en vente. CraftProfit n'achète jamais rien à votre place.
 - **Historique des prix** (enregistrement) : cochez *Suivre l'historique* sur 15 recettes au plus et CraftProfit garde leurs prix scan après scan, par jeu de règles (le « royaume » de la bêta) et par faction. Les graphiques sont prévus pour plus tard.
 - **Autonome** : ni Auctionator ni aucun autre addon n'est nécessaire. Il récupère aussi les scans lancés par d'autres addons.
 - **Fenêtre d'options et bouton de la minicarte** : choisissez l'apparence des fenêtres (bandeau des sections et cases de prix), appliquée aussitôt, et la limite de recettes épinglées ; ouvrez-la depuis le bouton de la minicarte, le compartiment d'addons ou `/cp options`.
-- **Anglais, français et espagnol** (selon la langue du jeu).
+- **Anglais, français et espagnol** (selon la langue du jeu ; les noms de recettes et de métiers enregistrés la suivent aussi).
 
 ## Installation
 
@@ -52,8 +59,8 @@ Le pas-à-pas complet, toutes les options et l'explication de chaque chiffre son
 | Commande | Effet |
 | --- | --- |
 | `/cp` ou `/craftprofit` | Affiche la liste des commandes |
-| `/cp show` / `hide` | Affiche ou masque la fenêtre |
-| `/cp reset` | Remet la fenêtre à côté de la fenêtre de métier ou de l'hôtel des ventes |
+| `/cp show` / `hide` | Affiche ou masque la fenêtre principale |
+| `/cp reset` | Remet la fenêtre principale à côté de la fenêtre de métier ou de l'hôtel des ventes |
 | `/cp options` | Ouvre ou ferme la fenêtre d'options (apparence des fenêtres, limite de recettes épinglées, bouton de la minicarte, commandes) |
 | `/cp minimap` | Masque le bouton de la minicarte, ou le rétablit |
 | `/cp scan` | Lance un scan complet de l'hôtel des ventes (hôtel des ventes ouvert) |

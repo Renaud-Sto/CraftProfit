@@ -107,7 +107,8 @@ function PinsUI.refresh()
     offset = math.max(0, math.min(offset, #pins - VISIBLE))
     local currentID = ctl.currentRecipeID()
 
-    panel:setTitle(L.PANEL_PINS)
+    -- The count follows every pin, unpin and limit change: each ends in Controller.refresh.
+    panel:setTitle(ctl.pinsTitle())
     parts.sort:setText(byPoint and L.SORT_POINT or L.SORT_NET)
     parts.search:setText(L.SEARCH_PRICES)
     parts.scan:setText(L.SCAN)
@@ -241,7 +242,7 @@ function PinsUI.init(controller)
     local inner = ns.Window.INNER_WIDTH
     local half = math.floor((inner - ns.Window.GAP) / 2)
 
-    panel = Native.panel(host, L.PANEL_PINS)
+    panel = Native.panel(host, ctl.pinsTitle())
     parts.panel = panel
     panel.frame:SetPoint("TOPLEFT", host, "TOPLEFT", 0, 0)
     panel.frame:SetPoint("TOPRIGHT", host, "TOPRIGHT", 0, 0)

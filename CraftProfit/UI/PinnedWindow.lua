@@ -57,7 +57,7 @@ function PinnedWindow.refresh()
     if not frame or not frame:IsShown() then return end
     local data = ctl.pinsData()
     frame:setTitle(L.PINNED_TITLE)
-    parts.panel:setTitle(L.PANEL_PINS)
+    parts.panel:setTitle(ctl.pinsTitle())
     parts.sort:setText(data.byPoint and L.SORT_POINT or L.SORT_NET)
     parts.age:SetText(data.ageText)
     parts.ageStale = data.stale and true or false
@@ -214,7 +214,7 @@ local function build()
         parts.age:SetTextColor(c[1], c[2], c[3], c[4])
     end
 
-    parts.panel = Native.panel(content, L.PANEL_PINS)
+    parts.panel = Native.panel(content, ctl.pinsTitle())
     parts.frames.panel = parts.panel.frame
     -- Fixed list height: the window keeps its size whatever the number of pins.
     parts.panel.frame:SetHeight(panelH)

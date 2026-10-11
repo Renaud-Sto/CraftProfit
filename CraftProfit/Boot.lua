@@ -357,6 +357,12 @@ function Controller.pinLimit()
     return DB.pinLimit(CraftProfitDB.settings.maxPins)
 end
 
+-- The pinned panels' title with the pin count over the limit, e.g. "PINNED RECIPES (21/30)".
+-- The count can exceed the limit after it was lowered (pins are never deleted for it).
+function Controller.pinsTitle()
+    return string.format(L.PANEL_PINS_COUNT, #CraftProfitCharDB.pins, Controller.pinLimit())
+end
+
 -- Saves a new limit and refreshes every view (the options window lights it). Anything but a
 -- listed limit is refused and changes nothing. Pins over a lower limit are kept: it only
 -- blocks new ones. Returns true when the limit was accepted.

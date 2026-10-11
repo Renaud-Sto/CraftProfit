@@ -12,7 +12,8 @@ ns.Locale.register("enUS", {
     PANEL_MATERIALS = "MATERIALS",
     PANEL_MATERIALS_MULTI = "MATERIALS x%d (ESTIMATE)",
     PANEL_OPTIONS = "OPTIONS",
-    PANEL_PINS = "PINNED RECIPES",
+    -- The pin count, then the limit.
+    PANEL_PINS_COUNT = "PINNED RECIPES (%d/%d)",
     CRAFTS_LABEL = "Crafts:",
     LINE_AH = "Auction house (net)",
     LINE_VENDOR = "Vendor",

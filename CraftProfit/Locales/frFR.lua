@@ -105,6 +105,7 @@ ns.Locale.register("frFR", {
     HISTORY_MEASURES = "Mesures",
     HISTORY_DAYS = "Jours couverts",
     HISTORY_CARRIED = "prix repris d'un jour précédent",
+    SHORT_DATE = "%d/%m",
     HISTORY_PAUSE = "Mettre le suivi en pause",
     HISTORY_RESUME = "Reprendre le suivi",
     HISTORY_DELETE = "Supprimer l'historique",

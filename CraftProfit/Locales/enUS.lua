@@ -107,6 +107,7 @@ ns.Locale.register("enUS", {
     HISTORY_MEASURES = "Measurements",
     HISTORY_DAYS = "Days covered",
     HISTORY_CARRIED = "price carried from an earlier day",
+    SHORT_DATE = "%m/%d",
     HISTORY_PAUSE = "Pause tracking",
     HISTORY_RESUME = "Resume tracking",
     HISTORY_DELETE = "Delete history",

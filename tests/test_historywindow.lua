@@ -420,3 +420,47 @@ H.test("a drag that ends on a button clicks nothing", function()
     H.eq(UI.parts.deleteButton.text, T.ns.L.HISTORY_DELETE)
     H.eq(T.ns.History.isActive(T.env.CraftProfitDB, 5), true)
 end)
+
+H.test("the icon row wraps: a 14 item recipe shows every item, clear of the period buttons", function()
+    local T, UI = boot()
+    -- 12 reagents and a weapon whose disenchant materials count: at least 14 items.
+    ITEMS[300] = { quality = 2, ilvl = 15, sellPrice = 200, classID = 2, bindType = 2 }
+    local big = raw(9)
+    big.outputItemID = 300
+    big.reagents = {}
+    for id = 1, 12 do big.reagents[id] = { itemID = 1000 + id, qty = 1 } end
+    track(T, big)
+    UI.show()
+    UI.select(9)
+    local ids = T.ns.Controller.historyItemsOf(T.env.CraftProfitDB.tracked[1].recipe)
+    H.truthy(#ids >= 14)
+    H.truthy(#UI.parts.itemButtons >= 20)
+    local shown, periodLeft = 0, UI.RIGHT_W - UI.PERIOD_W
+    for _, b in ipairs(UI.parts.itemButtons) do
+        if b.shown then
+            shown = shown + 1
+            local p = b.points[1]
+            H.truthy(p[4] + 24 <= periodLeft - 4)
+        end
+    end
+    H.eq(shown, #ids)
+    -- Two rows of icons: the second starts under the first.
+    H.eq(UI.parts.itemButtons[11].points[1][4], 0)
+    H.truthy(UI.parts.itemButtons[11].points[1][5] < UI.parts.itemButtons[1].points[1][5])
+    -- The period buttons stack at the right; the window stays under 500 px high.
+    for _, b in ipairs(UI.parts.periodButtons) do H.eq(b.points[1][1], "TOPRIGHT") end
+    H.truthy(UI.frame().height < 500)
+    ITEMS[300] = nil
+end)
+
+H.test("the hover date follows the locale: month first in English, day first in French and Spanish", function()
+    for locale, expected in pairs({ enUS = "10/12", frFR = "12/10", esES = "12/10" }) do
+        local T, UI = boot({ locale = locale })
+        T.ns.History.setDateFn(function()
+            return { year = 2026, month = 10, day = 12, hour = 12, min = 0, sec = 0, wday = 2 }
+        end)
+        H.eq(UI.dateText(NOW), expected)
+    end
+    local _, UI = boot()
+    H.eq(UI.dateText(0 / 0), "")
+end)

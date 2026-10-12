@@ -106,6 +106,11 @@ local function localDate(t)
     return d
 end
 
+-- The local date fields of t (year, month, day, hour, min, sec, wday), or nil.
+function History.dateFields(t)
+    return localDate(t)
+end
+
 -- Start of the local calendar day holding t, or nil when the local date is unknown.
 function History.dayOf(t)
     local d = localDate(t)

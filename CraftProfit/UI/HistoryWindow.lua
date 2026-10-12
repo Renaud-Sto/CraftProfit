@@ -31,6 +31,10 @@ local VIEW_W = 150
 local PERIOD_W = 72
 local ICON = 24
 local ICON_GAP = 4
+-- Item icons in two rows of ICONS_PER_ROW (12 reagents, the crafted item and its
+-- disenchant materials fit); the period buttons stack at the right of the button rows.
+local ICONS_PER_ROW, ICON_ROWS = 10, 2
+local HEADER_H = Native.BUTTON_H + 6 + ICON_ROWS * ICON + (ICON_ROWS - 1) * ICON_GAP
 local CHART_H = 230
 local NAMES_H = 12
 local HOVER_H = 12
@@ -70,6 +74,7 @@ HistoryWindow.FIGURE_LABEL_W = FIGURE_LABEL_W
 HistoryWindow.WEEKDAY_W = (RIGHT_W - Chart.LABEL_W) / 7
 HistoryWindow.QUESTION_MARK = QUESTION_MARK
 HistoryWindow.ACTION_W = ACTION_W
+HistoryWindow.RIGHT_W, HistoryWindow.PERIOD_W = RIGHT_W, PERIOD_W
 HistoryWindow.CONFIRM_SECONDS = CONFIRM_SECONDS
 
 function HistoryWindow.state()
@@ -126,12 +131,15 @@ local function setLit(button, on)
     button.lit:SetShown(on == true)
 end
 
-local function dayText(day)
-    local fn = date or (os and os.date)
-    if type(fn) ~= "function" or type(day) ~= "number" then return "" end
-    local ok, text = pcall(fn, "%d/%m", day)
-    return ok and type(text) == "string" and text or ""
+-- A short date in the language's order (L.SHORT_DATE: "%m/%d" or "%d/%m"), from the
+-- local date fields (History.dateFields, the same local days as the chart). "" when unknown.
+function HistoryWindow.dateText(t)
+    local d = ns.History.dateFields(t)
+    if not d then return "" end
+    local fields = { d = string.format("%02d", d.day), m = string.format("%02d", d.month) }
+    return (L.SHORT_DATE:gsub("%%([dm])", fields))
 end
+local dayText = HistoryWindow.dateText
 
 local function onHover(row)
     if type(row) ~= "table" then
@@ -379,7 +387,8 @@ end
 local function buildItemButton(parent, i)
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(ICON, ICON)
-    b:SetPoint("TOPLEFT", parent, "TOPLEFT", (i - 1) * (ICON + ICON_GAP), 0)
+    local col, line = (i - 1) % ICONS_PER_ROW, math.floor((i - 1) / ICONS_PER_ROW)
+    b:SetPoint("TOPLEFT", parent, "TOPLEFT", col * (ICON + ICON_GAP), -line * (ICON + ICON_GAP))
     b.icon = b:CreateTexture(nil, "ARTWORK")
     b.icon:SetAllPoints(b)
     addLit(b, ICON)
@@ -398,7 +407,7 @@ local function build()
     local panelH = Layout.panelHeight(VISIBLE, ROW_H)
     local leftH = INFO_H + GAP + panelH
     local figuresH = FIGURE_ROW_H * 3
-    local rightH = Native.BUTTON_H + ROW_GAP + ICON + ROW_GAP + CHART_H + 4 + NAMES_H + 4 + HOVER_H
+    local rightH = HEADER_H + ROW_GAP + CHART_H + 4 + NAMES_H + 4 + HOVER_H
         + ROW_GAP + figuresH + 4 + STATUS_H + ROW_GAP + Native.BUTTON_H
     frame = Native.window(NAME, L.HISTORY_TITLE, {
         width = WIDTH,
@@ -445,7 +454,7 @@ local function build()
     parts.right = right
     local rows = CreateFrame("Frame", nil, right)
     rows:SetPoint("TOPLEFT", right, "TOPLEFT", 0, 0)
-    rows:SetSize(RIGHT_W, Native.BUTTON_H + ROW_GAP + ICON)
+    rows:SetSize(RIGHT_W, HEADER_H)
     parts.buttonRows = rows
     for i, key in ipairs({ "net", "materials" }) do
         local b = Native.button(rows, "", { width = VIEW_W, onClick = unlessDragged(function() setView(key) end) })
@@ -456,20 +465,19 @@ local function build()
     end
     for i, p in ipairs(PERIODS) do
         local b = Native.button(rows, "", { width = PERIOD_W, onClick = unlessDragged(function() setPeriod(p) end) })
-        b:SetPoint("TOPRIGHT", rows, "TOPRIGHT", -(#PERIODS - i) * (PERIOD_W + ICON_GAP), -(Native.BUTTON_H + ROW_GAP))
+        b:SetPoint("TOPRIGHT", rows, "TOPRIGHT", 0, -(i - 1) * (Native.BUTTON_H + ICON_GAP))
         Native.forwardDrag(b, frame)
         addLit(b, PERIOD_W)
         parts.periodButtons[i] = b
     end
     local icons = CreateFrame("Frame", nil, rows)
     icons:SetPoint("TOPLEFT", rows, "TOPLEFT", 0, -(Native.BUTTON_H + ROW_GAP))
-    local iconRoom = RIGHT_W - #PERIODS * (PERIOD_W + ICON_GAP) - GAP
-    icons:SetSize(iconRoom, ICON)
-    for i = 1, math.floor((iconRoom + ICON_GAP) / (ICON + ICON_GAP)) do
+    icons:SetSize(ICONS_PER_ROW * (ICON + ICON_GAP), ICON_ROWS * (ICON + ICON_GAP))
+    for i = 1, ICONS_PER_ROW * ICON_ROWS do
         parts.itemButtons[i] = buildItemButton(icons, i)
     end
 
-    local y = -(Native.BUTTON_H + ROW_GAP + ICON + ROW_GAP)
+    local y = -(HEADER_H + ROW_GAP)
     parts.chart = Chart.new(right, RIGHT_W, CHART_H, frame)
     parts.chart.frame:SetPoint("TOPLEFT", right, "TOPLEFT", 0, y)
     parts.chart.onHover = onHover
@@ -517,7 +525,7 @@ local function build()
     end
     -- The messages of the empty states, in the middle of the right side.
     parts.empty = right:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-    parts.empty:SetPoint("TOP", right, "TOP", 0, -(Native.BUTTON_H + ROW_GAP + ICON + ROW_GAP + 60))
+    parts.empty:SetPoint("TOP", right, "TOP", 0, -(HEADER_H + ROW_GAP + 60))
     parts.empty:SetWidth(RIGHT_W - 40)
     parts.empty:SetJustifyH("CENTER")
     parts.empty:SetWordWrap(true)

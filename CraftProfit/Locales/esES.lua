@@ -105,6 +105,7 @@ ns.Locale.register("esES", {
     HISTORY_MEASURES = "Mediciones",
     HISTORY_DAYS = "Días cubiertos",
     HISTORY_CARRIED = "precio de un día anterior",
+    SHORT_DATE = "%d/%m",
     HISTORY_PAUSE = "Pausar seguimiento",
     HISTORY_RESUME = "Reanudar seguimiento",
     HISTORY_DELETE = "Borrar historial",

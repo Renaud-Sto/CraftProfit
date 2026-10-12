@@ -329,3 +329,94 @@ H.test("labels fit their buttons and columns in English, French and Spanish", fu
         fits(T.ns.L.HISTORY_LIST, UI.CHAR_W, UI.LEFT_W - 16)
     end
 end)
+
+H.test("the pause button toggles tracking and keeps the data", function()
+    local T, UI = boot()
+    track(T, raw(5))
+    fill(T, 10)
+    UI.show()
+    UI.select(5)
+    local pause = UI.parts.pauseButton
+    H.truthy(pause.shown)
+    H.eq(pause.text, T.ns.L.HISTORY_PAUSE)
+    click(pause)
+    H.eq(T.ns.History.isActive(T.env.CraftProfitDB, 5), false)
+    H.eq(pause.text, T.ns.L.HISTORY_RESUME)
+    H.eq(UI.parts.rows[1].arrows.text, T.ns.L.TRACK_PAUSED)
+    H.eq(#T.ns.Controller.market().series[1], 10)
+    H.eq(UI.state().selected, 5)
+    click(pause)
+    H.eq(T.ns.History.isActive(T.env.CraftProfitDB, 5), true)
+    H.eq(pause.text, T.ns.L.HISTORY_PAUSE)
+end)
+
+H.test("delete asks for a second click within 4 seconds, on the button itself", function()
+    local T, UI = boot()
+    track(T, raw(5))
+    fill(T, 10)
+    UI.show()
+    UI.select(5)
+    local delete = UI.parts.deleteButton
+    H.eq(delete.text, T.ns.L.HISTORY_DELETE)
+    click(delete)
+    H.eq(delete.text, T.ns.L.HISTORY_DELETE_CONFIRM)
+    H.eq(#T.env.CraftProfitDB.tracked, 1)
+    T.run()                                           -- 4 seconds pass: back to normal
+    H.eq(delete.text, T.ns.L.HISTORY_DELETE)
+    click(delete)
+    click(delete)
+    H.eq(#T.env.CraftProfitDB.tracked, 0)
+    H.eq(UI.state().selected, nil)
+    H.eq(T.ns.Controller.market().series[1], nil)
+    H.eq(UI.parts.empty.text, T.ns.L.HISTORY_NONE)
+    H.eq(UI.parts.deleteButton.shown, false)
+end)
+
+H.test("an armed delete is cancelled by choosing another recipe", function()
+    local T, UI = boot()
+    track(T, raw(5))
+    track(T, raw(6))
+    fill(T, 10)
+    UI.show()
+    UI.select(5)
+    click(UI.parts.deleteButton)
+    UI.select(6)
+    H.eq(UI.parts.deleteButton.text, T.ns.L.HISTORY_DELETE)
+    click(UI.parts.deleteButton)
+    H.eq(#T.env.CraftProfitDB.tracked, 2)
+    -- The actions show for a recipe without enough data too, and the labels fit.
+    T.ns.Controller.market().series = {}
+    UI.refresh()
+    H.truthy(UI.parts.deleteButton.shown)
+    H.truthy(UI.parts.pauseButton.shown)
+end)
+
+H.test("the action labels fit their buttons in English, French and Spanish", function()
+    for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
+        local T, UI = boot({ locale = locale })
+        local Layout, L = T.ns.Layout, T.ns.L
+        for _, b in ipairs({ UI.parts.pauseButton or { width = UI.ACTION_W }, UI.parts.deleteButton or { width = UI.ACTION_W } }) do
+            for _, text in ipairs({ L.HISTORY_PAUSE, L.HISTORY_RESUME, L.HISTORY_DELETE, L.HISTORY_DELETE_CONFIRM }) do
+                local need = Layout.textWidth(text, UI.CHAR_W)
+                H.truthy(need <= b.width - 16 or error(locale .. ": " .. text .. " needs " .. need))
+            end
+        end
+    end
+end)
+
+H.test("a drag that ends on a button clicks nothing", function()
+    local T, UI = boot()
+    track(T, raw(5))
+    fill(T, 10)
+    UI.show()
+    UI.select(5)
+    UI.frame().StartMoving = function() end
+    for _, b in ipairs({ UI.parts.periodButtons[1], UI.parts.deleteButton, UI.parts.pauseButton }) do
+        b.scripts.OnMouseDown(b)
+        b.scripts.OnDragStart(b)
+        click(b)
+    end
+    H.eq(UI.state().period, 30)
+    H.eq(UI.parts.deleteButton.text, T.ns.L.HISTORY_DELETE)
+    H.eq(T.ns.History.isActive(T.env.CraftProfitDB, 5), true)
+end)

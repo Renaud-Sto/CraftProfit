@@ -208,3 +208,59 @@ H.test("openHistory shows the window and selects the recipe, and is safe without
     H.eq(calls, { "show", 5 })
     T.ns.HistoryWindow = saved
 end)
+
+-- Series of `ids` in a market: one point each.
+local function seed(market, ids)
+    for _, id in ipairs(ids) do market.series[id] = { pt(1, 10) } end
+end
+
+H.test("pausing keeps the data, resuming records again, and both count as tracked", function()
+    local T, C = boot()
+    track(T, raw(5))
+    fill(C, 5, flat)
+    C.setHistoryActive(5, false)
+    H.eq(T.ns.History.isActive(T.env.CraftProfitDB, 5), false)
+    H.eq(#T.env.CraftProfitDB.tracked, 1)
+    H.eq(#C.market().series[1], 5)
+    C.setHistoryActive(5, true)
+    H.eq(T.ns.History.isActive(T.env.CraftProfitDB, 5), true)
+    C.setHistoryActive(99, false)                      -- not tracked: nothing happens
+    H.eq(#T.env.CraftProfitDB.tracked, 1)
+end)
+
+H.test("deleting a history removes the recipe and its series in every market, sparing shared items", function()
+    local T, C = boot()
+    track(T, raw(5))                                   -- items 1, 2, 100
+    local other = raw(6)
+    other.reagents = { { itemID = 1, qty = 1 }, { itemID = 3, qty = 1 } }
+    track(T, other)                                    -- items 1, 3, 100
+    local here = C.market()
+    local there = T.ns.DB.market(T.env.CraftProfitDB, "9999-Alliance")
+    seed(here, { 1, 2, 3, 100 })
+    seed(there, { 1, 2, 3, 100, 555 })
+    here.prices[2] = { 50, 1, NOW }
+    H.eq(C.deleteHistory(5), true)
+    H.eq(#T.env.CraftProfitDB.tracked, 1)
+    for _, market in ipairs({ here, there }) do
+        H.eq(market.series[2], nil)                    -- only recipe 5 needed it
+        H.truthy(market.series[1])                     -- shared with recipe 6
+        H.truthy(market.series[3])
+        H.truthy(market.series[100])
+    end
+    H.eq(there.series[555], nil)                       -- an orphan from before goes too
+    H.eq(here.prices[2], { 50, 1, NOW })               -- current prices are never touched
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r " .. string.format(T.ns.L.HISTORY_DELETED, "R5"))
+    H.eq(C.deleteHistory(5), false)
+end)
+
+H.test("/cp history remove cleans every market too and keeps its message", function()
+    local T, C = boot()
+    track(T, raw(5))
+    local there = T.ns.DB.market(T.env.CraftProfitDB, "9999-Alliance")
+    seed(C.market(), { 1, 2, 100 })
+    seed(there, { 1, 2, 100 })
+    C.historyCommand("remove 1")
+    H.eq(next(there.series), nil)
+    H.eq(next(C.market().series), nil)
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r " .. string.format(T.ns.L.HISTORY_REMOVED, "R5"))
+end)

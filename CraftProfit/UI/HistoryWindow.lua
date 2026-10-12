@@ -3,6 +3,9 @@
 -- item) over 7, 30 or 60 days, the key figures and the weekday strip. Only widgets: every
 -- figure comes from Controller.historyList / historyData. Built on first open, never at
 -- login; Escape closes it; refreshed only while shown (no per-frame work).
+-- Under the figures, two actions for the selected recipe: Pause/Resume tracking (the
+-- history stays) and Delete history, which asks for a second click on the button itself
+-- within CONFIRM_SECONDS (no game dialog) before Controller.deleteHistory.
 local _, ns = ...
 local L = ns.L
 local Native, Colors, Chart, Layout = ns.Native, ns.Colors, ns.Chart, ns.Layout
@@ -34,6 +37,8 @@ local HOVER_H = 12
 local FIGURE_ROW_H = 14
 local FIGURE_LABEL_W = 110
 local STATUS_H = 12
+local ACTION_W = 220
+local CONFIRM_SECONDS = 4
 local ROW_GAP = 6
 -- Estimated letter widths (the client cannot measure in tests), as OptionsUI.
 local CHAR_W, SMALL_CHAR_W = 7, 6
@@ -53,6 +58,8 @@ local frame, content, savedPosition
 local origin = { left = 0, right = 0, top = 0 }
 local offset = 0
 local selected, view, period = nil, "net", 30
+-- The recipe whose Delete waits for its confirming click, and the timer that expires it.
+local armed, armToken = nil, 0
 local parts = { rows = {}, itemButtons = {}, viewButtons = {}, periodButtons = {}, figures = {}, weekdayNames = {} }
 
 HistoryWindow.parts = parts
@@ -62,6 +69,8 @@ HistoryWindow.CHAR_W, HistoryWindow.SMALL_CHAR_W = CHAR_W, SMALL_CHAR_W
 HistoryWindow.FIGURE_LABEL_W = FIGURE_LABEL_W
 HistoryWindow.WEEKDAY_W = (RIGHT_W - Chart.LABEL_W) / 7
 HistoryWindow.QUESTION_MARK = QUESTION_MARK
+HistoryWindow.ACTION_W = ACTION_W
+HistoryWindow.CONFIRM_SECONDS = CONFIRM_SECONDS
 
 function HistoryWindow.state()
     return { selected = selected, view = view, period = period }
@@ -196,8 +205,28 @@ local function paintFigures(summary)
     end
 end
 
+local function disarm()
+    armed = nil
+    armToken = armToken + 1
+end
+
+local function paintActions(data)
+    local pause, delete = parts.pauseButton, parts.deleteButton
+    if not data then
+        pause:Hide()
+        delete:Hide()
+        return
+    end
+    pause.resume = data.paused == true
+    pause:setText(pause.resume and L.HISTORY_RESUME or L.HISTORY_PAUSE)
+    delete:setText(armed == data.recipe.recipeID and L.HISTORY_DELETE_CONFIRM or L.HISTORY_DELETE)
+    pause:Show()
+    delete:Show()
+end
+
 local function paintRight(list)
     local data = selected and ctl.historyData(selected, view, period) or nil
+    paintActions(data)
     if #list == 0 then return showEmpty(L.HISTORY_NONE) end
     if not data then return showEmpty(L.HISTORY_SELECT) end
     view, period = data.view, data.period
@@ -268,8 +297,32 @@ end
 
 -- Selects a tracked recipe: its Result view, the period kept.
 function HistoryWindow.select(recipeID)
+    if recipeID ~= selected then disarm() end
     selected, view = recipeID, "net"
     HistoryWindow.refresh()
+end
+
+-- First click arms the delete (its label asks for a second click), a second click within
+-- CONFIRM_SECONDS deletes; after that the label comes back.
+local function onDelete()
+    if not selected then return end
+    if armed == selected then
+        local id = selected
+        disarm()
+        ctl.deleteHistory(id)
+        return
+    end
+    disarm()
+    armed = selected
+    local token = armToken
+    parts.deleteButton:setText(L.HISTORY_DELETE_CONFIRM)
+    if type(C_Timer) == "table" and type(C_Timer.After) == "function" then
+        C_Timer.After(CONFIRM_SECONDS, function()
+            if token ~= armToken then return end
+            armed = nil
+            HistoryWindow.refresh()
+        end)
+    end
 end
 
 local function setView(key)
@@ -283,6 +336,14 @@ local function setPeriod(p)
 end
 
 -- Building ---------------------------------------------------------------------------
+
+-- A click that ends a drag (Native.forwardDrag) runs nothing.
+local function unlessDragged(fn)
+    return function(self, ...)
+        if self.dragged == true then return end
+        fn(self, ...)
+    end
+end
 
 -- A gold line under a button, shown on the active choice.
 local function addLit(button, width)
@@ -338,7 +399,7 @@ local function build()
     local leftH = INFO_H + GAP + panelH
     local figuresH = FIGURE_ROW_H * 3
     local rightH = Native.BUTTON_H + ROW_GAP + ICON + ROW_GAP + CHART_H + 4 + NAMES_H + 4 + HOVER_H
-        + ROW_GAP + figuresH + 4 + STATUS_H
+        + ROW_GAP + figuresH + 4 + STATUS_H + ROW_GAP + Native.BUTTON_H
     frame = Native.window(NAME, L.HISTORY_TITLE, {
         width = WIDTH,
         height = CHROME_H + PAD + math.max(leftH, rightH) + PAD,
@@ -387,14 +448,14 @@ local function build()
     rows:SetSize(RIGHT_W, Native.BUTTON_H + ROW_GAP + ICON)
     parts.buttonRows = rows
     for i, key in ipairs({ "net", "materials" }) do
-        local b = Native.button(rows, "", { width = VIEW_W, onClick = function() setView(key) end })
+        local b = Native.button(rows, "", { width = VIEW_W, onClick = unlessDragged(function() setView(key) end) })
         b:SetPoint("TOPLEFT", rows, "TOPLEFT", (i - 1) * (VIEW_W + ICON_GAP), 0)
         Native.forwardDrag(b, frame)
         addLit(b, VIEW_W)
         parts.viewButtons[i] = b
     end
     for i, p in ipairs(PERIODS) do
-        local b = Native.button(rows, "", { width = PERIOD_W, onClick = function() setPeriod(p) end })
+        local b = Native.button(rows, "", { width = PERIOD_W, onClick = unlessDragged(function() setPeriod(p) end) })
         b:SetPoint("TOPRIGHT", rows, "TOPRIGHT", -(#PERIODS - i) * (PERIOD_W + ICON_GAP), -(Native.BUTTON_H + ROW_GAP))
         Native.forwardDrag(b, frame)
         addLit(b, PERIOD_W)
@@ -443,6 +504,17 @@ local function build()
     parts.status:SetPoint("TOPLEFT", right, "TOPLEFT", 0, y)
     parts.status:SetWidth(RIGHT_W)
     parts.status:SetJustifyH("LEFT")
+    y = y - STATUS_H - ROW_GAP
+    parts.pauseButton = Native.button(right, "", { width = ACTION_W, onClick = unlessDragged(function(self)
+        if selected then ctl.setHistoryActive(selected, self.resume == true) end
+    end) })
+    parts.pauseButton:SetPoint("TOPLEFT", right, "TOPLEFT", 0, y)
+    parts.deleteButton = Native.button(right, "", { width = ACTION_W, onClick = unlessDragged(onDelete) })
+    parts.deleteButton:SetPoint("TOPLEFT", right, "TOPLEFT", ACTION_W + ICON_GAP, y)
+    for _, b in ipairs({ parts.pauseButton, parts.deleteButton }) do
+        Native.forwardDrag(b, frame)
+        b:Hide()
+    end
     -- The messages of the empty states, in the middle of the right side.
     parts.empty = right:CreateFontString(nil, "OVERLAY", "GameFontDisable")
     parts.empty:SetPoint("TOP", right, "TOP", 0, -(Native.BUTTON_H + ROW_GAP + ICON + ROW_GAP + 60))

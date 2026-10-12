@@ -1017,15 +1017,55 @@ function Controller.onEvent(event, arg1, arg2)
     end
 end
 
+-- Drops, in every market (other rulesets and factions too), the history series no
+-- tracked recipe (active or paused) needs any more. Current prices are never touched.
+function Controller.pruneHistory()
+    local removed = 0
+    for _, market in pairs(CraftProfitDB.markets) do
+        if type(market) == "table" and type(market.series) == "table" then
+            removed = removed + History.prune(CraftProfitDB, market, Controller.historyItems)
+        end
+    end
+    return removed
+end
+
+-- Stops tracking the n-th tracked recipe and deletes its history (items another tracked
+-- recipe uses keep theirs). Returns the recipe's name, or nil when there is no such entry.
+local function removeTracked(index)
+    local entry = CraftProfitDB.tracked[index]
+    if not entry or not History.remove(CraftProfitDB, index) then return nil end
+    Controller.pruneHistory()
+    return Controller.recipeName(entry.recipe)
+end
+
+-- Pauses (false) or resumes (true) the tracking of a recipe; its recorded history stays,
+-- and a paused recipe still counts as tracked (limit, pruning).
+function Controller.setHistoryActive(recipeID, active)
+    local _, entry = History.find(CraftProfitDB, recipeID)
+    if not entry then return false end
+    if active then History.track(CraftProfitDB, entry.recipe) else History.pause(CraftProfitDB, recipeID) end
+    Controller.refresh()
+    return true
+end
+
+-- The History window's Delete: stops tracking the recipe and deletes its history.
+function Controller.deleteHistory(recipeID)
+    local index = History.find(CraftProfitDB, recipeID)
+    local name = index and removeTracked(index)
+    if not name then return false end
+    say(string.format(L.HISTORY_DELETED, name))
+    Controller.refresh()
+    return true
+end
+
 -- /cp history: list the tracked recipes; /cp history remove <n>: delete one.
 function Controller.historyCommand(arg)
     local tracked = CraftProfitDB.tracked
     local index = tonumber(arg:match("^remove%s+(%d+)$"))
     if index then
-        local entry = tracked[index]
-        if History.remove(CraftProfitDB, index) then
-            History.prune(CraftProfitDB, Controller.market(), Controller.historyItems)
-            say(string.format(L.HISTORY_REMOVED, Controller.recipeName(entry.recipe)))
+        local name = removeTracked(index)
+        if name then
+            say(string.format(L.HISTORY_REMOVED, name))
             Controller.refresh()
         else
             say(L.HISTORY_NO_SUCH)

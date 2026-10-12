@@ -34,6 +34,12 @@ local function logLine(text)
     if #log > MAX_LOG then table.remove(log, 1) end
 end
 
+-- For the other probe files (Native.lua): a line to the log only, no chat, with the
+-- same timestamp, repeat folding and MAX_LOG trimming.
+function CraftProfitProbe_Log(text)
+    logLine(tostring(text))
+end
+
 local function plain(text)
     return (text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
 end

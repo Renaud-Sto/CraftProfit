@@ -156,12 +156,14 @@ local function build()
     return f
 end
 
--- Writes a detail line to the probe's log only (no chat), in the main probe's format.
+-- Writes a detail line to the probe's log only (no chat), through the main probe's logger
+-- (Probe.lua loads first), so its timestamp and MAX_LOG trimming apply.
 local function logOnly(...)
     local parts = {}
     for i = 1, select("#", ...) do parts[#parts + 1] = tostring((select(i, ...))) end
-    if type(CraftProfitProbeLog) ~= "table" then CraftProfitProbeLog = {} end
-    CraftProfitProbeLog[#CraftProfitProbeLog + 1] = date("%H:%M:%S") .. " [CPP native] " .. table.concat(parts, " ")
+    if type(CraftProfitProbe_Log) == "function" then
+        CraftProfitProbe_Log("[CPP native] " .. table.concat(parts, " "))
+    end
 end
 
 -- /cppn line: can a plain frame draw Line objects on this client (chart primitives)?
@@ -182,14 +184,12 @@ local function lineProbe()
     f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", f.StartMoving)
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
-    tinsert(UISpecialFrames, "CPPLineProbe")
     local bg = f:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
     bg:SetColorTexture(0.08, 0.08, 0.1, 0.95)
     local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOP", f, "TOP", 0, -8)
     title:SetText("CPP line probe: fan | polyline | texture bars (Escape closes)")
-    lineWin = f
 
     local failures = {}
     local function step(name, fn, ...)
@@ -240,6 +240,9 @@ local function lineProbe()
         t:SetSize(14, h)
         t:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 340 + (i - 1) * 13, 30)
     end
+    -- Kept (and closable with Escape) only once fully built: a build that raised is not reused.
+    lineWin = f
+    tinsert(UISpecialFrames, "CPPLineProbe")
     if #failures == 0 then
         out("lines: ok (details in the log; /reload writes it)")
     else

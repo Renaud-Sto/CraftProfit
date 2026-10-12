@@ -670,6 +670,32 @@ H.test("a price search records a history point for a tracked recipe it touches, 
     H.eq(C.market().series[1][1][2], 100)
 end)
 
+H.test("a point records whether its volume is complete: a cut search no, a short one and a scan yes", function()
+    local T = boot()
+    local C = T.ns.Controller
+    track(T)
+    -- Listings as the AH adapter gives them: `full` false when the list was cut.
+    C.recordListings(1, { { unit = 100, qty = 5 }, full = false })
+    C.recordListings(2, { { unit = 50, qty = 3 }, full = true })
+    C.recordListings(100, { { unit = 1000, qty = 2 } })        -- no flag: partial
+    C.commitSearch()
+    H.eq(C.market().prices[1][4], nil)
+    H.eq(C.market().prices[2][4], true)
+    H.eq(C.market().series[1][1], { 1700000000, 100, 5, 100, 100, 1 })
+    H.eq(C.market().series[2][1], { 1700000000, 50, 3, 50, 50, 1, true })
+    H.eq(C.market().series[100][1][7], nil)
+    -- A full scan counts every listing: complete volumes.
+    local T2 = boot()
+    track(T2)
+    local agg = T2.ns.Prices.newAggregator()
+    agg.add(1, 100, 4)
+    agg.add(2, 50, 1)
+    agg.add(100, 1000, 1)
+    T2.ns.Controller.onSnapshot(agg)
+    H.eq(T2.ns.Controller.market().prices[1], { 100, 4, 1700000000, true })
+    H.eq(T2.ns.Controller.market().series[1][1], { 1700000000, 100, 4, 100, 100, 1, true })
+end)
+
 H.test("a point needs a touched item: an unrelated search records nothing", function()
     local T = boot()
     local C = T.ns.Controller

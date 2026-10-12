@@ -636,7 +636,9 @@ end
 -- Stores the median price of an AH search result. False when nothing was listed.
 function Controller.recordListings(itemID, listings)
     local unit, volume = Prices.summarize(listings, CraftProfitDB.settings.medianN)
-    if unit and Prices.store(Controller.market(), itemID, unit, volume, time()) then searched[itemID] = true end
+    -- `full` (set by the AH adapter) says the listings hold every unit on offer.
+    local full = type(listings) == "table" and listings.full == true
+    if unit and Prices.store(Controller.market(), itemID, unit, volume, time(), full) then searched[itemID] = true end
     return unit ~= nil
 end
 

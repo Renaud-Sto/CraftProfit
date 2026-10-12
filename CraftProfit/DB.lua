@@ -137,15 +137,20 @@ local function sanitizeSettings(s)
     end
 end
 
--- Rows are compact arrays { unit, volume, time } to keep the file small. The unit has the
--- same bounds as Prices.store.
+-- Rows are compact arrays { unit, volume, time, full } to keep the file small. The unit
+-- has the same bounds as Prices.store; `full` is true or absent (rows saved before it
+-- existed, or anything else, read as a partial volume).
 local function sanitizePrices(prices)
     for itemID, row in pairs(prices) do
         local valid = Util.id(itemID) == itemID and type(row) == "table"
             and Util.isCopper(row[1]) and row[1] > 0 and row[1] <= Util.MAX_COPPER
             and Util.count(row[2]) ~= nil and Util.isCopper(row[3])
         -- Clearing a field while iterating with pairs is allowed in Lua.
-        if not valid then prices[itemID] = nil end
+        if not valid then
+            prices[itemID] = nil
+        elseif row[4] ~= true then
+            row[4] = nil
+        end
     end
 end
 

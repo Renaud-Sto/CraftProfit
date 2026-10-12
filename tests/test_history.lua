@@ -276,6 +276,42 @@ H.test("points older than 7 days are merged by day, keeping low, high and count;
     H.eq(H2.compact(out, NOW), out)
 end)
 
+H.test("a merged point is complete only if every merged point was, and keeps the count", function()
+    local H2 = load().History
+    local function at(age, volume, full) return { NOW - age, 100, volume, 100, 100, 1, full } end
+    local series = {
+        at(20 * DAY + 100, 10, true), at(20 * DAY + 200, 30, true),    -- one day, all complete
+        at(19 * DAY + 100, 10, true), at(19 * DAY + 200, 30),          -- one partial point
+        at(18 * DAY + 100, 10), { NOW - 18 * DAY - 50, 100, 20, 100, 100, 3 },  -- saved before the flag
+        at(1 * DAY, 7, true), at(2 * DAY, 8),                          -- raw: kept as they are
+    }
+    local out = H2.compact(series, NOW)
+    H.eq(out, {
+        { NOW - 21 * DAY, 100, 20, 100, 100, 2, true },
+        { NOW - 20 * DAY, 100, 20, 100, 100, 2 },
+        { NOW - 19 * DAY, 100, 18, 100, 100, 4 },
+        at(2 * DAY, 8), at(1 * DAY, 7, true),
+    })
+    H.eq(H2.compact(out, NOW), out)
+    -- Loading: anything but true reads as partial, then compacts the same way.
+    local saved = { tracked = {}, markets = { k = { prices = {}, series = { [7] = {
+        { NOW - DAY, 5, 1, 5, 5, 1, "yes" }, { NOW - 3600, 5, 1, 5, 5, 1, true }, { NOW - 60, 5, 1, 5, 5, 1, false },
+    } } } } }
+    H2.sanitize(saved, NOW)
+    H.eq(saved.markets.k.series[7], { { NOW - DAY, 5, 1, 5, 5, 1 }, { NOW - 3600, 5, 1, 5, 5, 1, true },
+        { NOW - 60, 5, 1, 5, 5, 1 } })
+end)
+
+H.test("a recorded point carries the price row's volume flag", function()
+    local H2, db = load().History, newDB()
+    H2.track(db, recipe(1))
+    local m = market({ [1] = { 100, 5, NOW, true }, [2] = { 50, 3, NOW }, [100] = { 1000, 2, NOW, "x" } })
+    H.eq(H2.record(db, m, NOW, { [1] = true }, itemsOf), 1)
+    H.eq(m.series[1], { { NOW, 100, 5, 100, 100, 1, true } })
+    H.eq(m.series[2], { { NOW, 50, 3, 50, 50, 1 } })
+    H.eq(m.series[100], { { NOW, 1000, 2, 1000, 1000, 1 } })
+end)
+
 H.test("compact drops corrupt points and keeps the series ordered", function()
     local H2 = load().History
     local out = H2.compact({
@@ -530,4 +566,30 @@ H.test("old daily points dated at UTC midnight load once onto a local day, then 
     H.eq(out, { { NOW - 21 * DAY + 8 * 3600, 300, 1, 250, 380, 5 }, { NOW - 20 * DAY + 8 * 3600, 310, 1, 300, 320, 2 } })
     H.eq(west.compact(out, NOW), out)
     H.eq(west.dailySeries(out, NOW, 30)[1], { day = NOW - 21 * DAY + 8 * 3600, avg = 300, low = 250, high = 380, n = 5 })
+end)
+
+H.test("volumeSeries gives the last complete volume of each day and whether all were complete", function()
+    local H2 = withDate(0)
+    local series = {
+        { NOW - 2 * DAY + 3600, 100, 50, 100, 100, 1, true },
+        { NOW - 2 * DAY + 7200, 100, 40, 100, 100, 1, true },
+        { NOW - DAY + 3600, 100, 30, 100, 100, 1, true },
+        { NOW - DAY + 7200, 100, 999, 100, 100, 1 },             -- partial: not the day's volume
+        { NOW + 3600, 100, 12, 100, 100, 1 },                     -- only partial today
+        { NOW + 7300, 100, 1, 100, 100, 1, true },                -- ahead of now: ignored
+        { NOW - 20 * DAY, 100, 25, 100, 100, 4, true },           -- a merged complete day
+        "junk", { NOW - 100, math.huge, 1, 1, 1, 1, true },
+    }
+    local saved = copy(series)
+    H.eq(H2.volumeSeries(series, NOW + 7200, 30), {
+        { day = NOW - 20 * DAY, volume = 25, full = true },
+        { day = NOW - 2 * DAY, volume = 40, full = true },
+        { day = NOW - DAY, volume = 30, full = false },
+        { day = NOW, volume = nil, full = false },
+    })
+    H.eq(series, saved)
+    H.eq(#H2.volumeSeries(series, NOW + 7200, 2), 2)
+    H.eq(H2.volumeSeries("x", NOW, 7), {})
+    H.eq(H2.volumeSeries(series, 0 / 0, 7), {})
+    H.eq(H2.volumeSeries(series, NOW, 0), {})
 end)

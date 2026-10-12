@@ -3,7 +3,10 @@
 -- A tracked recipe is a copy of a recipe plus an `active` flag, kept account wide in
 -- db.tracked (at most MAX_TRACKED, paused ones included). Each price measurement of
 -- an item of an active tracked recipe becomes a point in market.series[itemID]:
--- { t, unit, volume, low, high, n }. A raw point has low = high = unit and n = 1.
+-- { t, unit, volume, low, high, n, full }. A raw point has low = high = unit and n = 1.
+-- `full` is true when its volume counts every unit on offer (a full scan, or a search
+-- whose result list was not cut, see AHAdapter); it is left out otherwise, and points
+-- saved before it existed have none: absent means partial.
 -- Points older than 7 days are merged into one point per local day, and a day is dropped once
 -- it ended more than 60 days ago. Each tier has its own cap, so a busy week can only drop
 -- raw points, never the daily history.
@@ -165,10 +168,12 @@ function History.compact(series, now)
                 if t + DAY > oldestEnd then
                     local b = buckets[t]
                     if not b then
-                        b = { t, 0, 0, p[4], p[5], 0 }
+                        b = { t, 0, 0, p[4], p[5], 0, true }
                         buckets[t] = b
                         order[#order + 1] = t
                     end
+                    -- A merged volume is complete only if every merged one was.
+                    b[7] = b[7] and p[7] == true
                     -- Weighted by the number of measurements merged into each point.
                     b[2] = b[2] + p[2] * p[6]
                     b[3] = b[3] + p[3] * p[6]
@@ -182,7 +187,7 @@ function History.compact(series, now)
     local daily = {}
     for _, t in ipairs(order) do
         local b = buckets[t]
-        daily[#daily + 1] = { b[1], Util.round(b[2] / b[6]), Util.round(b[3] / b[6]), b[4], b[5], b[6] }
+        daily[#daily + 1] = { b[1], Util.round(b[2] / b[6]), Util.round(b[3] / b[6]), b[4], b[5], b[6], b[7] or nil }
     end
     -- Each tier is sorted on its own so its cap keeps its newest points.
     table.sort(raw, byTime)
@@ -197,7 +202,7 @@ function History.compact(series, now)
     return keep
 end
 
-local function addPoint(market, itemID, now, unit, volume)
+local function addPoint(market, itemID, now, unit, volume, full)
     local series = market.series[itemID]
     if not series then
         series = {}
@@ -219,7 +224,7 @@ local function addPoint(market, itemID, now, unit, volume)
         last = series[#series]
         if last and last[1] >= now then return false end
     end
-    series[#series + 1] = { now, unit, volume, unit, unit, 1 }
+    series[#series + 1] = { now, unit, volume, unit, unit, 1, full == true or nil }
     market.series[itemID] = History.compact(series, now)
     return true
 end
@@ -249,7 +254,7 @@ function History.record(db, market, now, updated, itemsOf)
                 for _, id in ipairs(items) do
                     local row = market.prices[id]
                     if type(row) == "table" and Util.isCopper(row[1]) and row[1] > 0
-                        and addPoint(market, id, now, row[1], row[2]) then
+                        and addPoint(market, id, now, row[1], row[2], row[4]) then
                         added = true
                     end
                 end
@@ -303,6 +308,10 @@ function History.sanitize(db, now)
             if Util.id(itemID) ~= itemID or type(series) ~= "table" then
                 market.series[itemID] = nil
             else
+                -- `full` is true or absent; anything else (a hand edit) reads as partial.
+                for _, p in ipairs(series) do
+                    if type(p) == "table" and p[7] ~= true then p[7] = nil end
+                end
                 market.series[itemID] = History.compact(series, now)
             end
         end
@@ -426,5 +435,43 @@ function History.weekdayProfile(days, usual)
         end
         out[i] = { pct = pct, n = counts[i] }
     end
+    return out
+end
+
+-- History.volumeSeries(series, now, days) -> { { day, volume, full }, ... } ascending, one
+-- entry per local day of the last `days` days that has points. volume = the volume of the
+-- day's last complete point (the quantity on offer at the end of the day; for a day older
+-- than RAW_SECONDS, merged into one point, the day's average volume), nil when none of
+-- the day's points is complete; full = every point of the day was complete. Sales per
+-- day are not derived here. Never mutates `series`.
+function History.volumeSeries(series, now, days)
+    local out = {}
+    if type(series) ~= "table" or not Util.isCopper(now) then return out end
+    days = Util.count(days)
+    if not days then return out end
+    local today = History.dayOf(now)
+    local first = today and daysBefore(today, days - 1)
+    if not first then return out end
+    local byDay, order = {}, {}
+    for _, p in ipairs(series) do
+        if validPoint(p) and p[1] <= now then
+            local day = History.dayOf(p[1])
+            if day and day >= first then
+                local d = byDay[day]
+                if not d then
+                    d = { day = day, full = true }
+                    byDay[day] = d
+                    order[#order + 1] = d
+                end
+                if p[7] == true then
+                    if not d.lastT or p[1] >= d.lastT then d.lastT, d.volume = p[1], p[3] end
+                else
+                    d.full = false
+                end
+            end
+        end
+    end
+    for _, d in ipairs(order) do out[#out + 1] = { day = d.day, volume = d.volume, full = d.full } end
+    table.sort(out, function(a, c) return a.day < c.day end)
     return out
 end

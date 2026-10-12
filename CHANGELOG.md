@@ -15,6 +15,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 ### Changed
 - Price history retention: every point is kept for 7 days, then one point a day for 60 days (at most 212 points, about 35 KB in the saved file, per item); the weekly tier is gone. Existing history is compacted at load: points between 7 and 60 days old become daily points, weekly points and anything older than 60 days are dropped.
 - Up to 30 recipes can be tracked (was 15).
+- Prices and history points record whether their volume counts every unit on offer (a full scan, or a search whose results were not cut at 100 rows), for a later estimate of sales per day; nothing visible changes.
 - The pinned list under the main window is no longer evaluated while it is hidden.
 
 ### Removed

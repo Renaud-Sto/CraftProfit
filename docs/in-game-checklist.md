@@ -104,6 +104,7 @@ Leveling window (`/cp level`):
 - [ ] 30 recipes can be tracked; ticking *Track history* on a 31st is refused with "Too many tracked recipes (30 max)" and the box stays unticked.
 - [ ] After updating from 1.0.0 with recorded history, `/reload`: no Lua error, and the `series` entries of the tracked items are still in `CraftProfit.lua` (points of the last 7 days as they were, older ones one per day, nothing older than 60 days, no weekly point).
 - [ ] `/cp history` still lists the tracked recipes (active and paused) and `/cp history remove <n>` still deletes one.
+- [ ] After a **Scan AH** and a **Refresh recipe**, `/reload` works with no Lua error and nothing visible changes (the price rows and history points of complete volumes end with `true` in `CraftProfit.lua`).
 
 ## Click a reagent to search it (quality of life, never buys)
 - [ ] With the materials detail unfolded at the AH, hovering a reagent row highlights it. Clicking "20x Bronze Bar" opens the AH's Buy view, types the item name in the AH search box and starts the search.

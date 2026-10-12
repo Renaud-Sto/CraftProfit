@@ -13,7 +13,8 @@ Not a goal: sales speed (the game gives no sales history), alerts, prices of rec
 
 ## Facts the design rests on
 
-- History exists only for recipes ticked *Track history* (account wide), per market (ruleset/realm and faction), per item: `market.series[itemID]` holds points `{ t, unit, volume, low, high, n }` (`History.lua`).
+- History exists only for recipes ticked *Track history* (account wide), per market (ruleset/realm and faction), per item: `market.series[itemID]` holds points `{ t, unit, volume, low, high, n, full }` (`History.lua`).
+- A search reads at most 100 result rows (`AH.MAX_SEARCH_RESULTS`), the cheapest first: when the list is cut, the volume of the point is only part of what is on offer. A full scan counts every listing. Each point says which (`full`, decision 11).
 - Points are written only when the player runs a search or scan at the auction house (`Refresh recipe`, `Refresh pinned`, `Scan AH`): the data is as regular as the player's habits. The view must say so and show how many measurements are behind each comparison.
 - A recipe is recorded only when every required item has a price; the crafted item of a bind-on-pickup recipe is optional.
 - Each measurement is already a median of the 5 cheapest units (the price model), so a point is a robust price, not a single listing.
@@ -33,6 +34,7 @@ Not a goal: sales speed (the game gives no sales history), alerts, prices of rec
 8. **Chart: bars, not lines.** For each day a vertical bar from the lowest to the highest price of that day with a tick at the average; the usual price as a horizontal line; carried days drawn lighter; missing days left empty. Built from coloured textures on a plain frame (no template, no atlas dependency). The `Line` object (smooth curves) is **not** assumed: a probe checks `CreateLine` on Forever first; if it works, a connecting line through the daily averages is added, otherwise bars stay. Vertical scale: min and max of the shown period with a margin, never a zero divisor when low equals high; gold/silver/copper axis labels with the coin formatting (no icons on the axis: plain `12g 40s`). The icon row for Net result offers two views, **Result** and **Materials cost**.
 9. **Day of the week strip.** Seven bars Monday to Sunday: the average of the daily averages of that weekday over the period divided by the period's usual price, as a percentage (`+8 %`); number of days behind each bar; weekdays with fewer than 2 days are drawn empty. Day of week comes from `date("*t", t)` in the player's local time.
 10. **Indicators for pins and leveling are out of scope** (history is per tracked recipe).
+11. **Volume completeness flag.** Every price row and history point records whether its volume is complete (`full`: a full scan, or a search whose result list was not cut at 100 rows); a merged daily point is complete only if all its points were; points saved before the flag read as partial. Estimated sales per day will come later, only from complete measurements, and show in the window's key figures as "about N per day (high estimate)": a drop in the quantity on offer also counts expired and cancelled auctions.
 
 ## Architecture
 

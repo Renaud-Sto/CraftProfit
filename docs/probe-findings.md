@@ -130,7 +130,7 @@ What to look for:
 - Whether `isdst` changes between June and late October or late March. That shows whether the client follows the computer's daylight saving rules.
 - Whether `time()` and `GetServerTime()` agree.
 
-Checked outside the game only: the same code under plain LuaJIT (`os.date` / `os.time`) gives `time(table): ok` for Europe/Paris, America/Los_Angeles and Pacific/Kiritimati (UTC+14). Results in game: ⚠️ not measured yet.
+Checked outside the game only: the same code under plain LuaJIT (`os.date` / `os.time`) gives `time(table): ok` for Europe/Paris, America/Los_Angeles and Pacific/Kiritimati (UTC+14). Results in game: see below.
 
 **Results in game (2026-10-12, build 1.60.1, French client, computer in Europe/Paris):**
 - **`CreateLine` works.** `/cppn line` printed `lines: ok`: `CreateLine`, `SetStartPoint`, `SetEndPoint`, `SetThickness` (1 and 2) and `SetColorTexture` all succeeded, and the fan of five lines and the polyline of seven points drew correctly next to the seven texture bars (screenshot checked). `Chart.USE_LINES` may be switched on; the History window (step 3) draws bars and line together so the author can judge the look.

@@ -128,8 +128,8 @@ Pure computations for the history view (no UI yet), all tested with hand-made se
 Design note for the main window arrows (step 4): since "today" is the newest measured day, the arrows are greyed or hidden when that newest point is older than 24 hours, so a stale comparison is never shown as current.
 
 **Chart geometry** (`ChartModel.lua`, pure, all amounts in copper, y measured from the top of the area):
-- `scale(lo, hi, steps)` → `{ min, max, step, ticks }`. Padding is 5 %; a range of 0 is padded by 10 % of the value, at least 1 copper. The scale never goes below 0 when `lo >= 0`. Steps are 1, 2 or 5 × 10^k (at least 1) for about `steps` intervals (default 4), and min and max are multiples of the step, so 0 is a tick whenever the range crosses it (a loss). Always `max > min`; a bound that is not finite is ignored.
-- `priceLabel(copper)` → plain text, never icons: `12g 40s`, `12g`, `40s 5c`, `5c`, `-3g 10s`. From 1000 gold it shows thousands of gold rounded down to one decimal (`1.2k g`, `1k g`), with no decimal from 100k (`100k g`). Anything not finite gives `?`.
+- `scale(lo, hi, steps)` → `{ min, max, step, ticks }`. Padding is 5 %; a range of 0 is padded by 10 % of the value, at least 1 copper. The scale never goes below 0 when `lo >= 0`. Steps are 1, 2 or 5 × 10^k (at least 1) for about `steps` intervals (default 4, kept within 2 to 20), and min and max are multiples of the step, so 0 is a tick whenever the range crosses it (a loss). Always `max > min`. A bound that is not finite is ignored, and the padded range stays within ±`Util.MAX_COPPER`, so a hostile value never produces a long tick list.
+- `priceLabel(copper)` → plain text, never icons: `12g 40s`, `12g`, `40s 5c`, `5c`, `-3g 10s`. From 1000 gold it shows thousands of gold rounded down to one decimal (`1.2k g`, `1k g`), with no decimal from 100k (`999k g`). From a million gold it shows millions the same way (`1M g`, `12.3M g`). Amounts are capped at `Util.MAX_COPPER`, which shows as `1000M g`. Anything not finite gives `?`.
 - `slots(period)` → `{ count, index(day, newest) }` for 1 to 62 days ending at `newest`. Days are counted by rounding, so a 23 or 25 hour day counts once.
 - `extent(days, field)` → the lowest and highest values a chart of those rows would draw.
 - `bars(days, scale, width, height, field, period, newest)` → `{ slot, x, w, yLow, yHigh, yAvg, carried, row }`. The rows are either `HistoryView.recipeDays` charted on `field` (`net`, `materials`, `sale`: low = high = the value, carried from `<field>Carried`, else `carried`) or `History.dailySeries` rows when `field` is nil (avg, low, high).
@@ -140,19 +140,23 @@ Design note for the main window arrows (step 4): since "today" is the newest mea
 - `usualY(usual, scale, height)` → `{ y, outside }`; `outside` is `above` or `below` when the usual price is off the scale, and the line then sits on that border.
 - `weekdayBars(profile, width, height)` → 7 entries, Monday first, `{ x, w, y, h, pct, n, empty }`, around a zero line at mid-height, plus `limit`. The scale is symmetric (±limit %): the largest |pct| rounded up to a multiple of 5, at least 10. A weekday under 2 days is empty.
 
+Gridline, zero line and usual price colours are in `Colors.CHART`.
+
 **Chart widget** (`UI/Chart.lua`) draws that geometry with coloured textures on plain frames: no template, no atlas, no image.
-- **Creation.** `Chart.new(parent, width, height)` returns an object; its `frame` starts shown and the caller anchors it. The area is split into a 60 px left gutter for the amounts, the plot, and a 50 px weekday strip under it. A size that is not finite or not positive falls back to 400 × 240.
+- **Creation.** `Chart.new(parent, width, height, window)` returns an object; its `frame` starts shown and the caller anchors it. The area is split into a 60 px left gutter for the amounts, the plot, and a 50 px weekday strip under it. A size that is not finite or not positive falls back to 400 × 240. With `window` (a `Native.window`), each slot button forwards a left drag to it through `Native.forwardDrag`, so a drag on the plot moves the window as a drag on its body does; no hover is reported while it moves, and a drag start ends the current hover. Without `window`, the slot buttons only hover.
 - **`chart:set(model)`.** The model is `{ days, field, scale, usual, period, newest, carriedTint }`; `period` defaults to 30, and nil or anything unusable clears the chart.
   - The scale comes from the days and the usual price when the model gives none.
   - Bars are coloured green or red by the net's sign, gold for other views. A carried day multiplies its alpha by `carriedTint` (default 0.4).
+  - Bars, ticks, gridlines and the usual line stay inside the plot, and every bar keeps at least one pixel visible.
+  - Ticks that are not finite numbers are skipped, and a `field` that is not a string draws nothing.
   - Every tick gets a 1 px gridline and its `priceLabel` in `GameFontHighlightSmall`, plus a brighter zero line when the scale crosses 0.
   - The usual price gets a line and a label, with ` ^` or ` v` when it is clamped off the scale.
 - **Other methods.**
-  - `chart:clear()` empties the chart.
-  - `chart:setWeekday(profile)` draws the 7 weekday bars (green above 0, red below, empty ones hidden) and their percentages (`-20%`, `0%`, `+20%`).
+  - `chart:clear()` empties the chart. When a day was hovered it also calls `onHover(nil)`, because a hidden button fires no `OnLeave` (`set` clears first, so a redraw ends the hover too).
+  - `chart:setWeekday(profile)` draws the 7 weekday bars (green above 0, red below, empty ones hidden) and their percentages, rounded and kept within ±999 (`-20%`, `0%`, `+13%`).
   - `chart.onHover(row, slot)` is set by the caller. One invisible Button per slot calls it on enter with the row of that day (nil over a gap) and with nil on leave.
 - **Pools.** Bars (span plus average tick), gridlines and labels, slot buttons, line segments and weekday bars come from pools. A redraw reuses what exists and hides the rest, so 60 days then 7 then 60 creates nothing new. Nothing runs per frame: drawing happens only in `set` and `setWeekday`.
-- **Lines.** `Chart.USE_LINES` (false) adds a line through the daily averages, one `CreateLine` segment between consecutive drawn days. When `CreateLine` is missing, returns nothing or raises, `chart.linesOk` is false and only the bars stay. It stays off until the probe shows lines work on Forever (`/cppn line`, [probe-findings.md](probe-findings.md) F14).
+- **Lines.** `Chart.USE_LINES` (false) adds a line through the daily averages, one `CreateLine` segment between neighbouring slots: the line stops at a gap and a lone day draws no segment. When `CreateLine` is missing, returns nothing or raises, `chart.linesOk` is false and only the bars stay. It stays off until the probe shows lines work on Forever (`/cppn line`, [probe-findings.md](probe-findings.md) F14).
 
 ## Evaluation
 

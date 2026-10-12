@@ -115,6 +115,8 @@ To check in step 3, once the history window shows the chart; take screenshots.
 - [ ] Axis labels are plain amounts (`12g 40s`, `1.2k g`), readable, not overlapping; a loss shows a brighter zero line.
 - [ ] Weekday strip: Monday first, green above and red below the zero line, a percentage under each bar, nothing for a weekday with fewer than 2 days.
 - [ ] Hovering a day reports that day (tooltip in step 3); hovering a gap reports nothing; switching 60 days then 7 then 60 leaves no stray bar.
+- [ ] Dragging from the chart moves the history window like a drag on its body, without a tooltip flickering while it moves; the window comes to the front on the press.
+- [ ] A refresh or a period change while a day is hovered hides its tooltip (no stale tooltip left behind).
 
 ## Click a reagent to search it (quality of life, never buys)
 - [ ] With the materials detail unfolded at the AH, hovering a reagent row highlights it. Clicking "20x Bronze Bar" opens the AH's Buy view, types the item name in the AH search box and starts the search.

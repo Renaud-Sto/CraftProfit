@@ -104,7 +104,7 @@ Why: the history chart (price history step 2) is drawn from coloured textures on
 
 How to run it:
 1. Enable `probe/CraftProfitProbe` next to CraftProfit (the version from the commit that adds this entry or later).
-2. `/cpp clear`, then `/cppn line`, then `/cppn time`. Each prints one verdict line in chat; the details go to the probe's log only.
+2. `/cpp clear`, then `/cppn line`, then `/cppn time`. Each prints one verdict line in chat; the details go to the probe's log only, through the main probe's logger (`CraftProfitProbe_Log`, with its timestamps and `MAX_LOG` trimming).
 3. `/reload` to write the log: `WTF/Account/<ACCOUNT>/SavedVariables/CraftProfitProbe.lua`, lines with `[CPP native] line` and `[CPP native] time`.
 
 `/cppn line` opens a movable window `CPPLineProbe` (Escape closes it, `/cppn line` toggles it) with three drawings on a dark background: a fan of 5 coloured lines from one point (thickness 1 and 2 alternating), a yellow 7 point polyline, and 7 blue texture bars for comparison. Every call runs in `pcall`.

@@ -4,7 +4,7 @@
 
 CraftProfit vous dit ce que coûte vraiment une recette de métier à l'hôtel des ventes, et ce qu'il faut faire de l'objet obtenu. Ce guide explique chaque partie de la fenêtre, comment chaque chiffre est calculé, et ce que l'addon ne peut pas savoir.
 
-Sommaire : [La fenêtre](#la-fenêtre) · [À l'hôtel des ventes](#à-lhôtel-des-ventes) · [Comment les chiffres sont calculés](#comment-les-chiffres-sont-calculés) · [Fenêtre d'options](#fenêtre-doptions) · [Options et commandes](#options-et-commandes) · [Langues](#langues) · [Limites connues](#limites-connues) · [FAQ et dépannage](#faq-et-dépannage)
+Sommaire : [La fenêtre](#la-fenêtre) · [À l'hôtel des ventes](#à-lhôtel-des-ventes) · [Comment les chiffres sont calculés](#comment-les-chiffres-sont-calculés) · [Historique des prix](#historique-des-prix) · [Fenêtre d'options](#fenêtre-doptions) · [Options et commandes](#options-et-commandes) · [Langues](#langues) · [Limites connues](#limites-connues) · [FAQ et dépannage](#faq-et-dépannage)
 
 ## La fenêtre
 
@@ -35,7 +35,7 @@ Pour de grandes quantités, le total est une estimation : le prix d'un composant
 
 ### Suivre l'historique
 
-La case **Suivre l'historique** (à côté de Crafts) fait garder à CraftProfit les prix des composants et du résultat de cette recette au fil du temps. Jusqu'à 30 recettes peuvent être suivies, indépendamment de la liste des épingles. Un point est enregistré après chaque scan et chaque recherche de prix qui touche un objet de la recette, tant que tous les prix nécessaires sont connus. Décocher la case met l'enregistrement en pause et garde ce qui a été enregistré. `/cp history` liste les recettes suivies et `/cp history remove <n>` en supprime une avec son historique. Les prix sont gardés par jeu de règles (le « royaume » de la bêta) et par faction : l'historique d'un marché ne se mélange jamais avec un autre. Chaque point enregistré est gardé 7 jours, puis un point par jour (moyenne, plus bas, plus haut et nombre de mesures) est gardé 60 jours ; l'historique plus ancien est supprimé. Une vue de l'historique (graphiques, « moins cher que d'habitude ») est prévue ; pour l'instant, les données sont seulement collectées.
+La case **Suivre l'historique** (à côté de Crafts) fait garder à CraftProfit les prix des composants et du résultat de cette recette au fil du temps. Jusqu'à 30 recettes peuvent être suivies, indépendamment de la liste des épingles. Un point est enregistré après chaque scan et chaque recherche de prix qui touche un objet de la recette, tant que tous les prix nécessaires sont connus. Décocher la case met l'enregistrement en pause et garde ce qui a été enregistré. `/cp history` ouvre la [fenêtre d'historique](#historique-des-prix) ; `/cp history list` liste les recettes suivies dans le chat et `/cp history remove <n>` en supprime une avec son historique. Les prix sont gardés par jeu de règles (le « royaume » de la bêta) et par faction : l'historique d'un marché ne se mélange jamais avec un autre. Chaque point enregistré est gardé 7 jours, puis un point par jour (moyenne, plus bas, plus haut et nombre de mesures) est gardé 60 jours ; l'historique plus ancien est supprimé. La [fenêtre d'historique](#historique-des-prix) les affiche.
 
 ### Boutons Épingler et Actualiser recette
 
@@ -51,7 +51,7 @@ Trois façons de mettre les prix à jour, de la plus rapide à la plus large :
 - **Actualiser épinglées** (sous la liste des épingles) : toutes les recettes épinglées, un objet à la fois, environ une minute pour 20 recettes.
 - **Scanner l'HV** (sous la liste des épingles) : tout l'hôtel des ventes en un scan complet ; le jeu en autorise un par tranche de 15 minutes et par compte.
 
-À l'ouverture de l'hôtel des ventes, la fenêtre affiche le panneau **RECETTES ÉPINGLÉES** sous la recette, avec trois boutons : **Actualiser épinglées** (le bouton principal), **Scanner l'HV** et **Montée de métier**, et une ligne de statut en dessous.
+À l'ouverture de l'hôtel des ventes, la fenêtre affiche le panneau **RECETTES ÉPINGLÉES** sous la recette, avec quatre boutons : **Actualiser épinglées** (le bouton principal), **Scanner l'HV**, **Montée de métier** et **Historique**, et une ligne de statut en dessous.
 
 - **Actualiser épinglées** chiffre tous les composants, tous les objets obtenus (sauf ceux liés quand ramassés) et, si besoin, les matériaux de désenchantement des recettes épinglées, un objet à la fois, avec un compteur de progression : environ une minute pour 20 recettes épinglées. Avec beaucoup de recettes épinglées, **Scanner l'HV** va souvent plus vite. Les prix sont enregistrés avec leur date. Si vous fermez l'hôtel des ventes en cours de route, la recherche est annulée et les prix déjà reçus sont conservés. Un prix qui ne répond pas, ou qui répond sans offre, est redemandé une seconde fois automatiquement avant le résumé (« Nouvel essai n/m »). Une seule recherche à la fois : Actualiser recette est grisé pendant qu'elle tourne.
 - **Scanner l'HV** lit tout l'hôtel des ventes d'un coup (le jeu autorise un scan complet par tranche de 15 minutes et par compte). Il chiffre des milliers d'objets, ce qui permet d'évaluer ensuite n'importe quelle recette. Si un autre addon lance un scan, CraftProfit utilise son résultat sans refaire de demande. Si le serveur ne répond pas, le statut le dit : le délai de 15 minutes est probablement en cours.
@@ -147,6 +147,18 @@ Un craft qui fait perdre 16s 50c avec 25 % de chances de point coûte 66s par po
 
 La probabilité de point dépend de la couleur de la recette et c'est une **estimation**, pas une valeur mesurée : orange 100 %, jaune 75 %, vert 25 %, gris 0 % (affiché `n/d`). Le pourcentage utilisé est affiché à côté de la case, après la valeur. La couleur des recettes épinglées est rafraîchie à chaque mise à jour de la fenêtre de métier, elle suit donc votre niveau.
 
+## Historique des prix
+
+La fenêtre **Historique** montre les prix que CraftProfit a enregistrés pour vos recettes suivies (cochez **Suivre l'historique** dans la fenêtre principale, 30 recettes au plus). Ouvrez-la avec le bouton **Historique** sous la liste des épingles (à côté de **Montée de métier**), le bouton **Historique** de la fenêtre d'options, ou `/cp history` ; `/cp history 2` l'ouvre sur la deuxième recette suivie.
+
+- **À gauche** : vos recettes suivies, colorées selon leur difficulté. À côté d'un nom, deux pourcentages comparent le coût des composants et la valeur de vente les plus récents à leur niveau habituel : vert pour une bonne nouvelle (composants moins chers ou vente plus haute), rouge pour l'inverse, gris à ±3 % près. Ils n'apparaissent que si la dernière mesure date de moins de 24 heures et qu'il y a au moins 3 jours de données. Une recette en pause l'indique.
+- **À droite**, une fois une recette choisie : **Résultat** (la vente à l'hôtel des ventes après la commission de 5 %, moins les composants) ou **Coût des composants**, ou le prix d'un seul objet avec les icônes en dessous ; la période, **7 jours**, **30 jours** ou **60 jours**, avec les boutons à droite.
+- **Le graphique** : une barre par jour, du prix le plus bas au plus haut de la journée, avec un trait blanc à la moyenne et une ligne qui relie les moyennes. Une barre plus claire utilise un prix repris d'un jour précédent (un objet non recherché ce jour-là). Un jour sans aucune mesure reste vide. La ligne horizontale est le prix habituel (médiane des 30 derniers jours), son montant à droite. Survolez un jour pour lire sa date et son montant sous le graphique.
+- **Chiffres clés** : aujourd'hui (le jour mesuré le plus récent), habituel, plus bas, plus haut, nombre de mesures et jours couverts.
+- **Jour de la semaine** : sept barres, du lundi au dimanche, qui montrent de combien les prix de chaque jour s'écartent du prix habituel, pour repérer par exemple une hausse le week-end. Un jour de la semaine avec moins de 2 jours de données reste vide.
+- **D'où viennent les données** : uniquement des recherches et des scans que vous lancez vous-même à l'hôtel des ventes. Sans actualisations régulières, rien de fiable à montrer ; avec moins de 3 jours, la fenêtre indique combien de mesures elle a.
+- **Mettre le suivi en pause** arrête l'enregistrement et garde tout ce qui a été enregistré (une recette en pause compte toujours dans les 30) ; **Reprendre le suivi** le relance. **Supprimer l'historique** demande un second clic sur le même bouton dans les 4 secondes (aucune fenêtre du jeu), puis arrête de suivre la recette et supprime l'historique de ses objets sur tous les jeux de règles et toutes les factions, sauf les objets qu'une autre recette suivie utilise. Les prix actuels ne sont jamais supprimés.
+
 ## Fenêtre d'options
 
 Ouvrez-la avec `/cp options`, un clic gauche sur le bouton de la minicarte, ou l'entrée CraftProfit du compartiment d'addons (le bouton de la liste des addons sur la minicarte, si votre client l'affiche). Échap la ferme ; déplacez-la où vous voulez, elle se rouvre au même endroit.
@@ -156,7 +168,7 @@ Où s'ouvrent les fenêtres : une fenêtre CraftProfit jamais déplacée s'ouvre
 - **Apparence** : choisissez le *Bandeau des sections* (Bois sculpté, Ombre ou Stries) et les *Cases de prix* (Carte de butin ou Encart). Les deux se combinent librement (6 apparences) ; le bouton allumé est votre choix. Il s'applique aussitôt à toutes les fenêtres, ouvertes ou non, et est enregistré pour le compte. Par défaut : Ombre et Encart.
 - **Recettes épinglées** : la *Limite par personnage*, 12, 20, 30 ou 40 (20 par défaut) ; le bouton allumé est votre choix, enregistré pour le compte et appliqué dès la prochaine épingle. Une limite plus haute rallonge **Actualiser épinglées**, car l'hôtel des ventes est interrogé un objet à la fois (environ une minute pour 20 recettes) ; avec beaucoup de recettes, **Scanner l'HV** va souvent plus vite. Baisser la limite ne supprime jamais d'épingle : celles au-delà de la nouvelle limite restent, et les nouvelles sont refusées tant que vous n'en avez pas retiré assez.
 - **Minicarte** : *Afficher le bouton de la minicarte*. Décochez pour masquer le bouton ; `/cp minimap` le masque ou le rétablit aussi.
-- **Fenêtres** : ouvre ou ferme la fenêtre principale et la fenêtre de montée de métier (première ligne) et la fenêtre des recettes épinglées (deuxième ligne).
+- **Fenêtres** : ouvre ou ferme la fenêtre principale et la fenêtre de montée de métier (première ligne), la fenêtre des recettes épinglées et la fenêtre d'historique (deuxième ligne).
 - **Commandes** : les clics sur la minicarte et toutes les commandes, une par ligne : la commande en doré, ce qu'elle fait en blanc.
 
 Les couleurs qui ont un sens ne changent jamais avec l'apparence : le gain en vert, la perte en rouge, les couleurs de difficulté des recettes (orange, jaune, vert, gris) et la teinte du bandeau de résultat.
@@ -197,7 +209,7 @@ La fenêtre suit la langue du jeu : anglais, français et espagnol (l'espagnol d
 - **Les grandes quantités sont estimées.** Voir [Crafts](#crafts).
 - **Les données de désenchantement viennent du Classic**, marquées *bêta*, sans table pour les épiques au-dessus du niveau d'objet 60.
 - **Les chances de point sont des estimations** fondées sur la couleur de la recette.
-- **L'historique des prix est enregistré, pas encore affiché.** Il n'y a ni graphique ni vue de l'historique ; `/cp history` liste seulement les recettes suivies.
+- **L'historique des prix dépend de vos propres recherches.** Un prix n'est enregistré que lorsque vous lancez une recherche ou un scan à l'hôtel des ventes ; le graphique et les flèches ne sont aussi réguliers que vos actualisations.
 - **Aucun historique ni fréquence de vente.** Le jeu ne fournit pas ces données : CraftProfit ne peut pas dire à quelle vitesse un objet se vend.
 - **L'hôtel des ventes seul pour les prix.** Les prix marchand viennent du jeu.
 

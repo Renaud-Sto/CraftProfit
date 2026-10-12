@@ -29,7 +29,7 @@ CraftProfit is an addon for **World of Warcraft: Forever**. Select a recipe you 
 - **Several crafts at once**: multiply a recipe by 1 to 9999 crafts.
 - **Pinned recipes** (20 per character by default; 12, 20, 30 or 40 in the options window), sorted by profit or by cost per point, to compare what to craft next (with many pinned, **Scan AH** is usually faster than **Refresh pinned**); under the main window at the auction house, and anywhere in their own window (`/cp pins` or a right click on the minimap button).
 - **Auction house tools**: **Refresh recipe** prices the recipe on screen in a few seconds, **Refresh pinned** prices every pinned recipe, **Scan AH** reads the whole auction house; a missed price is asked a second time automatically. Click a reagent to search it in the auction house, quantity already filled in, or the crafted item to see how many are for sale. CraftProfit never buys anything for you.
-- **Price history** (recording): tick *Track history* on up to 30 recipes and CraftProfit keeps their prices scan after scan (every point for 7 days, one a day for 60 days), per ruleset (the game "realm" in the beta) and faction. Graphs are planned.
+- **Price history**: tick *Track history* on up to 30 recipes and CraftProfit keeps their prices scan after scan (every point for 7 days, one a day for 60 days); the **History** window charts them over 7, 30 or 60 days (a bar per day, the usual price, the day of the week), and its list says in green or red whether the newest materials cost and sale value are better or worse than usual. Prices are kept per ruleset (the game "realm" in the beta) and faction.
 - **Standalone**: no Auctionator, no other addon required. It also picks up the scans other addons start.
 - **Options window and minimap button**: pick the look of the windows (header strip and tile card), applied at once, and the pinned recipes limit; open it from the minimap button, the addon compartment or `/cp options`.
 - **English, French and Spanish** (follows the game language; saved recipe and profession names follow it too).
@@ -62,7 +62,7 @@ The full walkthrough, every option and the explanation of each number are in the
 | `/cp options` | Open or close the options window (look of the windows, pinned recipes limit, minimap button, controls) |
 | `/cp minimap` | Hide the minimap button, or show it again |
 | `/cp scan` | Start a full auction house scan (auction house open) |
-| `/cp history` | List the tracked recipes; `/cp history remove <n>` deletes one |
+| `/cp history` | Open the History window (`/cp history <n>`: on the n-th tracked recipe); `/cp history list` lists the tracked recipes, `/cp history remove <n>` deletes one |
 | `/cp pins` | Open or close the pinned recipes window (works anywhere, last known prices) |
 | `/cp level` | Open or close the leveling window |
 | `/cp market` | Show which market (ruleset and faction) the prices are saved under |

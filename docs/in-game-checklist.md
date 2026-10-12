@@ -114,9 +114,26 @@ To check in step 3, once the history window shows the chart; take screenshots.
 - [ ] The usual price is a thin line with its amount at the right; when it is off the scale, the line sits on the border and its label ends with `^` or `v`.
 - [ ] Axis labels are plain amounts (`12g 40s`, `1.2k g`), readable, not overlapping; a loss shows a brighter zero line.
 - [ ] Weekday strip: Monday first, green above and red below the zero line, a percentage under each bar, nothing for a weekday with fewer than 2 days.
-- [ ] Hovering a day reports that day (tooltip in step 3); hovering a gap reports nothing; switching 60 days then 7 then 60 leaves no stray bar.
+- [ ] Hovering a day shows its date and amount in the line under the chart; hovering a gap shows nothing; switching 60 days then 7 then 60 leaves no stray bar.
 - [ ] Dragging from the chart moves the history window like a drag on its body, without a tooltip flickering while it moves; the window comes to the front on the press.
-- [ ] A refresh or a period change while a day is hovered hides its tooltip (no stale tooltip left behind).
+- [ ] A refresh or a period change while a day is hovered clears the hover line (nothing stale left behind).
+
+## History window
+Take screenshots of each state and of the chart in English, French and Spanish (`/cp locale frFR`, `/cp locale esES`).
+- [ ] Entry points: the **History** button right of **Leveling** under the pinned list (the footer keeps its height, the main window its size), the **History** button in the options window's Windows panel (two rows of two, every label whole), `/cp history` (opens), `/cp history 1` (opens on the first tracked recipe), `/cp history 9` with fewer recipes (message naming `/cp history list`), `/cp history list` (the chat list), `/cp history remove <n>`.
+- [ ] States: with no tracked recipe, "Tick Track history on a recipe to follow its prices."; with recipes but none selected, "Select a recipe."; a recipe with 1 or 2 days of data shows "N measurements over D days..."; a paused recipe still shows its chart with the paused line under the figures.
+- [ ] The title names the market (ruleset and faction); the information line on the data's origin is readable at the top left.
+- [ ] List: names in their difficulty colours, a gold tint on the selected row, a scroll bar with more than 12 tracked recipes (wheel and bar); the percentages appear only for fresh data (a search within 24 hours) and are green, red or grey as expected; a paused recipe shows *paused*. A click selects the row and never opens the main window.
+- [ ] Selection and views: clicking a recipe shows **Result** over the chosen period; **Materials cost** and each item icon redraw the chart; the active view and period have a gold underline; choosing another recipe goes back to Result and keeps the period; a refresh at the auction house keeps the selection, view and period.
+- [ ] Icons: every item of a recipe with many reagents shows (two rows of 10), clear of the period buttons; an icon the client cannot give shows a question mark; hovering an icon shows the item tooltip.
+- [ ] Periods: 7, 30 and 60 days redraw with the right number of slots; no stray bar after switching back and forth.
+- [ ] Hover line: the date in the language's order (12/10 in French and Spanish, 10/12 in English), the amount, lowest and highest for an item, and the *carried* note on a lighter day.
+- [ ] Weekday strip: the names Monday to Sunday under the bars, aligned with them; percentages readable.
+- [ ] Lines on and off: with `Chart.USE_LINES = true` (default) a thin line joins the daily averages and stops at gaps. Edit `CraftProfit/UI/Chart.lua` to `false`, `/reload`, compare the look (screenshots of both), then restore `true`. Note which reads better.
+- [ ] Drag: the window moves from its title bar, its body, the list rows, the buttons and the chart; a drag ending on a button clicks nothing; Escape closes it; its place is kept after `/reload`.
+- [ ] Pause and resume: **Pause tracking** turns the row to *paused* and the button to **Resume tracking**; the history stays; a scan records nothing for it; **Resume tracking** records again.
+- [ ] Delete: one click turns the button to "Click again to delete"; waiting 4 seconds brings the label back with nothing deleted; choosing another recipe also cancels; two clicks within 4 seconds delete it (chat: "History of ... deleted"), the row disappears, and an item shared with another tracked recipe keeps its history in that recipe's chart.
+- [ ] French and Spanish: every label fits (view, period, action buttons, figures, weekday names). The French and Spanish strings were written without a native speaker: have them read by one.
 
 ## Click a reagent to search it (quality of life, never buys)
 - [ ] With the materials detail unfolded at the AH, hovering a reagent row highlights it. Clicking "20x Bronze Bar" opens the AH's Buy view, types the item name in the AH search box and starts the search.

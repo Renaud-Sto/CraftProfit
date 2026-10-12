@@ -58,7 +58,7 @@ Pure modules under the fake environment with synthetic series (busy fortnight, g
 
 1. Retention and limit 30 (History, DB, docs, tests) plus pure computations (usual, compare, weekday, net result). **Done** (branch `feat/price-history`): `History.lua`, `HistoryView.lua`, docs.
 2. Chart widget and probe. **Done** (branch `feat/history-chart`): `ChartModel.lua`, `UI/Chart.lua`, probes `/cppn line` and `/cppn time` (F14). The in-game probe results are pending; `Chart.USE_LINES` stays off until the line probe passes.
-3. History window and entry points.
+3. History window and entry points. **Done** (branch `feat/history-window`): `UI/HistoryWindow.lua`, the data functions in `Boot.lua`, the footer and options buttons, `/cp history` routing; plus Pause/Resume and Delete history (two-click confirmation, pruning every market) and the line chart on (`Chart.USE_LINES`). In-game checks pending (checklist, History window).
 4. Quick indicators in the main window.
 5. Docs, checklist, changelog, skill and probe findings; one PR per step; in-game checks after 3 and 4.
 

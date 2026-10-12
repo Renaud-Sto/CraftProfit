@@ -41,9 +41,7 @@ Chart.STRIP_GAP = 8
 Chart.CARRIED_TINT = 0.4
 Chart.FONT = "GameFontHighlightSmall"
 
-local GRID = { 0.5, 0.5, 0.5, 0.25 }
-local ZERO = { 0.8, 0.8, 0.8, 0.6 }
-local USUAL = { 1, 1, 1, 0.7 }
+local GRID, ZERO, USUAL = Colors.CHART.grid, Colors.CHART.zero, Colors.CHART.usual
 
 local function paint(tex, c, alpha)
     local a = (c[4] or 1) * (alpha or 1)

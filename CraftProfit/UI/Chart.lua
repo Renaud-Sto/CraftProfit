@@ -52,9 +52,18 @@ local function paint(tex, c, alpha)
 end
 
 local function place(region, parent, x, y, w, h)
+    w, h = math.max(1, w), math.max(1, h)
     region:ClearAllPoints()
     region:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -y)
-    region:SetSize(math.max(1, w), math.max(1, h))
+    region:SetSize(w, h)
+    region.box = { x = x, y = y, w = w, h = h }
+end
+
+-- A horizontal span [x, x + w) kept inside [0, limit), at least 1 px wide.
+local function within(x, w, limit)
+    local left = Util.clamp(x, 0, math.max(0, limit - 1))
+    local right = Util.clamp(x + w, left + 1, math.max(left + 1, limit))
+    return left, right - left
 end
 
 local function size(n, default)
@@ -205,12 +214,12 @@ local function barColor(field, row)
     return Colors.text("gold")
 end
 
--- Line segments through the points, from the pool. False (and nothing shown) when the
--- client cannot draw lines.
-function Chart:drawLine(points)
+-- Line segments { a, b } (points { x, y }), from the pool. False (and nothing shown) when
+-- the client cannot draw lines.
+function Chart:drawLine(segments)
     local lines = self.pools.lines
     local ok = true
-    for i = 1, #points - 1 do
+    for i = 1, #segments do
         local line = lines[i]
         if not line then
             local created, l = pcall(self.plot.CreateLine, self.plot, nil, "OVERLAY")
@@ -221,7 +230,7 @@ function Chart:drawLine(points)
             line = l
             lines[i] = line
         end
-        local a, b = points[i], points[i + 1]
+        local a, b = segments[i][1], segments[i][2]
         local drawn = pcall(function()
             line:SetColorTexture(USUAL[1], USUAL[2], USUAL[3], 0.9)
             line:SetThickness(1)
@@ -238,7 +247,7 @@ function Chart:drawLine(points)
         hideFrom(lines, 1)
         return false
     end
-    hideFrom(lines, math.max(1, #points))
+    hideFrom(lines, #segments + 1)
     return true
 end
 
@@ -246,6 +255,7 @@ function Chart:set(model)
     self:clear()
     if type(model) ~= "table" or type(model.days) ~= "table" then return end
     local field = model.field
+    if field ~= nil and type(field) ~= "string" then return end
     local period = model.period or 30
     if not ChartModel.slots(period) then return end
     local usual = Util.isFinite(model.usual) and model.usual or nil
@@ -266,30 +276,39 @@ function Chart:set(model)
         local bar = acquireBar(self, i)
         local color = barColor(field, d.row)
         local alpha = d.carried and tint or 1
+        -- Kept inside the plot: at least one pixel of each bar shows, nothing spills out.
+        local x, w = within(d.x, d.w, W)
+        local top = Util.clamp(d.yHigh, 0, Hh - 1)
+        local bottom = Util.clamp(d.yLow, top + 1, Hh)
         paint(bar.span, color, alpha)
-        place(bar.span, self.plot, d.x, d.yHigh, d.w, d.yLow - d.yHigh)
+        place(bar.span, self.plot, x, top, w, bottom - top)
+        local tx, tw = within(d.x - 2, d.w + 4, W)
         paint(bar.tick, Colors.text("main"), alpha)
-        place(bar.tick, self.plot, d.x - 2, d.yAvg - 1, d.w + 4, 2)
+        place(bar.tick, self.plot, tx, Util.clamp(d.yAvg - 1, 0, Hh - 2), tw, 2)
         self.rowsBySlot[d.slot] = d.row
     end
     hideFrom(self.pools.bars, #drawn + 1, BAR_PARTS)
 
-    for i, v in ipairs(scale.ticks or {}) do
+    local ticks = {}
+    for _, v in ipairs(type(scale.ticks) == "table" and scale.ticks or {}) do
+        if Util.isFinite(v) then ticks[#ticks + 1] = v end
+    end
+    for i, v in ipairs(ticks) do
         local grid, label = acquireTick(self, i)
-        local y = yOf(scale, v, Hh)
+        local y = math.min(yOf(scale, v, Hh), Hh - 1)
         place(grid, self.plot, 0, y, W, 1)
         label:SetText(ChartModel.priceLabel(v))
         label:ClearAllPoints()
         label:SetPoint("RIGHT", self.plot, "TOPLEFT", -4, -y)
     end
     if scale.min < 0 and scale.max > 0 then
-        place(self.zeroLine, self.plot, 0, yOf(scale, 0, Hh), W, 1)
+        place(self.zeroLine, self.plot, 0, math.min(yOf(scale, 0, Hh), Hh - 1), W, 1)
         self.zeroLine:Show()
     end
 
     local u = usual and ChartModel.usualY(usual, scale, Hh)
     if u then
-        place(self.usualLine, self.plot, 0, u.y, W, 1)
+        place(self.usualLine, self.plot, 0, math.min(u.y, Hh - 1), W, 1)
         self.usualLine:Show()
         local mark = u.outside == "above" and " ^" or (u.outside == "below" and " v" or "")
         self.usualLabel:SetText(ChartModel.priceLabel(usual) .. mark)
@@ -309,19 +328,27 @@ function Chart:set(model)
     end
     hideFrom(self.pools.slots, count + 1)
 
+    -- One segment between each pair of neighbouring slots: a gap day stays a gap.
     self.linesOk = nil
-    if Chart.USE_LINES and #drawn >= 2 then
-        local points = {}
-        for _, d in ipairs(drawn) do points[#points + 1] = { d.x + d.w / 2, d.yAvg } end
-        self.linesOk = self:drawLine(points)
+    if Chart.USE_LINES then
+        local segments = {}
+        for i = 2, #drawn do
+            local a, b = drawn[i - 1], drawn[i]
+            if b.slot == a.slot + 1 then
+                segments[#segments + 1] = { { a.x + a.w / 2, a.yAvg }, { b.x + b.w / 2, b.yAvg } }
+            end
+        end
+        if #segments > 0 then self.linesOk = self:drawLine(segments) end
     end
 end
 
 -- Weekday strip ----------------------------------------------------------------------
 
+-- A whole percentage, within +-999 so a hostile value stays short.
 local function percentText(pct)
-    if pct == 0 then return "0%" end
-    return string.format("%+d%%", pct)
+    local v = Util.clamp(Util.round(pct), -999, 999)
+    if v == 0 then return "0%" end
+    return string.format("%+d%%", v)
 end
 
 function Chart:setWeekday(profile)

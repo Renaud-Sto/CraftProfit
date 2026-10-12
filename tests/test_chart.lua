@@ -296,3 +296,72 @@ H.test("clearing while a day is hovered reports the end of the hover", function(
     chart:clear()                                   -- nothing hovered any more: no call
     H.eq(#seen, 2)
 end)
+
+H.test("nothing spills outside the plot", function()
+    local T, Chart = boot()
+    local chart = Chart.new(T.env.UIParent, 100, 300)  -- a 40 px plot: slots under a pixel wide
+    local days = netDays(60)
+    days[1].net = 0
+    chart:set({ days = days, field = "net", period = 60,
+        scale = { min = 0, max = 2000, step = 500, ticks = { 0, 500, 1000, 1500, 2000 } } })
+    local W, Hh = chart.plotW, chart.plotH
+    for i = 1, #chart.drawn do
+        local bar = chart.pools.bars[i]
+        for _, part in ipairs({ bar.span, bar.tick }) do
+            local b = part.box
+            H.truthy(b.x >= 0 and b.x + b.w <= W + 1e-9)
+            H.truthy(b.y >= 0 and b.y <= Hh - 1 and b.y + b.h <= Hh + 1e-9)
+        end
+    end
+    -- The bar at the bottom of the scale (0) still has a pixel inside the plot.
+    H.eq(chart.pools.bars[1].span.box.y, Hh - 1)
+end)
+
+H.test("hostile ticks and fields are ignored", function()
+    local T, Chart = boot()
+    local chart = Chart.new(T.env.UIParent, 600, 300)
+    chart:set({ days = netDays(3, 200), field = "net", period = 7,
+        scale = { min = 0, max = 400, step = 100, ticks = { 0, "x", NAN, 200, INF, 400, {} } } })
+    H.eq(shownCount(chart.pools.labels), 3)
+    H.eq(shownCount(chart.pools.bars), 3)
+    for _, field in ipairs({ 42, {}, true }) do
+        chart:set({ days = netDays(3, 200), field = field, period = 7 })
+        H.eq(shownCount(chart.pools.bars), 0)
+    end
+end)
+
+H.test("weekday percentages are rounded and bounded", function()
+    local T, Chart = boot()
+    local chart = Chart.new(T.env.UIParent, 700, 300)
+    chart:setWeekday({ { pct = -0.4, n = 2 }, { pct = 12.7, n = 2 }, { pct = 1e9, n = 2 }, { pct = -1e9, n = 2 } })
+    H.eq(chart.pools.weekday[1].label.text, "0%")
+    H.eq(chart.pools.weekday[2].label.text, "+13%")
+    H.eq(chart.pools.weekday[3].label.text, "+999%")
+    H.eq(chart.pools.weekday[4].label.text, "-999%")
+end)
+
+H.test("the line through the averages stops at gaps", function()
+    local T, Chart = boot()
+    Chart.USE_LINES = true
+    local chart = Chart.new(T.env.UIParent, 700, 300)
+    local made = 0
+    chart.plot.CreateLine = function()
+        made = made + 1
+        local l = W.frame()
+        l.shown = true
+        return l
+    end
+    -- Slots 1, 2, 3, then a gap, then 5 and 6: two runs, 2 + 1 segments.
+    local days = {}
+    for _, k in ipairs({ 6, 5, 4, 2, 1 }) do days[#days + 1] = { day = NOW - k * DAY, net = 100 + k } end
+    chart:set({ days = days, field = "net", period = 7 })
+    Chart.USE_LINES = false
+    H.eq(chart.linesOk, true)
+    H.eq(shownCount(chart.pools.lines), 3)
+    -- Lone days (no neighbour) draw no segment.
+    Chart.USE_LINES = true
+    chart:set({ days = { { day = NOW - 6 * DAY, net = 1 }, { day = NOW - 3 * DAY, net = 2 }, { day = NOW, net = 3 } },
+        field = "net", period = 7 })
+    Chart.USE_LINES = false
+    H.eq(shownCount(chart.pools.lines), 0)
+end)

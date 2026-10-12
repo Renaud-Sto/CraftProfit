@@ -1085,25 +1085,35 @@ end
 -- recipe; /cp history list: the tracked recipes in chat; /cp history remove <n>: deletes one.
 function Controller.historyCommand(arg)
     local tracked = CraftProfitDB.tracked
+    arg = (type(arg) == "string" and arg or ""):match("^%s*(.-)%s*$")
+    -- A tracked entry by its number: a whole number from 1 to the list's length, else nil.
+    local function entryAt(text)
+        local n = Util.id(tonumber(text))
+        return n and tracked[n] and n or nil
+    end
     if arg == "" then
         if ns.HistoryWindow then ns.HistoryWindow.show() end
         return
     end
-    local nth = tonumber(arg:match("^(%d+)$"))
-    if nth then
-        local entry = tracked[nth]
-        if entry then Controller.openHistory(entry.recipe.recipeID) else say(L.HISTORY_NO_SUCH) end
+    if tonumber(arg) then
+        local n = entryAt(arg)
+        if n then Controller.openHistory(tracked[n].recipe.recipeID) else say(L.HISTORY_NO_SUCH) end
         return
     end
-    local index = tonumber(arg:match("^remove%s+(%d+)$"))
-    if index then
-        local name = removeTracked(index)
+    local removeArg = arg:match("^remove%s+(%S+)$")
+    if removeArg and tonumber(removeArg) then
+        local n = entryAt(removeArg)
+        local name = n and removeTracked(n)
         if name then
             say(string.format(L.HISTORY_REMOVED, name))
             Controller.refresh()
         else
             say(L.HISTORY_NO_SUCH)
         end
+        return
+    end
+    if arg ~= "list" then
+        say(L.SLASH_HELP)
         return
     end
     if #tracked == 0 then

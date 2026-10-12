@@ -1742,3 +1742,35 @@ H.test("the help names the history commands in every language", function()
         H.truthy(T.chat[#T.chat]:find("history [<n> | list | remove <n>]", 1, true) or error(locale))
     end
 end)
+
+H.test("/cp history arguments: trimmed, numbers checked, anything else gets the help", function()
+    local T = boot()
+    T.env.UISpecialFrames = {}
+    local C = T.ns.Controller
+    local NO_SUCH = "|cff66ccffCraftProfit|r No such tracked recipe. Use /cp history list to list them"
+    track(T)
+    for _, arg in ipairs({ "0", "-1", "2", "1e9", "1.5", "  7  " }) do
+        T.chat[#T.chat + 1] = "-"
+        C.historyCommand(arg)
+        H.eq(T.chat[#T.chat], NO_SUCH)
+        H.falsy(T.ns.HistoryWindow.isShown())
+    end
+    C.historyCommand("  1  ")
+    H.truthy(T.ns.HistoryWindow.isShown())
+    H.eq(T.ns.HistoryWindow.state().selected, 5)
+    C.historyCommand(" list ")
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r 1. Sword (tracking)")
+    for _, arg in ipairs({ "foo", "list 2", "remove", "remove x", "1 2" }) do
+        T.chat[#T.chat + 1] = "-"
+        C.historyCommand(arg)
+        H.truthy(T.chat[#T.chat]:find(T.ns.L.SLASH_HELP, 1, true) or error(arg))
+    end
+    for _, arg in ipairs({ "remove 0", "remove 1.5", "remove 1e9" }) do
+        T.chat[#T.chat + 1] = "-"
+        C.historyCommand(arg)
+        H.eq(T.chat[#T.chat], NO_SUCH)
+    end
+    H.eq(#T.env.CraftProfitDB.tracked, 1)
+    C.historyCommand("  remove   1 ")
+    H.eq(#T.env.CraftProfitDB.tracked, 0)
+end)

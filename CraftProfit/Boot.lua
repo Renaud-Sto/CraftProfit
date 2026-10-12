@@ -1058,9 +1058,20 @@ function Controller.deleteHistory(recipeID)
     return true
 end
 
--- /cp history: list the tracked recipes; /cp history remove <n>: delete one.
+-- /cp history: opens the History window; /cp history <n>: opens it on the n-th tracked
+-- recipe; /cp history list: the tracked recipes in chat; /cp history remove <n>: deletes one.
 function Controller.historyCommand(arg)
     local tracked = CraftProfitDB.tracked
+    if arg == "" then
+        if ns.HistoryWindow then ns.HistoryWindow.show() end
+        return
+    end
+    local nth = tonumber(arg:match("^(%d+)$"))
+    if nth then
+        local entry = tracked[nth]
+        if entry then Controller.openHistory(entry.recipe.recipeID) else say(L.HISTORY_NO_SUCH) end
+        return
+    end
     local index = tonumber(arg:match("^remove%s+(%d+)$"))
     if index then
         local name = removeTracked(index)

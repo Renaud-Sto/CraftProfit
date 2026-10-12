@@ -53,7 +53,9 @@ local CONTROL_LINES = {
     { "/cp pins", "CMD_PINS" },
     { "/cp level", "CMD_LEVEL" },
     { "/cp minimap", "CMD_MINIMAP" },
-    { "/cp history", "CMD_HISTORY" },
+    { "/cp history [n]", "CMD_HISTORY" },
+    { "/cp history list", "CMD_HISTORY_LIST" },
+    { "/cp history remove <n>", "CMD_HISTORY_REMOVE" },
     { "/cp scan", "CMD_SCAN" },
     { "/cp market", "CMD_MARKET" },
     { "/cp locale <code>", "CMD_LOCALE" },
@@ -74,7 +76,7 @@ local ctl
 local frame, content, savedPosition
 local origin = { left = 0, right = 0, top = 0 }
 -- The widgets, exposed for tests: panels, headerButtons / tileButtons (by key), minimap,
--- pinButtons (by limit), pinLabel, pinNote, mainButton, levelButton, pinsButton, headerLabel,
+-- pinButtons (by limit), pinLabel, pinNote, mainButton, levelButton, pinsButton, historyButton, headerLabel,
 -- tileLabel, lines (the controls list).
 local parts = { panels = {}, headerButtons = {}, tileButtons = {}, pinButtons = {}, lines = {} }
 OptionsUI.parts = parts
@@ -209,8 +211,8 @@ local function build()
     parts.minimap:SetPoint("TOPLEFT", panels.minimap.body, "TOPLEFT", 4, -1)
 
     panels.windows = Native.panel(content, L.OPTIONS_WINDOWS)
-    -- Two rows: main and leveling side by side, pinned recipes centred under them, all three
-    -- half the room wide so a French label is never cut.
+    -- Two rows of two: main and leveling, then pinned recipes and history, all four half the
+    -- room wide so a French label is never cut.
     local half = math.floor((ROOM - SEG_GAP) / 2)
     local winBody = panels.windows.body
     parts.mainButton = Native.button(winBody, "", { width = half,
@@ -221,8 +223,11 @@ local function build()
     parts.levelButton:SetPoint("LEFT", parts.mainButton, "RIGHT", SEG_GAP, 0)
     parts.pinsButton = Native.button(winBody, "", { width = half,
         onClick = function() if ns.PinnedWindow then ns.PinnedWindow.toggle() end end })
-    parts.pinsButton:SetPoint("TOP", winBody, "TOP", 0, -2 - LINE_ROW_H)
-    for _, button in ipairs({ parts.mainButton, parts.levelButton, parts.pinsButton }) do
+    parts.pinsButton:SetPoint("TOPLEFT", winBody, "TOPLEFT", 8, -2 - LINE_ROW_H)
+    parts.historyButton = Native.button(winBody, "", { width = half,
+        onClick = function() if ns.HistoryWindow then ns.HistoryWindow.toggle() end end })
+    parts.historyButton:SetPoint("LEFT", parts.pinsButton, "RIGHT", SEG_GAP, 0)
+    for _, button in ipairs({ parts.mainButton, parts.levelButton, parts.pinsButton, parts.historyButton }) do
         Native.forwardDrag(button, frame)
     end
 
@@ -276,6 +281,7 @@ function OptionsUI.refresh()
     parts.mainButton:setText(L.OPTIONS_MAIN_WINDOW)
     parts.levelButton:setText(L.LEVEL_BUTTON)
     parts.pinsButton:setText(L.PINNED_TITLE)
+    parts.historyButton:setText(L.HISTORY_BUTTON)
     local gold, white = Colors.escape(Colors.text("gold")), Colors.escape(Colors.text("main"))
     for i, entry in ipairs(CONTROL_LINES) do
         local head = entry[1]:sub(1, 1) == "/" and entry[1] or L[entry[1]]

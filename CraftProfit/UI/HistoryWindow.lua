@@ -21,7 +21,8 @@ local CHROME_H = Native.INSET_TOP + Native.INSET_BOTTOM
 local INNER_WIDTH = WIDTH - Native.INSET_LEFT - Native.INSET_RIGHT - PAD * 2
 -- Left column: the information line, then the list panel.
 local LEFT_W = 210
-local INFO_H = 48
+-- Six lines of the small font (12 px): the French text takes five at LEFT_W.
+local INFO_H = 72
 local ROW_H = 18
 local VISIBLE = 12
 local ARROWS_W = 70
@@ -69,6 +70,7 @@ local parts = { rows = {}, itemButtons = {}, viewButtons = {}, periodButtons = {
 HistoryWindow.parts = parts
 HistoryWindow.WIDTH = WIDTH
 HistoryWindow.LEFT_W = LEFT_W
+HistoryWindow.INFO_H = INFO_H
 HistoryWindow.CHAR_W, HistoryWindow.SMALL_CHAR_W = CHAR_W, SMALL_CHAR_W
 HistoryWindow.FIGURE_LABEL_W = FIGURE_LABEL_W
 HistoryWindow.WEEKDAY_W = (RIGHT_W - Chart.LABEL_W) / 7
@@ -240,7 +242,11 @@ local function paintRight(list)
     view, period = data.view, data.period
     paintButtons(data)
     if data.status == "nodata" then
-        return showEmpty(string.format(L.HISTORY_NODATA, data.measures or 0, data.days or 0), true)
+        showEmpty(string.format(L.HISTORY_NODATA, data.measures or 0, data.days or 0), true)
+        -- A paused recipe says so whatever its data.
+        parts.status:SetText(data.paused and L.HISTORY_PAUSED or "")
+        parts.status:SetShown(data.paused == true)
+        return
     end
     parts.empty:Hide()
     parts.chart.frame:Show()
@@ -321,16 +327,16 @@ local function onDelete()
         return
     end
     disarm()
+    -- Without a timer the armed state could never expire: never arm, never delete.
+    if type(C_Timer) ~= "table" or type(C_Timer.After) ~= "function" then return end
     armed = selected
     local token = armToken
     parts.deleteButton:setText(L.HISTORY_DELETE_CONFIRM)
-    if type(C_Timer) == "table" and type(C_Timer.After) == "function" then
-        C_Timer.After(CONFIRM_SECONDS, function()
-            if token ~= armToken then return end
-            armed = nil
-            HistoryWindow.refresh()
-        end)
-    end
+    C_Timer.After(CONFIRM_SECONDS, function()
+        if token ~= armToken then return end
+        armed = nil
+        HistoryWindow.refresh()
+    end)
 end
 
 local function setView(key)
@@ -427,6 +433,8 @@ local function build()
         offset = math.max(0, offset - delta)
         HistoryWindow.refresh()
     end)
+    -- A delete waiting for its second click never survives closing the window.
+    frame:HookScript("OnHide", disarm)
     local left0, top0 = origin.left + PAD, -(origin.top + PAD)
 
     -- Left: where the data comes from, then the list.

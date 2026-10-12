@@ -391,17 +391,71 @@ H.test("an armed delete is cancelled by choosing another recipe", function()
     H.truthy(UI.parts.pauseButton.shown)
 end)
 
-H.test("the action labels fit their buttons in English, French and Spanish", function()
+H.test("the action labels fit their buttons with room to spare in English, French and Spanish", function()
     for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
         local T, UI = boot({ locale = locale })
+        track(T, raw(5))
+        fill(T, 5)
+        UI.show()
+        UI.select(5)
         local Layout, L = T.ns.Layout, T.ns.L
-        for _, b in ipairs({ UI.parts.pauseButton or { width = UI.ACTION_W }, UI.parts.deleteButton or { width = UI.ACTION_W } }) do
+        for _, b in ipairs({ UI.parts.pauseButton, UI.parts.deleteButton }) do
+            H.eq(b.width, UI.ACTION_W)
             for _, text in ipairs({ L.HISTORY_PAUSE, L.HISTORY_RESUME, L.HISTORY_DELETE, L.HISTORY_DELETE_CONFIRM }) do
+                -- 8 px from each end for the button's caps, and 8 px more of margin.
                 local need = Layout.textWidth(text, UI.CHAR_W)
-                H.truthy(need <= b.width - 16 or error(locale .. ": " .. text .. " needs " .. need))
+                H.truthy(need <= b.width - 24 or error(locale .. ": " .. text .. " needs " .. need))
             end
         end
     end
+end)
+
+H.test("the information line fits its box in English, French and Spanish", function()
+    for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
+        local T, UI = boot({ locale = locale })
+        local lines = T.ns.Layout.wrapLines(T.ns.L.HISTORY_INFO, UI.SMALL_CHAR_W, UI.LEFT_W)
+        H.truthy(lines * 12 <= UI.INFO_H or error(locale .. ": " .. lines .. " lines"))
+    end
+end)
+
+H.test("closing the window disarms a pending delete", function()
+    local T, UI = boot()
+    track(T, raw(5))
+    fill(T, 10)
+    UI.show()
+    UI.select(5)
+    click(UI.parts.deleteButton)
+    H.eq(UI.parts.deleteButton.text, T.ns.L.HISTORY_DELETE_CONFIRM)
+    UI.frame().scripts.OnHide(UI.frame())
+    UI.hide()
+    UI.show()
+    H.eq(UI.parts.deleteButton.text, T.ns.L.HISTORY_DELETE)
+    click(UI.parts.deleteButton)
+    H.eq(#T.env.CraftProfitDB.tracked, 1)
+end)
+
+H.test("without a timer the delete never arms, so it never deletes", function()
+    local T, UI = boot()
+    track(T, raw(5))
+    fill(T, 10)
+    UI.show()
+    UI.select(5)
+    T.env.C_Timer.After = nil
+    click(UI.parts.deleteButton)
+    H.eq(UI.parts.deleteButton.text, T.ns.L.HISTORY_DELETE)
+    click(UI.parts.deleteButton)
+    H.eq(#T.env.CraftProfitDB.tracked, 1)
+end)
+
+H.test("a paused recipe with too little data says both", function()
+    local T, UI = boot()
+    track(T, raw(5), false)
+    fill(T, 2)
+    UI.show()
+    UI.select(5)
+    H.eq(UI.parts.empty.text, string.format(T.ns.L.HISTORY_NODATA, 2, 2))
+    H.truthy(UI.parts.status.shown)
+    H.eq(UI.parts.status.text, T.ns.L.HISTORY_PAUSED)
 end)
 
 H.test("a drag that ends on a button clicks nothing", function()

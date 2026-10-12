@@ -109,7 +109,7 @@ ns.Locale.register("esES", {
     HISTORY_PAUSE = "Pausar seguimiento",
     HISTORY_RESUME = "Reanudar seguimiento",
     HISTORY_DELETE = "Borrar historial",
-    HISTORY_DELETE_CONFIRM = "Haz clic otra vez para borrar",
+    HISTORY_DELETE_CONFIRM = "Clic otra vez para borrar",
     HISTORY_DELETED = "Historial de %s borrado",
     WEEKDAY_1 = "Lun",
     WEEKDAY_2 = "Mar",

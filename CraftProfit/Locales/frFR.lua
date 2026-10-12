@@ -109,7 +109,7 @@ ns.Locale.register("frFR", {
     HISTORY_PAUSE = "Mettre le suivi en pause",
     HISTORY_RESUME = "Reprendre le suivi",
     HISTORY_DELETE = "Supprimer l'historique",
-    HISTORY_DELETE_CONFIRM = "Cliquez encore pour supprimer",
+    HISTORY_DELETE_CONFIRM = "Recliquez pour supprimer",
     HISTORY_DELETED = "Historique de %s supprimé",
     WEEKDAY_1 = "Lun",
     WEEKDAY_2 = "Mar",

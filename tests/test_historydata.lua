@@ -124,14 +124,18 @@ H.test("historyData for the result: chart model, summary, weekday profile, items
     H.truthy(data.weekday[1].pct <= 0)
     H.eq(data.measures, data.summary.measures)
     H.eq(data.days, 28)
-    -- The icon row: the two recipe views, then each item.
-    H.eq(data.items[1].key, "net")
-    H.eq(data.items[2].key, "materials")
-    H.eq(data.items[3].key, "item:1")
-    H.eq(data.items[3].itemID, 1)
-    H.eq(data.items[5].key, "item:100")
-    H.eq(data.items[5].name, "Item100")
-    H.eq(#data.items, 5)
+    -- The icon row: each item with its group (the recipe views are the window's tabs).
+    H.eq(data.items[1].key, "item:1")
+    H.eq(data.items[1].itemID, 1)
+    H.eq(data.items[1].group, "materials")
+    H.eq(data.items[2].group, "materials")
+    H.eq(data.items[3].key, "item:100")
+    H.eq(data.items[3].name, "Item100")
+    H.eq(data.items[3].group, "crafted")
+    H.eq(#data.items, 3)
+    -- The commission as a percentage, for the caption.
+    H.eq(data.commission, 5)
+    H.eq(data.goal, "craft")
     H.eq(type(data.market), "string")
     H.truthy(#data.market > 0)
 end)
@@ -189,7 +193,9 @@ H.test("a paused recipe says so, and a bound crafted item has no sale", function
     fill(C, 10, flat, { 1, 2, 200 })
     local data = C.historyData(7, "sale", 30)
     H.eq(data.status, "nodata")
-    H.eq(#data.items, 4)                                -- net, materials, items 1 and 2
+    H.eq(#data.items, 2)                                -- items 1 and 2: no crafted group
+    for _, item in ipairs(data.items) do H.eq(item.group, "materials") end
+    H.eq(data.compare, nil)
     H.eq(C.historyData(7, "materials", 30).status, "ok")
 end)
 
@@ -324,4 +330,72 @@ H.test("the conservative item list ignores Enchanting and reports an unknown ite
     local _, unknown = C.historyItemsAll(weaponRecipe(12, 399, 2))
     H.eq(unknown, false)
     ITEMS[301] = nil
+end)
+
+H.test("historyData sorts the items into materials, crafted item and disenchant groups", function()
+    local T, C = boot()
+    -- A weapon (quality 2, item level 15) that sells, and disenchants into DUST.
+    ITEMS[301] = { quality = 2, ilvl = 15, sellPrice = 1, classID = 2, bindType = 2 }
+    ITEMS[302] = { quality = 2, ilvl = 15, sellPrice = 1, classID = 2, bindType = 1 }
+    track(T, weaponRecipe(11, 301, 1))
+    track(T, weaponRecipe(12, 302, 2))
+    local groups = {}
+    for _, item in ipairs(C.historyData(11, "net", 30).items) do groups[item.itemID] = item.group end
+    H.eq(groups, { [1] = "materials", [301] = "crafted", [10938] = "disenchant", [10940] = "disenchant" })
+    -- Bound on pickup: never sold, so no crafted group; its disenchant materials stay.
+    groups = {}
+    for _, item in ipairs(C.historyData(12, "net", 30).items) do groups[item.itemID] = item.group end
+    H.eq(groups[302], nil)
+    H.eq(groups[2], "materials")
+    for id, group in pairs(groups) do
+        if id ~= 2 then H.eq(group, "disenchant") end
+    end
+    ITEMS[301], ITEMS[302] = nil, nil
+end)
+
+H.test("historyData compares today with the usual price, good or bad by view", function()
+    local T, C = boot()
+    track(T, raw(5))
+    -- Ten days at the same prices, then item 1 at 80 today: materials 250 -> 210 (-16 %),
+    -- profit 700 -> 740 (+6 %), sale unchanged.
+    fill(C, 10, function(id, age)
+        if age == 0 and id == 1 then return 80 end
+        return flat(id)
+    end)
+    local m = C.historyData(5, "materials", 30)
+    H.eq(m.compare, { pct = -16, tone = "down", good = true })
+    H.eq(m.goal, "buy")
+    local n = C.historyData(5, "net", 30)
+    H.eq(n.compare, { pct = 6, tone = "up", good = true })
+    H.eq(n.goal, "craft")
+    local s = C.historyData(5, "sale", 30)
+    H.eq(s.compare, { pct = 0, tone = "flat" })
+    H.eq(s.goal, "sell")
+    -- One reagent: cheaper is good news (bought); the crafted item: higher is good (sold).
+    local item = C.historyData(5, "item:1", 30)
+    H.eq(item.compare, { pct = -20, tone = "down", good = true })
+    H.eq(item.goal, "buy")
+    H.eq(C.historyData(5, "item:100", 30).goal, "sell")
+    -- The low, high and newest days of the period come with the summary.
+    H.eq(m.summary.todayDay, T.ns.History.dayOf(NOW))
+    H.eq(m.summary.lowDay, T.ns.History.dayOf(NOW))
+    H.truthy(m.summary.highDay < m.summary.todayDay)
+end)
+
+H.test("historyData has no comparison under 3 days of data", function()
+    local T, C = boot()
+    track(T, raw(5))
+    fill(C, 2, flat)
+    for _, view in ipairs({ "net", "materials", "sale", "item:1" }) do
+        H.eq(C.historyData(5, view, 30).compare, nil)
+    end
+    fill(C, 3, flat)
+    H.eq(C.historyData(5, "net", 30).compare, { pct = 0, tone = "flat" })
+end)
+
+H.test("historyData reads the commission from the settings", function()
+    local T, C = boot()
+    track(T, raw(5))
+    T.env.CraftProfitDB.settings.cut = 0.075
+    H.eq(C.historyData(5, "net", 30).commission, 7.5)
 end)

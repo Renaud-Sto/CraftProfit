@@ -731,6 +731,13 @@ end
 -- 30 days), whatever the period; the other key figures cover the period. status: "nodata"
 -- (fewer than 3 days: `measures` and `days` over 30 days for the message), else "paused"
 -- for a paused recipe, else "ok".
+-- items: the recipe's items for the icon row, { key = "item:<id>", itemID, name, icon,
+-- group }, group "materials" (a reagent), "crafted" (the crafted item, when it is sold) or
+-- "disenchant"; the recipe views (net, materials, sale) are the window's tabs, not items.
+-- goal: what the shown price matters for, "buy" (materials, one reagent), "sell" (sale, the
+-- crafted item, a disenchant material) or "craft" (net). compare: today against the usual
+-- price (HistoryView.compare: good news is a lower price to buy, a higher one otherwise),
+-- nil without enough data. commission: the auction house cut in percent (5 for 0.05).
 function Controller.historyData(recipeID, view, period)
     local _, entry = History.find(CraftProfitDB, recipeID)
     if not entry then return nil end
@@ -738,19 +745,25 @@ function Controller.historyData(recipeID, view, period)
     local now, seriesOf, cut = time(), seriesReader(), CraftProfitDB.settings.cut
     period = Controller.HISTORY_PERIODS[period] and period or 30
     local ids = Controller.historyItemsOf(recipe)
-    local items = {
-        { key = "net", label = L.HISTORY_VIEW_NET },
-        { key = "materials", label = L.HISTORY_VIEW_MATERIALS },
-    }
+    local isReagent = {}
+    for _, r in ipairs(recipe.reagents) do isReagent[r.itemID] = true end
+    local items, groupOf = {}, {}
     local valid = { net = true, materials = true, sale = true }
     for _, id in ipairs(ids) do
         local key = "item:" .. id
         valid[key] = true
+        local group = "disenchant"
+        if isReagent[id] then group = "materials" elseif id == recipe.outputItemID then group = "crafted" end
+        groupOf[key] = group
         -- The icon helper is not measured on Forever yet: a failure only loses the icon.
         local okIcon, icon = pcall(Controller.itemIcon, id)
-        items[#items + 1] = { key = key, itemID = id, name = Controller.itemName(id) or ("#" .. id), icon = okIcon and icon or nil }
+        items[#items + 1] = { key = key, itemID = id, name = Controller.itemName(id) or ("#" .. id),
+            icon = okIcon and icon or nil, group = group }
     end
     if not valid[view] then view = "net" end
+    local goal = "craft"
+    if view == "materials" or groupOf[view] == "materials" then goal = "buy"
+    elseif view ~= "net" then goal = "sell" end
 
     local days, field, summary, usual30, weekdayDays
     local itemID = tonumber(view:match("^item:(%d+)$"))
@@ -782,6 +795,8 @@ function Controller.historyData(recipeID, view, period)
         status = status, paused = entry.active ~= true,
         measures = usual30.measures, days = usual30.daysCovered,
         market = Controller.marketName(),
+        goal = goal, compare = HistoryView.compare(summary, goal ~= "buy"),
+        commission = Util.round((cut or 0) * 10000) / 100,
     }
 end
 

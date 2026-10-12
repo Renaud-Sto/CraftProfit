@@ -151,13 +151,14 @@ H.test("summary gives today, usual, range, measures and days covered", function(
         days[k] = { day = NOW - (4 - k) * DAY, net = net, materials = 10, n = 2, carried = k == 2 }
     end
     H.eq(V.summary(days, "net"), { today = 250, usual = 225, low = 100, high = 300, measures = 8,
-        daysCovered = 4, enough = true })
-    -- All equal: a range of 0.
+        daysCovered = 4, enough = true, todayDay = NOW, lowDay = NOW - 3 * DAY, highDay = NOW - 2 * DAY })
+    -- All equal: a range of 0; a tie names the newest day.
     H.eq(V.summary(days, "materials"), { today = 10, usual = 10, low = 10, high = 10, measures = 8,
-        daysCovered = 4, enough = true })
+        daysCovered = 4, enough = true, todayDay = NOW, lowDay = NOW, highDay = NOW })
     -- Fewer than 3 days: no usual price.
     H.eq(V.summary({ days[1], days[2] }, "net"), { today = 300, low = 100, high = 300, measures = 4,
-        daysCovered = 2, enough = false })
+        daysCovered = 2, enough = false, todayDay = NOW - 2 * DAY, lowDay = NOW - 3 * DAY,
+        highDay = NOW - 2 * DAY })
     -- Days without a value are not counted; the usual covers the last 30 days only.
     local old = { { day = NOW - 40 * DAY, net = 9000, n = 1 }, { day = NOW - 3 * DAY, n = 1 } }
     for _, d in ipairs(days) do old[#old + 1] = d end
@@ -167,7 +168,7 @@ H.test("summary gives today, usual, range, measures and days covered", function(
     -- An item's daily series: avg, low and high come from the entries.
     local item = ns.History.dailySeries({ pt(3, 100), pt(2, 120), { NOW - DAY, 90, 1, 80, 95, 3 } }, NOW, 30)
     H.eq(V.summary(item), { today = 90, usual = 100, low = 80, high = 120, measures = 5,
-        daysCovered = 3, enough = true })
+        daysCovered = 3, enough = true, todayDay = NOW - DAY, lowDay = NOW - DAY, highDay = NOW - 2 * DAY })
     H.eq(V.summary({}), { measures = 0, daysCovered = 0, enough = false })
     H.eq(V.summary(nil, "net"), { measures = 0, daysCovered = 0, enough = false })
 end)
@@ -228,4 +229,19 @@ H.test("a day measuring only the crafted item does not count as a materials pric
     H.eq(ind.materials, { pct = -18, tone = "down", good = true })
     -- The sale was carried on yesterday's row (only reagents measured): skipped too.
     H.eq(days[#days - 1].saleCarried, "all")
+end)
+
+H.test("compare: good or bad by view, nothing without enough data", function()
+    local V = load().HistoryView
+    local cheaper = { today = 88, usual = 100, enough = true }
+    -- Materials: lower is good. Sale, profit and one item: higher is good.
+    H.eq(V.compare(cheaper, false), { pct = -12, tone = "down", good = true })
+    H.eq(V.compare(cheaper, true), { pct = -12, tone = "down", good = false })
+    H.eq(V.compare({ today = 108, usual = 100, enough = true }, true), { pct = 8, tone = "up", good = true })
+    H.eq(V.compare({ today = 102, usual = 100, enough = true }, true), { pct = 2, tone = "flat" })
+    -- Under 3 days (enough = false), or without a usable usual price: nil.
+    H.eq(V.compare({ today = 88, usual = 100, enough = false }, false), nil)
+    H.eq(V.compare({ today = 88, enough = false }, false), nil)
+    H.eq(V.compare({ today = 88, usual = -5, enough = true }, true), nil)
+    H.eq(V.compare(nil, true), nil)
 end)

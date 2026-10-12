@@ -19,11 +19,16 @@
 --   (when sale is known) is false or "all". n = the most measures of one item that day.
 --   Never mutates the saved series.
 -- HistoryView.summary(days, field) -> { today, usual, low, high, measures, daysCovered,
---   enough } for one view: `field` names the value of recipeDays entries ("net",
+--   enough, todayDay, lowDay, highDay } for one view: `field` names the value of recipeDays entries ("net",
 --   "materials", "sale"); without it the entries are a History.dailySeries (avg, low,
 --   high). A day whose `<field>Carried` is "all" repeats older prices and is skipped, as
 --   are entries without a value. today = the value of the newest day kept, usual = median
 --   of the days of the 30 days up to it (nil under 3 days, then enough = false).
+--   todayDay is the day of `today`; lowDay / highDay the day of the row holding `low` /
+--   `high` (the newest such day on a tie).
+-- HistoryView.compare(summary, higherIsGood) -> { pct, tone, good } or nil: History.compare
+--   of summary.today against summary.usual, nil unless summary.enough. good is true when the
+--   move is good news (up with higherIsGood, down without), false when bad, nil when flat.
 -- HistoryView.indicators(recipe, itemSeriesOf, now, itemsOf, cut)
 --   -> { materials = { pct, tone, good } or nil, sale = { pct, tone, good } or nil }:
 --   today against the usual price over 30 days. Materials cheaper and a sale higher are
@@ -140,11 +145,15 @@ function HistoryView.summary(days, field)
     local newest = rows[1]
     for _, r in ipairs(rows) do
         if r.day >= newest.day then newest = r end
-        result.low = result.low and math.min(result.low, r.low) or r.low
-        result.high = result.high and math.max(result.high, r.high) or r.high
+        if result.low == nil or r.low < result.low or (r.low == result.low and r.day > result.lowDay) then
+            result.low, result.lowDay = r.low, r.day
+        end
+        if result.high == nil or r.high > result.high or (r.high == result.high and r.day > result.highDay) then
+            result.high, result.highDay = r.high, r.day
+        end
         result.measures = result.measures + r.n
     end
-    result.today = newest.value
+    result.today, result.todayDay = newest.value, newest.day
     result.daysCovered = #rows
     local from = History.dayOf(newest.day - (History.USUAL_DAYS - 1) * DAY + DAY / 2)
     local values = {}
@@ -163,6 +172,11 @@ local function indicator(summary, higherIsGood)
     if not c then return nil end
     if c.tone == "up" then c.good = higherIsGood elseif c.tone == "down" then c.good = not higherIsGood end
     return c
+end
+
+function HistoryView.compare(summary, higherIsGood)
+    if type(summary) ~= "table" or summary.enough ~= true then return nil end
+    return indicator(summary, higherIsGood == true)
 end
 
 function HistoryView.indicators(recipe, itemSeriesOf, now, itemsOf, cut)

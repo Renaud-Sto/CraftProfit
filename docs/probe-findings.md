@@ -97,3 +97,37 @@ Results (2026-10-11, build 1.60.1, French client, about one minute of **Refresh 
 - **Throttle.** `THROTTLED_MESSAGE_SENT` fires at each `SEND` (so `ready` reads false at that instant). `AUCTION_HOUSE_THROTTLED_SYSTEM_READY` comes 0.37 to 0.39 s after the answer. CraftProfit's next `SEND` followed about 0.6 s after the previous one, which is roughly 6 s for 10 items.
 - **One genuine empty result.** Item 250528 (gear) answered `ITEM_SEARCH_RESULTS_UPDATED` with `results 0`: nobody was selling it. That is the "no listing" case, not a missed answer.
 - **What changed in CraftProfit.** Nothing was needed: it reads the first event, which is complete, and ignores the duplicate. The misses seen before this trace are not explained by the client's events in this sample. If they come back, trace again around them.
+
+## F14. Chart primitives (to measure in game) ⚠️
+
+Why: the history chart (price history step 2) is drawn from coloured textures on a plain frame. The `Line` object would add a line through the daily averages, but it is not assumed to work on Forever. The history's local days rely on `time(table)` (`History.dayOf`); if it misbehaves there, the code falls back to an estimate that is wrong only after the change hour of a daylight saving day.
+
+How to run it:
+1. Enable `probe/CraftProfitProbe` next to CraftProfit (the version from the commit that adds this entry or later).
+2. `/cpp clear`, then `/cppn line`, then `/cppn time`. Each prints one verdict line in chat; the details go to the probe's log only.
+3. `/reload` to write the log: `WTF/Account/<ACCOUNT>/SavedVariables/CraftProfitProbe.lua`, lines with `[CPP native] line` and `[CPP native] time`.
+
+`/cppn line` opens a movable window `CPPLineProbe` (Escape closes it, `/cppn line` toggles it) with three drawings on a dark background: a fan of 5 coloured lines from one point (thickness 1 and 2 alternating), a yellow 7 point polyline, and 7 blue texture bars for comparison. Every call runs in `pcall`.
+- Verdict: `lines: ok`, or `lines: FAILS <first error> (<n> failures, see the log)`.
+- Log: `CreateLine is <type>`, `GetObjectType <type>` (expected `Line`), then one line per call: `SetThickness(1)`, `SetThickness(2)`, `SetColorTexture`, `SetStartPoint`, `SetEndPoint`, and the same for each fan and polyline segment.
+
+What to look for:
+- The verdict, and whether the lines **look right**: thin, sharp lines meeting at the fan's origin, and a polyline whose segments join without gaps. Take a screenshot.
+- Whether thickness 1 and 2 are visibly different.
+- Whether the lines draw over the texture layer as expected.
+
+`/cppn time` checks six fixed timestamps: noon UTC on 15 June, 28 October and 28 March of the current and previous year (the same calendar date in any zone from UTC-11 to UTC+11). For each one it logs:
+- `date("*t", ts)`: year, month, day, hour, minute, second, `wday`, `yday`, `isdst`;
+- the UTC offset deduced from `date("*t")` and `date("!*t")` (no `time()` involved);
+- `time(date("*t", ts)) - ts` (expected 0);
+- `time{year, month, day, hour = 0}` of that date, its type, `noon - midnight` and the round trip `date("*t", midnight)`.
+
+It also logs `time()`, `GetServerTime()` and `GetTime()` once.
+- Verdict: `time(table): ok (6 dates, ...)` when every `time{...}` returns a number less than 25 hours before the noon timestamp that `date` maps back to the same date at 00:00; otherwise `time(table): FAILS (see the log)`.
+
+What to look for:
+- The verdict.
+- Whether `isdst` changes between June and late October or late March. That shows whether the client follows the computer's daylight saving rules.
+- Whether `time()` and `GetServerTime()` agree.
+
+Checked outside the game only: the same code under plain LuaJIT (`os.date` / `os.time`) gives `time(table): ok` for Europe/Paris, America/Los_Angeles and Pacific/Kiritimati (UTC+14). Results in game: ⚠️ not measured yet.

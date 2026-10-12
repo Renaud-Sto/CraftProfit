@@ -131,3 +131,7 @@ What to look for:
 - Whether `time()` and `GetServerTime()` agree.
 
 Checked outside the game only: the same code under plain LuaJIT (`os.date` / `os.time`) gives `time(table): ok` for Europe/Paris, America/Los_Angeles and Pacific/Kiritimati (UTC+14). Results in game: ⚠️ not measured yet.
+
+**Results in game (2026-10-12, build 1.60.1, French client, computer in Europe/Paris):**
+- **`CreateLine` works.** `/cppn line` printed `lines: ok`: `CreateLine`, `SetStartPoint`, `SetEndPoint`, `SetThickness` (1 and 2) and `SetColorTexture` all succeeded, and the fan of five lines and the polyline of seven points drew correctly next to the seven texture bars (screenshot checked). `Chart.USE_LINES` may be switched on; the History window (step 3) draws bars and line together so the author can judge the look.
+- **`time(table)` works.** `/cppn time` printed `time(table): ok (6 dates)`: `time{year,month,day,hour=0}` returns a number for every date, `date("*t", time(t))` round-trips to the same date at 00:00, and `time(date("*t", ts)) - ts` is 0. The client follows the computer's daylight saving rules: the offset deduced from `date("*t")` and `date("!*t")` is 7200 s in June and 3600 s in late October and March (late March 2026 is before the change on the 29th, so winter time), with `isdst` changing accordingly. `time()` and `GetServerTime()` agree to the second. The exact day computation of `History.dayOf` is therefore reliable on Forever; the estimate fallback stays as a safety net.

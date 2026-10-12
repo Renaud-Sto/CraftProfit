@@ -133,6 +133,7 @@ Take screenshots of each state and of the chart in English, French and Spanish (
 - [ ] Drag: the window moves from its title bar, its body, the list rows, the buttons and the chart; a drag ending on a button clicks nothing; Escape closes it; its place is kept after `/reload`.
 - [ ] Pause and resume: **Pause tracking** turns the row to *paused* and the button to **Resume tracking**; the history stays; a scan records nothing for it; **Resume tracking** records again.
 - [ ] Delete: one click turns the button to "Click again to delete"; waiting 4 seconds brings the label back with nothing deleted; choosing another recipe also cancels; two clicks within 4 seconds delete it (chat: "History of ... deleted"), the row disappears, and an item shared with another tracked recipe keeps its history in that recipe's chart.
+- [ ] Screen fit: at the largest UI scale (1.15) and a small resolution, the options and History windows fit the screen (shrunk if needed) and stay readable; at UI scale 1.0 on a 1080p screen they open at full size.
 - [ ] French and Spanish: every label fits (view, period, action buttons, figures, weekday names). The French and Spanish strings were written without a native speaker: have them read by one.
 
 ## Click a reagent to search it (quality of life, never buys)

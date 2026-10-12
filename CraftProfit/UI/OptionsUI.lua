@@ -53,9 +53,7 @@ local CONTROL_LINES = {
     { "/cp pins", "CMD_PINS" },
     { "/cp level", "CMD_LEVEL" },
     { "/cp minimap", "CMD_MINIMAP" },
-    { "/cp history [n]", "CMD_HISTORY" },
-    { "/cp history list", "CMD_HISTORY_LIST" },
-    { "/cp history remove <n>", "CMD_HISTORY_REMOVE" },
+    { "/cp history [n | list | remove <n>]", "CMD_HISTORY" },
     { "/cp scan", "CMD_SCAN" },
     { "/cp market", "CMD_MARKET" },
     { "/cp locale <code>", "CMD_LOCALE" },
@@ -302,6 +300,8 @@ function OptionsUI.show()
     OptionsUI.place()
     frame:Show()
     OptionsUI.refresh()
+    -- The refresh sets the height (the note's lines): fit after it.
+    Native.fitToScreen(frame)
 end
 
 function OptionsUI.hide()

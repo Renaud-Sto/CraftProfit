@@ -217,9 +217,7 @@ local EXPECTED_LINES = {
     "/cp pins - pinned recipes",
     "/cp level - leveling window",
     "/cp minimap - show or hide the minimap button",
-    "/cp history [n] - price history window",
-    "/cp history list - tracked recipes in chat",
-    "/cp history remove <n> - delete a history",
+    "/cp history [n | list | remove <n>] - price history window",
     "/cp scan - scan the auction house",
     "/cp market - which market is in use",
     "/cp locale <code> - change the language",
@@ -296,7 +294,7 @@ H.test("the command lines are translated and fit the panel in English, French an
         end
         if locale == "frFR" then
             H.eq(plain(O.parts.lines[7].text), "/cp pins - recettes épinglées")
-            H.eq(plain(O.parts.lines[10].text), "/cp history [n] - fenêtre d'historique des prix")
+            H.eq(plain(O.parts.lines[10].text), "/cp history [n | list | remove <n>] - historique des prix")
         end
     end
 end)
@@ -480,4 +478,25 @@ H.test("the note is the small font across the panel, under the buttons, as tall 
     measured = 0 / 0
     O.refresh()
     H.eq(O.noteLines(), Layout.wrapLines(note.text, O.SMALL_CHAR_W, O.ROOM))
+end)
+
+H.test("the options window shrinks to fit a short screen, and stays at full size otherwise", function()
+    local T, _, slash = boot()
+    local scales = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.SetScale = function(self, v) scales[#scales + 1] = v; self.scale = v end
+        return f
+    end
+    T.env.UIParent.GetHeight = function() return 400 end
+    slash("options")
+    local f = T.ns.OptionsUI.frame()
+    local h = f:GetHeight()
+    H.truthy(h > 380)
+    H.eq(f.scale, 380 / h)
+    T.env.UIParent.GetHeight = function() return 2000 end
+    slash("options")
+    slash("options")
+    H.eq(f.scale, 1)
 end)

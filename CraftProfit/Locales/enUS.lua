@@ -151,8 +151,6 @@ ns.Locale.register("enUS", {
     CMD_LEVEL = "leveling window",
     CMD_MINIMAP = "show or hide the minimap button",
     CMD_HISTORY = "price history window",
-    CMD_HISTORY_LIST = "tracked recipes in chat",
-    CMD_HISTORY_REMOVE = "delete a history",
     HISTORY_BUTTON = "History",
     CMD_SCAN = "scan the auction house",
     CMD_MARKET = "which market is in use",

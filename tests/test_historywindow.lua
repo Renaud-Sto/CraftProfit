@@ -464,3 +464,14 @@ H.test("the hover date follows the locale: month first in English, day first in 
     local _, UI = boot()
     H.eq(UI.dateText(0 / 0), "")
 end)
+
+H.test("the history window shrinks to fit a short screen", function()
+    local T, UI = boot()
+    T.env.UIParent.GetHeight = function() return 300 end
+    UI.show()
+    local f = UI.frame()
+    f.SetScale = function(self, v) self.scale = v end
+    UI.hide()
+    UI.show()
+    H.eq(f.scale, 280 / f.height)
+end)

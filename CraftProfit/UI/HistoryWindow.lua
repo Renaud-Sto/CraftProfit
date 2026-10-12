@@ -537,6 +537,7 @@ function HistoryWindow.show()
     if not frame then build() end
     HistoryWindow.place()
     frame:Show()
+    Native.fitToScreen(frame)
     HistoryWindow.refresh()
 end
 

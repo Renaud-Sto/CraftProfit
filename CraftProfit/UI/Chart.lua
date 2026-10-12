@@ -23,7 +23,7 @@
 -- bars): a redraw reuses what exists and hides the rest, so drawing 60 days then 7 creates
 -- nothing new. Nothing runs per frame: drawing happens in set/setWeekday only.
 -- Chart.USE_LINES adds a line through the daily averages with the game's Line objects
--- (frame:CreateLine), off until the probe (/cppn line, docs/probe-findings.md F14) shows
+-- (frame:CreateLine), on since the probe (/cppn line, docs/probe-findings.md F14) showed
 -- they work on Forever; when CreateLine is missing or raises, the bars stay alone.
 local _, ns = ...
 local Util, Colors, ChartModel, Native = ns.Util, ns.Colors, ns.ChartModel, ns.Native
@@ -32,7 +32,10 @@ local Chart = {}
 Chart.__index = Chart
 ns.Chart = Chart
 
-Chart.USE_LINES = false
+-- Draws the line through the daily averages (Line objects). On: the probe showed CreateLine
+-- works on Forever (docs/probe-findings.md F14); the author judges the look in game (see the
+-- checklist, History chart: lines on and off). Set to false to keep the bars only.
+Chart.USE_LINES = true
 Chart.DEFAULT_W, Chart.DEFAULT_H = 400, 240
 Chart.LABEL_W = 60          -- left gutter for the axis amounts
 Chart.STRIP_H = 50          -- weekday strip at the bottom (bars and their percentages)

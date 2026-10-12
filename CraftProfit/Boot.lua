@@ -230,6 +230,7 @@ function Controller.refresh()
     if ns.PinsUI then ns.PinsUI.refresh() end
     if ns.LevelingUI then ns.LevelingUI.refresh() end
     if ns.PinnedWindow then ns.PinnedWindow.refresh() end
+    if ns.HistoryWindow then ns.HistoryWindow.refresh() end
     if ns.OptionsUI then ns.OptionsUI.refresh() end
 end
 
@@ -275,7 +276,7 @@ end
 
 function Controller.besidePosition(except)
     local tops, entries = {}, {}
-    for _, mod in ipairs({ ns.Window, ns.LevelingUI, ns.PinnedWindow, ns.OptionsUI }) do
+    for _, mod in ipairs({ ns.Window, ns.LevelingUI, ns.PinnedWindow, ns.HistoryWindow, ns.OptionsUI }) do
         local f = type(mod) == "table" and type(mod.frame) == "function" and mod.frame() or nil
         if f and f ~= except then
             local right, top = edges(f)
@@ -438,6 +439,12 @@ end
 function Controller.savePinsPosition(x, y)
     if Util.isFinite(x) and Util.isFinite(y) then
         CraftProfitDB.settings.pinsWindow = { x = x, y = y }
+    end
+end
+
+function Controller.saveHistoryPosition(x, y)
+    if Util.isFinite(x) and Util.isFinite(y) then
+        CraftProfitDB.settings.historyWindow = { x = x, y = y }
     end
 end
 
@@ -739,7 +746,9 @@ function Controller.historyData(recipeID, view, period)
     for _, id in ipairs(ids) do
         local key = "item:" .. id
         valid[key] = true
-        items[#items + 1] = { key = key, itemID = id, name = Controller.itemName(id) or ("#" .. id), icon = Controller.itemIcon(id) }
+        -- The icon helper is not measured on Forever yet: a failure only loses the icon.
+        local okIcon, icon = pcall(Controller.itemIcon, id)
+        items[#items + 1] = { key = key, itemID = id, name = Controller.itemName(id) or ("#" .. id), icon = okIcon and icon or nil }
     end
     if not valid[view] then view = "net" end
 
@@ -952,6 +961,13 @@ function Controller.init()
             onMoved = function(_, x, y) Controller.savePinsPosition(x, y) end,
         })
         ns.PinnedWindow.attach(CraftProfitDB.settings.pinsWindow)
+    end
+    -- Nor the history window.
+    if ns.HistoryWindow then
+        ns.HistoryWindow.init(Controller, {
+            onMoved = function(_, x, y) Controller.saveHistoryPosition(x, y) end,
+        })
+        ns.HistoryWindow.attach(CraftProfitDB.settings.historyWindow)
     end
     -- Nothing is built here: the options window is made on first open.
     if ns.OptionsUI then

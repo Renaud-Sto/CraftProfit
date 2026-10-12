@@ -53,10 +53,10 @@ local function shownCount(list)
     return n
 end
 
-H.test("the chart is loaded after the native kit and draws no Line by default", function()
+H.test("the chart is loaded after the native kit and draws Lines by default", function()
     local T, Chart = boot()
     H.truthy(Chart)
-    H.eq(Chart.USE_LINES, false)
+    H.eq(Chart.USE_LINES, true)
     H.truthy(T.ns.ChartModel)
 end)
 

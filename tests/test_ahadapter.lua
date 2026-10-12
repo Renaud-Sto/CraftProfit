@@ -116,6 +116,18 @@ H.test("item results use the buyout per unit and skip bid-only auctions", functi
     H.eq(T.searches, { { 7, { { unit = 100, qty = 1 }, { unit = 50, qty = 2 }, full = true } } })
 end)
 
+H.test("an item row with a buyout that cannot be read makes the volume partial", function()
+    local T = setup({
+        GetNumItemSearchResults = function() return 2 end,
+        GetItemSearchResultInfo = function(_, i)
+            return ({ { buyoutAmount = 100, quantity = 1 }, { buyoutAmount = 100, quantity = 0 / 0 } })[i]
+        end,
+    })
+    T.AH.onEvent("ITEM_SEARCH_RESULTS_UPDATED", { itemID = 7 })
+    H.eq(T.searches[1][2].full, false)
+    H.eq(#T.searches[1][2], 1)
+end)
+
 H.test("search results are capped and invalid events are ignored", function()
     local T = setup({
         GetNumCommoditySearchResults = function() return 250 end,

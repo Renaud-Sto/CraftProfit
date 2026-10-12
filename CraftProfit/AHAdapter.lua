@@ -161,6 +161,9 @@ local function readItem(itemKey)
             -- A bid-only auction cannot be bought out: it is not on offer, not a gap.
             if qty and Util.isCopper(info.buyoutAmount) and info.buyoutAmount > 0 then
                 listings[#listings + 1] = { unit = info.buyoutAmount / qty, qty = qty }
+            elseif type(info.buyoutAmount) == "number" and info.buyoutAmount > 0 then
+                -- A buyout that could not be read (bad quantity, absurd amount) is a gap.
+                listings.full = false
             end
         else
             listings.full = false

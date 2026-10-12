@@ -18,6 +18,13 @@ Colors.FIXED = {
     trivial = { 0.55, 0.55, 0.55, 1 },
 }
 
+-- The history chart's lines (UI/Chart.lua): gridlines, the zero line, the usual price.
+Colors.CHART = {
+    grid = { 0.5, 0.5, 0.5, 0.25 },
+    zero = { 0.8, 0.8, 0.8, 0.6 },
+    usual = { 1, 1, 1, 0.7 },
+}
+
 -- The game global each text kind reads (looked up at each call: named globals, not _G,
 -- so a sandboxed environment answers), and the value used when the global is missing or
 -- not a colour object (the test fake, a changed build).

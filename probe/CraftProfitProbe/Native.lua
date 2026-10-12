@@ -156,8 +156,160 @@ local function build()
     return f
 end
 
+-- Writes a detail line to the probe's log only (no chat), through the main probe's logger
+-- (Probe.lua loads first), so its timestamp and MAX_LOG trimming apply.
+local function logOnly(...)
+    local parts = {}
+    for i = 1, select("#", ...) do parts[#parts + 1] = tostring((select(i, ...))) end
+    if type(CraftProfitProbe_Log) == "function" then
+        CraftProfitProbe_Log("[CPP native] " .. table.concat(parts, " "))
+    end
+end
+
+-- /cppn line: can a plain frame draw Line objects on this client (chart primitives)?
+-- A fan of 5 lines, a 7 point polyline, and 7 texture bars for comparison.
+local lineWin
+local function lineProbe()
+    if lineWin then
+        lineWin:SetShown(not lineWin:IsShown())
+        return
+    end
+    local f = CreateFrame("Frame", "CPPLineProbe", nil)
+    f:SetParent(UIParent)
+    f:SetSize(440, 260)
+    f:SetPoint("CENTER")
+    f:SetFrameStrata("HIGH")
+    f:SetMovable(true)
+    f:EnableMouse(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", f.StartMoving)
+    f:SetScript("OnDragStop", f.StopMovingOrSizing)
+    local bg = f:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0.08, 0.08, 0.1, 0.95)
+    local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    title:SetPoint("TOP", f, "TOP", 0, -8)
+    title:SetText("CPP line probe: fan | polyline | texture bars (Escape closes)")
+
+    local failures = {}
+    local function step(name, fn, ...)
+        local ok, res = pcall(fn, ...)
+        logOnly("line", name, ok and "ok" or ("FAILS " .. tostring(res)))
+        if not ok then failures[#failures + 1] = name .. ": " .. tostring(res) end
+        return ok, res
+    end
+
+    logOnly("line", "CreateLine is", type(f.CreateLine))
+    local ok, probe = step("CreateLine", f.CreateLine, f, nil, "ARTWORK")
+    if ok and type(probe) == "table" then
+        local okType, objType = pcall(probe.GetObjectType, probe)
+        logOnly("line", "GetObjectType", okType and tostring(objType) or ("FAILS " .. tostring(objType)))
+        step("SetThickness(1)", probe.SetThickness, probe, 1)
+        step("SetThickness(2)", probe.SetThickness, probe, 2)
+        step("SetColorTexture", probe.SetColorTexture, probe, 1, 1, 1, 1)
+        step("SetStartPoint", probe.SetStartPoint, probe, "BOTTOMLEFT", f, 0, 0)
+        step("SetEndPoint", probe.SetEndPoint, probe, "BOTTOMLEFT", f, 1, 1)
+        probe:Hide()
+
+        local function line(x0, y0, x1, y1, r, g, b, thickness, name)
+            local l = f:CreateLine(nil, "ARTWORK")
+            step(name .. " color", l.SetColorTexture, l, r, g, b, 1)
+            step(name .. " start", l.SetStartPoint, l, "BOTTOMLEFT", f, x0, y0)
+            step(name .. " end", l.SetEndPoint, l, "BOTTOMLEFT", f, x1, y1)
+            step(name .. " thickness", l.SetThickness, l, thickness)
+        end
+        -- Fan: 5 lines from one point, thickness 1 and 2 alternating.
+        local colors = { { 1, 0.2, 0.2 }, { 1, 0.8, 0.2 }, { 0.3, 1, 0.3 }, { 0.3, 0.7, 1 }, { 0.8, 0.4, 1 } }
+        for i, c in ipairs(colors) do
+            local angle = math.rad(15 + (i - 1) * 37.5)
+            line(80, 30, 80 + 90 * math.cos(angle), 30 + 90 * math.sin(angle), c[1], c[2], c[3], i % 2 == 0 and 2 or 1, "fan" .. i)
+        end
+        -- Polyline through 7 daily averages (the chart's optional connecting line).
+        local ys = { 60, 90, 75, 140, 120, 170, 110 }
+        for i = 1, #ys - 1 do
+            line(180 + (i - 1) * 22, ys[i], 180 + i * 22, ys[i + 1], 1, 0.82, 0, 2, "poly" .. i)
+        end
+    else
+        failures[#failures + 1] = "CreateLine: " .. tostring(probe)
+    end
+    -- Texture bars, the fallback the chart uses anyway.
+    local heights = { 40, 70, 55, 120, 100, 150, 90 }
+    for i, h in ipairs(heights) do
+        local t = f:CreateTexture(nil, "ARTWORK")
+        t:SetColorTexture(0.3, 0.6, 1, i % 2 == 0 and 0.5 or 1)
+        t:SetSize(14, h)
+        t:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 340 + (i - 1) * 13, 30)
+    end
+    -- Kept (and closable with Escape) only once fully built: a build that raised is not reused.
+    lineWin = f
+    tinsert(UISpecialFrames, "CPPLineProbe")
+    if #failures == 0 then
+        out("lines: ok (details in the log; /reload writes it)")
+    else
+        out("lines: FAILS " .. failures[1] .. " (" .. #failures .. " failures, see the log)")
+    end
+end
+
+-- Days since 1970-01-01 of a calendar date (proleptic Gregorian), no time() needed.
+local function daysFromCivil(y, m, d)
+    if m <= 2 then y = y - 1 end
+    local era = math.floor(y / 400)
+    local yoe = y - era * 400
+    local mp = (m + 9) % 12
+    local doy = math.floor((153 * mp + 2) / 5) + d - 1
+    local doe = yoe * 365 + math.floor(yoe / 4) - math.floor(yoe / 100) + doy
+    return era * 146097 + doe - 719468
+end
+
+-- /cppn time: date("*t"), time(table) and the clocks, for the history's local days.
+local function timeProbe()
+    local year = tonumber(date("%Y")) or 2026
+    local okAll, count = true, 0
+    logOnly("time", "time()", tostring(time()), "GetServerTime()", tostring(GetServerTime and GetServerTime()),
+        "GetTime()", tostring(GetTime()))
+    for _, y in ipairs({ year, year - 1 }) do
+        for _, md in ipairs({ { 6, 15 }, { 10, 28 }, { 3, 28 } }) do
+            count = count + 1
+            -- Noon UTC of that date: the same calendar date in any zone from UTC-11 to UTC+11.
+            local ts = daysFromCivil(y, md[1], md[2]) * 86400 + 12 * 3600
+            local d = date("*t", ts)
+            local u = date("!*t", ts)
+            logOnly("time", string.format("ts %d (%04d-%02d-%02d 12:00 UTC) local %04d-%02d-%02d %02d:%02d:%02d wday %s yday %s isdst %s",
+                ts, y, md[1], md[2], d.year, d.month, d.day, d.hour, d.min, d.sec, tostring(d.wday), tostring(d.yday), tostring(d.isdst)))
+            -- UTC offset from the fields only: minutes apart, corrected by the day difference.
+            local dayDiff = (d.year * 1000 + d.yday) - (u.year * 1000 + u.yday)
+            if dayDiff > 1 then dayDiff = -1 elseif dayDiff < -1 then dayDiff = 1 end
+            local offset = ((d.hour * 60 + d.min) - (u.hour * 60 + u.min) + dayDiff * 1440) * 60
+            local okRt, rt = pcall(time, d)
+            logOnly("time", "offset from date fields", offset, "s; time(date(\"*t\", ts)) - ts =",
+                (okRt and type(rt) == "number") and (rt - ts) or ("FAILS " .. tostring(rt)))
+            local okTime, midnight = pcall(time, { year = d.year, month = d.month, day = d.day, hour = 0 })
+            local good = okTime and type(midnight) == "number"
+            local back = good and date("*t", midnight) or nil
+            good = good and ts - midnight >= 0 and ts - midnight < 25 * 3600
+                and back.year == d.year and back.month == d.month and back.day == d.day and back.hour == 0
+            logOnly("time", "time{y,m,d,hour=0}", okTime and tostring(midnight) or ("FAILS " .. tostring(midnight)),
+                "type", type(midnight), "noon - midnight", good and (ts - midnight) or "-",
+                "round trip", back and string.format("%04d-%02d-%02d %02d:%02d", back.year, back.month, back.day, back.hour, back.min) or "-",
+                good and "OK" or "BAD")
+            if not good then okAll = false end
+        end
+    end
+    out(okAll and ("time(table): ok (" .. count .. " dates, details in the log)") or "time(table): FAILS (see the log)")
+end
+
 SLASH_CPPN1 = "/cppn"
 SlashCmdList.CPPN = function(msg)
+    if msg == "line" then
+        local ok, err = pcall(lineProbe)
+        if not ok then out("lines: FAILS " .. tostring(err)) end
+        return
+    end
+    if msg == "time" then
+        local ok, err = pcall(timeProbe)
+        if not ok then out("time(table): FAILS " .. tostring(err)) end
+        return
+    end
     if msg == "list" then
         for _, name in ipairs(ATLASES) do
             local info = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(name)
@@ -299,4 +451,4 @@ SlashCmdList.CPPN = function(msg)
     win:SetShown(not win:IsShown())
     out("window", win:IsShown() and "shown" or "hidden", "- /cppn list prints which names exist; /reload writes the log")
 end
-out("loaded. /cppn = native look showcase, /cppn list = which atlases/templates exist")
+out("loaded. /cppn = native look showcase, /cppn list = which atlases/templates exist, /cppn line and /cppn time = chart primitives")

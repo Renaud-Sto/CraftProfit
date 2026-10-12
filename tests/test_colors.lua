@@ -27,6 +27,15 @@ H.test("the meaning colours keep their values", function()
     })
 end)
 
+H.test("the chart's line colours keep their values", function()
+    local Colors = load()
+    H.eq(Colors.CHART, {
+        grid = { 0.5, 0.5, 0.5, 0.25 },
+        zero = { 0.8, 0.8, 0.8, 0.6 },
+        usual = { 1, 1, 1, 0.7 },
+    })
+end)
+
 H.test("text colours fall back to white, grey and gold without the game's globals", function()
     local Colors = load()
     H.eq(Colors.text("main"), { 1, 1, 1, 1 })

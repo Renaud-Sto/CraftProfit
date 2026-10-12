@@ -106,6 +106,18 @@ Leveling window (`/cp level`):
 - [ ] `/cp history` still lists the tracked recipes (active and paused) and `/cp history remove <n>` still deletes one.
 - [ ] After a **Scan AH** and a **Refresh recipe**, `/reload` works with no Lua error and nothing visible changes (the price rows and history points of complete volumes end with `true` in `CraftProfit.lua`).
 
+## History chart
+To check in step 3, once the history window shows the chart; take screenshots.
+- [ ] Bars: one per day with data, from the lowest to the highest price of that day, with a white tick at the average; a net result bar is green for a gain and red for a loss.
+- [ ] Gaps: a day without any measurement is an empty slot, not a bar at zero.
+- [ ] Carried days (a price taken from an earlier day) are drawn lighter.
+- [ ] The usual price is a thin line with its amount at the right; when it is off the scale, the line sits on the border and its label ends with `^` or `v`.
+- [ ] Axis labels are plain amounts (`12g 40s`, `1.2k g`), readable, not overlapping; a loss shows a brighter zero line.
+- [ ] Weekday strip: Monday first, green above and red below the zero line, a percentage under each bar, nothing for a weekday with fewer than 2 days.
+- [ ] Hovering a day reports that day (tooltip in step 3); hovering a gap reports nothing; switching 60 days then 7 then 60 leaves no stray bar.
+- [ ] Dragging from the chart moves the history window like a drag on its body, without a tooltip flickering while it moves; the window comes to the front on the press.
+- [ ] A refresh or a period change while a day is hovered hides its tooltip (no stale tooltip left behind).
+
 ## Click a reagent to search it (quality of life, never buys)
 - [ ] With the materials detail unfolded at the AH, hovering a reagent row highlights it. Clicking "20x Bronze Bar" opens the AH's Buy view, types the item name in the AH search box and starts the search.
 - [ ] Clicking the matching result opens its buy view with the quantity already set to 20. (Best effort: if the quantity stays at 1, note the AH view; the search itself is the part that must work.)

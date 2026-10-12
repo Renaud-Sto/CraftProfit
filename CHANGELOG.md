@@ -13,7 +13,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - Reagent quantities and unit prices have an upper bound, so a corrupt save cannot produce absurd amounts.
 
 ### Changed
-- Price history retention: every point is kept for 7 days, then one point a day for 60 days (at most 212 points, about 10 KB, per item); the weekly tier is gone. Existing history is compacted at load: points between 7 and 60 days old become daily points, weekly points and anything older than 60 days are dropped.
+- Price history retention: every point is kept for 7 days, then one point a day for 60 days (at most 212 points, about 35 KB in the saved file, per item); the weekly tier is gone. Existing history is compacted at load: points between 7 and 60 days old become daily points, weekly points and anything older than 60 days are dropped.
 - Up to 30 recipes can be tracked (was 15).
 - The pinned list under the main window is no longer evaluated while it is hidden.
 

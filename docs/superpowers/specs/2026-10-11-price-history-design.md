@@ -36,7 +36,7 @@ Not a goal: sales speed (the game gives no sales history), alerts, prices of rec
 
 ## Architecture
 
-- `History.lua` (pure): retention changes, plus new pure functions: `History.dailySeries(series, now, days)` (daily points of the period, raw points folded into days), `History.usual(series, now)` (median of 30 days, count, days), `History.compare(today, usual)`, `History.weekdayProfile(points, usual)`, `History.recipeDay(recipeItems, ...)` for the per-day net result, all unit tested with hand-made series.
+- `History.lua` (pure): retention changes, plus new pure functions: `History.dailySeries(series, now, days)` (daily points of the period, raw points folded into days), `History.usual(series, now)` (median of 30 days, count, days), `History.compare(today, usual)`, `History.weekdayProfile(points, usual)`, `HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf)` for the per-day net result, all unit tested with hand-made series.
 - `HistoryView.lua` (pure, new): turns a tracked recipe into what the window shows (figures, bars geometry in abstract units, the strip), no widgets.
 - `UI/Chart.lua` (new, widget): the bar chart and the weekday strip, on frames and textures, with `Layout`-style pure helpers for scale and ticks (tested).
 - `UI/HistoryWindow.lua` (new): the window on `ns.Native` (window, list rows, buttons, scroll bar); refreshes on `Controller.refresh` while shown.

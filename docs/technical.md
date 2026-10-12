@@ -130,7 +130,12 @@ Pure computations for the history view (no UI yet), all tested with hand-made se
 
 **Pausing and deleting.**
 - Pausing (`Controller.setHistoryActive(recipeID, false)`, the History window's **Pause tracking**, or unticking *Track history*) stops recording and keeps every point. A paused recipe still counts toward the limit of 30 and still protects its items from pruning; resuming (`History.track`) records again.
-- Deleting (`Controller.deleteHistory(recipeID)`, or `/cp history remove <n>` through the same code) removes the recipe from the tracked list, then `Controller.pruneHistory()` runs `History.prune` on **every market** in `CraftProfitDB.markets` (other rulesets and factions too): the series of items no tracked recipe needs any more are dropped, while items shared with another tracked recipe keep theirs. Current prices (`market.prices`) are never touched. The window prints "History of %s deleted"; the command keeps its own message.
+- Deleting (`Controller.deleteHistory(recipeID)`, or `/cp history remove <n>` through the same code) removes the recipe from the tracked list, then deletes series in **every market** of `CraftProfitDB.markets` (other rulesets and factions too), conservatively:
+  - Only an id from the removed recipe's own list can go, and only when no remaining tracked recipe (active or paused) could need it.
+  - Both lists come from `Controller.historyItemsAll(recipe)`: reagents, crafted item and every disenchant material the crafted item can give, as if the character knew Enchanting. It does not depend on the current character the way `historyItems` does.
+  - While a remaining recipe's crafted item is not loaded yet (its disenchant materials are unknown), only the removed recipe's own reagents and crafted item can go, never a disenchant material.
+  - Series that were never in the removed recipe's list are left alone.
+  - Current prices (`market.prices`) are never touched. `History.prune` (drop everything no tracked recipe needs, current market) is no longer called by the delete paths. The window prints "History of %s deleted"; the command keeps its own message.
 
 **History window data** (`Boot.lua`):
 - `Controller.historyList()` → `{ recipe, active, indicator, fresh }` per tracked recipe, in saved order. `indicator` is `HistoryView.indicators` (with `good`), present only when there is enough data and the data is fresh.

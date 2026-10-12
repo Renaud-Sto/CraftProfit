@@ -1017,16 +1017,39 @@ function Controller.onEvent(event, arg1, arg2)
     end
 end
 
--- Drops, in every market (other rulesets and factions too), the history series no
--- tracked recipe (active or paused) needs any more. Current prices are never touched.
-function Controller.pruneHistory()
-    local removed = 0
+-- Every item a tracked recipe's history could hold, whoever is playing: reagents, crafted
+-- item and every disenchant material its crafted item can give, as if the character knew
+-- Enchanting (Controller.historyItems depends on the character and on the item cache).
+-- `complete` is false while the crafted item's info (or item level) is not loaded: its
+-- disenchant materials are then unknown.
+function Controller.historyItemsAll(recipe)
+    local info = Controller.itemInfo(recipe.outputItemID)
+    local ids = Evaluate.wantedItems(recipe, Controller.itemInfo, Disenchant.lookup, true)
+    return ids, info ~= nil and Util.isFinite(info.ilvl)
+end
+
+-- Deletes, in every market (other rulesets and factions too), the history series of a recipe
+-- that was just removed from the tracked list. Conservative: only an id of that recipe's own
+-- list goes, and only when no remaining tracked recipe (active or paused) could need it; while
+-- a remaining recipe's list is incomplete (item not loaded), only the removed recipe's own
+-- reagents and crafted item can go, never a disenchant material. Current prices stay.
+local function deleteSeriesOf(recipe)
+    local candidates = Controller.historyItemsAll(recipe)
+    local own = { [recipe.outputItemID] = true }
+    for _, r in ipairs(recipe.reagents) do own[r.itemID] = true end
+    local keep, othersComplete = {}, true
+    for _, entry in ipairs(CraftProfitDB.tracked) do
+        local ids, complete = Controller.historyItemsAll(entry.recipe)
+        for _, id in ipairs(ids) do keep[id] = true end
+        if not complete then othersComplete = false end
+    end
     for _, market in pairs(CraftProfitDB.markets) do
         if type(market) == "table" and type(market.series) == "table" then
-            removed = removed + History.prune(CraftProfitDB, market, Controller.historyItems)
+            for _, id in ipairs(candidates) do
+                if not keep[id] and (othersComplete or own[id]) then market.series[id] = nil end
+            end
         end
     end
-    return removed
 end
 
 -- Stops tracking the n-th tracked recipe and deletes its history (items another tracked
@@ -1034,7 +1057,7 @@ end
 local function removeTracked(index)
     local entry = CraftProfitDB.tracked[index]
     if not entry or not History.remove(CraftProfitDB, index) then return nil end
-    Controller.pruneHistory()
+    deleteSeriesOf(entry.recipe)
     return Controller.recipeName(entry.recipe)
 end
 

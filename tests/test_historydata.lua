@@ -247,7 +247,7 @@ H.test("deleting a history removes the recipe and its series in every market, sp
         H.truthy(market.series[3])
         H.truthy(market.series[100])
     end
-    H.eq(there.series[555], nil)                       -- an orphan from before goes too
+    H.truthy(there.series[555])                        -- never in the deleted recipe: kept
     H.eq(here.prices[2], { 50, 1, NOW })               -- current prices are never touched
     H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r " .. string.format(T.ns.L.HISTORY_DELETED, "R5"))
     H.eq(C.deleteHistory(5), false)
@@ -263,4 +263,65 @@ H.test("/cp history remove cleans every market too and keeps its message", funct
     H.eq(next(there.series), nil)
     H.eq(next(C.market().series), nil)
     H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r " .. string.format(T.ns.L.HISTORY_REMOVED, "R5"))
+end)
+
+-- Weapons that disenchant into 10938 / 10940 (quality 2, item level 15), bound on pickup:
+-- a character without Enchanting cannot disenchant them, so the recording list leaves the
+-- disenchant materials out. Deleting another recipe must still keep their series.
+local DUST = { 10938, 10940 }
+
+local function weaponRecipe(id, output, reagent)
+    return { recipeID = id, name = "W" .. id, locale = "enUS", difficulty = 1, outputItemID = output,
+        qtyMin = 1, qtyMax = 1, reagents = { { itemID = reagent, qty = 1 } } }
+end
+
+H.test("deleting a history keeps the disenchant materials another recipe may need (non-enchanter)", function()
+    local T, C = boot()
+    ITEMS[301] = { quality = 2, ilvl = 15, sellPrice = 1, classID = 2, bindType = 1 }
+    ITEMS[302] = { quality = 2, ilvl = 15, sellPrice = 1, classID = 2, bindType = 1 }
+    C.knowsEnchanting = function() return false end
+    track(T, weaponRecipe(11, 301, 1))
+    track(T, weaponRecipe(12, 302, 2), false)          -- paused: still protects its items
+    local here = C.market()
+    local there = T.ns.DB.market(T.env.CraftProfitDB, "9999-Alliance")
+    for _, m in ipairs({ here, there }) do seed(m, { 1, 2, 301, 302, DUST[1], DUST[2] }) end
+    H.eq(C.deleteHistory(11), true)
+    for _, m in ipairs({ here, there }) do
+        H.eq(m.series[1], nil)                         -- recipe 11's own reagent
+        H.eq(m.series[301], nil)                       -- and its crafted item
+        H.truthy(m.series[DUST[1]])                    -- shared with recipe 12's weapon
+        H.truthy(m.series[DUST[2]])
+        H.truthy(m.series[2])
+        H.truthy(m.series[302])
+    end
+    ITEMS[301], ITEMS[302] = nil, nil
+end)
+
+H.test("deleting a history before an item is cached never deletes what that recipe could need", function()
+    local T, C = boot()
+    ITEMS[301] = { quality = 2, ilvl = 15, sellPrice = 1, classID = 2, bindType = 2 }
+    track(T, weaponRecipe(11, 301, 1))
+    track(T, weaponRecipe(12, 399, 2))                 -- 399: not loaded by the client yet
+    local here = C.market()
+    seed(here, { 1, 2, 301, 399, DUST[1], DUST[2] })
+    H.eq(C.deleteHistory(11), true)
+    H.eq(here.series[1], nil)
+    H.eq(here.series[301], nil)
+    -- 399 may disenchant into the same materials: they stay until its info is known.
+    H.truthy(here.series[DUST[1]])
+    H.truthy(here.series[DUST[2]])
+    H.truthy(here.series[399])
+    ITEMS[301] = nil
+end)
+
+H.test("the conservative item list ignores Enchanting and reports an unknown item", function()
+    local _, C = boot()
+    ITEMS[301] = { quality = 2, ilvl = 15, sellPrice = 1, classID = 2, bindType = 1 }
+    C.knowsEnchanting = function() return false end
+    local ids, complete = C.historyItemsAll(weaponRecipe(11, 301, 1))
+    H.eq(ids, { 1, 301, DUST[2], DUST[1] })            -- the disenchant table's order
+    H.eq(complete, true)
+    local _, unknown = C.historyItemsAll(weaponRecipe(12, 399, 2))
+    H.eq(unknown, false)
+    ITEMS[301] = nil
 end)

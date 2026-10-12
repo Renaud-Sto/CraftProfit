@@ -237,3 +237,62 @@ H.test("the line path is guarded: no CreateLine, a failing one, or a working one
     working:set({ days = netDays(5), field = "net", period = 7 })
     H.eq(shownCount(working.pools.lines), 0)
 end)
+
+-- A stand-in for a Native.window: records moves, stops and raises.
+local function fakeWindow()
+    local win = W.frame()
+    win.isNativeWindow = true
+    win.calls = {}
+    win.StartMoving = function(self) self.calls[#self.calls + 1] = "start" end
+    win.Raise = function(self) self.calls[#self.calls + 1] = "raise" end
+    win.stopDrag = function(self) self.calls[#self.calls + 1] = "stop" end
+    return win
+end
+
+H.test("a drag on the plot moves the window, and no hover is reported while it moves", function()
+    local T, Chart = boot()
+    local win = fakeWindow()
+    local chart = Chart.new(T.env.UIParent, 700, 300, win)
+    local seen = {}
+    chart.onHover = function(row) seen[#seen + 1] = row or false end
+    local days = { { day = NOW - 6 * DAY, net = 100 }, { day = NOW, net = 150 } }
+    chart:set({ days = days, field = "net", period = 7 })
+    local first, last = chart.pools.slots[1], chart.pools.slots[7]
+    first.scripts.OnEnter(first)
+    first.scripts.OnMouseDown(first)
+    first.scripts.OnDragStart(first)
+    last.scripts.OnEnter(last)                      -- the pointer crosses slots while moving
+    first.scripts.OnDragStop(first)
+    H.eq(win.calls, { "raise", "start", "stop" })
+    H.eq(seen, { days[1], false })                  -- the drag start hides the hover
+    -- After the drag, hovering works again.
+    last.scripts.OnEnter(last)
+    H.eq(seen[3], days[2])
+    -- Slots made later forward drags too.
+    chart:set({ days = netDays(30), field = "net", period = 30 })
+    local b = chart.pools.slots[30]
+    b.scripts.OnDragStart(b)
+    H.eq(win.calls[#win.calls], "start")
+end)
+
+H.test("without a window, slot buttons do not drag anything", function()
+    local T, Chart = boot()
+    local chart = Chart.new(T.env.UIParent, 700, 300)
+    chart:set({ days = netDays(3), field = "net", period = 7 })
+    H.eq(chart.pools.slots[1].scripts.OnDragStart, nil)
+end)
+
+H.test("clearing while a day is hovered reports the end of the hover", function()
+    local T, Chart = boot()
+    local chart = Chart.new(T.env.UIParent, 700, 300)
+    local seen = {}
+    chart.onHover = function(row) seen[#seen + 1] = row or false end
+    chart:set({ days = netDays(3), field = "net", period = 7 })
+    local b = chart.pools.slots[7]
+    b.scripts.OnEnter(b)
+    chart:clear()
+    H.eq(#seen, 2)
+    H.eq(seen[2], false)
+    chart:clear()                                   -- nothing hovered any more: no call
+    H.eq(#seen, 2)
+end)

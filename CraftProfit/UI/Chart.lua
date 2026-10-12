@@ -4,7 +4,7 @@
 -- strings and slot buttons. Built from coloured textures on plain frames: no template, no
 -- atlas, no image file.
 --
--- Chart.new(parent, width, height) -> chart, with:
+-- Chart.new(parent, width, height, window) -> chart, with:
 --   chart.frame               the root frame (the caller anchors it; it starts shown)
 --   chart:set(model)          model = { days, field, scale, usual, period, newest, carriedTint }
 --                             (see ChartModel.bars for days/field/period/newest; scale is
@@ -14,7 +14,11 @@
 --   chart:clear()
 --   chart:setWeekday(profile) History.weekdayProfile output (7 entries, Monday first), nil clears
 --   chart.onHover(row, slot)  set by the caller: called with the day row under the pointer
---                             (nil over a gap, and when the pointer leaves the chart)
+--                             (nil over a gap, when the pointer leaves the chart, when a
+--                             drag starts, and when the chart is cleared while hovered)
+-- The slot buttons cover the plot, so they would swallow a drag of the window: with
+-- `window` (a Native.window) they forward a left drag to it (Native.forwardDrag) and report
+-- no hover while it moves. Without `window` they only hover.
 -- Everything drawn comes from pools (bars, gridline labels, slot buttons, lines, weekday
 -- bars): a redraw reuses what exists and hides the rest, so drawing 60 days then 7 creates
 -- nothing new. Nothing runs per frame: drawing happens in set/setWeekday only.
@@ -22,7 +26,7 @@
 -- (frame:CreateLine), off until the probe (/cppn line, docs/probe-findings.md F14) shows
 -- they work on Forever; when CreateLine is missing or raises, the bars stay alone.
 local _, ns = ...
-local Util, Colors, ChartModel = ns.Util, ns.Colors, ns.ChartModel
+local Util, Colors, ChartModel, Native = ns.Util, ns.Colors, ns.ChartModel, ns.Native
 
 local Chart = {}
 Chart.__index = Chart
@@ -58,8 +62,24 @@ local function size(n, default)
     return default
 end
 
-function Chart.new(parent, width, height)
+function Chart.new(parent, width, height, window)
     local self = setmetatable({}, Chart)
+    if type(window) == "table" then
+        -- Stands for the window in Native.forwardDrag: the drag also ends any hover, and
+        -- raising walks up to the real window through GetParent.
+        self.dragProxy = {
+            StartMoving = function()
+                self.dragging = true
+                self:endHover()
+                window:StartMoving()
+            end,
+            stopDrag = function()
+                self.dragging = false
+                window.stopDrag(window)
+            end,
+            GetParent = function() return window end,
+        }
+    end
     self.width = size(width, Chart.DEFAULT_W)
     self.height = size(height, Chart.DEFAULT_H)
     self.plotW = math.max(10, self.width - Chart.LABEL_W)
@@ -123,11 +143,12 @@ local function acquireSlot(self, i)
         b.slot = i
         b:EnableMouse(true)
         b:SetScript("OnEnter", function(button)
+            if self.dragging then return end
+            self.hovered = button.slot
             if type(self.onHover) == "function" then self.onHover(self.rowsBySlot[button.slot], button.slot) end
         end)
-        b:SetScript("OnLeave", function()
-            if type(self.onHover) == "function" then self.onHover(nil) end
-        end)
+        b:SetScript("OnLeave", function() self:endHover() end)
+        if self.dragProxy then Native.forwardDrag(b, self.dragProxy) end
         self.pools.slots[i] = b
     end
     b:Show()
@@ -148,7 +169,15 @@ end
 
 local BAR_PARTS = { "span", "tick" }
 
+-- Reports the end of a hover once (hiding a button fires no OnLeave).
+function Chart:endHover()
+    if self.hovered == nil then return end
+    self.hovered = nil
+    if type(self.onHover) == "function" then self.onHover(nil) end
+end
+
 function Chart:clear()
+    self:endHover()
     hideFrom(self.pools.bars, 1, BAR_PARTS)
     hideFrom(self.pools.grid, 1)
     hideFrom(self.pools.labels, 1)

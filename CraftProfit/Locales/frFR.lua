@@ -88,6 +88,8 @@ ns.Locale.register("frFR", {
     HISTORY_HEADER = "Recettes suivies (%d sur %d) :",
     HISTORY_REMOVED = "Retirée de l'historique : %s",
     HISTORY_NO_SUCH = "Recette suivie introuvable. Tapez /cp history pour les lister",
+    HISTORY_VIEW_NET = "Résultat",
+    HISTORY_VIEW_MATERIALS = "Coût des composants",
     SLASH_HELP = "Commandes : /cp show | hide | reset | options | pins | minimap | scan | history | market | level | locale <code> | selftest",
     MARKET_INFO = "Marché : %s (enregistré sous %s)",
     SELFTEST_OK = "Auto-test réussi (%d vérifications)",

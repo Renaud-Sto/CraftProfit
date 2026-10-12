@@ -90,6 +90,8 @@ ns.Locale.register("enUS", {
     HISTORY_HEADER = "Tracked recipes (%d of %d):",
     HISTORY_REMOVED = "Removed from history: %s",
     HISTORY_NO_SUCH = "No such tracked recipe. Use /cp history to list them",
+    HISTORY_VIEW_NET = "Result",
+    HISTORY_VIEW_MATERIALS = "Materials cost",
     SLASH_HELP = "Commands: /cp show | hide | reset | options | pins | minimap | scan | history | market | level | locale <code> | selftest",
     MARKET_INFO = "Market: %s (saved as %s)",
     SELFTEST_OK = "Self-test passed (%d checks)",

@@ -2,7 +2,7 @@
 local ADDON, ns = ...
 local Util, Format, Core, Prices = ns.Util, ns.Format, ns.Core, ns.Prices
 local DB, Evaluate, Present, Recipes = ns.DB, ns.Evaluate, ns.Present, ns.Recipes
-local History, Leveling = ns.History, ns.Leveling
+local History, HistoryView, Leveling = ns.History, ns.HistoryView, ns.Leveling
 local Disenchant = ns.Data.Disenchant
 local L = ns.L
 
@@ -86,6 +86,19 @@ function Controller.itemInfo(itemID)
         return nil
     end
     return { quality = quality, ilvl = ilvl, sellPrice = sellPrice, classID = classID, bindType = bindType }
+end
+
+-- Item icon (file id or path) read secret-safely, or nil while the game has not loaded it.
+function Controller.itemIcon(itemID)
+    local api = C_Item
+    local ok, icon
+    if type(api.GetItemIconByID) == "function" then ok, icon = pcall(api.GetItemIconByID, itemID) end
+    if not ok or isSecret(icon) or (type(icon) ~= "number" and type(icon) ~= "string") or icon == "" then
+        local found, _, _, _, _, _, _, _, _, _, texture = pcall(api.GetItemInfo, itemID)
+        icon = found and not isSecret(texture) and texture or nil
+    end
+    if (type(icon) ~= "number" and type(icon) ~= "string") or icon == "" then return nil end
+    return icon
 end
 
 -- Item name read secret-safely (Util.text: a secret value raises when concatenated), or
@@ -617,6 +630,158 @@ function Controller.historyItems(recipe)
         if isReagent[id] or (id == recipe.outputItemID and not optional[id]) then required[#required + 1] = id end
     end
     return all, required
+end
+
+-- History window data ----------------------------------------------------------------
+
+-- The item ids of a tracked recipe in the order of the window's icon row: reagents, the
+-- crafted item unless it is bound on pickup (never sold), then disenchant materials when
+-- they count (Controller.historyItems: the list recording uses).
+function Controller.historyItemsOf(recipe)
+    local all, required = Controller.historyItems(recipe)
+    local needed = {}
+    for _, id in ipairs(required) do needed[id] = true end
+    local out = {}
+    for _, id in ipairs(all) do
+        if id ~= recipe.outputItemID or needed[id] then out[#out + 1] = id end
+    end
+    return out
+end
+
+-- The market the history comes from, readable: the ruleset ("realm") name and the faction,
+-- with (HC) for a hardcore character. Falls back to the market key.
+function Controller.marketName()
+    local realm = type(GetRealmName) == "function" and GetRealmName() or nil
+    if type(realm) ~= "string" or realm == "" then return Controller.marketKey() end
+    local name = realm
+    if type(UnitFactionGroup) == "function" then
+        local faction, localized = UnitFactionGroup("player")
+        local shown = type(localized) == "string" and localized ~= "" and localized or faction
+        if type(shown) == "string" and shown ~= "" then name = name .. " - " .. shown end
+    end
+    if Controller.marketKey():find("%-HC$") then name = name .. " (HC)" end
+    return name
+end
+
+Controller.HISTORY_PERIODS = { [7] = true, [30] = true, [60] = true }
+Controller.HISTORY_FRESH = 86400   -- arrows only when the newest measurement is this recent
+
+local function seriesReader()
+    local series = Controller.market().series
+    return function(itemID) return series[itemID] end
+end
+
+-- Time of the newest valid measurement of any of the recipe's items, or nil.
+local function newestPoint(recipe, seriesOf, now)
+    local newest
+    for _, id in ipairs((Controller.historyItems(recipe))) do
+        local series = seriesOf(id)
+        if type(series) == "table" then
+            for _, p in ipairs(series) do
+                local t = type(p) == "table" and p[1] or nil
+                if Util.isFinite(t) and t <= now and (not newest or t > newest) then newest = t end
+            end
+        end
+    end
+    return newest
+end
+
+-- The tracked recipes for the window's list, in saved order. `indicator` holds the arrows
+-- (HistoryView.indicators) only when there is enough data and the newest measurement is
+-- under 24 hours old (`fresh`); older data never shows as today's.
+function Controller.historyList()
+    local now, seriesOf, cut = time(), seriesReader(), CraftProfitDB.settings.cut
+    local out = {}
+    for _, entry in ipairs(CraftProfitDB.tracked) do
+        local newest = newestPoint(entry.recipe, seriesOf, now)
+        local fresh = newest ~= nil and now - newest <= Controller.HISTORY_FRESH
+        local indicator
+        if fresh then
+            local ind = HistoryView.indicators(entry.recipe, seriesOf, now, Controller.historyItems, cut)
+            if ind.materials or ind.sale then indicator = ind end
+        end
+        out[#out + 1] = { recipe = entry.recipe, active = entry.active == true, indicator = indicator, fresh = fresh }
+    end
+    return out
+end
+
+-- Rows a recipe view keeps for the weekday strip: the ones with a value that is not only
+-- carried prices (as HistoryView.summary counts them).
+local function viewDays(days, field)
+    local out = {}
+    for _, d in ipairs(days) do
+        if Util.isFinite(d[field]) and d[field .. "Carried"] ~= "all" then
+            out[#out + 1] = { day = d.day, value = d[field] }
+        end
+    end
+    return out
+end
+
+-- Everything the History window shows for one tracked recipe, one view ("net",
+-- "materials", "sale" or "item:<itemID>", default "net") and one period (7, 30 or 60
+-- days, default 30), from the current market only. nil for a recipe that is not tracked.
+-- The usual price and `enough` always cover 30 days (History.usual, HistoryView.summary of
+-- 30 days), whatever the period; the other key figures cover the period. status: "nodata"
+-- (fewer than 3 days: `measures` and `days` over 30 days for the message), else "paused"
+-- for a paused recipe, else "ok".
+function Controller.historyData(recipeID, view, period)
+    local _, entry = History.find(CraftProfitDB, recipeID)
+    if not entry then return nil end
+    local recipe = entry.recipe
+    local now, seriesOf, cut = time(), seriesReader(), CraftProfitDB.settings.cut
+    period = Controller.HISTORY_PERIODS[period] and period or 30
+    local ids = Controller.historyItemsOf(recipe)
+    local items = {
+        { key = "net", label = L.HISTORY_VIEW_NET },
+        { key = "materials", label = L.HISTORY_VIEW_MATERIALS },
+    }
+    local valid = { net = true, materials = true, sale = true }
+    for _, id in ipairs(ids) do
+        local key = "item:" .. id
+        valid[key] = true
+        items[#items + 1] = { key = key, itemID = id, name = Controller.itemName(id) or ("#" .. id), icon = Controller.itemIcon(id) }
+    end
+    if not valid[view] then view = "net" end
+
+    local days, field, summary, usual30, weekdayDays
+    local itemID = tonumber(view:match("^item:(%d+)$"))
+    if itemID then
+        local series = seriesOf(itemID)
+        days = History.dailySeries(series, now, period)
+        summary = HistoryView.summary(days)
+        usual30 = HistoryView.summary(History.dailySeries(series, now, History.USUAL_DAYS))
+        local usual = History.usual(series, now)
+        usual30.usual = usual and usual.price or nil
+        usual30.enough = usual ~= nil
+        weekdayDays = days
+    else
+        field = view
+        days = HistoryView.recipeDays(recipe, seriesOf, now, period, cut, Controller.historyItems)
+        summary = HistoryView.summary(days, field)
+        local month = HistoryView.recipeDays(recipe, seriesOf, now, History.USUAL_DAYS, cut, Controller.historyItems)
+        usual30 = HistoryView.summary(month, field)
+        weekdayDays = viewDays(days, field)
+    end
+    summary.usual, summary.enough = usual30.usual, usual30.enough
+    local status = "ok"
+    if not summary.enough then status = "nodata" elseif entry.active ~= true then status = "paused" end
+    return {
+        recipe = recipe, items = items, view = view, period = period,
+        chart = { days = days, field = field, usual = summary.usual, period = period, newest = History.dayOf(now) },
+        summary = summary,
+        weekday = History.weekdayProfile(weekdayDays, summary.usual),
+        status = status, paused = entry.active ~= true,
+        measures = usual30.measures, days = usual30.daysCovered,
+        market = Controller.marketName(),
+    }
+end
+
+-- Opens the History window on a tracked recipe (the window arrives with step 3, Task 2).
+function Controller.openHistory(recipeID)
+    local window = ns.HistoryWindow
+    if type(window) ~= "table" then return end
+    if type(window.show) == "function" then window.show() end
+    if type(window.select) == "function" then window.select(recipeID) end
 end
 
 local searched = {}

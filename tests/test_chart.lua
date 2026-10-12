@@ -304,12 +304,12 @@ H.test("nothing spills outside the plot", function()
     days[1].net = 0
     chart:set({ days = days, field = "net", period = 60,
         scale = { min = 0, max = 2000, step = 500, ticks = { 0, 500, 1000, 1500, 2000 } } })
-    local W, Hh = chart.plotW, chart.plotH
+    local PW, Hh = chart.plotW, chart.plotH
     for i = 1, #chart.drawn do
         local bar = chart.pools.bars[i]
         for _, part in ipairs({ bar.span, bar.tick }) do
             local b = part.box
-            H.truthy(b.x >= 0 and b.x + b.w <= W + 1e-9)
+            H.truthy(b.x >= 0 and b.x + b.w <= PW + 1e-9)
             H.truthy(b.y >= 0 and b.y <= Hh - 1 and b.y + b.h <= Hh + 1e-9)
         end
     end

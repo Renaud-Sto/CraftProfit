@@ -5,12 +5,15 @@
 -- ChartModel.scale(lo, hi, steps) -> { min, max, step, ticks }
 --   A readable axis around [lo, hi]: 5 % padding (a range of 0 is padded by 10 % of the
 --   value, at least 1 copper), never below 0 when lo >= 0, step 1, 2 or 5 x 10^k copper
---   (at least 1) for about `steps` intervals (default 4), min and max multiples of the
---   step, so 0 is a tick whenever the range crosses it. Always max > min.
+--   (at least 1) for about `steps` intervals (default 4, kept within 2 to 20), min and max
+--   multiples of the step, so 0 is a tick whenever the range crosses it. Always max > min.
+--   A bound that is not finite is ignored and the padded range is kept within
+--   +-Util.MAX_COPPER, so a hostile value never makes a long tick list.
 -- ChartModel.priceLabel(copper) -> plain text, never icons: the two largest units, "12g 40s",
---   "12g", "40s 5c", "5c", "0c"; from 1000 gold, thousands of gold with one decimal
---   ("1.2k g", "1k g") and none from 100k ("100k g"); a minus sign for a loss ("-3g 10s");
---   "?" for anything that is not a finite number.
+--   "12g", "40s 5c", "5c", "0c"; from 1000 gold, thousands of gold rounded down to one
+--   decimal ("1.2k g", "1k g") and none from 100k ("999k g"); from 1 million gold, millions
+--   the same way ("1M g", "12.3M g", "1000M g" for Util.MAX_COPPER, the cap applied to any
+--   larger amount); a minus sign for a loss ("-3g 10s"); "?" for anything not finite.
 -- ChartModel.slots(period) -> { count, index(day, newest) } for a period of `period` days
 --   (1 to 62) ending at the local day `newest`: index is 1 (oldest) to count (newest), nil
 --   outside the period. Days are counted by rounding, so 23 and 25 hour days still count once.
@@ -36,6 +39,7 @@ ns.ChartModel = ChartModel
 
 local DAY = 86400
 ChartModel.DEFAULT_STEPS = 4
+ChartModel.MIN_STEPS, ChartModel.MAX_STEPS = 2, 20
 ChartModel.MAX_SLOTS = 62
 ChartModel.BAR_FILL = 0.6        -- share of a slot a bar covers
 ChartModel.MIN_WEEKDAY_LIMIT = 10
@@ -53,14 +57,17 @@ local function niceStep(raw)
 end
 
 function ChartModel.scale(lo, hi, steps)
-    steps = Util.count(steps) or ChartModel.DEFAULT_STEPS
+    steps = Util.clamp(Util.count(steps) or ChartModel.DEFAULT_STEPS, ChartModel.MIN_STEPS, ChartModel.MAX_STEPS)
+    local cap = Util.MAX_COPPER
     if not Util.isFinite(lo) then lo = Util.isFinite(hi) and hi or 0 end
     if not Util.isFinite(hi) then hi = lo end
     if lo > hi then lo, hi = hi, lo end
     local positive = lo >= 0
     local pad = (hi - lo) * 0.05
     if hi == lo then pad = math.max(math.abs(lo) * 0.1, 1) end
-    lo, hi = lo - pad, hi + pad
+    lo = Util.clamp(lo - pad, -cap, cap)
+    hi = Util.clamp(hi + pad, -cap, cap)
+    if hi <= lo then lo = hi - 1 end
     if positive and lo < 0 then lo = 0 end
     local step = niceStep((hi - lo) / steps)
     local min = math.floor(lo / step) * step
@@ -74,17 +81,19 @@ end
 
 function ChartModel.priceLabel(copper)
     if not Util.isFinite(copper) then return "?" end
-    local c = Util.round(copper)
+    local c = Util.round(Util.clamp(copper, -Util.MAX_COPPER, Util.MAX_COPPER))
     if c < 0 then return "-" .. ChartModel.priceLabel(-c) end
     local g = math.floor(c / 10000)
     local s = math.floor(c % 10000 / 100)
     local cc = c % 100
-    if g >= 1000 then
-        local k = g / 1000
-        if k >= 100 then return string.format("%dk g", math.floor(k)) end
-        local text = string.format("%.1f", math.floor(k * 10) / 10):gsub("%.0$", "")
-        return text .. "k g"
+    -- Thousands (k) or millions (M) of gold, rounded down to one decimal, none from 100.
+    local function big(units, size, suffix)
+        local v = math.floor(units / (size / 10)) / 10
+        if v >= 100 then return string.format("%d%s g", math.floor(v), suffix) end
+        return (string.format("%.1f", v):gsub("%.0$", "")) .. suffix .. " g"
     end
+    if g >= 1000000 then return big(g, 1000000, "M") end
+    if g >= 1000 then return big(g, 1000, "k") end
     if g >= 1 then return s > 0 and string.format("%dg %ds", g, s) or string.format("%dg", g) end
     if s >= 1 then return cc > 0 and string.format("%ds %dc", s, cc) or string.format("%ds", s) end
     return string.format("%dc", cc)

@@ -86,6 +86,15 @@ H.test("priceLabel is plain text gold, silver and copper", function()
     H.eq(C.priceLabel(12000000), "1.2k g")
     H.eq(C.priceLabel(10000000), "1k g")
     H.eq(C.priceLabel(1e9), "100k g")
+    -- Thousands of gold round down to one decimal; millions from 1M gold, so the largest
+    -- amount the addon keeps (1e13 copper, 1e9 gold) stays short.
+    H.eq(C.priceLabel(12990000), "1.2k g")
+    H.eq(C.priceLabel(9999990000), "999k g")
+    H.eq(C.priceLabel(10000000000), "1M g")
+    H.eq(C.priceLabel(123400000000), "12.3M g")
+    H.eq(C.priceLabel(1e13), "1000M g")
+    H.eq(C.priceLabel(1e300), "1000M g")
+    H.eq(C.priceLabel(-1e300), "-1000M g")
     H.eq(C.priceLabel(124000.4), "12g 40s")
     H.eq(C.priceLabel(NAN), "?")
     H.eq(C.priceLabel(INF), "?")
@@ -228,4 +237,17 @@ H.test("the weekday strip starts on Monday, around a zero line, symmetric", func
         H.eq(out.limit, 10)
     end
     H.eq(C.weekdayBars(profile, 0, 100), {})
+end)
+
+H.test("hostile steps and bounds can never make a long tick list", function()
+    local C = load()
+    for _, args in ipairs({ { 0, 1e6, 1e9 }, { -1e308, 1e308, 4 }, { 1e308, 1e308, 4 }, { -1e308, 5, 1e9 },
+        { 0, 100, -3 }, { 0, 100, 1 } }) do
+        local s = C.scale(args[1], args[2], args[3])
+        wellFormed(s)
+        H.truthy(#s.ticks <= 23)
+        H.truthy(s.min >= -1e13 - s.step and s.max <= 1e13 + s.step)
+    end
+    H.truthy(#C.scale(0, 1e6, 1e9).ticks <= 21)     -- at most 20 intervals
+    H.truthy(#C.scale(0, 1e6, 1).ticks >= 3)        -- at least 2
 end)

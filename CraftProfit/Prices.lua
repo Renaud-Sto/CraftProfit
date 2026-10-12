@@ -73,23 +73,26 @@ function Prices.newAggregator()
     return agg
 end
 
--- db.prices rows are compact arrays { unit, volume, time }. A unit above Util.MAX_COPPER
--- is refused: it could only come from corrupt data and would add up to an infinite cost.
-function Prices.store(db, itemID, unit, volume, now)
+-- db.prices rows are compact arrays { unit, volume, time, full }. `full` is true when the
+-- volume counts every unit on offer (a full scan, or a search whose result list was not
+-- cut); it is left out (read as false) otherwise. A unit above Util.MAX_COPPER is
+-- refused: it could only come from corrupt data and would add up to an infinite cost.
+function Prices.store(db, itemID, unit, volume, now, full)
     if not Util.id(itemID) or not Util.isCopper(unit) or unit <= 0 or unit > Util.MAX_COPPER
         or not Util.isCopper(now) then
         return false
     end
-    db.prices[itemID] = { Util.round(unit), Util.count(volume) or 1, now }
+    db.prices[itemID] = { Util.round(unit), Util.count(volume) or 1, now, full == true or nil }
     return true
 end
 
--- Writes the result of a full scan. Returns how many prices were stored.
+-- Writes the result of a full scan (every listing counted: complete volumes). Returns how
+-- many prices were stored.
 function Prices.merge(db, map, now)
     if not Util.isCopper(now) then return 0 end
     local count = 0
     for itemID, row in pairs(map) do
-        if Prices.store(db, itemID, row.unit, row.volume, now) then count = count + 1 end
+        if Prices.store(db, itemID, row.unit, row.volume, now, true) then count = count + 1 end
     end
     db.snapshotTime = now
     return count

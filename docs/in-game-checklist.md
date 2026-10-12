@@ -96,10 +96,15 @@ Leveling window (`/cp level`):
 - [ ] The "Track history" box sits to the right of the Crafts box in the Options panel. Ticking it on a recipe, then pressing **Scan AH** (or **Refresh pinned** with that recipe or one sharing its reagents pinned) and `/reload`, leaves `series` entries for its items in `CraftProfit.lua` under `markets`.
 - [ ] A recipe whose output is bind-on-pickup still records (its output is never priced).
 - [ ] Unticking pauses recording; `/cp history` lists it as paused; `/cp history remove 1` deletes it and its series.
-- [ ] A 16th tracked recipe is refused with "Too many tracked recipes (15 max)".
 - [ ] After an update from an earlier build, prices are still shown (adopted by the current ruleset and faction) and a character on another ruleset or faction starts with no prices.
 - [ ] `/cp market` prints the ruleset name and the key the prices are saved under (for example `4613-Horde`). **At launch, and as soon as another ruleset can be created**, run it with `/cpp ruleset` on a character of each ruleset and faction: the keys must differ, or the key logic has to be revisited (see docs/technical.md, Price history).
-- [ ] The saved file stays small: note the size of `CraftProfit.lua` after a few scans with 15 tracked recipes.
+- [ ] The saved file stays small: note the size of `CraftProfit.lua` after a few scans with 30 tracked recipes.
+
+## History retention
+- [ ] 30 recipes can be tracked; ticking *Track history* on a 31st is refused with "Too many tracked recipes (30 max)" and the box stays unticked.
+- [ ] After updating from 1.0.0 with recorded history, `/reload`: no Lua error, and the `series` entries of the tracked items are still in `CraftProfit.lua` (points of the last 7 days as they were, older ones one per day, nothing older than 60 days, no weekly point).
+- [ ] `/cp history` still lists the tracked recipes (active and paused) and `/cp history remove <n>` still deletes one.
+- [ ] After a **Scan AH** and a **Refresh recipe**, `/reload` works with no Lua error and nothing visible changes (the price rows and history points of complete volumes end with `true` in `CraftProfit.lua`).
 
 ## Click a reagent to search it (quality of life, never buys)
 - [ ] With the materials detail unfolded at the AH, hovering a reagent row highlights it. Clicking "20x Bronze Bar" opens the AH's Buy view, types the item name in the AH search box and starts the search.

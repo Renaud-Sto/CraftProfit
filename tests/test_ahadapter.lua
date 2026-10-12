@@ -101,7 +101,7 @@ H.test("commodity results become unit/qty listings", function()
         end,
     })
     T.AH.onEvent("COMMODITY_SEARCH_RESULTS_UPDATED", 7)
-    H.eq(T.searches, { { 7, { { unit = 100, qty = 5 }, { unit = 120, qty = 1 } } } })
+    H.eq(T.searches, { { 7, { { unit = 100, qty = 5 }, { unit = 120, qty = 1 }, full = true } } })
 end)
 
 H.test("item results use the buyout per unit and skip bid-only auctions", function()
@@ -112,7 +112,20 @@ H.test("item results use the buyout per unit and skip bid-only auctions", functi
         end,
     })
     T.AH.onEvent("ITEM_SEARCH_RESULTS_UPDATED", { itemID = 7 })
-    H.eq(T.searches, { { 7, { { unit = 100, qty = 1 }, { unit = 50, qty = 2 } } } })
+    -- A bid-only auction is not on offer: the list is still complete.
+    H.eq(T.searches, { { 7, { { unit = 100, qty = 1 }, { unit = 50, qty = 2 }, full = true } } })
+end)
+
+H.test("an item row with a buyout that cannot be read makes the volume partial", function()
+    local T = setup({
+        GetNumItemSearchResults = function() return 2 end,
+        GetItemSearchResultInfo = function(_, i)
+            return ({ { buyoutAmount = 100, quantity = 1 }, { buyoutAmount = 100, quantity = 0 / 0 } })[i]
+        end,
+    })
+    T.AH.onEvent("ITEM_SEARCH_RESULTS_UPDATED", { itemID = 7 })
+    H.eq(T.searches[1][2].full, false)
+    H.eq(#T.searches[1][2], 1)
 end)
 
 H.test("search results are capped and invalid events are ignored", function()
@@ -137,7 +150,28 @@ H.test("secret search values are skipped", function()
     })
     T.env.issecretvalue = function(v) return v == "SECRET" end
     T.AH.onEvent("COMMODITY_SEARCH_RESULTS_UPDATED", 7)
-    H.eq(T.searches[1][2], { { unit = 90, qty = 1 } })
+    -- An unreadable row makes the volume partial.
+    H.eq(T.searches[1][2], { { unit = 90, qty = 1 }, full = false })
+end)
+
+H.test("a search cut at MAX_SEARCH_RESULTS rows is partial, a shorter one complete", function()
+    for _, case in ipairs({ { 99, true }, { 100, false }, { 250, false } }) do
+        local T = setup({
+            GetNumCommoditySearchResults = function() return case[1] end,
+            GetCommoditySearchResultInfo = function() return { unitPrice = 1, quantity = 1 } end,
+            GetNumItemSearchResults = function() return case[1] end,
+            GetItemSearchResultInfo = function() return { buyoutAmount = 5, quantity = 1 } end,
+        })
+        T.AH.onEvent("COMMODITY_SEARCH_RESULTS_UPDATED", 7)
+        T.AH.onEvent("ITEM_SEARCH_RESULTS_UPDATED", { itemID = 8 })
+        H.eq(T.searches[1][2].full, case[2])
+        H.eq(T.searches[2][2].full, case[2])
+        H.eq(#T.searches[1][2], math.min(case[1], T.AH.MAX_SEARCH_RESULTS))
+    end
+    -- An unreadable count gives no listing and a partial volume.
+    local T = setup({ GetNumCommoditySearchResults = function() return 0 / 0 end })
+    T.AH.onEvent("COMMODITY_SEARCH_RESULTS_UPDATED", 7)
+    H.eq(T.searches[1][2], { full = false })
 end)
 
 H.test("a full scan is read in chunks and aggregated per item", function()

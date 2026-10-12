@@ -670,6 +670,32 @@ H.test("a price search records a history point for a tracked recipe it touches, 
     H.eq(C.market().series[1][1][2], 100)
 end)
 
+H.test("a point records whether its volume is complete: a cut search no, a short one and a scan yes", function()
+    local T = boot()
+    local C = T.ns.Controller
+    track(T)
+    -- Listings as the AH adapter gives them: `full` false when the list was cut.
+    C.recordListings(1, { { unit = 100, qty = 5 }, full = false })
+    C.recordListings(2, { { unit = 50, qty = 3 }, full = true })
+    C.recordListings(100, { { unit = 1000, qty = 2 } })        -- no flag: partial
+    C.commitSearch()
+    H.eq(C.market().prices[1][4], nil)
+    H.eq(C.market().prices[2][4], true)
+    H.eq(C.market().series[1][1], { 1700000000, 100, 5, 100, 100, 1 })
+    H.eq(C.market().series[2][1], { 1700000000, 50, 3, 50, 50, 1, true })
+    H.eq(C.market().series[100][1][7], nil)
+    -- A full scan counts every listing: complete volumes.
+    local T2 = boot()
+    track(T2)
+    local agg = T2.ns.Prices.newAggregator()
+    agg.add(1, 100, 4)
+    agg.add(2, 50, 1)
+    agg.add(100, 1000, 1)
+    T2.ns.Controller.onSnapshot(agg)
+    H.eq(T2.ns.Controller.market().prices[1], { 100, 4, 1700000000, true })
+    H.eq(T2.ns.Controller.market().series[1][1], { 1700000000, 100, 4, 100, 100, 1, true })
+end)
+
 H.test("a point needs a touched item: an unrelated search records nothing", function()
     local T = boot()
     local C = T.ns.Controller
@@ -723,7 +749,7 @@ H.test("a bind-on-pickup output does not have to be priced for a point to be rec
     H.eq(C.market().series[100], nil)
 end)
 
-H.test("the tracking box starts and pauses recording and refuses a sixteenth recipe", function()
+H.test("the tracking box starts and pauses recording and refuses a thirty-first recipe", function()
     local T = boot()
     local C = T.ns.Controller
     C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
@@ -734,18 +760,19 @@ H.test("the tracking box starts and pauses recording and refuses a sixteenth rec
     T.ns.Window.lastHandlers.onTrackToggle(false)
     H.falsy(T.ns.Window.lastModel.tracked)
     H.eq(#T.env.CraftProfitDB.tracked, 1)
-    for id = 1000, 1013 do
+    for id = 1000, 1028 do
         local r = T.ns.Recipes.normalize(RAW)
         r.recipeID = id
         H.truthy(T.ns.History.track(T.env.CraftProfitDB, r))
     end
-    H.eq(#T.env.CraftProfitDB.tracked, 15)
+    H.eq(#T.env.CraftProfitDB.tracked, 30)
     local extra = T.ns.Recipes.normalize(RAW)
     extra.recipeID = 2000
     C.setRecipe(extra, "profession")
     T.ns.Window.lastHandlers.onTrackToggle(true)
     H.falsy(T.ns.Window.lastModel.tracked)
-    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Too many tracked recipes (15 max)")
+    H.eq(#T.env.CraftProfitDB.tracked, 30)
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Too many tracked recipes (30 max)")
 end)
 
 H.test("/cp history lists the tracked recipes and removes one with its history", function()

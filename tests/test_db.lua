@@ -88,8 +88,13 @@ H.test("initAccount removes invalid price rows", function()
         [104] = { -1, 1, 0 },
         [105] = { 5, 1, 0 / 0 },
         [106.5] = { 5, 1, 0 },
+        [107] = { 5, 2, 1000, true },
+        [108] = { 5, 2, 1000, "x" },
+        [109] = { 5, 2, 1000, false },
     } })
-    H.eq(db.prices, { [100] = { 5, 2, 1000 } })
+    -- The volume flag is true or absent: anything else reads as partial.
+    H.eq(db.prices, { [100] = { 5, 2, 1000 }, [107] = { 5, 2, 1000, true }, [108] = { 5, 2, 1000 },
+        [109] = { 5, 2, 1000 } })
 end)
 
 H.test("initAccount drops an invalid snapshot time", function()

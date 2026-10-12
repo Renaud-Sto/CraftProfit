@@ -1,5 +1,8 @@
 -- Auction house adapter: the only file that talks to C_AuctionHouse.
--- It turns the game's results into plain { unit, qty } listings.
+-- It turns the game's results into plain { unit, qty } listings. A search's listings also
+-- carry `full`: true when they hold every unit on offer (fewer rows than
+-- MAX_SEARCH_RESULTS and none skipped as unreadable), false when the list was cut, so
+-- their total volume is only part of the market.
 local _, ns = ...
 local Util, Prices = ns.Util, ns.Prices
 
@@ -130,13 +133,16 @@ end
 
 local function readCommodity(itemID)
     local api = C_AuctionHouse
-    local listings = {}
+    local listings = { full = false }
     local n = api.GetNumCommoditySearchResults(itemID)
     if isSecret(n) or not Util.isFinite(n) then return listings end
+    listings.full = n < AH.MAX_SEARCH_RESULTS
     for i = 1, math.min(n, AH.MAX_SEARCH_RESULTS) do
         local info = api.GetCommoditySearchResultInfo(itemID, i)
         if info and not isSecret(info.unitPrice) and not isSecret(info.quantity) then
             listings[#listings + 1] = { unit = info.unitPrice, qty = info.quantity }
+        else
+            listings.full = false
         end
     end
     return listings
@@ -144,16 +150,23 @@ end
 
 local function readItem(itemKey)
     local api = C_AuctionHouse
-    local listings = {}
+    local listings = { full = false }
     local n = api.GetNumItemSearchResults(itemKey)
     if isSecret(n) or not Util.isFinite(n) then return listings end
+    listings.full = n < AH.MAX_SEARCH_RESULTS
     for i = 1, math.min(n, AH.MAX_SEARCH_RESULTS) do
         local info = api.GetItemSearchResultInfo(itemKey, i)
         if info and not isSecret(info.buyoutAmount) and not isSecret(info.quantity) then
             local qty = Util.count(info.quantity or 1)
+            -- A bid-only auction cannot be bought out: it is not on offer, not a gap.
             if qty and Util.isCopper(info.buyoutAmount) and info.buyoutAmount > 0 then
                 listings[#listings + 1] = { unit = info.buyoutAmount / qty, qty = qty }
+            elseif type(info.buyoutAmount) == "number" and info.buyoutAmount > 0 then
+                -- A buyout that could not be read (bad quantity, absurd amount) is a gap.
+                listings.full = false
             end
+        else
+            listings.full = false
         end
     end
     return listings

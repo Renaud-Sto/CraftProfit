@@ -59,7 +59,11 @@ H.test("store writes a compact row and rejects invalid input", function()
     local P = load()
     local db = { prices = {} }
     H.eq(P.store(db, 7, 123.4, 3, 1000), true)
-    H.eq(db.prices[7], { 123, 3, 1000 })
+    H.eq(db.prices[7], { 123, 3, 1000 })           -- partial volume: no 4th element
+    H.eq(P.store(db, 9, 10, 3, 1000, true), true)
+    H.eq(db.prices[9], { 10, 3, 1000, true })
+    H.eq(P.store(db, 9, 10, 3, 1000, "yes"), true)
+    H.eq(db.prices[9], { 10, 3, 1000 })
     H.eq(P.store(db, 8, 0 / 0, 3, 1000), false)
     H.eq(P.store(db, 8, 0, 3, 1000), false)
     H.eq(P.store(db, 8, 10, 3, 0 / 0), false)
@@ -97,7 +101,7 @@ H.test("merge stores a snapshot result and remembers when", function()
     local db = { prices = {} }
     local count = P.merge(db, { [1] = { unit = 10, volume = 2 }, [2] = { unit = 0 / 0, volume = 1 } }, 2000)
     H.eq(count, 1)
-    H.eq(db.prices[1], { 10, 2, 2000 })
+    H.eq(db.prices[1], { 10, 2, 2000, true })      -- a full scan: a complete volume
     H.eq(db.snapshotTime, 2000)
     H.eq(P.merge(db, {}, 0 / 0), 0)
     H.eq(db.snapshotTime, 2000)

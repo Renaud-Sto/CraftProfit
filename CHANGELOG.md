@@ -5,7 +5,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 ## [Unreleased]
 
 ### Fixed
-- Price history keeps its long record: each tier (every point for 14 days, one a day, one a week) now has its own cap, so a busy fortnight can no longer erase the months and the year. Points or prices dated more than a day in the future no longer freeze an item's series (a point is dropped only when a newer one is recorded, so a clock set back never erases history), and the count of recorded recipes is exact.
+- Price history: each tier now has its own cap, so a busy week can no longer erase the daily history. Points or prices dated more than a day in the future no longer freeze an item's series (a point is dropped only when a newer one is recorded, so a clock set back never erases history), and the count of recorded recipes is exact.
 - A recipe whose disenchant materials have no data in the tables (for example epic items above item level 60) shows *no data* instead of a permanent *PRICES MISSING* that no search could clear.
 - The leveling window reopens where it was dragged during the same session.
 - A scan that fails while being read no longer blocks the following scans, a pending quantity for the auction house search is cleared when the auction house closes, and values returned by the game are checked (secret values, failing calls) before use.
@@ -13,6 +13,9 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - Reagent quantities and unit prices have an upper bound, so a corrupt save cannot produce absurd amounts.
 
 ### Changed
+- Price history retention: every point is kept for 7 days, then one point a day for 60 days (at most 212 points, about 35 KB in the saved file, per item); the weekly tier is gone. Existing history is compacted at load: points between 7 and 60 days old become daily points, weekly points and anything older than 60 days are dropped.
+- Up to 30 recipes can be tracked (was 15).
+- Prices and history points record whether their volume counts every unit on offer (a full scan, or a search whose results were not cut at 100 rows), for a later estimate of sales per day; nothing visible changes.
 - The pinned list under the main window is no longer evaluated while it is hidden.
 
 ### Removed

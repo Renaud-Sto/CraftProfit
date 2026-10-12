@@ -16,7 +16,7 @@
 --   outside the period. Days are counted by rounding, so 23 and 25 hour days still count once.
 -- ChartModel.extent(days, field) -> lo, hi of the values bars() would draw, or nil.
 -- ChartModel.bars(days, scale, width, height, field, period, newest)
---   -> { { slot, x, w, yLow, yHigh, yAvg, carried }, ... } inside a width x height area,
+--   -> { { slot, x, w, yLow, yHigh, yAvg, carried, row }, ... } inside a width x height area,
 --   y from the top. `days` are HistoryView.recipeDays rows charted on `field` ("net",
 --   "materials", "sale"; low = high = the value, carried from `<field>Carried`, else
 --   `carried`) or, with no field, History.dailySeries rows (avg, low, high). A row without a
@@ -173,7 +173,7 @@ function ChartModel.bars(days, scale, width, height, field, period, newest)
             out[#out + 1] = {
                 slot = slot, x = (slot - 1) * slotW + (slotW - w) / 2, w = w,
                 yLow = yOf(low, scale, height), yHigh = yOf(high, scale, height), yAvg = yOf(v, scale, height),
-                carried = flag and true or false,
+                carried = flag and true or false, row = row,
             }
         end
     end

@@ -407,6 +407,14 @@ H.test("labels fit their buttons, cells and columns in English, French and Spani
         fits(string.format(L.HISTORY_VERDICT_GOOD, string.format(L.HISTORY_CHEAPER, 99, amount), L.HISTORY_GOOD_BUY), UI.CHAR_W, UI.USE_W)
         fits(string.format(L.HISTORY_VERDICT_GOOD, string.format(L.HISTORY_HIGHER, 99, amount), L.HISTORY_GOOD_CRAFT), UI.CHAR_W, UI.USE_W)
         fits(string.format(L.HISTORY_VERDICT_ON, L.HISTORY_VIEW_MATERIALS, "12/10", string.format(L.HISTORY_LOSS, amount)), UI.CHAR_W, UI.USE_W)
+        for _, key in ipairs({ "HISTORY_LOSS", "HISTORY_PROFIT_AMOUNT" }) do
+            fits(string.format(L.HISTORY_AH_ON, "12/10", string.format(L[key], amount)), UI.CHAR_W, UI.USE_W)
+        end
+        fits(string.format(L.HISTORY_AH_ON, "12/10", L.HISTORY_BREAK_EVEN), UI.CHAR_W, UI.USE_W)
+        local loss = string.format(L.HISTORY_LOSS, amount)
+        fits(string.format(L.HISTORY_VERDICT_GOOD, string.format(L.HISTORY_PROFIT_BETTER, amount, amount), L.HISTORY_GOOD_CRAFT), UI.CHAR_W, UI.USE_W)
+        fits(string.format(L.HISTORY_PROFIT_WORSE, amount, loss), UI.CHAR_W, UI.USE_W)
+        fits(string.format(L.HISTORY_PROFIT_LESS_LOSS, amount, loss), UI.CHAR_W, UI.USE_W)
         -- Bubble lines (normal font) inside the bubble.
         local room = T.ns.Chart.BUBBLE_W - 2 * T.ns.Chart.BUBBLE_PAD
         fits(string.format(L.HISTORY_LABEL_VALUE, L.HISTORY_VIEW_NET, string.format(L.HISTORY_LOSS, "99g 99s 99c")), UI.CHAR_W, room)
@@ -660,8 +668,10 @@ H.test("the verdict says today's amount and compares it with the usual price, co
     UI.show()
     UI.select(5)
     click(UI.parts.tabs[1])
-    H.eq(UI.parts.verdictLine.text, string.format(L.HISTORY_VERDICT_TODAY, L.HISTORY_VIEW_MATERIALS, "<210>"))
-    H.eq(UI.parts.compareLine.text, string.format(L.HISTORY_VERDICT_GOOD,
+    -- The auction house profit first (950 - 210), then the view's figure, then the comparison.
+    H.eq(UI.parts.lines[1].text, string.format(L.HISTORY_AH_TODAY, string.format(L.HISTORY_PROFIT_AMOUNT, "<740>")))
+    H.eq(UI.parts.lines[2].text, string.format(L.HISTORY_VERDICT_TODAY, L.HISTORY_VIEW_MATERIALS, "<210>"))
+    H.eq(UI.parts.lines[3].text, string.format(L.HISTORY_VERDICT_GOOD,
         string.format(L.HISTORY_CHEAPER, 16, "<250>"), L.HISTORY_GOOD_BUY))
     -- Good news is green, bad news red, about usual grey.
     local data = T.ns.Controller.historyData(5, "materials", 30)
@@ -681,7 +691,7 @@ H.test("the verdict says today's amount and compares it with the usual price, co
     H.eq(UI.parts.caption.text, string.format(L.HISTORY_CAPTION_NET, "5"))
     -- Sale unchanged: about the usual level, no advice.
     click(UI.parts.tabs[2])
-    H.eq(UI.parts.compareLine.text, string.format(L.HISTORY_ABOUT, "<950>"))
+    H.eq(UI.parts.lines[3].text, string.format(L.HISTORY_ABOUT, "<950>"))
     H.eq(UI.parts.caption.text, L.HISTORY_CAPTION_SALE)
     click(UI.parts.itemButtons[1])
     H.eq(UI.parts.caption.text, string.format(L.HISTORY_CAPTION_ITEM, "Item1"))
@@ -700,7 +710,7 @@ H.test("a loss never prints a minus sign", function()
     end
     UI.show()
     UI.select(5)
-    H.eq(UI.parts.verdictLine.text, string.format(L.HISTORY_VERDICT_TODAY, L.HISTORY_VIEW_NET, string.format(L.HISTORY_LOSS, "<155>")))
+    H.eq(UI.parts.lines[1].text, string.format(L.HISTORY_AH_TODAY, string.format(L.HISTORY_LOSS, "<155>")))
     for _, f in ipairs(UI.parts.figures) do H.falsy(f.value.text:find("-", 1, true)) end
     H.eq(UI.parts.figures[1].value.text, string.format(L.HISTORY_LOSS, "<155>"))
     -- The chart holds the zero line.
@@ -753,4 +763,110 @@ H.test("the history window shrinks to fit a short screen", function()
     UI.hide()
     UI.show()
     H.eq(f.scale, 280 / f.height)
+end)
+
+-- Ten days of the crafted item at `usual` and today at `today` (materials 250 every day).
+local function sales(T, usual, today)
+    local series = T.ns.Controller.market().series
+    for id, unit in pairs({ [1] = 100, [2] = 50, [100] = usual }) do
+        series[id] = {}
+        for age = 9, 0, -1 do
+            local u = (id == 100 and age == 0) and today or unit
+            series[id][#series[id] + 1] = { NOW - age * DAY, u, 5, u, u, 1, true }
+        end
+    end
+end
+
+H.test("the verdict starts with the auction house profit, coloured; the Profit view skips the duplicate", function()
+    local T, UI = boot()
+    local L, Colors = T.ns.L, T.ns.Colors
+    track(T, raw(5))
+    -- Usually a 155 loss (sale 95 after the cut); today the sale is 228: a 22 loss.
+    sales(T, 100, 240)
+    UI.show()
+    UI.select(5)
+    local lossLine = string.format(L.HISTORY_AH_TODAY, string.format(L.HISTORY_LOSS, "<22>"))
+    H.eq(UI.parts.lines[1].text, lossLine)
+    -- Profit view: no "Profit today" line, the comparison comes second, in money, though
+    -- the usual is a loss: less loss than usual, grey (still a loss).
+    local less = string.format(L.HISTORY_PROFIT_LESS_LOSS, "<133>", string.format(L.HISTORY_LOSS, "<155>"))
+    H.eq(UI.parts.lines[2].text, less)
+    H.eq(UI.parts.lines[3].text, "")
+    local data = T.ns.Controller.historyData(5, "net", 30)
+    H.eq(UI.verdictLines(data), {
+        { text = lossLine, color = Colors.FIXED.loss },
+        { text = less, color = Colors.text("muted") },
+    })
+    -- Sale view: 140 % higher than usual, but at a loss: grey and no "good time to sell".
+    click(UI.parts.tabs[2])
+    H.eq(UI.parts.lines[1].text, lossLine)
+    H.eq(UI.parts.lines[2].text, string.format(L.HISTORY_VERDICT_TODAY, L.HISTORY_VIEW_SALE, "<228>"))
+    H.eq(UI.parts.lines[3].text, string.format(L.HISTORY_HIGHER, 140, "<95>"))
+    data = T.ns.Controller.historyData(5, "sale", 30)
+    H.eq(select(2, UI.compareLine(data)), Colors.text("muted"))
+    -- One reagent cheaper while at a loss: grey and neutral too.
+    data = T.ns.Controller.historyData(5, "materials", 30)
+    data.compare = { pct = -19, tone = "down", good = true }
+    H.eq({ UI.compareLine(data) }, { string.format(L.HISTORY_CHEAPER, 19, "<250>"), Colors.text("muted") })
+    -- Bad news stays red.
+    data.compare = { pct = 9, tone = "up", good = false }
+    H.eq(select(2, UI.compareLine(data)), Colors.FIXED.loss)
+end)
+
+H.test("the profit line: profit in green, break even in grey, worse than usual in red", function()
+    local T, UI = boot()
+    local L, Colors = T.ns.L, T.ns.Colors
+    track(T, raw(5))
+    -- Usually 700 profit; today the sale is 1260 (1197): 947, 247 better, a good time to craft.
+    sales(T, 1000, 1260)
+    UI.show()
+    UI.select(5)
+    local data = T.ns.Controller.historyData(5, "net", 30)
+    H.eq({ UI.profitLine(data) }, { string.format(L.HISTORY_AH_TODAY, string.format(L.HISTORY_PROFIT_AMOUNT, "<947>")), Colors.FIXED.profit })
+    H.eq({ UI.compareLine(data) }, { string.format(L.HISTORY_VERDICT_GOOD,
+        string.format(L.HISTORY_PROFIT_BETTER, "<247>", "<700>"), L.HISTORY_GOOD_CRAFT), Colors.FIXED.profit })
+    -- Worse than usual: red, whatever the sign.
+    data.profit.compare = { gap = -900, tone = "down", good = false }
+    data.compare, data.profit.today, data.profit.atLoss = data.profit.compare, -200, true
+    data.summary.today = -200
+    H.eq({ UI.compareLine(data) }, { string.format(L.HISTORY_PROFIT_WORSE, "<900>", "<700>"), Colors.FIXED.loss })
+    -- Exactly 0: break even, grey.
+    data.profit.today = 0
+    H.eq({ UI.profitLine(data) }, { string.format(L.HISTORY_AH_TODAY, L.HISTORY_BREAK_EVEN), Colors.text("muted") })
+    -- An older newest day says its date.
+    data.profit.todayDay = NOW - 2 * DAY
+    H.eq(UI.profitLine(data), string.format(L.HISTORY_AH_ON, UI.dateText(NOW - 2 * DAY), L.HISTORY_BREAK_EVEN))
+    -- Unknown profit (no sale): no line, the view's figure comes first.
+    data.profit.today = nil
+    H.eq(UI.profitLine(data), "")
+    data = T.ns.Controller.historyData(5, "materials", 30)
+    data.profit = { atLoss = false }
+    H.eq(UI.verdictLines(data)[1].text, string.format(L.HISTORY_VERDICT_TODAY, L.HISTORY_VIEW_MATERIALS, "<250>"))
+end)
+
+H.test("a recipe at a loss draws its list arrows grey and its tooltip says why", function()
+    local T, UI = boot()
+    local L, Colors = T.ns.L, T.ns.Colors
+    track(T, raw(5))
+    sales(T, 100, 240)
+    UI.show()
+    local row = UI.parts.rows[1]
+    local grey = Colors.escape(Colors.text("muted"))
+    H.eq(row.materials.text, grey .. "0%|r")
+    H.eq(row.sale.text, grey .. "+140%|r")
+    row.scripts.OnEnter(row)
+    H.eq(T.tooltip.text, L.HISTORY_ROW_TIP .. "\n\n" .. L.HISTORY_ROW_TIP_LOSS)
+    -- At a profit: the sale arrow is green again and the tooltip has no warning.
+    sales(T, 1000, 1260)
+    UI.refresh()
+    H.eq(row.sale.text, Colors.escape(Colors.FIXED.profit) .. "+26%|r")
+    row.scripts.OnEnter(row)
+    H.eq(T.tooltip.text, L.HISTORY_ROW_TIP)
+end)
+
+H.test("the verdict panel holds three lines and the window still fits 768 px", function()
+    local _, UI = boot()
+    UI.show()
+    H.eq(#UI.parts.lines, 3)
+    H.truthy(UI.frame().height <= 748 or error("height " .. UI.frame().height))
 end)

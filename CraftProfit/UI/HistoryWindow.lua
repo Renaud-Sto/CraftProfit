@@ -1,8 +1,11 @@
 -- The History window. Left: the tracked recipes in a "Tracked recipes" panel, two columns
 -- (materials and sale: today against the usual price), and under it a short hint on where
 -- the data comes from. Right, top to bottom, each in its own native panel:
---   verdict  the recipe name; "<What> today: <amount>"; a coloured sentence comparing today
---            with the usual price (green good news, red bad, grey about usual)
+--   verdict  the recipe name, then up to three lines: the auction house profit today (green
+--            profit, red loss, grey break even); "<What> today: <amount>" (not in the Profit
+--            view: the first line says it); a sentence comparing today with the usual (green
+--            good news, red bad, grey about usual). While crafting is at a loss the
+--            comparison is grey and gives no "good time to" advice (better is not good yet).
 --   chart    tabs Materials cost | Sale price | Profit, period buttons, the recipe's items
 --            in groups (Materials, Crafted item, Disenchant), a caption saying what is drawn,
 --            then the chart (UI/Chart.lua) with its hover bubble
@@ -47,7 +50,8 @@ local BODY_W = RIGHT_W - 2 * Native.PANEL_EDGE
 local INNER_PAD = 6
 local USE_W = BODY_W - 2 * INNER_PAD
 local LINE_H = 16
-local VERDICT_H = Layout.panelHeight(2, LINE_H)
+local VERDICT_LINES = 3
+local VERDICT_H = Layout.panelHeight(VERDICT_LINES, LINE_H)
 local ICON = 24
 local ICON_GAP = 4
 local ICON_ROWS = 2
@@ -105,7 +109,7 @@ local cachedList = {}
 -- The recipe whose Delete waits for its confirming click, and the timer that expires it.
 local armed, armToken = nil, 0
 local parts = { rows = {}, itemButtons = {}, tabs = {}, periodButtons = {}, figures = {},
-    groupCaptions = {}, separators = {} }
+    groupCaptions = {}, separators = {}, lines = {} }
 
 HistoryWindow.parts = parts
 HistoryWindow.WIDTH = WIDTH
@@ -206,11 +210,12 @@ local function goodColor(good)
     return Colors.text("muted")
 end
 
--- "-18%" coloured by whether it is good news (green), bad (red) or flat (grey).
-local function arrowText(c)
+-- "-18%" coloured by whether it is good news (green), bad (red) or flat (grey); all grey
+-- when `muted` (the recipe is crafted at a loss: no move is good news yet).
+local function arrowText(c, muted)
     if not c then return "" end
     local text = c.pct == 0 and "0%" or string.format("%+d%%", c.pct)
-    return Colors.escape(goodColor(c.good)) .. text .. "|r"
+    return Colors.escape(muted and Colors.text("muted") or goodColor(c.good)) .. text .. "|r"
 end
 
 local function money(v)
@@ -266,38 +271,87 @@ function HistoryWindow.captionText(data)
     return string.format(L.HISTORY_CAPTION_ITEM, whatText(data))
 end
 
--- Line 1 of the verdict: "Profit today: 12g" (or "on <date>" when the newest day is older).
+-- Whether the recipe is crafted at a loss (or for nothing) at the auction house today.
+local function atLoss(data)
+    return type(data.profit) == "table" and data.profit.atLoss == true
+end
+
+-- The auction house profit line: "Crafted and sold at the auction house today: loss 2s47"
+-- and its colour (green profit, red loss, grey break even). "" when the profit is unknown.
+function HistoryWindow.profitLine(data)
+    local p = data.profit
+    if type(p) ~= "table" or type(p.today) ~= "number" then return "", nil end
+    local amount, color
+    if p.today > 0 then
+        amount, color = string.format(L.HISTORY_PROFIT_AMOUNT, money(p.today)), Colors.FIXED.profit
+    elseif p.today < 0 then
+        amount, color = string.format(L.HISTORY_LOSS, money(-p.today)), Colors.FIXED.loss
+    else
+        amount, color = L.HISTORY_BREAK_EVEN, Colors.text("muted")
+    end
+    if p.todayDay == nil or p.todayDay == data.chart.newest then
+        return string.format(L.HISTORY_AH_TODAY, amount), color
+    end
+    return string.format(L.HISTORY_AH_ON, dayText(p.todayDay), amount), color
+end
+
+-- The view's figure: "Materials cost today: 12g" (or "on <date>" when the newest day is
+-- older). "" in the Profit view, whose figure is the profit line.
 function HistoryWindow.verdictLine(data)
     local s = data.summary
-    if type(s.today) ~= "number" then return "" end
-    local amount = data.view == "net" and signed(s.today) or money(s.today)
+    if data.view == "net" or type(s.today) ~= "number" then return "" end
+    local amount = money(s.today)
     if s.todayDay == data.chart.newest then
         return string.format(L.HISTORY_VERDICT_TODAY, whatText(data), amount)
     end
     return string.format(L.HISTORY_VERDICT_ON, whatText(data), dayText(s.todayDay), amount)
 end
 
--- Line 2: the comparison with the usual price, and its colour. "" without one.
+-- The Profit view's comparison, in money (data.compare is HistoryView.profitCompare): a
+-- percentage of a profit is meaningless when either side is a loss. Better is green with
+-- the advice only while there is a profit; a smaller loss is grey; worse is red.
+local function profitCompareLine(data, c)
+    local usual = signed(data.summary.usual)
+    if c.tone == "flat" then return string.format(L.HISTORY_ABOUT, usual), goodColor(nil) end
+    local gap = money(math.abs(c.gap or 0))
+    if c.tone == "down" then return string.format(L.HISTORY_PROFIT_WORSE, gap, usual), goodColor(false) end
+    if atLoss(data) then return string.format(L.HISTORY_PROFIT_LESS_LOSS, gap, usual), goodColor(nil) end
+    local text = string.format(L.HISTORY_PROFIT_BETTER, gap, usual)
+    return string.format(L.HISTORY_VERDICT_GOOD, text, L[GOOD.craft]), goodColor(true)
+end
+
+-- The comparison with the usual price, and its colour. "" without one. At a loss, good
+-- news turns grey and loses its advice: cheaper materials do not make a losing craft good.
 function HistoryWindow.compareLine(data)
     local c = data.compare
     if not c then return "", nil end
-    local usual = data.view == "net" and signed(data.summary.usual) or money(data.summary.usual)
+    if data.view == "net" then return profitCompareLine(data, c) end
+    local usual = money(data.summary.usual)
     local text
-    if data.view == "net" and c.tone ~= "flat" and type(data.summary.today) == "number" then
-        -- A percentage of a profit is meaningless when it turns into a loss: say the gap.
-        local gap = money(math.abs(data.summary.today - data.summary.usual))
-        text = string.format(c.tone == "down" and L.HISTORY_PROFIT_BELOW or L.HISTORY_PROFIT_ABOVE, gap, usual)
-    elseif c.tone == "down" then
+    if c.tone == "down" then
         text = string.format(data.goal == "buy" and L.HISTORY_CHEAPER or L.HISTORY_LOWER, math.abs(c.pct), usual)
     elseif c.tone == "up" then
         text = string.format(L.HISTORY_HIGHER, c.pct, usual)
     else
         text = string.format(L.HISTORY_ABOUT, usual)
     end
+    if c.good == true and atLoss(data) then return text, goodColor(nil) end
     if c.good == true and GOOD[data.goal] then
         text = string.format(L.HISTORY_VERDICT_GOOD, text, L[GOOD[data.goal]])
     end
     return text, goodColor(c.good)
+end
+
+-- The verdict's lines in order, the empty ones left out: { { text, color }, ... }.
+function HistoryWindow.verdictLines(data)
+    local out = {}
+    local function add(text, color)
+        if text ~= "" then out[#out + 1] = { text = text, color = color or Colors.text("main") } end
+    end
+    add(HistoryWindow.profitLine(data))
+    add(HistoryWindow.verdictLine(data))
+    add(HistoryWindow.compareLine(data))
+    return out
 end
 
 -- The lines of the chart's hover bubble for one day row of the shown view.
@@ -422,15 +476,12 @@ end
 
 local function paintVerdict(data)
     parts.verdict:setTitle(ctl.recipeName(data.recipe))
-    if data.status == "nodata" then
-        parts.verdictLine:SetText("")
-        parts.compareLine:SetText("")
-        return
+    local lines = data.status == "nodata" and {} or HistoryWindow.verdictLines(data)
+    for i, fs in ipairs(parts.lines) do
+        local line = lines[i]
+        fs:SetText(line and line.text or "")
+        if line then paintText(fs, line.color) end
     end
-    parts.verdictLine:SetText(HistoryWindow.verdictLine(data))
-    local text, color = HistoryWindow.compareLine(data)
-    parts.compareLine:SetText(text)
-    if color then paintText(parts.compareLine, color) end
 end
 
 local function paintFigures(data)
@@ -502,8 +553,8 @@ local function paintRight()
     parts.status:SetShown(data.status == "paused")
 end
 
-local function paintColumn(fs, c)
-    fs:SetText(arrowText(c))
+local function paintColumn(fs, c, muted)
+    fs:SetText(arrowText(c, muted))
 end
 
 -- Repaints the rows and the scroll bar from the cached list: no data work.
@@ -514,6 +565,7 @@ local function repaintList()
         if entry then
             local recipe = entry.recipe
             row.recipeID = recipe.recipeID
+            row.atLoss = entry.active and entry.atLoss == true
             row.name:SetText(ctl.recipeName(recipe))
             paintText(row.name, Colors.FIXED[recipe.difficulty] or Colors.text("main"))
             if not entry.active then
@@ -523,15 +575,15 @@ local function repaintList()
                 row.status:Show()
             else
                 local ind = entry.indicator or {}
-                paintColumn(row.materials, ind.materials)
-                paintColumn(row.sale, ind.sale)
+                paintColumn(row.materials, ind.materials, entry.atLoss)
+                paintColumn(row.sale, ind.sale, entry.atLoss)
                 row.status:SetText("")
                 row.status:Hide()
             end
             row.selected:SetShown(recipe.recipeID == selected)
             row:Show()
         else
-            row.recipeID = nil
+            row.recipeID, row.atLoss = nil, nil
             row:Hide()
         end
     end
@@ -652,7 +704,9 @@ local function buildRow(body, i)
         if self.dragged == true or not self.recipeID then return end
         HistoryWindow.select(self.recipeID)
     end)
-    row:HookScript("OnEnter", function(self) showTip(self, nil, L.HISTORY_ROW_TIP) end)
+    row:HookScript("OnEnter", function(self)
+        showTip(self, nil, self.atLoss and (L.HISTORY_ROW_TIP .. "\n\n" .. L.HISTORY_ROW_TIP_LOSS) or L.HISTORY_ROW_TIP)
+    end)
     row:HookScript("OnLeave", hideTip)
     return row
 end
@@ -795,10 +849,11 @@ local function buildRight(left0, top0)
     parts.right = right
     local y = 0
     parts.verdict = panelAt(right, "", 0, y, RIGHT_W, VERDICT_H)
-    parts.verdictLine = smallText(parts.verdict.body, "GameFontHighlight", USE_W)
-    parts.verdictLine:SetPoint("TOPLEFT", parts.verdict.body, "TOPLEFT", INNER_PAD, 0)
-    parts.compareLine = smallText(parts.verdict.body, "GameFontHighlight", USE_W)
-    parts.compareLine:SetPoint("TOPLEFT", parts.verdict.body, "TOPLEFT", INNER_PAD, -LINE_H)
+    for i = 1, VERDICT_LINES do
+        local fs = smallText(parts.verdict.body, "GameFontHighlight", USE_W)
+        fs:SetPoint("TOPLEFT", parts.verdict.body, "TOPLEFT", INNER_PAD, -(i - 1) * LINE_H)
+        parts.lines[i] = fs
+    end
     y = y - VERDICT_H - PANEL_GAP
     buildChartPanel(right, y)
     y = y - CHART_PANEL_H - PANEL_GAP

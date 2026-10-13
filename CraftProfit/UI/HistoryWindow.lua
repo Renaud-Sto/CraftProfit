@@ -354,6 +354,16 @@ function HistoryWindow.compareLine(data)
     return text, goodColor(c.good)
 end
 
+-- "1 measurement over 1 day", "12 measurements over 5 days": each count agrees in number
+-- (ns.Locale.plural: French counts 0 as singular).
+function HistoryWindow.coverageText(measures, days)
+    local function count(n, key)
+        n = type(n) == "number" and n or 0
+        return string.format(L[key .. (ns.Locale.plural(n) == "one" and "_ONE" or "_OTHER")], n)
+    end
+    return string.format(L.HISTORY_COVERAGE, count(measures, "HISTORY_MEASURES"), count(days, "HISTORY_DAYS"))
+end
+
 -- The typical week's line when it has no bar, saying the real reason: too few days, or no
 -- usable usual price to compare with (data.weekdayEmpty).
 function HistoryWindow.weekNote(data)
@@ -526,7 +536,7 @@ local function paintFigures(data)
         f.value:SetText(cell[2])
         f.date:SetText(cell[3])
     end
-    parts.coverage:SetText(string.format(L.HISTORY_COVERAGE, s.measures or 0, s.daysCovered or 0))
+    parts.coverage:SetText(HistoryWindow.coverageText(s.measures, s.daysCovered))
 end
 
 local function disarm()
@@ -562,7 +572,7 @@ local function paintRight()
     local noPeriod = data.status ~= "nodata" and #data.chart.days == 0
     if data.status == "nodata" or noPeriod then
         showEmpty(noPeriod and string.format(L.HISTORY_PERIOD_EMPTY, data.period)
-            or string.format(L.HISTORY_NODATA, data.measures or 0, data.days or 0), true)
+            or string.format(L.HISTORY_NODATA, HistoryWindow.coverageText(data.measures, data.days)), true)
         parts.caption:SetText(HistoryWindow.captionText(data))
         -- A paused recipe says so whatever its data.
         parts.status:SetText(data.paused and L.HISTORY_PAUSED or "")

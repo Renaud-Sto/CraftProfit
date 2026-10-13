@@ -146,7 +146,7 @@ H.test("clicking a row selects it and draws its result over 30 days", function()
     H.eq(UI.parts.figures[3].label.text, L.HISTORY_WORST_DAY)
     H.eq(UI.parts.figures[4].label.text, L.HISTORY_BEST_DAY)
     local summary = T.ns.Controller.historyData(5, "net", 30).summary
-    H.eq(UI.parts.coverage.text, string.format(L.HISTORY_COVERAGE, summary.measures, 10))
+    H.eq(UI.parts.coverage.text, UI.coverageText(summary.measures, 10))
     H.truthy(UI.parts.title:find(T.ns.Controller.marketName(), 1, true))
     -- The typical week: weekday names under its bars, Monday first.
     H.eq(UI.parts.week.pools.weekday[1].name.text, L.WEEKDAY_1)
@@ -165,7 +165,7 @@ H.test("too little data says how much there is", function()
     fill(T, 2)
     UI.show()
     UI.select(5)
-    H.eq(UI.parts.empty.text, string.format(T.ns.L.HISTORY_NODATA, 2, 2))
+    H.eq(UI.parts.empty.text, string.format(T.ns.L.HISTORY_NODATA, UI.coverageText(2, 2)))
     H.truthy(UI.parts.empty.shown)
     H.eq(UI.parts.chart.frame.shown, false)
 end)
@@ -397,7 +397,7 @@ H.test("labels fit their buttons, cells and columns in English, French and Spani
         fits(L.HISTORY_LIST, UI.CHAR_W, UI.LEFT_W - 16)
         for i = 1, 7 do fits(L["WEEKDAY_" .. i], UI.SMALL_CHAR_W, UI.USE_W / 7) end
         fits(L.HISTORY_WEEK_EMPTY, UI.SMALL_CHAR_W, UI.USE_W)
-        fits(string.format(L.HISTORY_COVERAGE, 9999, 60), UI.SMALL_CHAR_W, UI.USE_W)
+        fits(UI.coverageText(9999, 60), UI.SMALL_CHAR_W, UI.USE_W)
         -- Captions (small) and the verdict (normal font) with long amounts.
         for _, text in ipairs({ string.format(L.HISTORY_CAPTION_NET, "7.5"), L.HISTORY_CAPTION_MATERIALS,
             L.HISTORY_CAPTION_SALE, string.format(L.HISTORY_CAPTION_ITEM, "Elixir of the Mongoose Supreme") }) do
@@ -550,7 +550,7 @@ H.test("a paused recipe with too little data says both", function()
     fill(T, 2)
     UI.show()
     UI.select(5)
-    H.eq(UI.parts.empty.text, string.format(T.ns.L.HISTORY_NODATA, 2, 2))
+    H.eq(UI.parts.empty.text, string.format(T.ns.L.HISTORY_NODATA, UI.coverageText(2, 2)))
     H.truthy(UI.parts.status.shown)
     H.eq(UI.parts.status.text, T.ns.L.HISTORY_PAUSED)
 end)
@@ -961,4 +961,21 @@ H.test("a period without any measurement says so instead of a blank chart", func
     click(UI.parts.periodButtons[2])
     H.eq(UI.parts.empty.shown, false)
     H.truthy(UI.parts.chart.frame.shown)
+end)
+
+H.test("measurement and day counts agree in number in English, French and Spanish", function()
+    local expected = {
+        enUS = { "1 measurement over 1 day", "2 measurements over 3 days", "0 measurements over 0 days" },
+        frFR = { "1 mesure sur 1 jour", "2 mesures sur 3 jours", "0 mesure sur 0 jour" },
+        esES = { "1 medición en 1 día", "2 mediciones en 3 días", "0 mediciones en 0 días" },
+    }
+    for locale, texts in pairs(expected) do
+        local T, UI = boot({ locale = locale })
+        H.eq(UI.coverageText(1, 1), texts[1])
+        H.eq(UI.coverageText(2, 3), texts[2])
+        H.eq(UI.coverageText(0, 0), texts[3])
+        -- The not-enough-data message starts with the same counts.
+        local nodata = string.format(T.ns.L.HISTORY_NODATA, UI.coverageText(1, 1))
+        H.eq(nodata:sub(1, #texts[1]), texts[1])
+    end
 end)

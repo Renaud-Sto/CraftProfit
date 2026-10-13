@@ -17,6 +17,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - History window: the typical week always reads the last 30 days, so it no longer stays empty on the 7-day period.
 - History window: the typical week on the Profit tab shows the gap from the usual profit in money, so a recipe usually at a loss (or at 0) no longer shows an empty week that claims to need two weeks of data; percentages from a tiny usual price are bounded.
 - History window: a period with no measurement (newest prices older than 7 days, on the 7-day period) says so and asks to refresh, instead of a blank chart and dashes.
+- History window: "1 measurement over 1 day" instead of "1 measurements over 1 days" (French and Spanish too).
 - Price history: each tier now has its own cap, so a busy week can no longer erase the daily history. Points or prices dated more than a day in the future no longer freeze an item's series (a point is dropped only when a newer one is recorded, so a clock set back never erases history), and the count of recorded recipes is exact.
 - A recipe whose disenchant materials have no data in the tables (for example epic items above item level 60) shows *no data* instead of a permanent *PRICES MISSING* that no search could clear.
 - The leveling window reopens where it was dragged during the same session.

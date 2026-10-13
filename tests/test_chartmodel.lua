@@ -140,9 +140,13 @@ H.test("bars place each day in its slot, keep gaps, and tint carried days", func
     H.truthy(bars[1].w > 0 and bars[1].w < 100)
     H.eq(bars[1].yAvg, 300)                         -- 100 on a 0..400 scale, 400 px, y from the top
     H.eq(bars[3].yAvg, 100)
-    -- A recipe value has no range: low = high = avg.
-    H.eq(bars[1].yLow, 300)
+    -- A profit stands on the zero line (the bottom of this scale) up to its value.
+    H.eq(bars[1].yLow, 400)
     H.eq(bars[1].yHigh, 300)
+    -- Another recipe value has no range: low = high = the value.
+    local m = C.bars({ { day = NOW, materials = 100 } }, SCALE, 700, 400, "materials", 7)
+    H.eq(m[1].yLow, 300)
+    H.eq(m[1].yHigh, 300)
     H.eq(bars[1].carried, false)
     H.eq(bars[2].carried, true)
 end)
@@ -250,4 +254,81 @@ H.test("hostile steps and bounds can never make a long tick list", function()
     end
     H.truthy(#C.scale(0, 1e6, 1e9).ticks <= 21)     -- at most 20 intervals
     H.truthy(#C.scale(0, 1e6, 1).ticks >= 3)        -- at least 2
+end)
+
+H.test("range spans from the first data day, at least 7 slots, at most the period", function()
+    local C = load()
+    -- 4 data days on a 60-day period: 7 slots ending today, not 60 mostly empty ones.
+    local four = {}
+    for k = 3, 0, -1 do four[#four + 1] = { day = NOW - k * DAY, net = 100 } end
+    H.eq(C.range(four, 60, NOW, "net"), { first = NOW - 6 * DAY, last = NOW, count = 7 })
+    -- 20 days back on a 60-day period: 20 slots.
+    local twenty = { { day = NOW - 19 * DAY, net = 1 }, { day = NOW, net = 2 } }
+    H.eq(C.range(twenty, 60, NOW, "net").count, 20)
+    -- Data older than the period does not widen it; the period is the most.
+    local old = { { day = NOW - 90 * DAY, net = 1 }, { day = NOW - 40 * DAY, net = 1 }, { day = NOW, net = 1 } }
+    H.eq(C.range(old, 30, NOW, "net").count, 7)
+    H.eq(C.range({ { day = NOW - 29 * DAY, net = 1 }, { day = NOW, net = 1 } }, 30, NOW, "net").count, 30)
+    -- A row without a value does not count; item rows use avg.
+    H.eq(C.range({ { day = NOW - 30 * DAY }, { day = NOW, net = 1 } }, 60, NOW, "net").count, 7)
+    H.eq(C.range({ { day = NOW - 9 * DAY, avg = 5 }, { day = NOW, avg = 5 } }, 30, NOW).count, 10)
+    -- The newest day defaults to the newest drawn row.
+    H.eq(C.range({ { day = NOW - 2 * DAY, net = 1 } }, 30, nil, "net"), { first = NOW - 8 * DAY, last = NOW - 2 * DAY, count = 7 })
+    -- A 7 day period stays 7 slots; nothing drawable gives nil.
+    H.eq(C.range(four, 7, NOW, "net").count, 7)
+    H.eq(C.range({}, 30, NOW, "net"), nil)
+    H.eq(C.range(nil, 30, NOW, "net"), nil)
+    H.eq(C.range(four, 0, NOW, "net"), nil)
+    H.eq(C.range(four, NAN, NOW, "net"), nil)
+end)
+
+H.test("date ticks name the first, middle and last slot, at midday", function()
+    local C = load()
+    H.eq(C.dateTicks(7, NOW), {
+        { slot = 1, t = NOW - 6 * DAY + DAY / 2 },
+        { slot = 4, t = NOW - 3 * DAY + DAY / 2 },
+        { slot = 7, t = NOW + DAY / 2 },
+    })
+    H.eq(C.dateTicks(60, NOW)[2].slot, 30)
+    H.eq(#C.dateTicks(2, NOW), 2)
+    H.eq(#C.dateTicks(1, NOW), 1)
+    H.eq(C.dateTicks(0, NOW), {})
+    H.eq(C.dateTicks(7, NAN), {})
+end)
+
+H.test("the zero line sits where 0 falls, and only when the scale holds it", function()
+    local C = load()
+    local s = { min = -1000, max = 3000, step = 1000, ticks = { -1000, 0, 1000, 2000, 3000 } }
+    H.eq(C.zeroY(s, 400), 300)
+    H.eq(C.zeroY(SCALE, 400), 400)                   -- 0 is the bottom of a 0..400 scale
+    H.eq(C.zeroY({ min = 100, max = 500 }, 400), nil)
+    H.eq(C.zeroY({ min = -500, max = -100 }, 400), nil)
+    H.eq(C.zeroY(nil, 400), nil)
+    H.eq(C.zeroY(s, NAN), nil)
+end)
+
+H.test("net bars stand on the zero line: up for a profit, down for a loss", function()
+    local C = load()
+    local s = { min = -1000, max = 3000, step = 1000, ticks = { -1000, 0, 1000, 2000, 3000 } }
+    local bars = C.bars({ { day = NOW - DAY, net = 2000 }, { day = NOW, net = -1000 } }, s, 200, 400, "net", 2)
+    H.eq(bars[1].yHigh, 100)
+    H.eq(bars[1].yLow, 300)
+    H.eq(bars[1].yAvg, 100)
+    H.eq(bars[1].yEdge, 100)
+    H.eq(bars[2].yHigh, 300)
+    H.eq(bars[2].yLow, 400)
+    H.eq(bars[2].yEdge, 400)                         -- the loss's outer end is at the bottom
+    -- Other views keep low to high, the edge on top.
+    local item = C.bars({ { day = NOW, avg = 200, low = 100, high = 300 } }, SCALE, 100, 400, nil, 1)
+    H.eq(item[1].yEdge, 100)
+end)
+
+H.test("dashes cut the usual line into short segments inside the width", function()
+    local C = load()
+    H.eq(C.dashes(20, 4, 3), { { x = 0, w = 4 }, { x = 7, w = 4 }, { x = 14, w = 4 } })
+    H.eq(C.dashes(16, 4, 3), { { x = 0, w = 4 }, { x = 7, w = 4 }, { x = 14, w = 2 } })
+    H.eq(C.dashes(0, 4, 3), {})
+    H.eq(C.dashes(NAN, 4, 3), {})
+    H.eq(C.dashes(20, 0, 3), {})
+    H.eq(#C.dashes(1e9, 4, 3), C.MAX_DASHES)          -- a hostile width stays bounded
 end)

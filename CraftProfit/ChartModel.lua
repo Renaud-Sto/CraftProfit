@@ -18,12 +18,24 @@
 --   (1 to 62) ending at the local day `newest`: index is 1 (oldest) to count (newest), nil
 --   outside the period. Days are counted by rounding, so 23 and 25 hour days still count once.
 -- ChartModel.extent(days, field) -> lo, hi of the values bars() would draw, or nil.
+-- ChartModel.range(days, period, newest, field) -> { first, last, count } or nil: the slots
+--   the chart draws. They end at `newest` (default: the newest drawn day) and start at the
+--   oldest drawn day inside the period, with at least MIN_SLOTS and at most `period` slots,
+--   so a few days of data on a 60-day period never leave the plot mostly empty. first is
+--   `last` minus count - 1 days (in seconds). nil when nothing in the period can be drawn.
+-- ChartModel.dateTicks(count, newest) -> { { slot, t }, ... }: the first, middle and last
+--   slot (distinct ones only), t at midday of that slot's day (safe from 23/25 hour days).
+-- ChartModel.zeroY(scale, height) -> y of 0, or nil when the scale does not hold 0.
+-- ChartModel.dashes(width, dash, gap) -> { { x, w }, ... } segments of a dashed line over
+--   [0, width), the last one cut at the width; at most MAX_DASHES; {} when unusable.
 -- ChartModel.bars(days, scale, width, height, field, period, newest)
---   -> { { slot, x, w, yLow, yHigh, yAvg, carried, row }, ... } inside a width x height area,
---   y from the top. `days` are HistoryView.recipeDays rows charted on `field` ("net",
---   "materials", "sale"; low = high = the value, carried from `<field>Carried`, else
---   `carried`) or, with no field, History.dailySeries rows (avg, low, high). A row without a
---   finite value is skipped and its slot stays empty: missing days are gaps, never zeros.
+--   -> { { slot, x, w, yLow, yHigh, yAvg, yEdge, carried, row }, ... } inside a width x
+--   height area, y from the top. `days` are HistoryView.recipeDays rows charted on `field`
+--   ("net", "materials", "sale"; low = high = the value, carried from `<field>Carried`,
+--   else `carried`) or, with no field, History.dailySeries rows (avg, low, high). A net
+--   bar stands on the zero line (from 0 to the value, 0 clamped into the area); yEdge is
+--   the bar's outer end: the value for a recipe view, the high for an item. A row without
+--   a finite value is skipped and its slot stays empty: missing days are gaps, never zeros.
 --   `newest` defaults to the newest drawn day. Values outside the scale are clamped.
 -- ChartModel.usualY(usual, scale, height) -> { y, outside } or nil: outside is "above" or
 --   "below" when the usual price is off the scale (y then sits on that border).
@@ -43,6 +55,8 @@ ChartModel.MIN_STEPS, ChartModel.MAX_STEPS = 2, 20
 ChartModel.MAX_SLOTS = 62
 ChartModel.BAR_FILL = 0.6        -- share of a slot a bar covers
 ChartModel.MIN_WEEKDAY_LIMIT = 10
+ChartModel.MIN_SLOTS = 7
+ChartModel.MAX_DASHES = 400
 
 -- The smallest step 1, 2 or 5 x 10^k at least `raw`, and at least 1.
 local function niceStep(raw)
@@ -128,6 +142,15 @@ local function rowValues(row, field)
     return v, math.min(low, v), math.max(high, v)
 end
 
+-- The newest day with a drawable value, or nil.
+local function newestDrawn(days, field)
+    local newest
+    for _, row in ipairs(days) do
+        if rowValues(row, field) and (not newest or row.day > newest) then newest = row.day end
+    end
+    return newest
+end
+
 function ChartModel.extent(days, field)
     if type(days) ~= "table" then return nil end
     local lo, hi
@@ -165,10 +188,7 @@ function ChartModel.bars(days, scale, width, height, field, period, newest)
         return out
     end
     if not Util.isFinite(newest) then
-        newest = nil
-        for _, row in ipairs(days) do
-            if rowValues(row, field) and (not newest or row.day > newest) then newest = row.day end
-        end
+        newest = newestDrawn(days, field)
         if not newest then return out end
     end
     local slotW = width / slots.count
@@ -179,14 +199,62 @@ function ChartModel.bars(days, scale, width, height, field, period, newest)
         if slot then
             local flag = field and row[field .. "Carried"]
             if flag == nil then flag = row.carried end
+            if field == "net" then low, high = math.min(v, 0), math.max(v, 0) end
+            local yAvg = yOf(v, scale, height)
             out[#out + 1] = {
                 slot = slot, x = (slot - 1) * slotW + (slotW - w) / 2, w = w,
-                yLow = yOf(low, scale, height), yHigh = yOf(high, scale, height), yAvg = yOf(v, scale, height),
+                yLow = yOf(low, scale, height), yHigh = yOf(high, scale, height), yAvg = yAvg,
+                yEdge = field and yAvg or yOf(high, scale, height),
                 carried = flag and true or false, row = row,
             }
         end
     end
     table.sort(out, function(a, b) return a.slot < b.slot end)
+    return out
+end
+
+function ChartModel.range(days, period, newest, field)
+    local slots = ChartModel.slots(period)
+    if type(days) ~= "table" or not slots then return nil end
+    if not Util.isFinite(newest) then newest = newestDrawn(days, field) end
+    if not newest then return nil end
+    local oldest
+    for _, row in ipairs(days) do
+        local i = rowValues(row, field) and slots.index(row.day, newest)
+        if i and (not oldest or i < oldest) then oldest = i end
+    end
+    if not oldest then return nil end
+    local count = math.min(slots.count, math.max(ChartModel.MIN_SLOTS, slots.count - oldest + 1))
+    return { first = newest - (count - 1) * DAY, last = newest, count = count }
+end
+
+function ChartModel.dateTicks(count, newest)
+    local out = {}
+    count = Util.count(count)
+    if not count or not Util.isFinite(newest) then return out end
+    local seen = {}
+    for _, slot in ipairs({ 1, math.ceil(count / 2), count }) do
+        if not seen[slot] then
+            seen[slot] = true
+            out[#out + 1] = { slot = slot, t = newest - (count - slot) * DAY + DAY / 2 }
+        end
+    end
+    return out
+end
+
+function ChartModel.zeroY(scale, height)
+    if not validScale(scale) or not validSize(height) or scale.min > 0 or scale.max < 0 then return nil end
+    return yOf(0, scale, height)
+end
+
+function ChartModel.dashes(width, dash, gap)
+    local out = {}
+    if not validSize(width) or not validSize(dash) or not Util.isFinite(gap) or gap < 0 then return out end
+    local x = 0
+    while x < width and #out < ChartModel.MAX_DASHES do
+        out[#out + 1] = { x = x, w = math.min(dash, width - x) }
+        x = x + dash + gap
+    end
     return out
 end
 

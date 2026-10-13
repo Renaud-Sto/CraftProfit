@@ -36,8 +36,8 @@ local ICON_GAP = 4
 -- disenchant materials fit); the period buttons stack at the right of the button rows.
 local ICONS_PER_ROW, ICON_ROWS = 10, 2
 local HEADER_H = Native.BUTTON_H + 6 + ICON_ROWS * ICON + (ICON_ROWS - 1) * ICON_GAP
-local CHART_H = 230
-local NAMES_H = 12
+local CHART_H = 180
+local NAMES_H = 50
 local HOVER_H = 12
 local FIGURE_ROW_H = 14
 local FIGURE_LABEL_W = 110
@@ -251,11 +251,7 @@ local function paintRight(list)
     parts.empty:Hide()
     parts.chart.frame:Show()
     parts.chart:set(data.chart)
-    parts.chart:setWeekday(data.weekday)
-    for i, fs in ipairs(parts.weekdayNames) do
-        fs:SetText(L["WEEKDAY_" .. i])
-        fs:Show()
-    end
+    parts.week:set(data.weekday, "")
     paintFigures(data.summary)
     parts.status:SetText(data.status == "paused" and L.HISTORY_PAUSED or "")
     parts.status:SetShown(data.status == "paused")
@@ -489,12 +485,13 @@ local function build()
     parts.chart = Chart.new(right, RIGHT_W, CHART_H, frame)
     parts.chart.frame:SetPoint("TOPLEFT", right, "TOPLEFT", 0, y)
     parts.chart.onHover = onHover
+    parts.chart.dateText = HistoryWindow.dateText
     y = y - CHART_H - 4
-    for i = 1, 7 do
-        local fs = right:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-        fs:SetPoint("TOP", right, "TOPLEFT", Chart.LABEL_W + (i - 0.5) * HistoryWindow.WEEKDAY_W, y)
-        parts.weekdayNames[i] = fs
-    end
+    local names = {}
+    for i = 1, 7 do names[i] = L["WEEKDAY_" .. i] end
+    parts.week = Chart.newWeekday(right, RIGHT_W - Chart.LABEL_W, NAMES_H, names)
+    parts.week.frame:SetPoint("TOPLEFT", right, "TOPLEFT", Chart.LABEL_W, y)
+    for i = 1, 7 do parts.weekdayNames[i] = parts.week.pools.weekday[i].name end
     y = y - NAMES_H - 4
     parts.hover = right:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     parts.hover:SetPoint("TOPLEFT", right, "TOPLEFT", Chart.LABEL_W, y)

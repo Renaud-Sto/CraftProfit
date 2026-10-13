@@ -41,8 +41,10 @@
 --   "below" when the usual price is off the scale (y then sits on that border).
 -- ChartModel.weekdayBars(profile, width, height) -> 7 entries Monday to Sunday
 --   { x, w, y, h, pct, n, empty } around a zero line at mid-height, plus `limit`: the scale
---   is symmetric, +-limit %, limit = the largest |pct| rounded up to 5, at least 10. An
---   entry without a finite pct (fewer than 2 days) is empty, with a height of 0.
+--   is symmetric, +-limit %, limit = the largest |pct| (within +-MAX_WEEKDAY_PCT) rounded up
+--   to 5, at least 10. An entry without a finite pct (fewer than 2 days) is empty, with a
+--   height of 0. A profile in money (History.weekdayProfile inMoney: entries with `gap`)
+--   gives `gap` instead of `pct` and `money` = true, scaled on the largest |gap| (at least 1).
 local _, ns = ...
 local Util = ns.Util
 
@@ -55,6 +57,7 @@ ChartModel.MIN_STEPS, ChartModel.MAX_STEPS = 2, 20
 ChartModel.MAX_SLOTS = 62
 ChartModel.BAR_FILL = 0.6        -- share of a slot a bar covers
 ChartModel.MIN_WEEKDAY_LIMIT = 10
+ChartModel.MAX_WEEKDAY_PCT = 999
 ChartModel.MIN_SLOTS = 7
 ChartModel.MAX_DASHES = 400
 
@@ -269,13 +272,22 @@ function ChartModel.weekdayBars(profile, width, height)
     local out = {}
     if not validSize(width) or not validSize(height) then return out end
     if type(profile) ~= "table" then profile = {} end
-    local pcts, limit = {}, ChartModel.MIN_WEEKDAY_LIMIT
+    local money = false
+    for i = 1, 7 do
+        if type(profile[i]) == "table" and Util.isFinite(profile[i].gap) then money = true end
+    end
+    local pcts, limit = {}, money and 1 or ChartModel.MIN_WEEKDAY_LIMIT
     for i = 1, 7 do
         local entry = profile[i]
-        local pct = type(entry) == "table" and entry.pct or nil
-        if Util.isFinite(pct) then
-            pcts[i] = pct
-            limit = math.max(limit, math.ceil(math.abs(pct) / 5) * 5)
+        local v = type(entry) == "table" and entry[money and "gap" or "pct"] or nil
+        if Util.isFinite(v) then
+            if money then
+                limit = math.max(limit, math.abs(v))
+            else
+                v = Util.clamp(v, -ChartModel.MAX_WEEKDAY_PCT, ChartModel.MAX_WEEKDAY_PCT)
+                limit = math.max(limit, math.ceil(math.abs(v) / 5) * 5)
+            end
+            pcts[i] = v
         end
     end
     local mid = height / 2
@@ -285,13 +297,14 @@ function ChartModel.weekdayBars(profile, width, height)
         local entry = profile[i]
         local n = type(entry) == "table" and Util.count(entry.n) or 0
         local pct = pcts[i]
-        local bar = { x = (i - 1) * slotW + (slotW - w) / 2, w = w, y = mid, h = 0, pct = pct, n = n, empty = pct == nil }
+        local bar = { x = (i - 1) * slotW + (slotW - w) / 2, w = w, y = mid, h = 0, n = n, empty = pct == nil }
+        bar[money and "gap" or "pct"] = pct
         if pct then
             bar.h = math.abs(pct) / limit * mid
             if pct > 0 then bar.y = mid - bar.h end
         end
         out[i] = bar
     end
-    out.limit = limit
+    out.limit, out.money = limit, money
     return out
 end

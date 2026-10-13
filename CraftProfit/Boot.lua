@@ -766,7 +766,9 @@ end
 -- profit: the recipe's auction house profit whatever the view (HistoryView.summary "net" of
 -- the period's rows, usual over 30 days): { today, todayDay, usual, enough, compare
 -- (HistoryView.profitCompare), atLoss (today is a number <= 0) }; vendor and disenchant are
--- not counted. commission: the auction house cut in percent (5 for 0.05). fresh: as
+-- not counted. weekday: History.weekdayProfile of 30 days, in money (gap) in the Profit view;
+-- weekdayEmpty: why it has no bar, "days" (no weekday measured twice) or "usual" (no usable
+-- usual price), nil when it has one. commission: the auction house cut in percent (5 for 0.05). fresh: as
 -- historyList's (a reagent or the sold crafted item measured within HISTORY_FRESH); stale
 -- figures are still shown, dated, but never as good news.
 function Controller.historyData(recipeID, view, period)
@@ -826,11 +828,20 @@ function Controller.historyData(recipeID, view, period)
     summary.usual, summary.enough = usual30.usual, usual30.enough
     local status = "ok"
     if not summary.enough then status = "nodata" elseif entry.active ~= true then status = "paused" end
+    -- The profit's usual may be 0 or a loss: its typical week is in money.
+    local weekday = History.weekdayProfile(weekdayDays, summary.usual, view == "net")
+    local weekdayEmpty
+    local filled, enoughDays = false, false
+    for i = 1, 7 do
+        if weekday[i].pct or weekday[i].gap then filled = true end
+        if weekday[i].n >= History.WEEKDAY_MIN_DAYS then enoughDays = true end
+    end
+    if not filled then weekdayEmpty = enoughDays and "usual" or "days" end
     return {
         recipe = recipe, items = items, view = view, period = period,
         chart = { days = days, field = field, usual = summary.usual, period = period, newest = History.dayOf(now) },
         summary = summary,
-        weekday = History.weekdayProfile(weekdayDays, summary.usual),
+        weekday = weekday, weekdayEmpty = weekdayEmpty,
         status = status, paused = entry.active ~= true,
         measures = usual30.measures, days = usual30.daysCovered,
         market = Controller.marketName(),

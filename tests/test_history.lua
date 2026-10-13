@@ -464,6 +464,26 @@ H.test("weekdayProfile shows a rising weekend and a falling Monday", function()
     H.eq(H2.weekdayProfile({ "junk", { day = 0 / 0, avg = 5 }, { day = NOW, avg = "x" } }, 100)[7], { n = 0 })
 end)
 
+H.test("weekdayProfile in money: a gap from the usual for any sign, and bounded percentages", function()
+    local H2 = withDate(0)
+    local days = {}
+    for k = 27, 0, -1 do
+        local day = NOW - k * DAY
+        local w = H2.weekday(day)
+        days[#days + 1] = { day = day, value = (w == 6 or w == 7) and -50 or -200 }
+    end
+    -- A usual loss of 200: the weekend loses 150 less.
+    local profile = H2.weekdayProfile(days, -200, true)
+    H.eq(profile[6], { gap = 150, n = 4 })
+    H.eq(profile[1], { gap = 0, n = 4 })
+    H.eq(H2.weekdayProfile(days, 0, true)[1], { gap = -200, n = 4 })
+    H.eq(H2.weekdayProfile(days, 0 / 0, true)[1], { n = 4 })
+    -- A tiny usual price cannot give an absurd percentage.
+    local tiny = {}
+    for k = 13, 0, -1 do tiny[#tiny + 1] = { day = NOW - k * DAY, value = 5000 } end
+    H.eq(H2.weekdayProfile(tiny, 1)[1], { pct = 999, n = 2 })
+end)
+
 -- Paris-like zone (UTC+1, UTC+2 in summer). Spring forward on local day SF at 02:00 local
 -- (01:00 UTC): a 23 hour day. Fall back on local day FB at 03:00 summer time (01:00 UTC):
 -- a 25 hour day.

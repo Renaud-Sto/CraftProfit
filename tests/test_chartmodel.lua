@@ -205,6 +205,27 @@ H.test("the usual price line is clamped to the area with an indicator", function
     H.eq(C.usualY(100, nil, 400), nil)
 end)
 
+H.test("the weekday strip in money: scaled on the largest gap, any size", function()
+    local C = load()
+    local bars = C.weekdayBars({ { gap = -300, n = 2 }, { gap = 150, n = 2 }, { n = 1 } }, 700, 100)
+    H.eq(bars.money, true)
+    H.eq(bars.limit, 300)
+    H.eq(bars[1].gap, -300)
+    H.eq(bars[1].h, 50)
+    H.eq(bars[1].y, 50)
+    H.eq(bars[2].h, 25)
+    H.eq(bars[2].y, 25)
+    H.eq(bars[3].empty, true)
+    -- All gaps 0: flat bars, no division by zero.
+    local flat = C.weekdayBars({ { gap = 0, n = 2 } }, 700, 100)
+    H.eq(flat[1].h, 0)
+    H.eq(flat[1].empty, false)
+    -- A percentage profile is not money; a hostile percentage is bounded.
+    local huge = C.weekdayBars({ { pct = 1e9, n = 2 }, { pct = 10, n = 2 } }, 700, 100)
+    H.eq(huge.money, false)
+    H.eq(huge.limit, 1000)
+end)
+
 H.test("the weekday strip starts on Monday, around a zero line, symmetric", function()
     local C = load()
     local profile = {

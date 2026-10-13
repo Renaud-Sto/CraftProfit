@@ -902,3 +902,38 @@ H.test("stale data keeps its dated figures but the comparison is grey and gives 
     fill(T, 10)
     H.eq(T.ns.Controller.historyData(5, "net", 30).fresh, true)
 end)
+
+H.test("the Profit view's typical week labels its bars in money", function()
+    local T, UI = boot()
+    track(T, raw(5))
+    local series = T.ns.Controller.market().series
+    for id, unit in pairs({ [1] = 100, [2] = 50, [100] = 100 }) do
+        series[id] = {}
+        for age = 27, 0, -1 do
+            local wd = T.ns.History.weekday(NOW - age * DAY)
+            local u = (id == 100 and (wd == 6 or wd == 7)) and 200 or unit
+            series[id][#series[id] + 1] = { NOW - age * DAY, u, 5, u, u, 1, true }
+        end
+    end
+    UI.show()
+    UI.select(5)
+    local pool = UI.parts.week.pools.weekday
+    H.eq(UI.parts.week.empty, false)
+    H.eq(pool[6].label.text, "+<95>")
+    H.eq(pool[1].label.text, "<0>")
+    click(UI.parts.tabs[2])
+    H.eq(pool[6].label.text, "+100%")
+end)
+
+H.test("the typical week's empty line gives the real reason", function()
+    local T, UI = boot()
+    track(T, raw(5))
+    fill(T, 5)
+    UI.show()
+    UI.select(5)
+    H.eq(UI.parts.week.note.text, T.ns.L.HISTORY_WEEK_EMPTY)
+    local data = T.ns.Controller.historyData(5, "sale", 30)
+    H.eq(UI.weekNote(data), T.ns.L.HISTORY_WEEK_EMPTY)
+    data.weekdayEmpty = "usual"
+    H.eq(UI.weekNote(data), T.ns.L.HISTORY_WEEK_NO_USUAL)
+end)

@@ -142,6 +142,7 @@ ns.Locale.register("frFR", {
     HISTORY_COVERAGE = "%d mesures sur %d jours",
     HISTORY_WEEK = "Semaine type",
     HISTORY_WEEK_EMPTY = "S'affiche après environ deux semaines de données.",
+    HISTORY_WEEK_NO_USUAL = "Pas encore de niveau habituel auquel comparer les jours.",
     HISTORY_LABEL_VALUE = "%s\194\160: %s",
     HISTORY_AVERAGE = "Moyenne",
     HISTORY_RANGE = "Fourchette",

@@ -36,10 +36,11 @@
 --
 -- Chart.newWeekday(parent, width, height, names) -> week, with:
 --   week.frame                the root frame
---   week:set(profile, emptyText)  History.weekdayProfile output (7 entries, Monday first):
+--   week:set(profile, emptyText, moneyText)  History.weekdayProfile output (7 entries, Monday first):
 --                             the percentage above each bar, the weekday name (names[i])
 --                             under it; when no weekday has a value, only `emptyText` shows,
---                             on one muted line.
+--                             on one muted line. A profile in money (entries with `gap`)
+--                             labels each bar moneyText(gap) instead of a percentage.
 -- Chart.USE_LINES: on since the probe (/cppn line, docs/probe-findings.md F14) showed Line
 -- objects work on Forever; when CreateLine is missing or raises, the bars stay alone.
 local _, ns = ...
@@ -550,6 +551,12 @@ local function percentText(pct)
     return string.format("%+d%%", v)
 end
 
+-- A money gap: moneyText(gap) when given, else a signed number.
+local function gapText(gap, moneyText)
+    if type(moneyText) == "function" then return moneyText(gap) end
+    return gap == 0 and "0" or string.format("%+d", gap)
+end
+
 function Chart.newWeekday(parent, width, height, names)
     local self = setmetatable({}, Week)
     self.width = size(width, Chart.DEFAULT_W)
@@ -584,7 +591,7 @@ function Chart.newWeekday(parent, width, height, names)
     return self
 end
 
-function Week:set(profile, emptyText)
+function Week:set(profile, emptyText, moneyText)
     local bars = ChartModel.weekdayBars(profile, self.width, self.barsH)
     local any = false
     for i = 1, 7 do
@@ -597,11 +604,12 @@ function Week:set(profile, emptyText)
     for i = 1, 7 do
         local entry, b = self.pools.weekday[i], bars[i]
         if any and b and not b.empty then
-            local color = b.pct < 0 and Colors.FIXED.loss or Colors.FIXED.profit
+            local value = b.gap or b.pct
+            local color = value < 0 and Colors.FIXED.loss or Colors.FIXED.profit
             paint(entry.bar, color)
             place(entry.bar, self.frame, b.x, Chart.WEEK_LABEL_H + b.y, b.w, math.max(1, b.h))
             entry.bar:Show()
-            entry.label:SetText(percentText(b.pct))
+            entry.label:SetText(b.gap and gapText(b.gap, moneyText) or percentText(b.pct))
         else
             entry.bar:Hide()
             entry.label:SetText("")

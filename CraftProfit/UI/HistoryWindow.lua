@@ -354,6 +354,20 @@ function HistoryWindow.compareLine(data)
     return text, goodColor(c.good)
 end
 
+-- The typical week's line when it has no bar, saying the real reason: too few days, or no
+-- usable usual price to compare with (data.weekdayEmpty).
+function HistoryWindow.weekNote(data)
+    if data.weekdayEmpty == "usual" then return L.HISTORY_WEEK_NO_USUAL end
+    return L.HISTORY_WEEK_EMPTY
+end
+
+-- A weekday's gap from the usual profit: "+2s10c", "-40c", "0" as the money format gives it.
+local function weekGap(v)
+    if v > 0 then return "+" .. money(v) end
+    if v < 0 then return "-" .. money(-v) end
+    return money(0)
+end
+
 -- The verdict's lines in order, the empty ones left out: { { text, color }, ... }.
 function HistoryWindow.verdictLines(data)
     local out = {}
@@ -560,7 +574,7 @@ local function paintRight()
     model.usualLabel = L.HISTORY_USUAL
     parts.chart:set(model)
     paintFigures(data)
-    parts.week:set(data.weekday, L.HISTORY_WEEK_EMPTY)
+    parts.week:set(data.weekday, HistoryWindow.weekNote(data), weekGap)
     parts.status:SetText(data.status == "paused" and L.HISTORY_PAUSED or "")
     parts.status:SetShown(data.status == "paused")
 end

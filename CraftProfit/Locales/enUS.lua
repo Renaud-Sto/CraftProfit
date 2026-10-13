@@ -144,6 +144,7 @@ ns.Locale.register("enUS", {
     HISTORY_COVERAGE = "%d measurements over %d days",
     HISTORY_WEEK = "Typical week",
     HISTORY_WEEK_EMPTY = "Shows after about two weeks of data.",
+    HISTORY_WEEK_NO_USUAL = "No usual level to compare the weekdays with yet.",
     HISTORY_LABEL_VALUE = "%s: %s",
     HISTORY_AVERAGE = "Average",
     HISTORY_RANGE = "Low - high",

@@ -120,8 +120,9 @@ H.test("historyData for the result: chart model, summary, weekday profile, items
     H.eq(data.chart.newest, T.ns.History.dayOf(NOW))
     H.truthy(data.summary.enough)
     H.eq(data.summary.daysCovered, 28)
-    H.truthy(data.weekday[6].pct > 0 and data.weekday[7].pct > 0)
-    H.truthy(data.weekday[1].pct <= 0)
+    -- The Profit view's typical week is in money.
+    H.truthy(data.weekday[6].gap > 0 and data.weekday[7].gap > 0)
+    H.truthy(data.weekday[1].gap <= 0)
     H.eq(data.measures, data.summary.measures)
     H.eq(data.days, 28)
     -- The icon row: each item with its group (the recipe views are the window's tabs).
@@ -526,4 +527,25 @@ H.test("the typical week reads 30 days whatever the period", function()
         H.truthy(week[6].pct > 0 and week[7].pct > 0)
         H.eq(week[1].n, 4)
     end
+end)
+
+H.test("the Profit view's typical week is in money, even when the usual result is a loss", function()
+    local T, C = boot()
+    track(T, raw(5))
+    -- Materials 250; the crafted item sells for 100 (95): a 155 loss, 200 (190) at the weekend.
+    fill(C, 28, function(id, age)
+        local wd = T.ns.History.weekday(NOW - age * DAY)
+        if id == 100 then return (wd == 6 or wd == 7) and 200 or 100 end
+        return flat(id)
+    end)
+    local data = C.historyData(5, "net", 30)
+    H.eq(data.summary.usual, -155)
+    H.eq(data.weekday[6], { gap = 95, n = 4 })
+    H.eq(data.weekday[1], { gap = 0, n = 4 })
+    H.eq(data.weekdayEmpty, nil)
+    -- Other views stay in percent.
+    H.eq(C.historyData(5, "sale", 30).weekday[1].gap, nil)
+    -- Too few days: the reason is the number of days.
+    fill(C, 5, flat)
+    H.eq(C.historyData(5, "net", 30).weekdayEmpty, "days")
 end)

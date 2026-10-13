@@ -229,6 +229,21 @@ H.test("the typical week draws seven bars, Monday first, the name under each", f
     H.truthy(pool[1].name.points[1][5] < -40)
 end)
 
+H.test("a typical week in money labels each bar with its gap", function()
+    local T, Chart = boot()
+    local week = Chart.newWeekday(T.env.UIParent, 500, 60, NAMES)
+    week:set({ { gap = -300, n = 2 }, { gap = 150, n = 2 }, { gap = 0, n = 2 } }, "empty",
+        function(v) return "<" .. v .. ">" end)
+    local pool = week.pools.weekday
+    H.eq(pool[1].label.text, "<-300>")
+    H.eq(pool[2].label.text, "<150>")
+    H.eq(pool[3].label.text, "<0>")
+    H.eq(pool[1].bar.shown, true)
+    -- Without a formatter a gap still says something.
+    week:set({ { gap = 25, n = 2 } }, "empty")
+    H.eq(pool[1].label.text, "+25")
+end)
+
 H.test("an empty typical week is one muted line, not seven empty labels", function()
     local T, Chart = boot()
     local week = Chart.newWeekday(T.env.UIParent, 500, 60, NAMES)

@@ -511,3 +511,19 @@ H.test("historyList freshness reads the reagents and the crafted item, never a d
     H.eq(C.historyList()[1].fresh, true)
     ITEMS[301] = nil
 end)
+
+H.test("the typical week reads 30 days whatever the period", function()
+    local T, C = boot()
+    track(T, raw(5))
+    fill(C, 28, function(id, age)
+        local wd = T.ns.History.weekday(NOW - age * DAY)
+        if id == 100 then return (wd == 6 or wd == 7) and 1200 or 1000 end
+        return flat(id)
+    end)
+    for _, view in ipairs({ "sale", "item:100" }) do
+        local week = C.historyData(5, view, 7).weekday
+        H.eq(week, C.historyData(5, view, 30).weekday)
+        H.truthy(week[6].pct > 0 and week[7].pct > 0)
+        H.eq(week[1].n, 4)
+    end
+end)

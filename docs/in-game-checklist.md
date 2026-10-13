@@ -134,6 +134,7 @@ Take screenshots of each state in English, French and Spanish (`/cp locale frFR`
 - [ ] Tabs: *Materials cost*, *Sale price*, *Profit*, the active one lit; clicking an item icon lights none. The caption under the icons says what is drawn (Profit with the real commission). Choosing another recipe goes back to Profit and keeps the period.
 - [ ] Item groups: *Materials*, *Crafted item*, *Disenchant* captions above their icons, a thin separator between groups; a bound-on-pickup recipe shows no Crafted item group and no orphan separator; a recipe with many reagents wraps to a second line, clear of the chart caption.
 - [ ] Key figures: Now, Usual (30-day median), and Worst/Best day (Profit), Cheapest/Priciest day (Materials cost) or Lowest/Highest, each with its date under the amount; the "N measurements over D days" line.
+- [ ] Typical week on the 7-day period: the same bars as on 30 days (it always reads 30 days).
 - [ ] Typical week: bars with the percentage above and the weekday under each; with less than about two weeks of data, one muted line "Shows after about two weeks of data." instead of seven empty labels.
 - [ ] Drag: the window moves from its title bar, its body, the list rows, the buttons and the chart; a drag ending on a button clicks nothing; Escape closes it; its place is kept after `/reload`.
 - [ ] Pause and resume, Delete (two clicks within 4 seconds, cancelled by waiting, by another recipe or by closing the window) behave as before.

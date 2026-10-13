@@ -14,6 +14,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - Deleting a tracked recipe's history while another tracked recipe's crafted item is not loaded yet no longer deletes a reagent that this item may disenchant into (an enchanting recipe's Lesser Magic Essence, say).
 - History window: a profit is never computed from a sale price carried from an earlier day, so the profit "today", the loss flag and the list's sale arrow no longer come from an old sale price; freshness reads only the recipe's reagents and crafted item (a disenchant material measured today no longer makes old figures look current).
 - History window: when nothing of the recipe was measured in the last 24 hours, the verdict keeps its dated figures but the comparison is grey and never says "good time to buy/sell/craft".
+- History window: the typical week always reads the last 30 days, so it no longer stays empty on the 7-day period.
 - Price history: each tier now has its own cap, so a busy week can no longer erase the daily history. Points or prices dated more than a day in the future no longer freeze an item's series (a point is dropped only when a newer one is recorded, so a clock set back never erases history), and the count of recorded recipes is exact.
 - A recipe whose disenchant materials have no data in the tables (for example epic items above item level 60) shows *no data* instead of a permanent *PRICES MISSING* that no search could clear.
 - The leveling window reopens where it was dragged during the same session.

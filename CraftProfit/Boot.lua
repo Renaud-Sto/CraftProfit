@@ -752,8 +752,8 @@ end
 -- Everything the History window shows for one tracked recipe, one view ("net",
 -- "materials", "sale" or "item:<itemID>", default "net") and one period (7, 30 or 60
 -- days, default 30), from the current market only. nil for a recipe that is not tracked.
--- The usual price and `enough` always cover 30 days (History.usual, HistoryView.summary of
--- 30 days), whatever the period; the other key figures cover the period. status: "nodata"
+-- The usual price, `enough` and the typical week always cover 30 days (History.usual,
+-- HistoryView.summary of 30 days), whatever the period; the other key figures cover the period. status: "nodata"
 -- (fewer than 3 days: `measures` and `days` over 30 days for the message), else "paused"
 -- for a paused recipe, else "ok".
 -- items: the recipe's items for the icon row, { key = "item:<id>", itemID, name, icon,
@@ -810,17 +810,18 @@ function Controller.historyData(recipeID, view, period)
         local series = seriesOf(itemID)
         days = History.dailySeries(series, now, period)
         summary = HistoryView.summary(days)
-        usual30 = HistoryView.summary(History.dailySeries(series, now, History.USUAL_DAYS))
+        local monthDays = History.dailySeries(series, now, History.USUAL_DAYS)
+        usual30 = HistoryView.summary(monthDays)
         local usual = History.usual(series, now)
         usual30.usual = usual and usual.price or nil
         usual30.enough = usual ~= nil
-        weekdayDays = days
+        weekdayDays = monthDays
     else
         field = view
         days = rows
         summary = HistoryView.summary(days, field)
         usual30 = HistoryView.summary(month, field)
-        weekdayDays = viewDays(days, field)
+        weekdayDays = viewDays(month, field)
     end
     summary.usual, summary.enough = usual30.usual, usual30.enough
     local status = "ok"

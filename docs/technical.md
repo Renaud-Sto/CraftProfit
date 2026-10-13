@@ -149,7 +149,7 @@ Pure computations for the history view (no UI yet), all tested with hand-made se
   - A recipe view charts `HistoryView.recipeDays`; an item view charts `History.dailySeries`.
   - The usual price and `enough` always cover 30 days, whatever the period; the other key figures cover the period.
   - `chart` is the model for `Chart:set`, ending today (`newest = History.dayOf(now)`).
-  - `weekday` is `History.weekdayProfile` of the period's days, skipping days made only of carried prices.
+  - `weekday` is `History.weekdayProfile` of the last 30 days whatever the period (like the usual price it is compared with, so the 7-day period does not lose it), skipping days made only of carried prices.
   - `status` is `nodata` (fewer than 3 days; `measures` and `days` over 30 days are given for the message), else `paused`, else `ok`.
   - `items` holds one entry per item: `{ key = "item:<id>", itemID, name, icon, group }`, `group` being `materials` (a reagent), `crafted` (the crafted item, when it is sold) or `disenchant`. The recipe views (net, materials, sale) are the window's tabs, not items.
   - `goal` says what the shown price matters for: `buy` (materials, or a reagent), `sell` (sale, the crafted item, a disenchant material) or `craft` (net). `compare` is `HistoryView.compare(summary, goal ~= "buy")`: a lower price is good news when buying, a higher one otherwise; nil without enough data. In the Profit view it is `profit.compare` instead (money, any sign of the usual). `commission` is the auction house cut in percent (`settings.cut` × 100, two decimals), for the Profit caption.

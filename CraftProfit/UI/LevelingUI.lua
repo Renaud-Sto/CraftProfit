@@ -74,37 +74,11 @@ local function name(recipe)
     return ns.Recipes.label(recipe)
 end
 
-function LevelingUI.refresh()
-    if not frame or not frame:IsShown() then return end
-    local data = ctl.levelData()
-    frame:setTitle(L.LEVEL_TITLE)
-    parts.panel:setTitle(L.LEVEL_PANEL)
-    parts.sort:setText(data.sort == "speed" and L.SORT_SPEED or L.SORT_POINT)
-    parts.grey:setText(L.LEVEL_SHOW_GREY)
-    parts.grey:SetChecked(data.showGrey)
-    if not data.profession then
-        parts.profession:setText("-")
-        parts.age:SetText("")
-        parts.hidden:SetText("")
-        fitGreyLabel()
-        parts.empty:SetText(L.LEVEL_EMPTY)
-        parts.empty:Show()
-        parts.bar:update(0, VISIBLE, 0)
-        for i = 1, VISIBLE do
-            parts.rows[i].recipeID, parts.rows[i].recipe = nil, nil
-            parts.rows[i]:Hide()
-        end
-        return
-    end
-    parts.profession:setText(ctl.professionName and ctl.professionName(data.profession) or data.profession.name)
-    parts.age:SetText(data.ageText)
-    parts.ageStale = data.stale and true or false
-    parts.paintAge()
-    parts.hidden:SetText(data.hiddenGrey > 0 and string.format(L.LEVEL_HIDDEN, data.hiddenGrey) or "")
-    fitGreyLabel()
-    local items = data.items
-    parts.empty:SetText(L.LEVEL_NONE)
-    parts.empty:SetShown(#items == 0)
+-- The rows and the scroll bar from the last data (lastItems): no evaluation.
+local lastItems = {}
+
+local function paintRows()
+    local items = lastItems
     offset = math.max(0, math.min(offset, #items - VISIBLE))
     local currentID = ctl.currentRecipeID()
     for i = 1, VISIBLE do
@@ -129,6 +103,50 @@ function LevelingUI.refresh()
         end
     end
     parts.bar:update(#items, VISIBLE, offset)
+end
+
+-- A wheel step or the scroll bar: repaints the rows only, and nothing at all when the
+-- offset (clamped to the list) does not change.
+local function scrollTo(newOffset)
+    newOffset = math.max(0, math.min(newOffset, #lastItems - VISIBLE))
+    if newOffset == offset then return end
+    offset = newOffset
+    paintRows()
+end
+
+function LevelingUI.refresh()
+    if not frame or not frame:IsShown() then return end
+    local data = ctl.levelData()
+    frame:setTitle(L.LEVEL_TITLE)
+    parts.panel:setTitle(L.LEVEL_PANEL)
+    parts.sort:setText(data.sort == "speed" and L.SORT_SPEED or L.SORT_POINT)
+    parts.grey:setText(L.LEVEL_SHOW_GREY)
+    parts.grey:SetChecked(data.showGrey)
+    if not data.profession then
+        lastItems = {}
+        parts.profession:setText("-")
+        parts.age:SetText("")
+        parts.hidden:SetText("")
+        fitGreyLabel()
+        parts.empty:SetText(L.LEVEL_EMPTY)
+        parts.empty:Show()
+        parts.bar:update(0, VISIBLE, 0)
+        for i = 1, VISIBLE do
+            parts.rows[i].recipeID, parts.rows[i].recipe = nil, nil
+            parts.rows[i]:Hide()
+        end
+        return
+    end
+    parts.profession:setText(ctl.professionName and ctl.professionName(data.profession) or data.profession.name)
+    parts.age:SetText(data.ageText)
+    parts.ageStale = data.stale and true or false
+    parts.paintAge()
+    parts.hidden:SetText(data.hiddenGrey > 0 and string.format(L.LEVEL_HIDDEN, data.hiddenGrey) or "")
+    fitGreyLabel()
+    lastItems = data.items
+    parts.empty:SetText(L.LEVEL_NONE)
+    parts.empty:SetShown(#lastItems == 0)
+    paintRows()
 end
 
 function LevelingUI.frame() return frame end
@@ -201,10 +219,7 @@ function LevelingUI.init(controller, h)
         origin = { left = Native.INSET_LEFT, right = Native.INSET_RIGHT, top = Native.INSET_TOP }
     end
     frame:EnableMouseWheel(true)
-    frame:SetScript("OnMouseWheel", function(_, delta)
-        offset = math.max(0, offset - delta)
-        LevelingUI.refresh()
-    end)
+    frame:SetScript("OnMouseWheel", function(_, delta) scrollTo(offset - delta) end)
 
     -- Strip: the profession (click to cycle) and the sort order.
     local strip = section("strip", STRIP_H)
@@ -229,10 +244,7 @@ function LevelingUI.init(controller, h)
     for i = 1, VISIBLE do parts.rows[i] = buildRow(parts.panel.body, i) end
     parts.bar = Native.scrollbar(parts.panel.body, VISIBLE * ROW_H)
     parts.bar.frame:SetPoint("TOPRIGHT", parts.panel.body, "TOPRIGHT", -2, 0)
-    parts.bar.onScroll = function(newOffset)
-        offset = newOffset
-        LevelingUI.refresh()
-    end
+    parts.bar.onScroll = scrollTo
     -- At the top of the list, where no row shows while it is displayed.
     parts.empty = parts.panel.body:CreateFontString(nil, "OVERLAY", "GameFontDisable")
     parts.empty:SetPoint("TOP", parts.panel.body, "TOP", 0, -20)

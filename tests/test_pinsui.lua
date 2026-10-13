@@ -314,6 +314,31 @@ H.test("the mouse wheel scrolls the list and the bar, and removing pins clamps t
     H.falsy(parts.bar.frame.shown)
 end)
 
+H.test("scrolling the pinned list evaluates no pin, and does nothing when the offset stays", function()
+    local T = boot()
+    local parts = openList(T)
+    for i = 3, 12 do
+        T.ns.DB.pinAdd(T.env.CraftProfitCharDB, raw(i, 100, { { itemID = 1, qty = 1 } }))
+    end
+    T.ns.PinsUI.refresh()
+    local C = T.ns.Controller
+    local evaluate, evaluated = C.evaluate, 0
+    C.evaluate = function(...) evaluated = evaluated + 1; return evaluate(...) end
+    local host = T.ns.Window.pinsHost()
+    local first = parts.rows[1].recipeID
+    host.scripts.OnMouseWheel(host, -1)
+    H.truthy(parts.rows[1].recipeID ~= first)
+    parts.bar.onScroll(6)
+    H.eq(parts.bar.offset, 6)
+    H.eq(evaluated, 0)
+    local named, recipeName = 0, C.recipeName
+    C.recipeName = function(recipe) named = named + 1; return recipeName(recipe) end
+    parts.bar.onScroll(99)
+    host.scripts.OnMouseWheel(host, -1)
+    H.eq(named, 0)
+    H.eq(parts.bar.offset, 6)
+end)
+
 H.test("the panel height follows the number of pinned rows shown and the host height follows the panel", function()
     local T = boot()
     local Layout, Window = T.ns.Layout, T.ns.Window

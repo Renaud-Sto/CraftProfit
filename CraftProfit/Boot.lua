@@ -1076,6 +1076,9 @@ function Controller.init()
         onReagentClick = Controller.onReagentClick,
         onOutputClick = Controller.onOutputClick,
         itemName = Controller.itemName,
+        -- The history indicators' tooltips.
+        historyData = Controller.historyData,
+        fmt = Controller.fmt,
         onCraftsChange = Controller.setCrafts,
         onTrackToggle = Controller.setTracking,
         onPerPointToggle = function(checked)

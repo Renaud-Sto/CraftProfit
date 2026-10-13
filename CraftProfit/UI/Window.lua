@@ -1,12 +1,14 @@
 -- The main window, built on the native kit (UI/Native.lua): a game panel with a result
 -- banner, three tiles for the ways to sell the item, a Materials panel and an Options
 -- panel inside its dark inset; at the auction house the pinned list (UI/PinsUI.lua) hangs
--- below. Parented to UIParent (never to a Blizzard frame, to avoid taint); anchored beside
+-- below. A tracked recipe with fresh history data shows small "today vs usual" percentages
+-- beside the Materials total and in the AH tile (model.history, Present.changeText), each
+-- with a tooltip of the figures behind it. Parented to UIParent (never to a Blizzard frame, to avoid taint); anchored beside
 -- the profession or AH window until the user drags it, after which the saved position wins.
 -- Colours are meaning colours (ns.Colors) or the game's own text colours.
 local _, ns = ...
 local L = ns.L
-local Layout, Native, Colors = ns.Layout, ns.Native, ns.Colors
+local Layout, Native, Colors, Present = ns.Layout, ns.Native, ns.Colors, ns.Present
 
 local Window = {}
 ns.Window = Window
@@ -28,6 +30,12 @@ local PER_POINT_X = 8
 local VALUE_MARGIN = 8 -- per-point value from the body's right edge
 local LABEL_GAP = 8 -- between the per-point label and its value
 local EMPTY_H = 24
+-- History indicators: between a percentage and what it follows (the Materials total, the
+-- AH value), the period their tooltip covers, and the letter width used when the client
+-- cannot measure the text.
+local IND_GAP = 4
+local IND_PERIOD = 30
+local IND_CHAR_W = 6
 -- Between the pin and "Refresh recipe" buttons.
 local BUTTON_GAP = 6
 -- One materials row per reagent a recipe may have (Recipes loads before the UI).
@@ -145,6 +153,111 @@ local function buildLikely()
     parts.likely = text
 end
 
+-- History indicators ----------------------------------------------------------------
+
+-- The text a model's history gives one indicator ("materials" or "sale"), "" for none: a
+-- broken or missing history draws nothing (Present.changeText checks the figure).
+local function indicatorText(h, kind)
+    if type(h) ~= "table" then return "" end
+    return Present.changeText(h[kind], h.atLoss == true)
+end
+
+local function money(v)
+    if type(v) ~= "number" then return "-" end
+    local fmt = handlers.fmt
+    return type(fmt) == "function" and fmt(v) or tostring(v)
+end
+
+-- The tooltip of one indicator, as { text, colour } lines: the view and its percentage,
+-- what it measures, then (from Controller.historyData over IND_PERIOD days) now, usual,
+-- lowest and highest with the coverage, and why both are grey when the recipe is at a loss.
+function Window.indicatorTip(kind, h)
+    local main, muted = Colors.text("main"), Colors.text("muted")
+    local view = kind == "materials" and L.HISTORY_VIEW_MATERIALS or L.HISTORY_VIEW_SALE
+    local lines = {
+        { view .. " " .. indicatorText(h, kind), main },
+        { kind == "materials" and L.HISTORY_CAPTION_MATERIALS or L.HISTORY_CAPTION_SALE, muted },
+    }
+    local data = type(h) == "table" and type(handlers.historyData) == "function"
+        and handlers.historyData(h.recipeID, kind, IND_PERIOD) or nil
+    local s = type(data) == "table" and data.summary or nil
+    if type(s) == "table" then
+        local function labelled(label, v)
+            lines[#lines + 1] = { string.format(L.HISTORY_LABEL_VALUE, label, money(v)), main }
+        end
+        labelled(L.HISTORY_NOW, s.today)
+        labelled(L.HISTORY_USUAL, s.usual)
+        labelled(L.HISTORY_LOWEST, s.low)
+        labelled(L.HISTORY_HIGHEST, s.high)
+        lines[#lines + 1] = { Present.coverageText(L, s.measures, s.daysCovered), muted }
+    end
+    if type(h) == "table" and h.atLoss == true then lines[#lines + 1] = { L.IND_TIP_LOSS, muted } end
+    return lines
+end
+
+local function showIndicatorTip(owner, kind)
+    if type(GameTooltip) ~= "table" then return end
+    local lines = Window.indicatorTip(kind, Window.lastModel and Window.lastModel.history)
+    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+    local first = lines[1]
+    GameTooltip:SetText(first[1], first[2][1], first[2][2], first[2][3], 1, true)
+    for i = 2, #lines do
+        local c = lines[i][2]
+        GameTooltip:AddLine(lines[i][1], c[1], c[2], c[3], true)
+    end
+    GameTooltip:Show()
+end
+
+local function hideTip()
+    if type(GameTooltip) == "table" then GameTooltip:Hide() end
+end
+
+-- A percentage in small type on `parent`, and the button over it that shows its tooltip.
+-- The button takes the mouse, so it forwards drags to the window and its click runs
+-- `onClick` (what a click on the header or tile under it does); the click ending a drag
+-- does nothing. `hover` (optional): a highlight kept lit while the button is hovered.
+-- Both start hidden.
+local function newIndicator(parent, kind, onClick, level, hover)
+    local text = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    text:SetWordWrap(false)
+    text:Hide()
+    local hit = CreateFrame("Button", nil, parent)
+    hit:SetPoint("TOPLEFT", text, "TOPLEFT", -2, 2)
+    hit:SetPoint("BOTTOMRIGHT", text, "BOTTOMRIGHT", 2, -2)
+    if type(level) == "number" then hit:SetFrameLevel(level + 1) end
+    hit:SetScript("OnClick", function(self)
+        if self.dragged == true then return end
+        onClick(self)
+    end)
+    hit:SetScript("OnEnter", function(self)
+        if hover then hover:Show() end
+        showIndicatorTip(self, kind)
+    end)
+    hit:SetScript("OnLeave", function()
+        if hover then hover:Hide() end
+        hideTip()
+    end)
+    Native.forwardDrag(hit, frame)
+    hit:Hide()
+    return { text = text, hit = hit, kind = kind }
+end
+
+local function setIndicator(ind, text)
+    ind.text:SetText(text)
+    ind.text:SetShown(text ~= "")
+    ind.hit:SetShown(text ~= "")
+end
+
+-- Width of a shown indicator, measured, else estimated from its letters (colour codes
+-- left out); 0 when hidden.
+local function indicatorWidth(ind, text)
+    if text == "" then return 0 end
+    local width = Native.naturalWidth(ind.text)
+    if width > 0 then return width end
+    local plain = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+    return #plain * IND_CHAR_W
+end
+
 -- Materials: the header folds the detail; each row searches its reagent at the AH.
 -- Rows and header are buttons covering the window's body: they forward drags to it, and
 -- the click that ends a drag does nothing.
@@ -152,11 +265,18 @@ local function buildMaterials()
     local panel = Native.panel(content, "")
     parts.frames.materials = panel.frame
     parts.materials = panel
+    local function toggle()
+        if handlers.onCostToggle then handlers.onCostToggle(not expanded) end
+    end
     local header = panel:onHeaderClick(function(self)
         if self and self.dragged == true then return end
-        if handlers.onCostToggle then handlers.onCostToggle(not expanded) end
+        toggle()
     end)
     Native.forwardDrag(header, frame)
+    -- The materials percentage, left of the total; the title is cut before it (render).
+    local ind = newIndicator(panel.head, "materials", toggle)
+    ind.text:SetPoint("RIGHT", panel.right, "LEFT", -IND_GAP - 2, 0)
+    parts.materialsInd = ind
     local main, muted = Colors.text("main"), Colors.text("muted")
     for i = 1, MAX_DETAIL do
         -- A reagent row is never selected: its selected tint stays hidden.
@@ -316,8 +436,13 @@ function Window.create(h)
     end
     buildBanner()
     buildTiles()
-    parts.tiles[1]:onClick(searchOutput)
-    Native.forwardDrag(parts.tiles[1].hit, frame)
+    local ahTile = parts.tiles[1]
+    ahTile:onClick(searchOutput)
+    Native.forwardDrag(ahTile.hit, frame)
+    -- The sale percentage, at the right end of the AH value line (which leaves it room).
+    local level = ahTile.hit:GetFrameLevel()
+    parts.saleInd = newIndicator(ahTile.face, "sale", searchOutput, level, ahTile.hover)
+    parts.saleInd.text:SetPoint("BOTTOMLEFT", ahTile.value, "BOTTOMRIGHT", IND_GAP, 1)
     buildLikely()
     buildMaterials()
     buildAge()
@@ -417,7 +542,19 @@ function Window.render(model)
     parts.empty:Hide()
 
     parts.banner:set(model.banner or { kind = "none", text = "", value = "" })
-    for i, tile in ipairs(parts.tiles) do tile:set((model.tiles or {})[i] or {}) end
+    -- The AH tile's value keeps room for the sale percentage (the model is not modified).
+    local saleText = indicatorText(model.history, "sale")
+    setIndicator(parts.saleInd, saleText)
+    for i, tile in ipairs(parts.tiles) do
+        local spec = (model.tiles or {})[i] or {}
+        if i == 1 and saleText ~= "" then
+            local copy = {}
+            for k, v in pairs(spec) do copy[k] = v end
+            copy.reserve = indicatorWidth(parts.saleInd, saleText) + IND_GAP
+            spec = copy
+        end
+        tile:set(spec)
+    end
     showSearchIcons(ns.AH ~= nil and ns.AH.isOpen == true)
 
     local likely = findLine(model.lines, "likely")
@@ -426,6 +563,11 @@ function Window.render(model)
     local materials = model.materials or { title = L.PANEL_MATERIALS, total = "" }
     parts.materials:setTitle((expanded and "- " or "+ ") .. materials.title)
     parts.materials.right:SetText(materials.total)
+    local materialsText = indicatorText(model.history, "materials")
+    setIndicator(parts.materialsInd, materialsText)
+    -- A long (translated) title is cut before the percentage, never drawn under it.
+    local stop = materialsText ~= "" and parts.materialsInd.text or parts.materials.right
+    parts.materials.title:SetPoint("RIGHT", stop, "LEFT", -8, 0)
     parts.materials.body:SetShown(expanded)
     for i = 1, MAX_DETAIL do
         local row, cost = parts.rows[i], expanded and costLines[i] or nil

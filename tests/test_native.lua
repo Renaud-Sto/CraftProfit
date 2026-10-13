@@ -860,6 +860,34 @@ H.test("a tile steps its value down the game fonts until it fits, measured unbou
     H.eq(fonts, { "GameFontNormalHuge" })
 end)
 
+H.test("a tile keeps `reserve` px free right of its value: the value stops short and fits the rest", function()
+    local T, Native = boot()
+    local Layout = T.ns.Layout
+    local tile = Native.tile(nil, 110, 52)
+    local fonts, points = {}, {}
+    tile.value.SetFontObject = function(_, name) fonts[#fonts + 1] = name end
+    tile.value.SetPoint = function(_, ...) points[#points + 1] = { ... } end
+    tile.value.GetUnboundedStringWidth = function() return 80 end
+    -- 80 px fits the 90 px room without a reserve...
+    tile:set({ label = "AH", value = "12g 34s" })
+    H.eq(fonts, { "GameFontNormalHuge" })
+    H.eq(points[#points], { "TOPRIGHT", tile.frame, "TOPRIGHT", -Native.TILE_PAD, -24 })
+    -- ...not the 50 px left beside a 40 px reserve.
+    fonts = {}
+    tile:set({ label = "AH", value = "12g 34s", reserve = 40 })
+    local sizes = {}
+    for i, font in ipairs(Native.TILE_FONTS) do sizes[i] = font[2] end
+    local want = Layout.fitSize(80, sizes[1], 110 - Native.TILE_PAD * 2 - 40, sizes)
+    H.truthy(want < sizes[1])
+    for _, font in ipairs(Native.TILE_FONTS) do
+        if font[2] == want then H.eq(fonts[#fonts], font[1]) end
+    end
+    H.eq(points[#points], { "TOPRIGHT", tile.frame, "TOPRIGHT", -Native.TILE_PAD - 40, -24 })
+    -- A broken reserve counts as none.
+    tile:set({ label = "AH", value = "1g", reserve = 0 / 0 })
+    H.eq(points[#points], { "TOPRIGHT", tile.frame, "TOPRIGHT", -Native.TILE_PAD, -24 })
+end)
+
 H.test("a clickable tile is a Button that fires, not on the click that ends a drag", function()
     local _, Native, env = boot()
     recordFrames(env)

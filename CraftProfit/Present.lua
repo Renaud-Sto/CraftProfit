@@ -144,6 +144,22 @@ function Present.changeText(c, muted)
     return Colors.escape(muted and Colors.text("muted") or Present.goodColor(c.good)) .. text .. "|r"
 end
 
+-- "1 measurement over 1 day", "12 measurements over 5 days": each count agrees in number
+-- (ns.Locale.plural: French counts 0 as singular). Shared by the History window and the
+-- main window's indicator tooltips.
+local function counted(L, n, key)
+    n = type(n) == "number" and n or 0
+    return string.format(L[key .. (ns.Locale.plural(n) == "one" and "_ONE" or "_OTHER")], n)
+end
+
+function Present.coverageText(L, measures, days)
+    return string.format(L.HISTORY_COVERAGE, counted(L, measures, "HISTORY_MEASURES"), counted(L, days, "HISTORY_DAYS"))
+end
+
+function Present.daysText(L, days)
+    return counted(L, days, "HISTORY_DAYS")
+end
+
 -- Grey sub-line under the disenchant value: the most probable outcome, so the
 -- player sees the gamble behind the average ("75%: 1-2x Soul Dust = 7s 30c").
 local function likelyLine(likely, fmt, itemName)

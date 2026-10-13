@@ -784,3 +784,244 @@ H.test("naturalWidth is 0 when a font string cannot be measured", function()
     H.eq(Native.naturalWidth({ GetUnboundedStringWidth = function() return 90 end,
         GetStringWidth = function() return 40 end }), 90)
 end)
+
+-- History indicators ----------------------------------------------------------------
+
+local function history(over)
+    local h = {
+        recipeID = 5, atLoss = false,
+        materials = { pct = -18, tone = "down", good = true },
+        sale = { pct = 12, tone = "up", good = true },
+    }
+    for k, v in pairs(over or {}) do h[k] = v end
+    return h
+end
+
+-- A GameTooltip that records its owner, its lines (text and colour) and whether it shows.
+local function recordTooltip(T)
+    local tip = { lines = {} }
+    T.env.GameTooltip = {
+        SetOwner = function(_, owner) tip.owner, tip.lines = owner, {} end,
+        SetText = function(_, text, r, g, b) tip.lines[1] = { text, r, g, b } end,
+        AddLine = function(_, text, r, g, b) tip.lines[#tip.lines + 1] = { text, r, g, b } end,
+        Show = function() tip.shown = true end,
+        Hide = function() tip.shown = false end,
+    }
+    return tip
+end
+
+-- Controller.historyData's shape, the parts the tooltip reads.
+local function historyData(view)
+    local s = view == "materials"
+        and { today = 205, usual = 250, low = 190, high = 300, measures = 12, daysCovered = 5 }
+        or { today = 1064, usual = 950, low = 900, high = 1100, measures = 1, daysCovered = 1 }
+    return { view = view, summary = s }
+end
+
+H.test("indicators: a tracked recipe with fresh data shows both percentages, coloured", function()
+    local T, Window = boot()
+    local P = T.ns.Present
+    Window.render(model({ tracked = true, history = history() }))
+    local p = Window.parts
+    H.eq(p.materialsInd.text.text, P.changeText({ pct = -18, good = true }))
+    H.truthy(p.materialsInd.text.shown)
+    H.truthy(p.materialsInd.hit.shown)
+    H.eq(p.saleInd.text.text, P.changeText({ pct = 12, good = true }))
+    H.truthy(p.saleInd.text.shown)
+    H.truthy(p.saleInd.hit.shown)
+end)
+
+H.test("indicators: none without history, and they go away when it does", function()
+    local _, Window = boot()
+    local p = Window.parts
+    Window.render(model())
+    H.falsy(p.materialsInd.text.shown)
+    H.falsy(p.materialsInd.hit.shown)
+    H.falsy(p.saleInd.text.shown)
+    H.falsy(p.saleInd.hit.shown)
+    Window.render(model({ history = history() }))
+    H.truthy(p.saleInd.text.shown)
+    Window.render(model())
+    H.falsy(p.materialsInd.text.shown)
+    H.falsy(p.saleInd.hit.shown)
+end)
+
+H.test("indicators: only the side with a figure shows", function()
+    local _, Window = boot()
+    local p = Window.parts
+    Window.render(model({ history = history({ sale = false }) }))
+    H.truthy(p.materialsInd.text.shown)
+    H.falsy(p.saleInd.text.shown)
+    Window.render(model({ history = history({ materials = false }) }))
+    H.falsy(p.materialsInd.text.shown)
+    H.truthy(p.saleInd.text.shown)
+end)
+
+H.test("indicators: both grey when the recipe is crafted at a loss", function()
+    local T, Window = boot()
+    local C = T.ns.Colors
+    local grey = C.escape(C.text("muted"))
+    Window.render(model({ history = history({ atLoss = true }) }))
+    H.eq(Window.parts.materialsInd.text.text, grey .. "-18%|r")
+    H.eq(Window.parts.saleInd.text.text, grey .. "+12%|r")
+end)
+
+H.test("indicators: a broken history never raises and draws nothing", function()
+    local _, Window = boot()
+    local p = Window.parts
+    for _, bad in ipairs({ "x", 5, {}, history({ materials = "x", sale = { pct = 0 / 0 } }),
+        history({ materials = { pct = math.huge }, sale = { tone = "up" } }) }) do
+        Window.render(model({ history = bad }))
+        H.falsy(p.materialsInd.text.shown)
+        H.falsy(p.saleInd.text.shown)
+        H.falsy(p.saleInd.hit.shown)
+    end
+end)
+
+H.test("indicators: the window keeps its height and the AH value makes room for the percentage", function()
+    local T, Window = boot()
+    local Native = T.ns.Native
+    local tile = Window.parts.tiles[1]
+    local reserves = {}
+    local set = tile.set
+    tile.set = function(self, spec)
+        reserves[#reserves + 1] = spec.reserve or 0
+        return set(self, spec)
+    end
+    Window.render(model())
+    local height = Window.frame().height
+    Window.parts.saleInd.text.GetUnboundedStringWidth = function() return 26 end
+    Window.render(model({ history = history() }))
+    H.eq(Window.frame().height, height)
+    H.eq(reserves, { 0, 26 + 4 })
+    -- The other tiles never get a reserve.
+    H.eq(Window.parts.tiles[2].value.text, "2s")
+    -- Unmeasurable (the fake, a changed build): estimated from the letters.
+    Window.parts.saleInd.text.GetUnboundedStringWidth = nil
+    Window.render(model({ history = history() }))
+    H.truthy(reserves[3] > 4)
+    H.eq(Native.TILE_PAD, 10)
+end)
+
+H.test("indicators: the materials title stops before the percentage, else before the total", function()
+    local _, Window = boot({ record = true })
+    local p = Window.parts
+    Window.render(model({ history = history() }))
+    H.truthy(anchoredTo(p.materials.title, "RIGHT", p.materialsInd.text, "LEFT"))
+    H.truthy(anchoredTo(p.materialsInd.text, "RIGHT", p.materials.right, "LEFT"))
+    Window.render(model())
+    local last = p.materials.title.points[#p.materials.title.points]
+    H.eq({ last[1], last[2], last[3] }, { "RIGHT", p.materials.right, "LEFT" })
+end)
+
+H.test("indicators: hovering one shows today, usual, lowest, highest and the coverage", function()
+    local T, Window = boot()
+    local L, C = T.ns.L, T.ns.Colors
+    local tip = recordTooltip(T)
+    local asked
+    Window.lastHandlers.historyData = function(id, view, period)
+        asked = { id, view, period }
+        return historyData(view)
+    end
+    Window.lastHandlers.fmt = function(c) return "<" .. c .. ">" end
+    Window.render(model({ history = history() }))
+    local hit = Window.parts.materialsInd.hit
+    hit.scripts.OnEnter(hit)
+    H.eq(asked, { 5, "materials", 30 })
+    H.truthy(tip.shown)
+    H.truthy(tip.owner == hit)
+    local texts = {}
+    for i, line in ipairs(tip.lines) do texts[i] = line[1] end
+    H.eq(texts, {
+        L.HISTORY_VIEW_MATERIALS .. " " .. T.ns.Present.changeText({ pct = -18, good = true }),
+        L.HISTORY_CAPTION_MATERIALS,
+        "Now: <205>", "Usual: <250>", "Lowest: <190>", "Highest: <300>",
+        "12 measurements over 5 days",
+    })
+    local grey = C.text("muted")
+    H.eq({ tip.lines[2][2], tip.lines[2][3], tip.lines[2][4] }, { grey[1], grey[2], grey[3] })
+    hit.scripts.OnLeave(hit)
+    H.falsy(tip.shown)
+    -- The sale side: the crafted item's price, counted in the singular.
+    local sale = Window.parts.saleInd.hit
+    sale.scripts.OnEnter(sale)
+    H.eq(asked, { 5, "sale", 30 })
+    H.eq(tip.lines[2][1], L.HISTORY_CAPTION_SALE)
+    H.eq(tip.lines[3][1], "Now: <1064>")
+    H.eq(tip.lines[#tip.lines][1], "1 measurement over 1 day")
+end)
+
+H.test("indicators: at a loss the tooltip says why they are grey; no data or no tooltip never raises", function()
+    local T, Window = boot()
+    local L = T.ns.L
+    local tip = recordTooltip(T)
+    Window.lastHandlers.historyData = function(_, view) return historyData(view) end
+    Window.lastHandlers.fmt = function(c) return "<" .. c .. ">" end
+    Window.render(model({ history = history({ atLoss = true }) }))
+    local hit = Window.parts.saleInd.hit
+    hit.scripts.OnEnter(hit)
+    H.eq(tip.lines[#tip.lines][1], L.IND_TIP_LOSS)
+    -- No figures (not tracked any more): the title and caption only.
+    Window.lastHandlers.historyData = function() return nil end
+    hit.scripts.OnEnter(hit)
+    H.eq(#tip.lines, 3)
+    Window.lastHandlers.historyData = function() return { summary = "x" } end
+    hit.scripts.OnEnter(hit)
+    T.env.GameTooltip = nil
+    hit.scripts.OnEnter(hit)
+    hit.scripts.OnLeave(hit)
+end)
+
+H.test("indicators: they drag the window, and a click does what the header or tile under it does", function()
+    local _, Window, calls = boot()
+    Window.render(model({ history = history() }))
+    local starts = 0
+    Window.frame().StartMoving = function() starts = starts + 1 end
+    for _, ind in ipairs({ Window.parts.materialsInd, Window.parts.saleInd }) do
+        local hit = ind.hit
+        hit.scripts.OnMouseDown(hit)
+        hit.scripts.OnDragStart(hit)
+        hit.scripts.OnDragStop(hit)
+        H.eq(calls[#calls], { "onMoved", "TOPLEFT", 100, 700 })
+        local before = #calls
+        hit.scripts.OnClick(hit)
+        H.eq(#calls, before)
+    end
+    H.eq(starts, 2)
+    local m = Window.parts.materialsInd.hit
+    m.scripts.OnMouseDown(m)
+    m.scripts.OnClick(m)
+    H.eq(calls[#calls], { "onCostToggle", false })
+    local s = Window.parts.saleInd.hit
+    s.scripts.OnMouseDown(s)
+    s.scripts.OnClick(s)
+    H.eq(calls[#calls], { "onOutputClick" })
+end)
+
+H.test("indicators: the AH tile keeps its hover highlight while the percentage is hovered", function()
+    local T, Window = boot()
+    recordTooltip(T)
+    Window.render(model({ history = history() }))
+    local tile, hit = Window.parts.tiles[1], Window.parts.saleInd.hit
+    hit.scripts.OnEnter(hit)
+    H.truthy(tile.hover.shown)
+    hit.scripts.OnLeave(hit)
+    H.falsy(tile.hover.shown)
+end)
+
+H.test("the tooltip line for a loss exists in English, French and Spanish", function()
+    local T = W.boot(H)
+    local tables, seen = T.ns.Locale.tables, {}
+    for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
+        local text = tables[locale].IND_TIP_LOSS
+        H.eq(type(text), "string")
+        H.falsy(seen[text])
+        seen[text] = true
+    end
+end)
+
+H.test("indicators: the controller hands the window its history figures and money format", function()
+    local T, Window = boot()
+    H.truthy(Window.lastHandlers.historyData == T.ns.Controller.historyData)
+    H.truthy(Window.lastHandlers.fmt == T.ns.Controller.fmt)
+end)

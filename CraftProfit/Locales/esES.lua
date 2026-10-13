@@ -110,6 +110,8 @@ ns.Locale.register("esES", {
     HISTORY_COL_SALE = "Venta",
     HISTORY_ROW_TIP = "Materiales: hoy frente a lo habitual. Venta: hoy frente a lo habitual. El verde te favorece (materiales más baratos, venta más alta).",
     HISTORY_ROW_TIP_LOSS = "Fabricar y vender en la casa de subastas da pérdidas o ni gana ni pierde hoy, así que estos cambios aún no son buenas noticias.",
+    -- Main window indicators: why both percentages are grey.
+    IND_TIP_LOSS = "Con pérdidas o sin ganancia en la casa de subastas hoy: se muestra en gris, ningún cambio es aún una buena noticia.",
     HISTORY_PERIOD = "%d días",
     HISTORY_VERDICT_TODAY = "%s hoy: %s",
     HISTORY_VERDICT_ON = "%s el %s: %s",

@@ -348,19 +348,14 @@ function HistoryWindow.compareLine(data)
     return text, goodColor(c.good)
 end
 
--- "1 measurement over 1 day", "12 measurements over 5 days": each count agrees in number
--- (ns.Locale.plural: French counts 0 as singular).
-local function count(n, key)
-    n = type(n) == "number" and n or 0
-    return string.format(L[key .. (ns.Locale.plural(n) == "one" and "_ONE" or "_OTHER")], n)
-end
-
+-- "1 measurement over 1 day", "12 measurements over 5 days" (Present.coverageText, shared
+-- with the main window's tooltips).
 function HistoryWindow.coverageText(measures, days)
-    return string.format(L.HISTORY_COVERAGE, count(measures, "HISTORY_MEASURES"), count(days, "HISTORY_DAYS"))
+    return ns.Present.coverageText(L, measures, days)
 end
 
 function HistoryWindow.daysText(days)
-    return count(days, "HISTORY_DAYS")
+    return ns.Present.daysText(L, days)
 end
 
 -- One item of the least measured line: "Copper Bar (8 measurements over 2 days)" alone,
@@ -372,7 +367,7 @@ local function thinItem(item, alone)
     local counts = L.HISTORY_THIN_NONE
     if measures > 0 then
         counts = alone and HistoryWindow.coverageText(measures, item.days)
-            or string.format(L.HISTORY_COVERAGE, tostring(measures), count(item.days, "HISTORY_DAYS"))
+            or string.format(L.HISTORY_COVERAGE, tostring(measures), HistoryWindow.daysText(item.days))
     end
     return string.format(L.HISTORY_THIN_ITEM, name, counts)
 end

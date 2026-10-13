@@ -503,6 +503,39 @@ H.test("a recipe picked from a list stays selected while the profession window r
     H.eq(C.currentRecipeID(), 6)
 end)
 
+-- One refresh pass: the market, the Enchanting lookup and each evaluation once (I1).
+H.test("one refresh with pins in two lists looks the market and Enchanting up once and evaluates each pin once", function()
+    local T = boot()
+    T.env.UISpecialFrames = {}
+    stock(T)
+    local C, ns = T.ns.Controller, T.ns
+    for i = 1, 5 do
+        local pin = ns.Recipes.normalize(RAW)
+        pin.recipeID = 100 + i
+        ns.DB.pinAdd(T.env.CraftProfitCharDB, pin)
+    end
+    ns.AH.isOpen = true
+    C.onAHOpen(true)                                -- the list under the main window
+    ns.PinnedWindow.show()                          -- and the pinned window
+    C.setRecipe(ns.Recipes.normalize(RAW), "profession")
+    local keys, enchanting, runs = 0, 0, 0
+    local marketKey, hasProfession, run = C.marketKey, ns.Trade.hasProfession, ns.Evaluate.run
+    C.marketKey = function() keys = keys + 1; return marketKey() end
+    ns.Trade.hasProfession = function(...) enchanting = enchanting + 1; return hasProfession(...) end
+    ns.Evaluate.run = function(...) runs = runs + 1; return run(...) end
+    C.refresh()
+    H.eq(keys, 1)
+    H.eq(enchanting, 1)
+    -- The recipe shown and the five pins, each evaluated once for both lists.
+    H.eq(runs, 6)
+    H.truthy(ns.PinnedWindow.parts.rows[5].recipeID)
+    -- Nothing is kept for the next pass: a new price shows at the next refresh.
+    ns.Prices.store(C.market(), 100, 5, 10, 1699999990)
+    C.refresh()
+    H.eq(ns.Window.lastModel.verdict.kind, "loss")
+    H.eq(runs, 12)
+end)
+
 -- Pinned recipe survives closing the profession window (field report: it vanished at the AH)
 H.test("a pinned recipe stays available after the profession window closes, outside the AH", function()
     local T = boot()

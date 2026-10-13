@@ -1025,6 +1025,26 @@ H.test("too little data: the verdict says why in one muted line and the least me
     H.truthy(UI.parts.lines[1].text ~= L.HISTORY_VERDICT_NODATA)
 end)
 
+H.test("too little data with every item measured, but never together, says the prices never meet", function()
+    local T, UI = boot()
+    local L = T.ns.L
+    track(T, raw(5))
+    local series = T.ns.Controller.market().series
+    T.ns.Controller.historyChanged()
+    local first = { [1] = 0, [2] = 4, [100] = 8 }
+    for id, unit in pairs(PRICES) do
+        series[id] = {}
+        for age = first[id] + 3, first[id], -1 do
+            series[id][#series[id] + 1] = { NOW - age * DAY, unit, 5, unit, unit, 1, true }
+        end
+    end
+    UI.show()
+    UI.select(5)
+    H.eq(UI.parts.lines[1].text, L.HISTORY_VERDICT_NODATA)
+    H.eq(UI.parts.emptyDetail.text, string.format(L.HISTORY_APART, UI.daysText(0)))
+    H.truthy(UI.parts.emptyDetail.shown)
+end)
+
 H.test("a paused recipe with too little data says it is paused in the verdict too", function()
     local T, UI = boot()
     local L = T.ns.L

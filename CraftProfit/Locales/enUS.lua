@@ -106,6 +106,7 @@ ns.Locale.register("enUS", {
     HISTORY_THIN = "Least measured: %s.",
     HISTORY_THIN_ITEM = "%s (%s)",
     HISTORY_THIN_NONE = "none",
+    HISTORY_APART = "Every item has enough days, but never on the same days: only %s hold all the prices together. Refresh them all on the same visit.",
     HISTORY_LIST = "Tracked recipes",
     HISTORY_COL_MATERIALS = "Materials",
     HISTORY_COL_SALE = "Sale",

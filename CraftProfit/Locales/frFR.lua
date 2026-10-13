@@ -104,6 +104,7 @@ ns.Locale.register("frFR", {
     HISTORY_THIN = "Objets les moins mesurés\194\160: %s.",
     HISTORY_THIN_ITEM = "%s (%s)",
     HISTORY_THIN_NONE = "aucune",
+    HISTORY_APART = "Chaque objet a assez de jours, mais jamais les mêmes\194\160: seulement %s réunissent tous les prix. Actualise-les tous lors de la même visite.",
     HISTORY_LIST = "Recettes suivies",
     HISTORY_COL_MATERIALS = "Composants",
     HISTORY_COL_SALE = "Vente",

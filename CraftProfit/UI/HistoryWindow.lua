@@ -370,6 +370,10 @@ function HistoryWindow.coverageText(measures, days)
     return string.format(L.HISTORY_COVERAGE, count(measures, "HISTORY_MEASURES"), count(days, "HISTORY_DAYS"))
 end
 
+function HistoryWindow.daysText(days)
+    return count(days, "HISTORY_DAYS")
+end
+
 -- One item of the least measured line: "Copper Bar (8 measurements over 2 days)" alone,
 -- "Copper Bar (8 over 2 days)" in a list, "Rough Stone (none)" when never measured.
 local function thinItem(item, alone)
@@ -401,6 +405,20 @@ function HistoryWindow.thinText(thin, width)
         text = string.format(L.HISTORY_THIN, table.concat(pieces, ", "))
         if not width or Layout.wrapLines(text, SMALL_CHAR_W, width) <= 2 then break end
     end
+    return text
+end
+
+-- The line for a recipe whose items each have enough days but never on the same days: the
+-- recipe is judged on the days that hold every price, `days` of them (data.days).
+function HistoryWindow.apartText(days)
+    return string.format(L.HISTORY_APART, HistoryWindow.daysText(days))
+end
+
+-- The muted line under the not-enough-data message: the least measured items, or, when
+-- every item has enough days, that their prices were never taken on the same days.
+function HistoryWindow.detailText(data)
+    local text = HistoryWindow.thinText(data.thin, EMPTY_W)
+    if text == "" and data.status == "nodata" then return HistoryWindow.apartText(data.days) end
     return text
 end
 
@@ -625,7 +643,7 @@ local function paintRight()
         -- Too little data: under the message, which items lack it.
         showEmpty(noPeriod and string.format(L.HISTORY_PERIOD_EMPTY, data.period)
             or string.format(L.HISTORY_NODATA, HistoryWindow.coverageText(data.measures, data.days)), true,
-            not noPeriod and HistoryWindow.thinText(data.thin, EMPTY_W) or nil)
+            not noPeriod and HistoryWindow.detailText(data) or nil)
         parts.caption:SetText(HistoryWindow.captionText(data))
         -- A paused recipe says so whatever its data.
         parts.status:SetText(data.paused and L.HISTORY_PAUSED or "")

@@ -208,6 +208,21 @@ H.test("historyData names the items with fewer than 3 days of data, in icon orde
     H.eq(C.historyData(5, "net", 30).thin, {})
 end)
 
+H.test("historyData has no thin item when each one has enough days but never on the same days", function()
+    local T, C = boot()
+    track(T, raw(5))
+    -- Item 1 on days 0-3, item 2 on days 4-7, the crafted item 100 on days 8-11: 4 days each.
+    fill(C, 12, function(id, age)
+        local first = ({ [1] = 0, [2] = 4, [100] = 8 })[id]
+        if age < first or age > first + 3 then return nil end
+        return flat(id)
+    end)
+    local data = C.historyData(5, "net", 30)
+    H.eq(data.status, "nodata")
+    H.eq(data.thin, {})
+    H.eq(data.days, 0)
+end)
+
 H.test("historyData's thin list keeps 3 items, skips an unsold crafted item, falls back to #id", function()
     local T, C = boot()
     local recipe = raw(7, 200)                         -- 200 is bound: not sold

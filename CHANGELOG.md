@@ -10,6 +10,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - Pause or resume tracking, and delete a recipe's history, from the History window (delete asks for a second click within 4 seconds; items another tracked recipe uses keep their history; current prices are never deleted).
 
 ### Fixed
+- History window: the verdict now starts with what crafting and selling at the auction house earns today (profit in green, loss in red, break even in grey), whatever tab or item is shown, then the shown figure (left out on the Profit tab), then the comparison with the usual level. While the craft is at a loss, a cheaper material or a higher sale is no longer shown as green "good time to buy/sell": it is grey, and the list's percentage columns turn grey with a tooltip that says why. On the Profit tab the comparison is in money and no longer vanishes when the usual result is a loss ("34s less loss than usual (loss 37s)").
 - Price history: each tier now has its own cap, so a busy week can no longer erase the daily history. Points or prices dated more than a day in the future no longer freeze an item's series (a point is dropped only when a newer one is recorded, so a clock set back never erases history), and the count of recorded recipes is exact.
 - A recipe whose disenchant materials have no data in the tables (for example epic items above item level 60) shows *no data* instead of a permanent *PRICES MISSING* that no search could clear.
 - The leveling window reopens where it was dragged during the same session.

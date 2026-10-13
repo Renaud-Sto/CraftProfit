@@ -221,6 +221,7 @@ function Controller.refresh()
         for _, reagent in ipairs(recipe.reagents or {}) do Controller.itemInfo(reagent.itemID) end
         model.pinned = DB.pinIndex(CraftProfitCharDB, recipe.recipeID) ~= nil
         model.tracked = History.isActive(CraftProfitDB, recipe.recipeID)
+        model.history = model.tracked and Controller.windowHistory(recipe.recipeID) or nil
         model.showPerPoint = settings.showPerPoint
         model.costExpanded = settings.costExpanded
         ns.Window.render(model)
@@ -773,6 +774,21 @@ end
 function Controller.historyList()
     local now = time()
     return cached("list", now, function() return computeList(now) end)
+end
+
+-- The main window's indicators for one recipe, from the cached historyList entry (no
+-- computation of its own): { materials, sale (HistoryView comparisons, each nil when not
+-- fresh), atLoss (true only when known), recipeID }, or nil unless the recipe is tracked,
+-- active and has an indicator (fresh data, enough days). Callers must not modify it.
+function Controller.windowHistory(recipeID)
+    for _, entry in ipairs(Controller.historyList()) do
+        if entry.recipe.recipeID == recipeID then
+            local ind = entry.indicator
+            if not entry.active or type(ind) ~= "table" then return nil end
+            return { materials = ind.materials, sale = ind.sale, atLoss = entry.atLoss == true, recipeID = recipeID }
+        end
+    end
+    return nil
 end
 
 -- Rows a recipe view keeps for the weekday strip: the ones with a value that is not only

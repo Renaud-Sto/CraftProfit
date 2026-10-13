@@ -210,19 +210,8 @@ local function paintText(fs, color)
     fs:SetTextColor(color[1], color[2], color[3], color[4])
 end
 
-local function goodColor(good)
-    if good == true then return Colors.FIXED.profit end
-    if good == false then return Colors.FIXED.loss end
-    return Colors.text("muted")
-end
-
--- "-18%" coloured by whether it is good news (green), bad (red) or flat (grey); all grey
--- when `muted` (the recipe is crafted at a loss: no move is good news yet).
-local function arrowText(c, muted)
-    if not c then return "" end
-    local text = c.pct == 0 and "0%" or string.format("%+d%%", c.pct)
-    return Colors.escape(muted and Colors.text("muted") or goodColor(c.good)) .. text .. "|r"
-end
+-- Green good news, red bad, grey flat (shared with the main window: Present).
+local goodColor = ns.Present.goodColor
 
 local function money(v)
     if type(v) ~= "number" then return "-" end
@@ -665,8 +654,10 @@ local function paintRight()
     parts.status:SetShown(data.status == "paused")
 end
 
+-- "-18%" coloured by whether it is good news (green), bad (red) or flat (grey); all grey
+-- when `muted` (the recipe is crafted at a loss: no move is good news yet).
 local function paintColumn(fs, c, muted)
-    fs:SetText(arrowText(c, muted))
+    fs:SetText(ns.Present.changeText(c, muted))
 end
 
 -- Repaints the rows and the scroll bar from the cached list: no data work.

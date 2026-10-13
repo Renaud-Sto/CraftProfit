@@ -1,7 +1,7 @@
 local H = ...
 
 local function load()
-    local ns = H.newNS("Util", "Format", "Core", "Data/Skillup", "Data/Disenchant", "Recipes", "DB", "Evaluate", "Present",
+    local ns = H.newNS("Util", "Format", "Colors", "Core", "Data/Skillup", "Data/Disenchant", "Recipes", "DB", "Evaluate", "Present",
         "Locale", "Locales/enUS", "Locales/frFR", "Locales/esES")
     ns.Locale.select("enUS")
     return ns
@@ -333,4 +333,38 @@ H.test("the per-point line shows a 99.5% chance with one decimal, never 100%", f
     local line = m.lines[#m.lines]
     H.eq(line.key, "perpoint")
     H.eq(line.value, "5s (99.5%, estimate)")
+end)
+
+H.test("changeText: a signed percentage, green good news, red bad, grey flat", function()
+    local ns = load()
+    local P, C = ns.Present, ns.Colors
+    local grey = C.escape(C.text("muted"))
+    H.eq(P.changeText({ pct = -18, tone = "down", good = true }), C.escape(C.FIXED.profit) .. "-18%|r")
+    H.eq(P.changeText({ pct = 12, tone = "up", good = false }), C.escape(C.FIXED.loss) .. "+12%|r")
+    H.eq(P.changeText({ pct = 0, tone = "flat" }), grey .. "0%|r")
+    H.eq(P.changeText({ pct = -2, tone = "flat" }), grey .. "-2%|r")
+end)
+
+H.test("changeText: all grey when muted (at a loss), nothing for a missing or broken comparison", function()
+    local ns = load()
+    local P, C = ns.Present, ns.Colors
+    local grey = C.escape(C.text("muted"))
+    H.eq(P.changeText({ pct = -18, tone = "down", good = true }, true), grey .. "-18%|r")
+    H.eq(P.changeText({ pct = 30, tone = "up", good = false }, true), grey .. "+30%|r")
+    H.eq(P.changeText(nil), "")
+    H.eq(P.changeText({}), "")
+    H.eq(P.changeText("x"), "")
+    H.eq(P.changeText({ pct = 0 / 0, good = true }), "")
+    H.eq(P.changeText({ pct = math.huge, good = true }), "")
+    H.eq(P.changeText({ pct = "5" }), "")
+    -- A fraction is rounded, never formatted as an error.
+    H.eq(P.changeText({ pct = 4.6, good = true }), C.escape(C.FIXED.profit) .. "+5%|r")
+end)
+
+H.test("goodColor: green for good news, red for bad, the game's grey otherwise", function()
+    local ns = load()
+    local P, C = ns.Present, ns.Colors
+    H.eq(P.goodColor(true), C.FIXED.profit)
+    H.eq(P.goodColor(false), C.FIXED.loss)
+    H.eq(P.goodColor(nil), C.text("muted"))
 end)

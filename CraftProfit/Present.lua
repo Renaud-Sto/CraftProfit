@@ -1,7 +1,7 @@
 -- Turns an Evaluate result into text for the window. Pure Lua, no WoW API:
--- L is the locale table and fmt formats copper (both injected).
+-- L is the locale table and fmt formats copper (both injected); colours come from ns.Colors.
 local _, ns = ...
-local Util, Core, Format = ns.Util, ns.Core, ns.Format
+local Util, Core, Format, Colors = ns.Util, ns.Core, ns.Format, ns.Colors
 
 local Present = {}
 ns.Present = Present
@@ -123,6 +123,25 @@ function Present.percent(chance)
     local whole = math.floor(p + 0.5)
     if math.abs(p - whole) < 0.05 then return tostring(whole) end
     return string.format("%.1f", p)
+end
+
+-- The colour of a move against the usual price: green when it is good news (`good` true),
+-- red when bad (false), the game's grey when flat or unknown (nil).
+function Present.goodColor(good)
+    if good == true then return Colors.FIXED.profit end
+    if good == false then return Colors.FIXED.loss end
+    return Colors.text("muted")
+end
+
+-- A HistoryView comparison ({ pct, good }) as "-18%", "+12%" or "0%" in its goodColor; all
+-- grey when `muted` (the recipe is crafted at a loss: no move is good news yet). "" without
+-- a comparison or with a pct that is not a finite number. Shared by the History window's
+-- list and the main window's indicators.
+function Present.changeText(c, muted)
+    if type(c) ~= "table" or not Util.isFinite(c.pct) then return "" end
+    local pct = Util.round(c.pct)
+    local text = pct == 0 and "0%" or string.format("%+d%%", pct)
+    return Colors.escape(muted and Colors.text("muted") or Present.goodColor(c.good)) .. text .. "|r"
 end
 
 -- Grey sub-line under the disenchant value: the most probable outcome, so the

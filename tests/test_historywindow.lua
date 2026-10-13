@@ -979,3 +979,10 @@ H.test("measurement and day counts agree in number in English, French and Spanis
         H.eq(nodata:sub(1, #texts[1]), texts[1])
     end
 end)
+
+H.test("the loss tooltip also covers break even, which greys the row too", function()
+    for locale, words in pairs({ enUS = "break even", frFR = "ni gain ni perte", esES = "ni gana ni pierde" }) do
+        local T = boot({ locale = locale })
+        H.truthy(T.ns.L.HISTORY_ROW_TIP_LOSS:find(words, 1, true) or error(locale .. ": " .. T.ns.L.HISTORY_ROW_TIP_LOSS))
+    end
+end)

@@ -102,7 +102,7 @@ ns.Locale.register("esES", {
     HISTORY_COL_MATERIALS = "Materiales",
     HISTORY_COL_SALE = "Venta",
     HISTORY_ROW_TIP = "Materiales: hoy frente a lo habitual. Venta: hoy frente a lo habitual. El verde te favorece (materiales más baratos, venta más alta).",
-    HISTORY_ROW_TIP_LOSS = "Fabricar y vender en la casa de subastas da pérdidas hoy, así que estos cambios aún no son buenas noticias.",
+    HISTORY_ROW_TIP_LOSS = "Fabricar y vender en la casa de subastas da pérdidas o ni gana ni pierde hoy, así que estos cambios aún no son buenas noticias.",
     HISTORY_PERIOD = "%d días",
     HISTORY_VERDICT_TODAY = "%s hoy: %s",
     HISTORY_VERDICT_ON = "%s el %s: %s",

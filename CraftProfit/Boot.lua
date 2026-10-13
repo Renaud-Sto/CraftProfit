@@ -477,6 +477,7 @@ end
 function Controller.setTracking(checked)
     local recipe = state.recipe
     if not recipe then return end
+    Controller.historyChanged()
     if checked then
         local ok, reason = History.track(CraftProfitDB, recipe)
         if not ok and reason == "full" then say(string.format(L.TRACK_FULL, History.MAX_TRACKED)) end
@@ -703,12 +704,43 @@ local function freshness(recipe, seriesOf, now)
     for _, id in ipairs(required) do
         if id == recipe.outputItemID then sale[1] = id else reagents[#reagents + 1] = id end
     end
+    local flip
     local function isFresh(ids)
         local newest = newestPoint(ids, seriesOf, now)
-        return newest ~= nil and now - newest <= Controller.HISTORY_FRESH
+        local ok = newest ~= nil and now - newest <= Controller.HISTORY_FRESH
+        if ok then
+            local at = newest + Controller.HISTORY_FRESH + 1
+            if not flip or at < flip then flip = at end
+        end
+        return ok
     end
     local materialsFresh, saleFresh = isFresh(reagents), isFresh(sale)
-    return materialsFresh or saleFresh, materialsFresh, saleFresh
+    return materialsFresh or saleFresh, materialsFresh, saleFresh, flip
+end
+
+-- Cache of historyList and historyData: the History window refreshes with every controller
+-- refresh, and recomputing every tracked recipe's days each time is the costly part. A
+-- result is reused while its key holds: Controller.historyVersion (bumped by
+-- historyChanged: a record, a pause or resume, a track, a delete, an item loaded), the
+-- market, the commission, whether Enchanting is known, and the local day; and while no
+-- fresh flag has expired (freshness's flip time). Callers must not modify a result.
+Controller.historyVersion = 0
+function Controller.historyChanged()
+    Controller.historyVersion = Controller.historyVersion + 1
+end
+
+local historyCache = { key = nil, entries = {} }
+
+local function cached(slot, now, compute)
+    local key = table.concat({ Controller.historyVersion, Controller.marketKey(),
+        tostring(CraftProfitDB.settings.cut), tostring(Controller.knowsEnchanting()),
+        tostring(History.dayOf(now)) }, "|")
+    if historyCache.key ~= key then historyCache.key, historyCache.entries = key, {} end
+    local hit = historyCache.entries[slot]
+    if hit and (not hit.expires or now < hit.expires) then return hit.value end
+    local value, expires = compute()
+    historyCache.entries[slot] = { value = value, expires = expires }
+    return value
 end
 
 -- The tracked recipes for the window's list, in saved order. `indicator` holds the arrows
@@ -718,11 +750,12 @@ end
 -- data never shows as today's. atLoss: when the crafted item's sale price is fresh too,
 -- whether crafting and selling at the auction house loses money (or earns 0) on the newest
 -- day (indicators' netToday <= 0); nil when unknown (stale data or sale price, no sale).
-function Controller.historyList()
-    local now, seriesOf, cut = time(), seriesReader(), CraftProfitDB.settings.cut
-    local out = {}
+local function computeList(now)
+    local seriesOf, cut = seriesReader(), CraftProfitDB.settings.cut
+    local out, expires = {}, nil
     for _, entry in ipairs(CraftProfitDB.tracked) do
-        local fresh, materialsFresh, saleFresh = freshness(entry.recipe, seriesOf, now)
+        local fresh, materialsFresh, saleFresh, flip = freshness(entry.recipe, seriesOf, now)
+        if flip and (not expires or flip < expires) then expires = flip end
         local indicator, atLoss
         if fresh then
             local ind = HistoryView.indicators(entry.recipe, seriesOf, now, Controller.historyItems, cut)
@@ -734,7 +767,12 @@ function Controller.historyList()
         out[#out + 1] = { recipe = entry.recipe, active = entry.active == true, indicator = indicator, fresh = fresh,
             atLoss = atLoss }
     end
-    return out
+    return out, expires
+end
+
+function Controller.historyList()
+    local now = time()
+    return cached("list", now, function() return computeList(now) end)
 end
 
 -- Rows a recipe view keeps for the weekday strip: the ones with a value that is not only
@@ -771,11 +809,11 @@ end
 -- usual price), nil when it has one. commission: the auction house cut in percent (5 for 0.05). fresh: as
 -- historyList's (a reagent or the sold crafted item measured within HISTORY_FRESH); stale
 -- figures are still shown, dated, but never as good news.
-function Controller.historyData(recipeID, view, period)
+local function computeData(recipeID, view, period, now)
     local _, entry = History.find(CraftProfitDB, recipeID)
     if not entry then return nil end
     local recipe = entry.recipe
-    local now, seriesOf, cut = time(), seriesReader(), CraftProfitDB.settings.cut
+    local seriesOf, cut = seriesReader(), CraftProfitDB.settings.cut
     period = Controller.HISTORY_PERIODS[period] and period or 30
     local ids = Controller.historyItemsOf(recipe)
     local isReagent = {}
@@ -837,6 +875,7 @@ function Controller.historyData(recipeID, view, period)
         if weekday[i].n >= History.WEEKDAY_MIN_DAYS then enoughDays = true end
     end
     if not filled then weekdayEmpty = enoughDays and "usual" or "days" end
+    local fresh, _, _, expires = freshness(recipe, seriesOf, now)
     return {
         recipe = recipe, items = items, view = view, period = period,
         chart = { days = days, field = field, usual = summary.usual, period = period, newest = History.dayOf(now) },
@@ -847,9 +886,15 @@ function Controller.historyData(recipeID, view, period)
         market = Controller.marketName(),
         goal = goal, profit = profit,
         compare = view == "net" and profit.compare or HistoryView.compare(summary, goal ~= "buy"),
-        fresh = (freshness(recipe, seriesOf, now)),
+        fresh = fresh,
         commission = Util.round((cut or 0) * 10000) / 100,
-    }
+    }, expires
+end
+
+function Controller.historyData(recipeID, view, period)
+    local now = time()
+    return cached(tostring(recipeID) .. ":" .. tostring(view) .. ":" .. tostring(period), now,
+        function() return computeData(recipeID, view, period, now) end)
 end
 
 -- Opens the History window on a tracked recipe (the window arrives with step 3, Task 2).
@@ -864,6 +909,7 @@ local searched = {}
 
 -- Writes one history point per tracked recipe the update touched.
 function Controller.recordHistory(updated)
+    Controller.historyChanged()
     History.record(CraftProfitDB, Controller.market(), time(), updated, Controller.historyItems)
 end
 
@@ -1073,6 +1119,8 @@ function Controller.onEvent(event, arg1, arg2)
         -- at every refresh, forever.
         if arg2 ~= false and requestedItems[arg1] then
             requestedItems[arg1] = nil
+            -- Names, icons, bound or disenchant status of a history item may change.
+            Controller.historyChanged()
             Controller.requestRefresh()
         end
     elseif event == "TRADE_SKILL_LIST_UPDATE" then
@@ -1131,6 +1179,7 @@ end
 local function removeTracked(index)
     local entry = CraftProfitDB.tracked[index]
     if not entry or not History.remove(CraftProfitDB, index) then return nil end
+    Controller.historyChanged()
     deleteSeriesOf(entry.recipe)
     return Controller.recipeName(entry.recipe)
 end
@@ -1141,6 +1190,7 @@ function Controller.setHistoryActive(recipeID, active)
     local _, entry = History.find(CraftProfitDB, recipeID)
     if not entry then return false end
     if active then History.track(CraftProfitDB, entry.recipe) else History.pause(CraftProfitDB, recipeID) end
+    Controller.historyChanged()
     Controller.refresh()
     return true
 end

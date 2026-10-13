@@ -618,6 +618,7 @@ end)
 local function track(T, recipe)
     local ok = T.ns.History.track(T.env.CraftProfitDB, T.ns.Recipes.normalize(recipe or RAW))
     H.truthy(ok)
+    T.ns.Controller.historyChanged()
 end
 
 H.test("the first market adopts the prices saved before markets existed", function()

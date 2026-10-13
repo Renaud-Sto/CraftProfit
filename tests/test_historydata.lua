@@ -38,6 +38,7 @@ end
 
 -- Prices of items 1, 2 and 100 over `days` days; `price(id, age)` gives each one.
 local function fill(C, days, price, ids)
+    if C.historyChanged then C.historyChanged() end
     local series = C.market().series
     for _, id in ipairs(ids or { 1, 2, 100 }) do
         series[id] = {}
@@ -548,4 +549,68 @@ H.test("the Profit view's typical week is in money, even when the usual result i
     -- Too few days: the reason is the number of days.
     fill(C, 5, flat)
     H.eq(C.historyData(5, "net", 30).weekdayEmpty, "days")
+end)
+
+-- Counts the recipe day computations (the costly part of historyList and historyData).
+local function countDays(T)
+    local V = T.ns.HistoryView
+    local original, counter = V.recipeDays, { n = 0 }
+    V.recipeDays = function(...)
+        counter.n = counter.n + 1
+        return original(...)
+    end
+    return counter
+end
+
+H.test("historyList and historyData are cached while nothing changes", function()
+    local T, C = boot()
+    track(T, raw(5))
+    track(T, raw(6))
+    fill(C, 10, flat)
+    local calls = countDays(T)
+    local list = C.historyList()
+    local after = calls.n
+    H.truthy(after > 0)
+    H.truthy(C.historyList() == list)
+    H.eq(calls.n, after)
+    local data = C.historyData(5, "net", 30)
+    after = calls.n
+    H.truthy(C.historyData(5, "net", 30) == data)
+    H.eq(calls.n, after)
+    -- Another view, period or recipe is its own entry.
+    H.truthy(C.historyData(5, "net", 7) ~= data)
+    H.truthy(calls.n > after)
+    after = calls.n
+    H.truthy(C.historyData(5, "net", 30) == data)
+    H.eq(calls.n, after)
+end)
+
+H.test("a record, a pause, a delete, the commission, the day and freshness invalidate the cache", function()
+    local T, C = boot()
+    track(T, raw(5))
+    track(T, raw(6))
+    fill(C, 10, flat)
+    -- A recomputed list is a new table.
+    local function recomputes(fn)
+        local before = C.historyList()
+        fn()
+        return C.historyList() ~= before
+    end
+    H.eq(recomputes(function() end), false)
+    -- A new price recorded: the newest point is in the next list.
+    H.truthy(recomputes(function()
+        C.market().prices[1] = { 60, 1, NOW }
+        C.recordHistory({ [1] = true })
+    end))
+    H.truthy(recomputes(function() C.setHistoryActive(6, false) end))
+    H.truthy(recomputes(function() T.env.CraftProfitDB.settings.cut = 0.1 end))
+    H.truthy(recomputes(function() C.deleteHistory(6) end))
+    H.eq(#C.historyList(), 1)
+    -- An hour later nothing changed; past midnight, or once the newest point is a day old,
+    -- the list is computed again.
+    local clock = T.env.time
+    H.eq(recomputes(function() T.env.time = function() return NOW + 60 end end), false)
+    H.truthy(recomputes(function() T.env.time = function() return NOW + DAY + 60 end end))
+    H.eq(C.historyList()[1].fresh, false)
+    T.env.time = clock
 end)

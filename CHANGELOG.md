@@ -19,6 +19,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - History window: a period with no measurement (newest prices older than 7 days, on the 7-day period) says so and asks to refresh, instead of a blank chart and dashes.
 - History window: "1 measurement over 1 day" instead of "1 measurements over 1 days" (French and Spanish too).
 - History window: the list's grey-row tooltip says "at a loss or break even", since a craft that earns exactly nothing is greyed too.
+- History window: its figures are cached until a price is recorded, a recipe is paused, resumed or deleted, the commission or the day changes, so the window no longer recomputes every tracked recipe at each refresh of the addon.
 - Price history: each tier now has its own cap, so a busy week can no longer erase the daily history. Points or prices dated more than a day in the future no longer freeze an item's series (a point is dropped only when a newer one is recorded, so a clock set back never erases history), and the count of recorded recipes is exact.
 - A recipe whose disenchant materials have no data in the tables (for example epic items above item level 60) shows *no data* instead of a permanent *PRICES MISSING* that no search could clear.
 - The leveling window reopens where it was dragged during the same session.

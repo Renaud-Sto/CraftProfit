@@ -65,6 +65,7 @@ local PRICES = { [1] = 100, [2] = 50, [100] = 1000 }
 
 local function fill(T, days)
     local series = T.ns.Controller.market().series
+    T.ns.Controller.historyChanged()               -- the test writes the saved series itself
     for id, unit in pairs(PRICES) do
         series[id] = {}
         for age = days - 1, 0, -1 do
@@ -216,6 +217,7 @@ H.test("an item icon falls back to the question mark, and its tooltip names it",
     track(T, raw(5))
     fill(T, 5)
     T.ns.Controller.itemIcon = function(id) if id == 1 then return 12345 end return nil end
+    T.ns.Controller.historyChanged()
     UI.show()
     UI.select(5)
     H.eq(UI.parts.itemButtons[1].icon.texture, 12345)
@@ -228,6 +230,7 @@ H.test("an item icon falls back to the question mark, and its tooltip names it",
     H.eq(T.tooltip.shown, false)
     -- An icon helper that raises is survived.
     T.ns.Controller.itemIcon = function() error("boom") end
+    T.ns.Controller.historyChanged()
     UI.refresh()
     H.eq(UI.parts.itemButtons[1].icon.texture, UI.QUESTION_MARK)
 end)
@@ -658,6 +661,7 @@ H.test("the verdict says today's amount and compares it with the usual price, co
     track(T, raw(5))
     -- Ten flat days, then item 1 cheaper today: materials 250 -> 210, 16 % cheaper.
     local series = T.ns.Controller.market().series
+    T.ns.Controller.historyChanged()               -- the test writes the saved series itself
     for id, unit in pairs(PRICES) do
         series[id] = {}
         for age = 9, 0, -1 do
@@ -704,6 +708,7 @@ H.test("a loss never prints a minus sign", function()
     track(T, raw(5))
     -- The crafted item sells for 100 (95 after the cut); materials cost 250: a 155 loss.
     local series = T.ns.Controller.market().series
+    T.ns.Controller.historyChanged()               -- the test writes the saved series itself
     for id, unit in pairs({ [1] = 100, [2] = 50, [100] = 100 }) do
         series[id] = {}
         for age = 9, 0, -1 do series[id][#series[id] + 1] = { NOW - age * DAY, unit, 5, unit, unit, 1, true } end
@@ -768,6 +773,7 @@ end)
 -- Ten days of the crafted item at `usual` and today at `today` (materials 250 every day).
 local function sales(T, usual, today)
     local series = T.ns.Controller.market().series
+    T.ns.Controller.historyChanged()               -- the test writes the saved series itself
     for id, unit in pairs({ [1] = 100, [2] = 50, [100] = usual }) do
         series[id] = {}
         for age = 9, 0, -1 do
@@ -877,6 +883,7 @@ H.test("stale data keeps its dated figures but the comparison is grey and gives 
     track(T, raw(5))
     -- Ten days ending 20 days ago; on the last one the sale was much higher and item 1 cheaper.
     local series = T.ns.Controller.market().series
+    T.ns.Controller.historyChanged()               -- the test writes the saved series itself
     for id, unit in pairs({ [1] = 100, [2] = 50, [100] = 1000 }) do
         series[id] = {}
         for age = 29, 20, -1 do
@@ -907,6 +914,7 @@ H.test("the Profit view's typical week labels its bars in money", function()
     local T, UI = boot()
     track(T, raw(5))
     local series = T.ns.Controller.market().series
+    T.ns.Controller.historyChanged()               -- the test writes the saved series itself
     for id, unit in pairs({ [1] = 100, [2] = 50, [100] = 100 }) do
         series[id] = {}
         for age = 27, 0, -1 do
@@ -944,6 +952,7 @@ H.test("a period without any measurement says so instead of a blank chart", func
     track(T, raw(5))
     -- Ten days of data, the newest 10 days old: nothing in the last 7 days.
     local series = T.ns.Controller.market().series
+    T.ns.Controller.historyChanged()               -- the test writes the saved series itself
     for id, unit in pairs(PRICES) do
         series[id] = {}
         for age = 19, 10, -1 do series[id][#series[id] + 1] = { NOW - age * DAY, unit, 5, unit, unit, 1, true } end

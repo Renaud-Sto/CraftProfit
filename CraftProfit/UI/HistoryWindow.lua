@@ -5,7 +5,8 @@
 --            profit, red loss, grey break even); "<What> today: <amount>" (not in the Profit
 --            view: the first line says it); a sentence comparing today with the usual (green
 --            good news, red bad, grey about usual). While crafting is at a loss the
---            comparison is grey and gives no "good time to" advice (better is not good yet).
+--            comparison is grey and gives no "good time to" advice (better is not good yet);
+--            so is it with stale data (not measured for a day), whose lines are dated.
 --   chart    tabs Materials cost | Sale price | Profit, period buttons, the recipe's items
 --            in groups (Materials, Crafted item, Disenchant), a caption saying what is drawn,
 --            then the chart (UI/Chart.lua) with its hover bubble
@@ -276,6 +277,11 @@ local function atLoss(data)
     return type(data.profit) == "table" and data.profit.atLoss == true
 end
 
+-- Whether the data is too old for today's advice (Controller.historyData's fresh flag).
+local function stale(data)
+    return data.fresh == false
+end
+
 -- The auction house profit line: "Crafted and sold at the auction house today: loss 2s47"
 -- and its colour (green profit, red loss, grey break even). "" when the profit is unknown.
 function HistoryWindow.profitLine(data)
@@ -314,6 +320,11 @@ local function profitCompareLine(data, c)
     local usual = signed(data.summary.usual)
     if c.tone == "flat" then return string.format(L.HISTORY_ABOUT, usual), goodColor(nil) end
     local gap = money(math.abs(c.gap or 0))
+    if stale(data) then
+        local key = c.tone == "down" and "HISTORY_PROFIT_WORSE"
+            or (atLoss(data) and "HISTORY_PROFIT_LESS_LOSS" or "HISTORY_PROFIT_BETTER")
+        return string.format(L[key], gap, usual), goodColor(nil)
+    end
     if c.tone == "down" then return string.format(L.HISTORY_PROFIT_WORSE, gap, usual), goodColor(false) end
     if atLoss(data) then return string.format(L.HISTORY_PROFIT_LESS_LOSS, gap, usual), goodColor(nil) end
     local text = string.format(L.HISTORY_PROFIT_BETTER, gap, usual)
@@ -322,6 +333,7 @@ end
 
 -- The comparison with the usual price, and its colour. "" without one. At a loss, good
 -- news turns grey and loses its advice: cheaper materials do not make a losing craft good.
+-- With stale data (no measurement within a day) every comparison is grey, without advice.
 function HistoryWindow.compareLine(data)
     local c = data.compare
     if not c then return "", nil end
@@ -335,7 +347,7 @@ function HistoryWindow.compareLine(data)
     else
         text = string.format(L.HISTORY_ABOUT, usual)
     end
-    if c.good == true and atLoss(data) then return text, goodColor(nil) end
+    if stale(data) or (c.good == true and atLoss(data)) then return text, goodColor(nil) end
     if c.good == true and GOOD[data.goal] then
         text = string.format(L.HISTORY_VERDICT_GOOD, text, L[GOOD[data.goal]])
     end

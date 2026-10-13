@@ -766,7 +766,9 @@ end
 -- profit: the recipe's auction house profit whatever the view (HistoryView.summary "net" of
 -- the period's rows, usual over 30 days): { today, todayDay, usual, enough, compare
 -- (HistoryView.profitCompare), atLoss (today is a number <= 0) }; vendor and disenchant are
--- not counted. commission: the auction house cut in percent (5 for 0.05).
+-- not counted. commission: the auction house cut in percent (5 for 0.05). fresh: as
+-- historyList's (a reagent or the sold crafted item measured within HISTORY_FRESH); stale
+-- figures are still shown, dated, but never as good news.
 function Controller.historyData(recipeID, view, period)
     local _, entry = History.find(CraftProfitDB, recipeID)
     if not entry then return nil end
@@ -833,6 +835,7 @@ function Controller.historyData(recipeID, view, period)
         market = Controller.marketName(),
         goal = goal, profit = profit,
         compare = view == "net" and profit.compare or HistoryView.compare(summary, goal ~= "buy"),
+        fresh = (freshness(recipe, seriesOf, now)),
         commission = Util.round((cut or 0) * 10000) / 100,
     }
 end

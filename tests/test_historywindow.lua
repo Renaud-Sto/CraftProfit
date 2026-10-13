@@ -870,3 +870,35 @@ H.test("the verdict panel holds three lines and the window still fits 768 px", f
     H.eq(#UI.parts.lines, 3)
     H.truthy(UI.frame().height <= 748 or error("height " .. UI.frame().height))
 end)
+
+H.test("stale data keeps its dated figures but the comparison is grey and gives no advice", function()
+    local T, UI = boot()
+    local L, Colors = T.ns.L, T.ns.Colors
+    track(T, raw(5))
+    -- Ten days ending 20 days ago; on the last one the sale was much higher and item 1 cheaper.
+    local series = T.ns.Controller.market().series
+    for id, unit in pairs({ [1] = 100, [2] = 50, [100] = 1000 }) do
+        series[id] = {}
+        for age = 29, 20, -1 do
+            local u = unit
+            if age == 20 and id == 100 then u = 1260 elseif age == 20 and id == 1 then u = 80 end
+            series[id][#series[id] + 1] = { NOW - age * DAY, u, 5, u, u, 1, true }
+        end
+    end
+    local data = T.ns.Controller.historyData(5, "net", 30)
+    H.eq(data.fresh, false)
+    H.eq(data.compare.good, true)
+    -- The profit line says its date; the comparison is grey, without "good time to craft".
+    local dated = string.format(L.HISTORY_AH_ON, UI.dateText(NOW - 20 * DAY),
+        string.format(L.HISTORY_PROFIT_AMOUNT, "<987>"))
+    H.eq({ UI.profitLine(data) }, { dated, Colors.FIXED.profit })
+    H.eq({ UI.compareLine(data) }, { string.format(L.HISTORY_PROFIT_BETTER, "<287>", "<700>"), Colors.text("muted") })
+    -- Materials: cheaper, grey, no "good time to buy"; bad news is grey too.
+    data = T.ns.Controller.historyData(5, "materials", 30)
+    H.eq({ UI.compareLine(data) }, { string.format(L.HISTORY_CHEAPER, 16, "<250>"), Colors.text("muted") })
+    data.compare = { pct = 9, tone = "up", good = false }
+    H.eq(select(2, UI.compareLine(data)), Colors.text("muted"))
+    -- Fresh data: the flag is set.
+    fill(T, 10)
+    H.eq(T.ns.Controller.historyData(5, "net", 30).fresh, true)
+end)

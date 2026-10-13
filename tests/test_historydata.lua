@@ -506,6 +506,7 @@ H.test("historyList freshness reads the reagents and the crafted item, never a d
     fill(C, 10, function(_, age) return age >= 3 and 100 or nil end, { 1, 301 })
     fill(C, 10, function() return 5 end, DUST)            -- disenchant materials: today
     H.eq(C.historyList()[1].fresh, false)
+    H.eq(C.historyData(11, "net", 30).fresh, false)
     fill(C, 10, function() return 100 end, { 1, 301 })
     H.eq(C.historyList()[1].fresh, true)
     ITEMS[301] = nil

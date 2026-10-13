@@ -109,6 +109,8 @@ ns.Locale.register("enUS", {
     HISTORY_CHEAPER = "%d%% cheaper than usual (%s)",
     HISTORY_LOWER = "%d%% lower than usual (%s)",
     HISTORY_HIGHER = "%d%% higher than usual (%s)",
+    HISTORY_PROFIT_BELOW = "%s below usual (%s)",
+    HISTORY_PROFIT_ABOVE = "%s above usual (%s)",
     HISTORY_ABOUT = "About the usual level (%s)",
     HISTORY_VERDICT_GOOD = "%s: %s",
     HISTORY_GOOD_BUY = "good time to buy",

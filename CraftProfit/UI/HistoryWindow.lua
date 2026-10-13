@@ -283,7 +283,11 @@ function HistoryWindow.compareLine(data)
     if not c then return "", nil end
     local usual = data.view == "net" and signed(data.summary.usual) or money(data.summary.usual)
     local text
-    if c.tone == "down" then
+    if data.view == "net" and c.tone ~= "flat" and type(data.summary.today) == "number" then
+        -- A percentage of a profit is meaningless when it turns into a loss: say the gap.
+        local gap = money(math.abs(data.summary.today - data.summary.usual))
+        text = string.format(c.tone == "down" and L.HISTORY_PROFIT_BELOW or L.HISTORY_PROFIT_ABOVE, gap, usual)
+    elseif c.tone == "down" then
         text = string.format(data.goal == "buy" and L.HISTORY_CHEAPER or L.HISTORY_LOWER, math.abs(c.pct), usual)
     elseif c.tone == "up" then
         text = string.format(L.HISTORY_HIGHER, c.pct, usual)

@@ -107,6 +107,8 @@ ns.Locale.register("frFR", {
     HISTORY_CHEAPER = "%d\194\160%% moins cher que d'habitude (%s)",
     HISTORY_LOWER = "%d\194\160%% plus bas que d'habitude (%s)",
     HISTORY_HIGHER = "%d\194\160%% plus haut que d'habitude (%s)",
+    HISTORY_PROFIT_BELOW = "%s sous l'habituel (%s)",
+    HISTORY_PROFIT_ABOVE = "%s au-dessus de l'habituel (%s)",
     HISTORY_ABOUT = "Proche de l'habitude (%s)",
     HISTORY_VERDICT_GOOD = "%s\194\160: %s",
     HISTORY_GOOD_BUY = "bon moment pour acheter",

@@ -432,6 +432,77 @@ H.test("the profession recipe comes back after the AH closes", function()
     H.truthy(T.ns.Window.lastModel)
 end)
 
+-- The profession window reports its selection again after every list update (B2).
+local function poll(T) T.tickers[#T.tickers].fn() end
+
+local function selectInProfession(T, recipeID)
+    T.env.ProfessionsFrame.CraftingPage.SchematicForm.GetRecipeInfo = function() return { recipeID = recipeID } end
+end
+
+H.test("the shown recipe reported again is refreshed, never reopens a main window the player closed", function()
+    local T = boot()
+    stock(T)
+    mockProfession(T)
+    local C, Window = T.ns.Controller, T.ns.Window
+    poll(T)
+    H.eq(C.currentRecipeID(), 5)
+    C.setCrafts(3)
+    Window.hide()                                   -- the player's X
+    -- A craft: the list updates (the difficulty went down) and the watcher reports 5 again.
+    T.env.C_TradeSkillUI.GetRecipeInfo = function(id)
+        return { recipeID = id, name = "Sword", learned = true, relativeDifficulty = 2 }
+    end
+    Window.lastModel = nil
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    poll(T)
+    H.falsy(Window.isShown())
+    H.eq(C.currentRecipeID(), 5)
+    -- Its data were read again and drawn, the multiplier kept.
+    H.truthy(Window.lastModel)
+    H.eq(Window.lastModel.crafts, 3)
+    C.togglePin()
+    H.eq(T.env.CraftProfitCharDB.pins[1].difficulty, "easy")
+    -- A new recipe picked in the profession window opens it again.
+    selectInProfession(T, 6)
+    poll(T)
+    H.eq(C.currentRecipeID(), 6)
+    H.truthy(Window.isShown())
+end)
+
+H.test("a recipe picked from a list stays selected while the profession window reports the same recipe", function()
+    local T = boot()
+    stock(T)
+    mockProfession(T)
+    local C = T.ns.Controller
+    poll(T)
+    local pinned = T.ns.Recipes.normalize(RAW)
+    pinned.recipeID = 7
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, pinned)
+    C.selectPin(7)
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    poll(T)
+    H.eq(C.currentRecipeID(), 7)
+    -- The same from the leveling list, and after a profession event.
+    local known = T.ns.Recipes.normalize(RAW)
+    known.recipeID = 8
+    C.selectKnown(known)
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    poll(T)
+    H.eq(C.currentRecipeID(), 8)
+    -- Another recipe in the profession window replaces it.
+    selectInProfession(T, 6)
+    poll(T)
+    H.eq(C.currentRecipeID(), 6)
+    -- Reopening the profession window is a new report too.
+    C.selectPin(7)
+    T.env.ProfessionsFrame.IsShown = function() return false end
+    poll(T)
+    H.eq(C.currentRecipeID(), 7)
+    T.env.ProfessionsFrame.IsShown = function() return true end
+    poll(T)
+    H.eq(C.currentRecipeID(), 6)
+end)
+
 -- Pinned recipe survives closing the profession window (field report: it vanished at the AH)
 H.test("a pinned recipe stays available after the profession window closes, outside the AH", function()
     local T = boot()

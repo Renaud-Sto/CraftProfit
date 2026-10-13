@@ -995,12 +995,27 @@ function Controller.onAHOpen(open)
     if window.updateRefreshButton then window.updateRefreshButton() end
 end
 
--- The profession window selection changed (or the window closed).
+-- The recipe id the profession window reported last; nil while it is closed.
+local lastProfessionID
+
+-- The profession window selection changed (or the window closed), or the watcher reports
+-- the same one again (Trade.invalidate: the list updated after a craft, a skill-up or a
+-- filter change). Only a new selection replaces the recipe shown and opens the main window:
+-- the same one again refreshes its data (difficulty, quantities) without reopening a window
+-- the player closed, and leaves a recipe picked from a list (source "pin") in place.
 local function onSelection(recipeID)
+    local previous = lastProfessionID
+    lastProfessionID = recipeID
     if recipeID then
+        if state.source == "pin" and recipeID == previous then return end
         local recipe = Recipes.normalize(ns.Trade.readSelected())
         if recipe then
-            Controller.setRecipe(recipe, "profession")
+            if state.source == "profession" and recipeID == Controller.currentRecipeID() then
+                choose(recipe, "profession")
+                Controller.refresh()
+            else
+                Controller.setRecipe(recipe, "profession")
+            end
             return
         end
     end

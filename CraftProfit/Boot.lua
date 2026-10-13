@@ -732,6 +732,32 @@ end
 
 local historyCache = { key = nil, entries = {} }
 
+-- A fresh flag expires by itself, with nothing else to refresh the windows: one timer asks
+-- for a refresh at the soonest expiry of the cached results (+1 s, so time() has passed
+-- it), so a percentage shown in the main window or the History list goes away once its
+-- data are a day old. Replaced (the old one does nothing) when the soonest expiry changes;
+-- none while nothing expires. A result already expired is left out: it is recomputed when
+-- next asked for.
+local expiry = { at = nil, token = 0 }
+
+local function scheduleExpiry(now)
+    local soonest
+    for _, entry in pairs(historyCache.entries) do
+        local at = entry.expires
+        if at and at > now and (not soonest or at < soonest) then soonest = at end
+    end
+    if soonest == expiry.at then return end
+    expiry.token = expiry.token + 1
+    expiry.at = soonest
+    if not soonest then return end
+    local token = expiry.token
+    C_Timer.After(soonest - now + 1, function()
+        if token ~= expiry.token then return end
+        expiry.at = nil
+        Controller.requestRefresh()
+    end)
+end
+
 local function cached(slot, now, compute)
     local key = table.concat({ Controller.historyVersion, Controller.marketKey(),
         tostring(CraftProfitDB.settings.cut), tostring(Controller.knowsEnchanting()),
@@ -741,6 +767,7 @@ local function cached(slot, now, compute)
     if hit and (not hit.expires or now < hit.expires) then return hit.value end
     local value, expires = compute()
     historyCache.entries[slot] = { value = value, expires = expires }
+    scheduleExpiry(now)
     return value
 end
 

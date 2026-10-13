@@ -11,7 +11,6 @@ ns.Controller = Controller
 
 local state = { recipe = nil, source = nil, crafts = 1 }
 local requestedItems = {}
-local refreshQueued = false
 
 -- The refresh pass in progress (Controller.inPass), or nil. One refresh evaluates the
 -- recipe shown and every pin of each shown list (the leveling list: up to 400 recipes);
@@ -295,12 +294,23 @@ function Controller.refresh()
     Controller.inPass(refreshAll)
 end
 
--- Coalesces bursts (many ITEM_DATA_LOAD_RESULT events, one per search result).
+-- Coalesces bursts (many ITEM_DATA_LOAD_RESULT events, one per search result). While a
+-- price search runs, each answered item asks for a refresh: they are coalesced over about
+-- a second instead (the values still move, less often). A request at the usual pace does
+-- not wait for a slower one already queued (the search just ended): it replaces it.
+local REFRESH_DELAY, SEARCH_REFRESH_DELAY = 0.1, 1
+local refreshQueued, refreshToken = nil, 0
+
 function Controller.requestRefresh()
-    if refreshQueued then return end
-    refreshQueued = true
-    C_Timer.After(0.1, function()
-        refreshQueued = false
+    local searching = ns.PinsUI and ns.PinsUI.state == "running"
+    local delay = searching and SEARCH_REFRESH_DELAY or REFRESH_DELAY
+    if refreshQueued and refreshQueued <= delay then return end
+    refreshToken = refreshToken + 1
+    local token = refreshToken
+    refreshQueued = delay
+    C_Timer.After(delay, function()
+        if token ~= refreshToken then return end
+        refreshQueued = nil
         Controller.refresh()
     end)
 end

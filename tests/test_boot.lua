@@ -536,6 +536,37 @@ H.test("one refresh with pins in two lists looks the market and Enchanting up on
     H.eq(runs, 12)
 end)
 
+-- While a price search runs, refreshes are coalesced to about a second (I2).
+H.test("refreshes asked during a search wait about a second; the one at the end comes at the usual pace", function()
+    local T = boot()
+    local C, PinsUI = T.ns.Controller, T.ns.PinsUI
+    local delays, timers = {}, {}
+    T.env.C_Timer.After = function(delay, fn) delays[#delays + 1] = delay; timers[#timers + 1] = fn end
+    local refreshes, refresh = 0, C.refresh
+    C.refresh = function() refreshes = refreshes + 1; return refresh() end
+    C.requestRefresh()
+    H.eq(delays, { 0.1 })
+    table.remove(timers, 1)()
+    H.eq(refreshes, 1)
+    PinsUI.state = "running"
+    C.requestRefresh()
+    C.requestRefresh()
+    H.eq(delays, { 0.1, 1 })
+    -- The search ends: its refresh does not wait for the slow one, which then does nothing.
+    PinsUI.state = "done"
+    C.requestRefresh()
+    H.eq(delays, { 0.1, 1, 0.1 })
+    C.requestRefresh()
+    H.eq(#delays, 3)
+    local slow, fast = timers[1], timers[2]
+    fast()
+    H.eq(refreshes, 2)
+    slow()
+    H.eq(refreshes, 2)
+    C.requestRefresh()
+    H.eq(#delays, 4)
+end)
+
 -- Pinned recipe survives closing the profession window (field report: it vanished at the AH)
 H.test("a pinned recipe stays available after the profession window closes, outside the AH", function()
     local T = boot()

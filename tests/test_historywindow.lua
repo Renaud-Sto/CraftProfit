@@ -937,3 +937,28 @@ H.test("the typical week's empty line gives the real reason", function()
     data.weekdayEmpty = "usual"
     H.eq(UI.weekNote(data), T.ns.L.HISTORY_WEEK_NO_USUAL)
 end)
+
+H.test("a period without any measurement says so instead of a blank chart", function()
+    local T, UI = boot()
+    local L = T.ns.L
+    track(T, raw(5))
+    -- Ten days of data, the newest 10 days old: nothing in the last 7 days.
+    local series = T.ns.Controller.market().series
+    for id, unit in pairs(PRICES) do
+        series[id] = {}
+        for age = 19, 10, -1 do series[id][#series[id] + 1] = { NOW - age * DAY, unit, 5, unit, unit, 1, true } end
+    end
+    UI.show()
+    UI.select(5)
+    click(UI.parts.periodButtons[1])
+    H.eq(UI.state().period, 7)
+    H.eq(UI.parts.empty.text, string.format(L.HISTORY_PERIOD_EMPTY, 7))
+    H.truthy(UI.parts.empty.shown)
+    H.eq(UI.parts.chart.frame.shown, false)
+    H.eq(UI.parts.figuresPanel.frame.shown, false)
+    -- The period buttons stay: 30 days draws the chart again.
+    H.truthy(UI.parts.chartPanel.frame.shown)
+    click(UI.parts.periodButtons[2])
+    H.eq(UI.parts.empty.shown, false)
+    H.truthy(UI.parts.chart.frame.shown)
+end)

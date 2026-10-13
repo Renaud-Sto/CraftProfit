@@ -96,6 +96,7 @@ ns.Locale.register("esES", {
     HISTORY_SELECT = "Selecciona una receta.",
     HISTORY_NONE = "Marca Seguir historial en una receta para seguir sus precios.",
     HISTORY_NODATA = "%d mediciones en %d días. Se necesitan al menos 3 días: actualiza los precios en la casa de subastas.",
+    HISTORY_PERIOD_EMPTY = "Ninguna medición en los últimos %d días: actualiza los precios en la casa de subastas.",
     HISTORY_PAUSED = "Seguimiento en pausa para esta receta: no se registran precios nuevos.",
     HISTORY_LIST = "Recetas seguidas",
     HISTORY_COL_MATERIALS = "Materiales",

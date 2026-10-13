@@ -98,6 +98,7 @@ ns.Locale.register("enUS", {
     HISTORY_SELECT = "Select a recipe.",
     HISTORY_NONE = "Tick Track history on a recipe to follow its prices.",
     HISTORY_NODATA = "%d measurements over %d days. At least 3 days are needed: refresh prices at the auction house.",
+    HISTORY_PERIOD_EMPTY = "No measurements in the last %d days: refresh prices at the auction house.",
     HISTORY_PAUSED = "Tracking is paused for this recipe: no new prices are recorded.",
     HISTORY_LIST = "Tracked recipes",
     HISTORY_COL_MATERIALS = "Materials",

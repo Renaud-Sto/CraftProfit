@@ -557,8 +557,12 @@ local function paintRight()
     paintVerdict(data)
     paintTabs(data)
     paintIcons(data)
-    if data.status == "nodata" then
-        showEmpty(string.format(L.HISTORY_NODATA, data.measures or 0, data.days or 0), true)
+    -- Too little data, or none in the chosen period (the newest is older than it): say so,
+    -- keeping the tabs and period buttons, rather than a blank chart full of dashes.
+    local noPeriod = data.status ~= "nodata" and #data.chart.days == 0
+    if data.status == "nodata" or noPeriod then
+        showEmpty(noPeriod and string.format(L.HISTORY_PERIOD_EMPTY, data.period)
+            or string.format(L.HISTORY_NODATA, data.measures or 0, data.days or 0), true)
         parts.caption:SetText(HistoryWindow.captionText(data))
         -- A paused recipe says so whatever its data.
         parts.status:SetText(data.paused and L.HISTORY_PAUSED or "")

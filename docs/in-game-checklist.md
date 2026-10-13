@@ -145,6 +145,16 @@ Take screenshots of each state in English, French and Spanish (`/cp locale frFR`
 - [ ] Pause and resume, Delete (two clicks within 4 seconds, cancelled by waiting, by another recipe or by closing the window) behave as before.
 - [ ] French and Spanish: every label fits (tabs, periods, figures, captions, verdict, bubble). The French and Spanish strings were written without a native speaker: have them read by one.
 
+## History in the main window
+Take screenshots in English, French and Spanish, with the AH open and closed.
+- [ ] A tracked recipe with 3+ days of data refreshed today: a small percentage left of the Materials total and one at the right of the AH (NET) value; green/red/grey as in the History window's list for the same recipe (same numbers). Vendor and Disenchant tiles show none.
+- [ ] Untracked, paused, fewer than 3 days, or nothing measured in the last 24 hours: no percentage anywhere, and the window is exactly as before (no gap, no placeholder). Only the crafted item stale: the AH percentage hides, Materials stays.
+- [ ] A recipe crafted at a loss (or break even): both percentages grey; the tooltip ends with "At a loss or break even at the auction house today: shown in grey...".
+- [ ] Hover each one: the tooltip shows the view with its percentage, the caption, Now, Usual, Lowest, Highest (money in the addon's format) and "N measurements over D days"; it hides on leaving. Moving from the AH tile onto its percentage keeps the tile highlighted.
+- [ ] Click the Materials percentage: the panel folds or unfolds as with the header. Click the AH percentage with the AH open: the crafted item is searched as with the tile. A drag starting on either moves the window and the click ending it does nothing.
+- [ ] Layout in all three languages: the AH value shrinks to leave room for the percentage and never runs under it; the magnifier (AH open) does not touch it; a long Materials title ("COMPOSANTS x10 (ESTIMATION)", "MATERIALES x10 (ESTIMADO)") is cut before the percentage, never drawn under it; the window is neither taller nor wider than without history.
+- [ ] Repaint: a **Refresh recipe** on a tracked recipe updates its percentages when the search ends; unticking *Track history* hides them at once, ticking again brings them back; pausing it from the History window hides them.
+
 ## Click a reagent to search it (quality of life, never buys)
 - [ ] With the materials detail unfolded at the AH, hovering a reagent row highlights it. Clicking "20x Bronze Bar" opens the AH's Buy view, types the item name in the AH search box and starts the search.
 - [ ] Clicking the matching result opens its buy view with the quantity already set to 20. (Best effort: if the quantity stays at 1, note the AH view; the search itself is the part that must work.)

@@ -673,7 +673,7 @@ function Controller.marketName()
 end
 
 Controller.HISTORY_PERIODS = { [7] = true, [30] = true, [60] = true }
-Controller.HISTORY_FRESH = 86400   -- arrows only when the newest measurement is this recent
+Controller.HISTORY_FRESH = 86400   -- percentages only when the newest measurement is this recent
 
 local function seriesReader()
     local series = Controller.market().series
@@ -744,10 +744,10 @@ local function cached(slot, now, compute)
     return value
 end
 
--- The tracked recipes for the window's list, in saved order. `indicator` holds the arrows
+-- The tracked recipes for the window's list, in saved order. `indicator` holds the percentages
 -- (HistoryView.indicators) only when there is enough data and the newest measurement is
 -- under 24 hours old (`fresh`: a reagent or the sold crafted item, see freshness), each
--- arrow only when its own items are (materials: a reagent, sale: the crafted item); older
+-- one only when its own items are (materials: a reagent, sale: the crafted item); older
 -- data never shows as today's. atLoss: when the crafted item's sale price is fresh too,
 -- whether crafting and selling at the auction house loses money (or earns 0) on the newest
 -- day (indicators' netToday <= 0); nil when unknown (stale data or sale price, no sale).

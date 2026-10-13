@@ -17,7 +17,7 @@ From top to bottom:
 | **Result** banner | The best way to sell the item and the net result of the craft (best resale minus materials) in large type. Green for a gain, red for a loss, amber when the result is incomplete (a price is missing). |
 | **Three tiles** | **AH (NET)**: the price the crafted item would fetch at the auction house, after the 5 % commission. **VENDOR**: what a vendor pays for the item. **DISENCH.** with a *beta* tag: the *expected* value of disenchanting the item, net of the auction house commission on the materials (see [Disenchanting](#disenchanting)). The best one is outlined in gold. A tile reads `n/a` when that way is not possible (bound when picked up, cannot be vendored or disenchanted) and `?` when it is possible but a price is unknown. With the auction house open, the **AH (NET)** tile can be clicked to search the crafted item (see [Searching the crafted item](#searching-the-crafted-item)). |
 | *grey line* | Under the tiles: the most probable disenchant outcome, for example `75%: 1-2x Soul Dust = 7s 30c`. Only shown when the disenchant has several possible results. |
-| **Materials** panel | The cost of all reagents at auction house prices. Click the header to fold or unfold the detail (`-` unfolded, `+` folded); the choice is saved. Click a reagent to search it at the auction house (see [Searching a reagent](#searching-a-reagent)). |
+| **Materials** panel | The cost of all reagents at auction house prices. Click the header to fold or unfold the detail (`-` unfolded, `+` folded); the choice is saved. Click a reagent to search it at the auction house (see [Searching a reagent](#searching-a-reagent)). For a tracked recipe, a small percentage may sit left of the total (see [History in the main window](#history-in-the-main-window)). |
 | **Prices: 5m ago** | How old the oldest price used is. It turns orange when prices are more than an hour old. |
 | **Options** panel | **Crafts**, **Track history**, **Cost per skill point** with its value on the right (see [Cost per skill point](#cost-per-skill-point)), then the **Pin** / **Unpin** and **Refresh recipe** buttons. |
 
@@ -36,6 +36,10 @@ For large quantities the total is an estimate: the price of a reagent is the med
 ### Track history
 
 The **Track history** box (next to Crafts) makes CraftProfit keep the prices of this recipe's reagents and result over time. Up to 30 recipes can be tracked, independently of the pinned list. A point is recorded after every scan and every price search that touches one of the recipe's items, as long as all the needed prices are known. Unticking the box pauses recording and keeps what was recorded. `/cp history` opens the [History window](#price-history); `/cp history list` lists the tracked recipes in chat and `/cp history remove <n>` deletes one with its history. Prices are kept per ruleset (the game "realm" in the beta) and faction, so the history of one market never mixes with another. Every recorded point is kept for 7 days, then one point a day (average, lowest, highest and number of measurements) is kept for 60 days; older history is dropped. The [History window](#price-history) shows it.
+
+### History in the main window
+
+For a tracked recipe, two small percentages compare today's prices with their usual level (the 30-day median), the same figures as the History window's list: one left of the **Materials** total (the cost of the materials) and one at the right of the **AH (NET)** value (the crafted item's sale price after the commission). Green is good for you (materials cheaper, sale higher), red the opposite, grey within ±3 %. While crafting and selling at the auction house loses money or earns nothing today, both are grey. Hover one for today's price, the usual one, the lowest and highest of the last 30 days and how many measurements they come from. They show only when tracking is on (not paused), there are at least 3 days of data and the prices were measured less than 24 hours ago; otherwise nothing is shown. Clicking one does what a click on the header or the tile does.
 
 ### Pin and Refresh recipe buttons
 
@@ -211,7 +215,7 @@ The window follows the game language: English, French and Spanish (Latin America
 - **Large quantities are estimated.** See [Crafts](#crafts).
 - **Disenchant data is Classic data**, tagged *beta*, with no table for epic items above item level 60.
 - **Skill-up chances are estimates** based on recipe colour.
-- **Price history depends on your own searches.** A price is recorded only when you search or scan at the auction house; the chart and the arrows are only as regular as your refreshes.
+- **Price history depends on your own searches.** A price is recorded only when you search or scan at the auction house; the chart and the percentages are only as regular as your refreshes.
 - **No sales history or frequency.** The game gives no such data, so CraftProfit cannot say how fast an item sells.
 - **Auction house only for prices.** Vendor prices come from the game.
 

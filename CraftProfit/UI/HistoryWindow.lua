@@ -919,7 +919,15 @@ local function buildRight(left0, top0)
         b:Hide()
     end
     -- The messages of the empty states.
-    parts.empty = right:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+    -- On its own frame above the panels: a text on `right` itself would hide behind the
+    -- chart panel's background when the message sits over it.
+    local host = CreateFrame("Frame", nil, right)
+    host:SetAllPoints(right)
+    if type(right.GetFrameLevel) == "function" and type(host.SetFrameLevel) == "function" then
+        local level = right:GetFrameLevel()
+        if type(level) == "number" then host:SetFrameLevel(level + 20) end
+    end
+    parts.empty = host:CreateFontString(nil, "OVERLAY", "GameFontDisable")
     parts.empty:SetWidth(RIGHT_W - 40)
     parts.empty:SetJustifyH("CENTER")
     parts.empty:SetWordWrap(true)

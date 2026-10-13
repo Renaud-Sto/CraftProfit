@@ -210,19 +210,8 @@ local function paintText(fs, color)
     fs:SetTextColor(color[1], color[2], color[3], color[4])
 end
 
-local function goodColor(good)
-    if good == true then return Colors.FIXED.profit end
-    if good == false then return Colors.FIXED.loss end
-    return Colors.text("muted")
-end
-
--- "-18%" coloured by whether it is good news (green), bad (red) or flat (grey); all grey
--- when `muted` (the recipe is crafted at a loss: no move is good news yet).
-local function arrowText(c, muted)
-    if not c then return "" end
-    local text = c.pct == 0 and "0%" or string.format("%+d%%", c.pct)
-    return Colors.escape(muted and Colors.text("muted") or goodColor(c.good)) .. text .. "|r"
-end
+-- Green good news, red bad, grey flat (shared with the main window: Present).
+local goodColor = ns.Present.goodColor
 
 local function money(v)
     if type(v) ~= "number" then return "-" end
@@ -359,19 +348,14 @@ function HistoryWindow.compareLine(data)
     return text, goodColor(c.good)
 end
 
--- "1 measurement over 1 day", "12 measurements over 5 days": each count agrees in number
--- (ns.Locale.plural: French counts 0 as singular).
-local function count(n, key)
-    n = type(n) == "number" and n or 0
-    return string.format(L[key .. (ns.Locale.plural(n) == "one" and "_ONE" or "_OTHER")], n)
-end
-
+-- "1 measurement over 1 day", "12 measurements over 5 days" (Present.coverageText, shared
+-- with the main window's tooltips).
 function HistoryWindow.coverageText(measures, days)
-    return string.format(L.HISTORY_COVERAGE, count(measures, "HISTORY_MEASURES"), count(days, "HISTORY_DAYS"))
+    return ns.Present.coverageText(L, measures, days)
 end
 
 function HistoryWindow.daysText(days)
-    return count(days, "HISTORY_DAYS")
+    return ns.Present.daysText(L, days)
 end
 
 -- One item of the least measured line: "Copper Bar (8 measurements over 2 days)" alone,
@@ -383,7 +367,7 @@ local function thinItem(item, alone)
     local counts = L.HISTORY_THIN_NONE
     if measures > 0 then
         counts = alone and HistoryWindow.coverageText(measures, item.days)
-            or string.format(L.HISTORY_COVERAGE, tostring(measures), count(item.days, "HISTORY_DAYS"))
+            or string.format(L.HISTORY_COVERAGE, tostring(measures), HistoryWindow.daysText(item.days))
     end
     return string.format(L.HISTORY_THIN_ITEM, name, counts)
 end
@@ -665,8 +649,10 @@ local function paintRight()
     parts.status:SetShown(data.status == "paused")
 end
 
+-- "-18%" coloured by whether it is good news (green), bad (red) or flat (grey); all grey
+-- when `muted` (the recipe is crafted at a loss: no move is good news yet).
 local function paintColumn(fs, c, muted)
-    fs:SetText(arrowText(c, muted))
+    fs:SetText(ns.Present.changeText(c, muted))
 end
 
 -- Repaints the rows and the scroll bar from the cached list: no data work.

@@ -110,6 +110,8 @@ ns.Locale.register("frFR", {
     HISTORY_COL_SALE = "Vente",
     HISTORY_ROW_TIP = "Composants\194\160: aujourd'hui par rapport à l'habitude. Vente\194\160: idem. Le vert vous est favorable (composants moins chers, vente plus haute).",
     HISTORY_ROW_TIP_LOSS = "Fabriquer et vendre à l'hôtel des ventes fait perdre de l'argent ou ne laisse ni gain ni perte aujourd'hui\194\160: ces variations ne sont pas encore une bonne nouvelle.",
+    -- Main window indicators: why both percentages are grey.
+    IND_TIP_LOSS = "À perte ou sans gain à l'HV aujourd'hui\194\160: variation affichée en gris.",
     HISTORY_PERIOD = "%d jours",
     HISTORY_VERDICT_TODAY = "%s aujourd'hui\194\160: %s",
     HISTORY_VERDICT_ON = "%s le %s\194\160: %s",

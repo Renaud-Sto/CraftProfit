@@ -665,3 +665,77 @@ H.test("a record, a pause, a delete, the commission, the day and freshness inval
     H.eq(C.historyList()[1].fresh, false)
     T.env.time = clock
 end)
+
+-- The recipe shown in the main window, and its model's history figures.
+local function show(T, C, recipe)
+    C.setRecipe(T.ns.Recipes.normalize(recipe), "profession")
+    return T.ns.Window.lastModel.history
+end
+
+H.test("the main window model carries the indicators of a tracked, active recipe with fresh data", function()
+    local T, C = boot()
+    track(T, raw(5))
+    fill(C, 10, function(id, age)
+        if age == 0 and id == 1 then return 80 end       -- materials cheaper today
+        return flat(id)
+    end)
+    local history = show(T, C, raw(5))
+    H.eq(history.recipeID, 5)
+    H.eq(history.materials.tone, "down")
+    H.eq(history.materials.good, true)
+    H.eq(history.sale.tone, "flat")
+    H.eq(history.atLoss, false)
+    -- The very entries of the cached list: no second computation.
+    local entry = C.historyList()[1]
+    H.truthy(history.materials == entry.indicator.materials)
+end)
+
+H.test("the main window model has no indicators when untracked, paused, stale or short of data", function()
+    local T, C = boot()
+    fill(C, 10, flat)
+    H.eq(show(T, C, raw(5)), nil)                        -- untracked
+    track(T, raw(5), false)
+    C.historyChanged()
+    H.eq(show(T, C, raw(5)), nil)                        -- paused
+    C.setHistoryActive(5, true)
+    H.truthy(show(T, C, raw(5)))
+    fill(C, 10, function(id, age) if age >= 2 then return flat(id) end end)
+    H.eq(show(T, C, raw(5)), nil)                        -- newest point two days old
+    fill(C, 2, flat)
+    H.eq(show(T, C, raw(5)), nil)                        -- two days: no usual price
+end)
+
+H.test("the main window model flags a recipe sold at a loss, and keeps only the fresh side", function()
+    local T, C = boot()
+    track(T, raw(5))
+    -- The crafted item sells for less than its materials cost.
+    fill(C, 10, function(id) if id == 100 then return 200 end return flat(id) end)
+    local history = show(T, C, raw(5))
+    H.eq(history.atLoss, true)
+    -- The crafted item not measured for two days: no sale figure, no loss flag.
+    fill(C, 10, function(id, age)
+        if id == 100 and age < 2 then return nil end
+        return flat(id)
+    end)
+    history = show(T, C, raw(5))
+    H.truthy(history.materials)
+    H.eq(history.sale, nil)
+    H.eq(history.atLoss, false)
+end)
+
+H.test("a new measurement, a pause and an untrack reach the main window model on the next refresh", function()
+    local T, C = boot()
+    track(T, raw(5))
+    fill(C, 10, flat)
+    H.eq(show(T, C, raw(5)).materials.tone, "flat")
+    -- Materials far cheaper today, recorded the way a search records them.
+    T.ns.History.setDateFn(stubClock(0))
+    C.market().series[1][#C.market().series[1]] = pt(0, 40)
+    C.recordHistory({ [1] = true })
+    C.refresh()
+    H.eq(T.ns.Window.lastModel.history.materials.tone, "down")
+    C.setTracking(false)
+    H.eq(T.ns.Window.lastModel.history, nil)
+    C.setTracking(true)
+    H.truthy(T.ns.Window.lastModel.history)
+end)

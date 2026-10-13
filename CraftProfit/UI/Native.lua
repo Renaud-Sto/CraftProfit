@@ -792,7 +792,7 @@ function Native.tile(parent, width, height)
         paint()
     end
 
-    -- spec: { label, tag, value, best, muted }
+    -- spec: { label, tag, value, best, muted }.
     function tile:set(spec)
         self.best = spec.best and true or false
         self.muted = spec.muted and true or false
@@ -859,6 +859,17 @@ function Native.tile(parent, width, height)
         local shown = show and Native.searchIcon(self.icon)
         self.icon:SetShown(shown and true or false)
         -- While the magnifier shows, the label stops short of it (cut, not drawn under it).
+        self:anchorLabel()
+    end
+
+    -- The label's right end: before the owner's mark (tile.mark, a fontstring it places at
+    -- the top right) when there is one, else before the magnifier or the tile's padding.
+    function tile:anchorLabel()
+        if self.mark then
+            self.label:SetPoint("TOPRIGHT", self.mark, "TOPLEFT", -4, 0)
+            return
+        end
+        local shown = self.icon and self.icon:IsShown()
         local right = shown and (6 + Native.TILE_ICON + 4) or Native.TILE_PAD
         self.label:SetPoint("TOPRIGHT", f, "TOPRIGHT", -right, -8)
     end

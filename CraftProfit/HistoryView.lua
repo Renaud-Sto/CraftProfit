@@ -1,5 +1,5 @@
 -- Turns a tracked recipe and its items' price series into the figures the history window
--- and the main window arrows show. Pure Lua, no WoW API, no widgets.
+-- and the main window indicators show. Pure Lua, no WoW API, no widgets.
 --
 -- HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf)
 --   -> { { day, materials, sale, net, carried, materialsCarried, saleCarried, netCarried, n }, ... }

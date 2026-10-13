@@ -112,6 +112,8 @@ ns.Locale.register("enUS", {
     HISTORY_COL_SALE = "Sale",
     HISTORY_ROW_TIP = "Materials: today vs usual. Sale: today vs usual. Green is good for you (cheaper materials, higher sale).",
     HISTORY_ROW_TIP_LOSS = "Crafting and selling at the auction house is at a loss or break even today, so the changes are not good news yet.",
+    -- Main window indicators: why both percentages are grey.
+    IND_TIP_LOSS = "At a loss or break even at the AH today: change shown in grey.",
     HISTORY_PERIOD = "%d days",
     HISTORY_VERDICT_TODAY = "%s today: %s",
     HISTORY_VERDICT_ON = "%s on %s: %s",

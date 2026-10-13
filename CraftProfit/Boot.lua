@@ -221,6 +221,7 @@ function Controller.refresh()
         for _, reagent in ipairs(recipe.reagents or {}) do Controller.itemInfo(reagent.itemID) end
         model.pinned = DB.pinIndex(CraftProfitCharDB, recipe.recipeID) ~= nil
         model.tracked = History.isActive(CraftProfitDB, recipe.recipeID)
+        model.history = model.tracked and Controller.windowHistory(recipe.recipeID) or nil
         model.showPerPoint = settings.showPerPoint
         model.costExpanded = settings.costExpanded
         ns.Window.render(model)
@@ -672,7 +673,7 @@ function Controller.marketName()
 end
 
 Controller.HISTORY_PERIODS = { [7] = true, [30] = true, [60] = true }
-Controller.HISTORY_FRESH = 86400   -- arrows only when the newest measurement is this recent
+Controller.HISTORY_FRESH = 86400   -- percentages only when the newest measurement is this recent
 
 local function seriesReader()
     local series = Controller.market().series
@@ -743,10 +744,10 @@ local function cached(slot, now, compute)
     return value
 end
 
--- The tracked recipes for the window's list, in saved order. `indicator` holds the arrows
+-- The tracked recipes for the window's list, in saved order. `indicator` holds the percentages
 -- (HistoryView.indicators) only when there is enough data and the newest measurement is
 -- under 24 hours old (`fresh`: a reagent or the sold crafted item, see freshness), each
--- arrow only when its own items are (materials: a reagent, sale: the crafted item); older
+-- one only when its own items are (materials: a reagent, sale: the crafted item); older
 -- data never shows as today's. atLoss: when the crafted item's sale price is fresh too,
 -- whether crafting and selling at the auction house loses money (or earns 0) on the newest
 -- day (indicators' netToday <= 0); nil when unknown (stale data or sale price, no sale).
@@ -773,6 +774,21 @@ end
 function Controller.historyList()
     local now = time()
     return cached("list", now, function() return computeList(now) end)
+end
+
+-- The main window's indicators for one recipe, from the cached historyList entry (no
+-- computation of its own): { materials, sale (HistoryView comparisons, each nil when not
+-- fresh), atLoss (true only when known), recipeID }, or nil unless the recipe is tracked,
+-- active and has an indicator (fresh data, enough days). Callers must not modify it.
+function Controller.windowHistory(recipeID)
+    for _, entry in ipairs(Controller.historyList()) do
+        if entry.recipe.recipeID == recipeID then
+            local ind = entry.indicator
+            if not entry.active or type(ind) ~= "table" then return nil end
+            return { materials = ind.materials, sale = ind.sale, atLoss = entry.atLoss == true, recipeID = recipeID }
+        end
+    end
+    return nil
 end
 
 -- Rows a recipe view keeps for the weekday strip: the ones with a value that is not only
@@ -1060,6 +1076,9 @@ function Controller.init()
         onReagentClick = Controller.onReagentClick,
         onOutputClick = Controller.onOutputClick,
         itemName = Controller.itemName,
+        -- The history indicators' tooltips.
+        historyData = Controller.historyData,
+        fmt = Controller.fmt,
         onCraftsChange = Controller.setCrafts,
         onTrackToggle = Controller.setTracking,
         onPerPointToggle = function(checked)

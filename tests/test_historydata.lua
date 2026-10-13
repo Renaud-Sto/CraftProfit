@@ -320,6 +320,35 @@ H.test("deleting a history before an item is cached never deletes what that reci
     ITEMS[301] = nil
 end)
 
+H.test("deleting a history before an item is cached keeps an own reagent that is a disenchant material", function()
+    local T, C = boot()
+    -- An enchanting recipe using Lesser Magic Essence (10938), and a weapon not loaded yet
+    -- that may disenchant into it.
+    local enchant = weaponRecipe(11, 100, DUST[1])
+    track(T, enchant)
+    track(T, weaponRecipe(12, 399, 2))
+    local here = C.market()
+    local there = T.ns.DB.market(T.env.CraftProfitDB, "9999-Alliance")
+    for _, m in ipairs({ here, there }) do seed(m, { DUST[1], 100, 2, 399 }) end
+    H.eq(C.deleteHistory(11), true)
+    for _, m in ipairs({ here, there }) do
+        H.truthy(m.series[DUST[1]])                    -- 399 may still need it
+        H.eq(m.series[100], nil)                       -- never a disenchant material: deleted
+        H.truthy(m.series[399])
+    end
+end)
+
+H.test("deleting a history once every item is cached removes an own disenchant material nobody needs", function()
+    local T, C = boot()
+    track(T, weaponRecipe(11, 100, DUST[1]))
+    track(T, raw(6))
+    local here = C.market()
+    seed(here, { DUST[1], 100, 1, 2 })
+    H.eq(C.deleteHistory(11), true)
+    H.eq(here.series[DUST[1]], nil)
+    H.truthy(here.series[100])                         -- recipe 6's crafted item
+end)
+
 H.test("the conservative item list ignores Enchanting and reports an unknown item", function()
     local _, C = boot()
     ITEMS[301] = { quality = 2, ilvl = 15, sellPrice = 1, classID = 2, bindType = 1 }

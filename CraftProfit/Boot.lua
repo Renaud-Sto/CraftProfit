@@ -1062,8 +1062,10 @@ end
 -- Deletes, in every market (other rulesets and factions too), the history series of a recipe
 -- that was just removed from the tracked list. Conservative: only an id of that recipe's own
 -- list goes, and only when no remaining tracked recipe (active or paused) could need it; while
--- a remaining recipe's list is incomplete (item not loaded), only the removed recipe's own
--- reagents and crafted item can go, never a disenchant material. Current prices stay.
+-- a remaining recipe's list is incomplete (item not loaded), that recipe could need any
+-- disenchant material: only the removed recipe's own reagents and crafted item can go, and
+-- never one that is a disenchant material (a Lesser Magic Essence reagent, say). Current
+-- prices stay.
 local function deleteSeriesOf(recipe)
     local candidates = Controller.historyItemsAll(recipe)
     local own = { [recipe.outputItemID] = true }
@@ -1073,6 +1075,11 @@ local function deleteSeriesOf(recipe)
         local ids, complete = Controller.historyItemsAll(entry.recipe)
         for _, id in ipairs(ids) do keep[id] = true end
         if not complete then othersComplete = false end
+    end
+    if not othersComplete then
+        for _, bracket in ipairs(Disenchant.brackets) do
+            for _, result in ipairs(bracket.results) do keep[result.itemID] = true end
+        end
     end
     for _, market in pairs(CraftProfitDB.markets) do
         if type(market) == "table" and type(market.series) == "table" then

@@ -20,6 +20,9 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] A recipe you have not learned shows nothing (window hides or keeps the empty text).
 - [ ] The window opens on the right of the profession window; dragging it and `/reload` keeps the position; `/cp reset` puts it back.
 - [ ] Closing the profession window hides the window (outside the AH).
+- [ ] Close the main window with its X, then craft the selected recipe (or change the profession window's filter, or gain a skill point): the main window stays closed. Pick another recipe in the profession window: it opens on that recipe.
+- [ ] Pick a recipe from the pinned list, the pinned window or the leveling window while the profession window shows another one, then craft or change the filter there: the picked recipe stays in the main window. Pick a new recipe in the profession window: it replaces the picked one.
+- [ ] Craft the recipe shown several times with "Crafts" set to 5: the window stays on it, the box keeps 5, and its colour and cost per point follow a skill-up.
 - [ ] Ticking "Cost per skill point" shows its value beside the box, with the chance used, marked `(75%, estimate)`; a grey recipe shows `n/a`.
 - [ ] The Pin button toggles to Unpin and back.
 - [ ] Clicking the Materials header folds the reagent detail in (`+`) and out (`-`); the choice survives `/reload`. With 5+ reagents the window grows and nothing overlaps.
@@ -62,6 +65,8 @@ Use a recipe with at least 5 reagents; `/console scriptErrors 1` on.
 Pinned list (open the AH with pinned recipes):
 - [ ] With more than 6 pins a scroll bar shows at the right edge of the list. The thumb moves with the mouse wheel over the rows, over the bar and over the empty space of the list. Dragging the thumb scrolls; clicking the track jumps there. Dragging far outside the bar and releasing stops the scrolling.
 - [ ] With 6 pins or fewer there is no bar. Unpin recipes while scrolled down to the end: the list clamps back and the bar disappears when 6 or fewer are left.
+- [ ] With 20 or more pins, scroll fast with the wheel and drag the thumb from end to end: smooth, no hitch, and the addon profiler shows no peak while scrolling (rows are repainted from the last refresh, nothing is evaluated). The wheel at the top or the bottom of the list does nothing. Same in the pinned window.
+- [ ] Refresh pinned with 20 pins: the values update while the search runs, about once a second, and the last update comes right after the summary line.
 - [ ] Pinned names are orange, yellow, green or grey, matching the profession window. The colour is the one known when the profession window was last open: gain skill points, open the profession window, and the colours follow (with the profession closed they can lag). A pin without a known difficulty shows the plain text colour.
 - [ ] The selected row is tinted gold, the row under the mouse is highlighted, and a hovered selected row still looks right. Values are green for a gain, red for a loss, muted when unknown.
 - [ ] The Sort button in the panel header takes clicks (profit and cost/point alternate) and does not overlap the title "RECETTES ÉPINGLÉES" under `/cp locale frFR`.
@@ -71,6 +76,7 @@ Leveling window (`/cp level`):
 - [ ] It opens beside the main window, with the native look; the profession button cycles through the professions read; the sort button toggles cost/point and speed.
 - [ ] The grey-recipes check box shows or hides grey recipes, and the hidden count follows. Clicking the words next to the square toggles it too (every check box: the label is part of the click area), and the scroll bar and the row count change when the grey recipes appear.
 - [ ] With more than 12 recipes the scroll bar appears and the wheel and the bar scroll. With 12 or fewer there is no bar. The window height never changes.
+- [ ] With a profession of 200+ learned recipes, drag the thumb from end to end and spin the wheel: smooth, no hitch (nothing is evaluated while scrolling).
 - [ ] A long French recipe name is cut with "..." and does not wrap; no text runs under the scroll bar.
 - [ ] With no profession read, the French empty message stays inside the panel and wraps.
 - [ ] Drag the window, `/reload`: the position is remembered. The x closes it. Clicking a row shows that recipe in the main window.
@@ -87,6 +93,7 @@ Leveling window (`/cp level`):
 - [ ] Each row shows `x1`, `x1.3` or `x4` before the amount (crafts per point); the top right button switches between *Sort: cost/point* and *Sort: speed* (orange first, then yellow, then green) and the choice survives `/reload`.
 - [ ] The leveling window opens to the right of the main window, not over it.
 - [ ] Unpriced recipes show `?` at the bottom. A recipe whose crafts pay for themselves shows `+…/pt` in green and comes first.
+- [ ] A recipe whose reagents are priced but whose crafted item has no AH price yet shows its cost per point in amber (the colour of the PRICES MISSING warning), not red or green; after a Refresh recipe that prices the item it turns red or green.
 - [ ] Clicking a row shows the recipe in the main window; the row is highlighted.
 - [ ] The list is still there at the auction house with the profession window closed, and the button under the pinned list opens it. With two professions read, the top button cycles between them.
 - [ ] Opening the profession window does not hitch the client (the read is spread over a few frames).
@@ -149,6 +156,7 @@ Take screenshots of each state in English, French and Spanish (`/cp locale frFR`
 Take screenshots in English, French and Spanish, with the AH open and closed.
 - [ ] A tracked recipe with 3+ days of data refreshed today: a small percentage left of the Materials total and one on the AH (NET) tile's label line, left of the magnifier's place (a long amount keeps the whole value line, nothing cut); green/red/grey as in the History window's list for the same recipe (same numbers). Vendor and Disenchant tiles show none.
 - [ ] Untracked, paused, fewer than 3 days, or nothing measured in the last 24 hours: no percentage anywhere, and the window is exactly as before (no gap, no placeholder). Only the crafted item stale: the AH percentage hides, Materials stays.
+- [ ] Leave the main window (and the History window) open on a tracked recipe without touching anything: the percentage disappears by itself 24 hours after the last measurement (for a quick check, set the system clock forward, or measure late in the evening and watch the next day).
 - [ ] A recipe crafted at a loss (or break even): both percentages grey; the tooltip ends with "At a loss or break even at the auction house today: shown in grey...".
 - [ ] Hover each one: the tooltip shows the view with its percentage, the caption, Now, Usual, Lowest, Highest (money in the addon's format) and "N measurements over D days"; it hides on leaving. Moving from the AH tile onto its percentage keeps the tile highlighted.
 - [ ] Click the Materials percentage: the panel folds or unfolds as with the header. Click the AH percentage with the AH open: the crafted item is searched as with the tile. A drag starting on either moves the window and the click ending it does nothing.

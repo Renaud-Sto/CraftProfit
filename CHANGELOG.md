@@ -28,6 +28,9 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - A scan that fails while being read no longer blocks the following scans, a pending quantity for the auction house search is cleared when the auction house closes, and values returned by the game are checked (secret values, failing calls) before use.
 - The Spanish materials label is consistent, and the translation test now compares format specifiers in order, so a translation that swaps them is caught.
 - Reagent quantities and unit prices have an upper bound, so a corrupt save cannot produce absurd amounts.
+- The main window no longer reopens by itself after you close it while the profession window is open (a craft, a skill-up or a filter change re-reported the same recipe), and a recipe picked from the pinned list, the pinned window or the leveling window is no longer replaced by the profession window's recipe; picking a new recipe in the profession window still opens it.
+- A cost per point counted while a resale price is missing (the crafted item or a disenchant material) shows in the amber of the "prices missing" warning instead of passing for a real cost.
+- A history percentage in the main window or the History list disappears by itself once its data are a day old, without waiting for another refresh.
 
 ### Changed
 - Price history retention: every point is kept for 7 days, then one point a day for 60 days (at most 212 points, about 35 KB in the saved file, per item); the weekly tier is gone. Existing history is compacted at load: points between 7 and 60 days old become daily points, weekly points and anything older than 60 days are dropped.
@@ -36,6 +39,9 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - The options window's Windows panel has two rows of two buttons (History added).
 - Prices and history points record whether their volume counts every unit on offer (a full scan, or a search whose results were not cut at 100 rows), for a later estimate of sales per day; nothing visible changes.
 - The pinned list under the main window is no longer evaluated while it is hidden.
+- Scrolling the pinned list, the pinned window or the leveling list no longer recalculates every recipe: the rows are redrawn from the last refresh.
+- One refresh looks up the market, Enchanting and each item once, and evaluates a recipe shown in two lists once.
+- During **Refresh pinned** the values update about once a second instead of after every item.
 
 ### Removed
 - The `/cp kitdemo` developer window (it prints the command list like any unknown command).

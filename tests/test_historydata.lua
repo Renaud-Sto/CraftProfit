@@ -366,7 +366,7 @@ H.test("historyData compares today with the usual price, good or bad by view", f
     H.eq(m.compare, { pct = -16, tone = "down", good = true })
     H.eq(m.goal, "buy")
     local n = C.historyData(5, "net", 30)
-    H.eq(n.compare, { pct = 6, tone = "up", good = true })
+    H.eq(n.compare, { gap = 40, tone = "up", good = true })
     H.eq(n.goal, "craft")
     local s = C.historyData(5, "sale", 30)
     H.eq(s.compare, { pct = 0, tone = "flat" })
@@ -390,7 +390,7 @@ H.test("historyData has no comparison under 3 days of data", function()
         H.eq(C.historyData(5, view, 30).compare, nil)
     end
     fill(C, 3, flat)
-    H.eq(C.historyData(5, "net", 30).compare, { pct = 0, tone = "flat" })
+    H.eq(C.historyData(5, "net", 30).compare, { gap = 0, tone = "flat" })
 end)
 
 H.test("historyData reads the commission from the settings", function()
@@ -398,4 +398,59 @@ H.test("historyData reads the commission from the settings", function()
     track(T, raw(5))
     T.env.CraftProfitDB.settings.cut = 0.075
     H.eq(C.historyData(5, "net", 30).commission, 7.5)
+end)
+
+H.test("historyData gives the auction house profit whatever the view, and whether it is a loss", function()
+    local T, C = boot()
+    track(T, raw(5))
+    -- Materials 250 every day; the crafted item sells for 100 (95 after the cut): a 155
+    -- loss, but today at 240 (228): a 22 loss, 133 better than usual.
+    fill(C, 10, function(id, age)
+        if id == 100 then return age == 0 and 240 or 100 end
+        return flat(id)
+    end)
+    local expected = { today = -22, todayDay = T.ns.History.dayOf(NOW), usual = -155, enough = true,
+        compare = { gap = 133, tone = "up", good = true }, atLoss = true }
+    for _, view in ipairs({ "net", "materials", "sale", "item:1", "item:100" }) do
+        for _, period in ipairs({ 7, 30, 60 }) do
+            H.eq(C.historyData(5, view, period).profit, expected)
+        end
+    end
+    -- The Profit view compares in money, for a usual loss too (History.compare cannot).
+    H.eq(C.historyData(5, "net", 30).compare, expected.compare)
+    -- A profit is not a loss; exactly 0 is (nothing is earned).
+    fill(C, 10, flat)
+    local profit = C.historyData(5, "materials", 30).profit
+    H.eq(profit.today, 700)
+    H.eq(profit.atLoss, false)
+    T.env.CraftProfitDB.settings.cut = 0
+    fill(C, 10, function(id) return id == 100 and 250 or flat(id) end)
+    H.eq(C.historyData(5, "sale", 30).profit.today, 0)
+    H.eq(C.historyData(5, "sale", 30).profit.atLoss, true)
+end)
+
+H.test("historyData: no sale, no profit, and no loss claimed", function()
+    local T, C = boot()
+    track(T, raw(7, 200))
+    fill(C, 10, flat, { 1, 2, 200 })
+    local profit = C.historyData(7, "materials", 30).profit
+    H.eq(profit.today, nil)
+    H.eq(profit.compare, nil)
+    H.eq(profit.atLoss, false)
+end)
+
+H.test("historyList says which recipes are crafted at a loss today", function()
+    local T, C = boot()
+    track(T, raw(5))
+    track(T, raw(7, 200))
+    fill(C, 10, function(id) return id == 100 and 100 or flat(id) end, { 1, 2, 100, 200 })
+    local list = C.historyList()
+    H.eq(list[1].atLoss, true)
+    -- Unknown (no sale): nil.
+    H.eq(list[2].atLoss, nil)
+    fill(C, 10, flat)
+    H.eq(C.historyList()[1].atLoss, false)
+    -- Data older than 24 hours: no arrows, nothing said.
+    fill(C, 10, function(id, age) if age < 2 then return nil end return flat(id) end)
+    H.eq(C.historyList()[1].atLoss, nil)
 end)

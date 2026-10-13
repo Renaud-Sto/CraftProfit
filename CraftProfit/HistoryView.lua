@@ -29,10 +29,16 @@
 -- HistoryView.compare(summary, higherIsGood) -> { pct, tone, good } or nil: History.compare
 --   of summary.today against summary.usual, nil unless summary.enough. good is true when the
 --   move is good news (up with higherIsGood, down without), false when bad, nil when flat.
+-- HistoryView.profitCompare(summary) -> { gap, tone, good } or nil: the "net" summary's
+--   today against its usual profit in money, for any sign of either (History.compare needs
+--   a usual above 0). gap = today - usual; tone "flat" when |gap| <= FLAT_PERCENT % of
+--   |usual| (a usual of exactly 0: only a gap of 0), else "up" (good = true) or "down"
+--   (good = false). nil unless summary.enough and both are finite.
 -- HistoryView.indicators(recipe, itemSeriesOf, now, itemsOf, cut)
---   -> { materials = { pct, tone, good } or nil, sale = { pct, tone, good } or nil }:
---   today against the usual price over 30 days. Materials cheaper and a sale higher are
---   good (true), the opposite bad (false); within the flat band good is nil.
+--   -> { materials = { pct, tone, good } or nil, sale = { pct, tone, good } or nil,
+--   netToday }: today against the usual price over 30 days. Materials cheaper and a sale
+--   higher are good (true), the opposite bad (false); within the flat band good is nil.
+--   netToday: the auction house profit of the newest day (summary "net"), nil unknown.
 local _, ns = ...
 local Util, Core, History = ns.Util, ns.Core, ns.History
 
@@ -179,10 +185,23 @@ function HistoryView.compare(summary, higherIsGood)
     return indicator(summary, higherIsGood == true)
 end
 
+function HistoryView.profitCompare(summary)
+    if type(summary) ~= "table" or summary.enough ~= true then return nil end
+    local today, usual = summary.today, summary.usual
+    if not Util.isFinite(today) or not Util.isFinite(usual) then return nil end
+    local gap = today - usual
+    local flat
+    if usual == 0 then flat = gap == 0 else flat = math.abs(gap) * 100 <= History.FLAT_PERCENT * math.abs(usual) end
+    if flat then return { gap = gap, tone = "flat" } end
+    if gap > 0 then return { gap = gap, tone = "up", good = true } end
+    return { gap = gap, tone = "down", good = false }
+end
+
 function HistoryView.indicators(recipe, itemSeriesOf, now, itemsOf, cut)
     local days = HistoryView.recipeDays(recipe, itemSeriesOf, now, History.USUAL_DAYS, cut, itemsOf)
     return {
         materials = indicator(HistoryView.summary(days, "materials"), false),
         sale = indicator(HistoryView.summary(days, "sale"), true),
+        netToday = HistoryView.summary(days, "net").today,
     }
 end

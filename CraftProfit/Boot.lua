@@ -695,19 +695,23 @@ end
 
 -- The tracked recipes for the window's list, in saved order. `indicator` holds the arrows
 -- (HistoryView.indicators) only when there is enough data and the newest measurement is
--- under 24 hours old (`fresh`); older data never shows as today's.
+-- under 24 hours old (`fresh`); older data never shows as today's. atLoss: with fresh data,
+-- whether crafting and selling at the auction house loses money (or earns 0) on the newest
+-- day (indicators' netToday <= 0); nil when unknown (stale data, no sale).
 function Controller.historyList()
     local now, seriesOf, cut = time(), seriesReader(), CraftProfitDB.settings.cut
     local out = {}
     for _, entry in ipairs(CraftProfitDB.tracked) do
         local newest = newestPoint(entry.recipe, seriesOf, now)
         local fresh = newest ~= nil and now - newest <= Controller.HISTORY_FRESH
-        local indicator
+        local indicator, atLoss
         if fresh then
             local ind = HistoryView.indicators(entry.recipe, seriesOf, now, Controller.historyItems, cut)
             if ind.materials or ind.sale then indicator = ind end
+            if type(ind.netToday) == "number" then atLoss = ind.netToday <= 0 end
         end
-        out[#out + 1] = { recipe = entry.recipe, active = entry.active == true, indicator = indicator, fresh = fresh }
+        out[#out + 1] = { recipe = entry.recipe, active = entry.active == true, indicator = indicator, fresh = fresh,
+            atLoss = atLoss }
     end
     return out
 end
@@ -737,7 +741,11 @@ end
 -- goal: what the shown price matters for, "buy" (materials, one reagent), "sell" (sale, the
 -- crafted item, a disenchant material) or "craft" (net). compare: today against the usual
 -- price (HistoryView.compare: good news is a lower price to buy, a higher one otherwise),
--- nil without enough data. commission: the auction house cut in percent (5 for 0.05).
+-- nil without enough data; in the Profit view it is profit.compare (in money).
+-- profit: the recipe's auction house profit whatever the view (HistoryView.summary "net" of
+-- the period's rows, usual over 30 days): { today, todayDay, usual, enough, compare
+-- (HistoryView.profitCompare), atLoss (today is a number <= 0) }; vendor and disenchant are
+-- not counted. commission: the auction house cut in percent (5 for 0.05).
 function Controller.historyData(recipeID, view, period)
     local _, entry = History.find(CraftProfitDB, recipeID)
     if not entry then return nil end
@@ -767,6 +775,14 @@ function Controller.historyData(recipeID, view, period)
 
     local days, field, summary, usual30, weekdayDays
     local itemID = tonumber(view:match("^item:(%d+)$"))
+    -- The recipe's rows over the period and over 30 days: the profit whatever the view.
+    local rows = HistoryView.recipeDays(recipe, seriesOf, now, period, cut, Controller.historyItems)
+    local month = HistoryView.recipeDays(recipe, seriesOf, now, History.USUAL_DAYS, cut, Controller.historyItems)
+    local profit = HistoryView.summary(rows, "net")
+    local profit30 = HistoryView.summary(month, "net")
+    profit = { today = profit.today, todayDay = profit.todayDay, usual = profit30.usual, enough = profit30.enough }
+    profit.compare = HistoryView.profitCompare(profit)
+    profit.atLoss = type(profit.today) == "number" and profit.today <= 0
     if itemID then
         local series = seriesOf(itemID)
         days = History.dailySeries(series, now, period)
@@ -778,9 +794,8 @@ function Controller.historyData(recipeID, view, period)
         weekdayDays = days
     else
         field = view
-        days = HistoryView.recipeDays(recipe, seriesOf, now, period, cut, Controller.historyItems)
+        days = rows
         summary = HistoryView.summary(days, field)
-        local month = HistoryView.recipeDays(recipe, seriesOf, now, History.USUAL_DAYS, cut, Controller.historyItems)
         usual30 = HistoryView.summary(month, field)
         weekdayDays = viewDays(days, field)
     end
@@ -795,7 +810,8 @@ function Controller.historyData(recipeID, view, period)
         status = status, paused = entry.active ~= true,
         measures = usual30.measures, days = usual30.daysCovered,
         market = Controller.marketName(),
-        goal = goal, compare = HistoryView.compare(summary, goal ~= "buy"),
+        goal = goal, profit = profit,
+        compare = view == "net" and profit.compare or HistoryView.compare(summary, goal ~= "buy"),
         commission = Util.round((cut or 0) * 10000) / 100,
     }
 end

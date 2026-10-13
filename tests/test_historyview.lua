@@ -198,7 +198,26 @@ H.test("indicators say whether materials are cheaper and the sale higher than us
     -- A bound crafted item has no sale arrow; too little data has none at all.
     H.eq(V.indicators(RECIPE, seriesOf(map), NOW + 120, itemsOfBound, CUT).sale, nil)
     local few = { [1] = { pt(1, 100), pt(0, 90, 60) }, [2] = { pt(1, 50) }, [100] = { pt(1, 1000) } }
-    H.eq(V.indicators(RECIPE, seriesOf(few), NOW + 120, itemsOf, CUT), {})
+    local none = V.indicators(RECIPE, seriesOf(few), NOW + 120, itemsOf, CUT)
+    H.eq(none.materials, nil)
+    H.eq(none.sale, nil)
+end)
+
+H.test("indicators give the auction house profit of the newest day, a loss below zero", function()
+    local V = load().HistoryView
+    local map = { [1] = {}, [2] = {}, [100] = {} }
+    for age = 10, 0, -1 do
+        local extra = age == 0 and 60 or nil
+        map[1][#map[1] + 1] = pt(age, 100, extra)
+        map[2][#map[2] + 1] = pt(age, 50, extra)
+        map[100][#map[100] + 1] = pt(age, 100, extra)
+    end
+    -- 3 crafted items at 100 sell for 285 after the cut; materials cost 250: 35 profit.
+    H.eq(V.indicators(RECIPE, seriesOf(map), NOW + 120, itemsOf, CUT).netToday, 35)
+    map[100][#map[100]] = pt(0, 60, 60)
+    H.eq(V.indicators(RECIPE, seriesOf(map), NOW + 120, itemsOf, CUT).netToday, 171 - 250)
+    -- No sale (bound crafted item): no profit.
+    H.eq(V.indicators(RECIPE, seriesOf(map), NOW + 120, itemsOfBound, CUT).netToday, nil)
 end)
 
 H.test("a day measuring only the crafted item does not count as a materials price", function()
@@ -244,4 +263,23 @@ H.test("compare: good or bad by view, nothing without enough data", function()
     H.eq(V.compare({ today = 88, enough = false }, false), nil)
     H.eq(V.compare({ today = 88, usual = -5, enough = true }, true), nil)
     H.eq(V.compare(nil, true), nil)
+end)
+
+H.test("profitCompare: a money gap for any sign of the usual profit, flat within 3 % of it", function()
+    local V = load().HistoryView
+    -- A loss shrinking from 3700 to 247: better, whatever the signs.
+    H.eq(V.profitCompare({ today = -247, usual = -3700, enough = true }), { gap = 3453, tone = "up", good = true })
+    H.eq(V.profitCompare({ today = -500, usual = 200, enough = true }), { gap = -700, tone = "down", good = false })
+    H.eq(V.profitCompare({ today = 1200, usual = 1000, enough = true }), { gap = 200, tone = "up", good = true })
+    -- Within 3 % of the usual amount (its size, not its sign): flat.
+    H.eq(V.profitCompare({ today = -1030, usual = -1000, enough = true }), { gap = -30, tone = "flat" })
+    H.eq(V.profitCompare({ today = -969, usual = -1000, enough = true }), { gap = 31, tone = "up", good = true })
+    -- A usual of exactly 0: any gap counts, none is flat.
+    H.eq(V.profitCompare({ today = 1, usual = 0, enough = true }), { gap = 1, tone = "up", good = true })
+    H.eq(V.profitCompare({ today = 0, usual = 0, enough = true }), { gap = 0, tone = "flat" })
+    -- Without enough data or a number: nil.
+    H.eq(V.profitCompare({ today = 5, usual = 1, enough = false }), nil)
+    H.eq(V.profitCompare({ today = 0 / 0, usual = 1, enough = true }), nil)
+    H.eq(V.profitCompare({ usual = 1, enough = true }), nil)
+    H.eq(V.profitCompare(nil), nil)
 end)

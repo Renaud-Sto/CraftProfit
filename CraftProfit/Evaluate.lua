@@ -107,6 +107,7 @@ function Evaluate.run(ctx)
     end
 
     local best, bestValue, optionsIncomplete = Core.bestOption(options)
+    local incomplete = optionsIncomplete or total == nil
     local net
     if total and bestValue then net = bestValue - total end
 
@@ -117,6 +118,9 @@ function Evaluate.run(ctx)
         if total and chance then
             perPoint.cost = Core.costPerPoint(total, bestValue, chance)
         end
+        -- A resale price is missing: the cost counts only what the known ways to sell recover
+        -- (nothing when none is known), so it is an upper bound and is shown as incomplete.
+        if incomplete then perPoint.incomplete = true end
     end
 
     -- Several crafts: every amount scales, the per point figures above do not (they
@@ -143,7 +147,7 @@ function Evaluate.run(ctx)
         best = best,
         bestValue = bestValue,
         net = net,
-        incomplete = optionsIncomplete or total == nil,
+        incomplete = incomplete,
         perPoint = perPoint,
         oldestAge = oldest,
     }

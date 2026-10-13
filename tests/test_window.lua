@@ -878,29 +878,23 @@ H.test("indicators: a broken history never raises and draws nothing", function()
     end
 end)
 
-H.test("indicators: the window keeps its height and the AH value makes room for the percentage", function()
-    local T, Window = boot()
-    local Native = T.ns.Native
+H.test("indicators: the window keeps its height and the AH label stops before the percentage", function()
+    local T, Window = boot({ record = true })
     local tile = Window.parts.tiles[1]
-    local reserves = {}
-    local set = tile.set
-    tile.set = function(self, spec)
-        reserves[#reserves + 1] = spec.reserve or 0
-        return set(self, spec)
-    end
     Window.render(model())
     local height = Window.frame().height
-    Window.parts.saleInd.text.GetUnboundedStringWidth = function() return 26 end
+    H.eq(tile.mark, nil)
     Window.render(model({ history = history() }))
     H.eq(Window.frame().height, height)
-    H.eq(reserves, { 0, 26 + 4 })
-    -- The other tiles never get a reserve.
+    H.eq(tile.mark, Window.parts.saleInd.text)
+    H.truthy(anchoredTo(tile.label, "TOPRIGHT", Window.parts.saleInd.text, "TOPLEFT"))
+    -- The value keeps the tile's whole width; the other tiles are untouched.
     H.eq(Window.parts.tiles[2].value.text, "2s")
-    -- Unmeasurable (the fake, a changed build): estimated from the letters.
-    Window.parts.saleInd.text.GetUnboundedStringWidth = nil
-    Window.render(model({ history = history() }))
-    H.truthy(reserves[3] > 4)
-    H.eq(Native.TILE_PAD, 10)
+    -- No percentage any more: the label goes back to the magnifier / padding.
+    Window.render(model())
+    H.eq(tile.mark, nil)
+    H.truthy(anchoredTo(tile.label, "TOPRIGHT", tile.frame, "TOPRIGHT"))
+    H.eq(T.ns.Native.TILE_PAD, 10)
 end)
 
 H.test("indicators: the materials title stops before the percentage, else before the total", function()

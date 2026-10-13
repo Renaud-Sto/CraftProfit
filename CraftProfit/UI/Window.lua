@@ -35,7 +35,6 @@ local EMPTY_H = 24
 -- cannot measure the text.
 local IND_GAP = 4
 local IND_PERIOD = 30
-local IND_CHAR_W = 6
 -- Between the pin and "Refresh recipe" buttons.
 local BUTTON_GAP = 6
 -- One materials row per reagent a recipe may have (Recipes loads before the UI).
@@ -248,16 +247,6 @@ local function setIndicator(ind, text)
     ind.hit:SetShown(text ~= "")
 end
 
--- Width of a shown indicator, measured, else estimated from its letters (colour codes
--- left out); 0 when hidden.
-local function indicatorWidth(ind, text)
-    if text == "" then return 0 end
-    local width = Native.naturalWidth(ind.text)
-    if width > 0 then return width end
-    local plain = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
-    return #plain * IND_CHAR_W
-end
-
 -- Materials: the header folds the detail; each row searches its reagent at the AH.
 -- Rows and header are buttons covering the window's body: they forward drags to it, and
 -- the click that ends a drag does nothing.
@@ -439,10 +428,11 @@ function Window.create(h)
     local ahTile = parts.tiles[1]
     ahTile:onClick(searchOutput)
     Native.forwardDrag(ahTile.hit, frame)
-    -- The sale percentage, at the right end of the AH value line (which leaves it room).
+    -- The sale percentage, on the label line left of the magnifier's place: the value line
+    -- keeps its whole width for long amounts.
     local level = ahTile.hit:GetFrameLevel()
     parts.saleInd = newIndicator(ahTile.face, "sale", searchOutput, level, ahTile.hover)
-    parts.saleInd.text:SetPoint("BOTTOMLEFT", ahTile.value, "BOTTOMRIGHT", IND_GAP, 1)
+    parts.saleInd.text:SetPoint("TOPRIGHT", ahTile.face, "TOPRIGHT", -(6 + Native.TILE_ICON + IND_GAP), -8)
     buildLikely()
     buildMaterials()
     buildAge()
@@ -542,19 +532,12 @@ function Window.render(model)
     parts.empty:Hide()
 
     parts.banner:set(model.banner or { kind = "none", text = "", value = "" })
-    -- The AH tile's value keeps room for the sale percentage (the model is not modified).
+    -- The AH tile's label stops short of the sale percentage.
     local saleText = indicatorText(model.history, "sale")
     setIndicator(parts.saleInd, saleText)
-    for i, tile in ipairs(parts.tiles) do
-        local spec = (model.tiles or {})[i] or {}
-        if i == 1 and saleText ~= "" then
-            local copy = {}
-            for k, v in pairs(spec) do copy[k] = v end
-            copy.reserve = indicatorWidth(parts.saleInd, saleText) + IND_GAP
-            spec = copy
-        end
-        tile:set(spec)
-    end
+    for i, tile in ipairs(parts.tiles) do tile:set((model.tiles or {})[i] or {}) end
+    parts.tiles[1].mark = saleText ~= "" and parts.saleInd.text or nil
+    parts.tiles[1]:anchorLabel()
     showSearchIcons(ns.AH ~= nil and ns.AH.isOpen == true)
 
     local likely = findLine(model.lines, "likely")

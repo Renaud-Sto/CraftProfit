@@ -147,7 +147,7 @@ Take screenshots of each state in English, French and Spanish (`/cp locale frFR`
 
 ## History in the main window
 Take screenshots in English, French and Spanish, with the AH open and closed.
-- [ ] A tracked recipe with 3+ days of data refreshed today: a small percentage left of the Materials total and one at the right of the AH (NET) value; green/red/grey as in the History window's list for the same recipe (same numbers). Vendor and Disenchant tiles show none.
+- [ ] A tracked recipe with 3+ days of data refreshed today: a small percentage left of the Materials total and one on the AH (NET) tile's label line, left of the magnifier's place (a long amount keeps the whole value line, nothing cut); green/red/grey as in the History window's list for the same recipe (same numbers). Vendor and Disenchant tiles show none.
 - [ ] Untracked, paused, fewer than 3 days, or nothing measured in the last 24 hours: no percentage anywhere, and the window is exactly as before (no gap, no placeholder). Only the crafted item stale: the AH percentage hides, Materials stays.
 - [ ] A recipe crafted at a loss (or break even): both percentages grey; the tooltip ends with "At a loss or break even at the auction house today: shown in grey...".
 - [ ] Hover each one: the tooltip shows the view with its percentage, the caption, Now, Usual, Lowest, Highest (money in the addon's format) and "N measurements over D days"; it hides on leaving. Moving from the AH tile onto its percentage keeps the tile highlighted.

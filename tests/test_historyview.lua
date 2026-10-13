@@ -56,9 +56,9 @@ H.test("recipeDays gives materials, sale after commission and net for each measu
     local days = V.recipeDays(RECIPE, seriesOf(map), NOW, 7, CUT, itemsOf)
     H.eq(days, {
         { day = NOW - 2 * DAY, materials = 250, sale = sale(1013), net = sale(1013) - 250, carried = false,
-            materialsCarried = false, saleCarried = false, n = 1 },
+            materialsCarried = false, saleCarried = false, netCarried = false, n = 1 },
         { day = NOW - DAY, materials = 260, sale = sale(1100), net = sale(1100) - 260, carried = false,
-            materialsCarried = false, saleCarried = false, n = 1 },
+            materialsCarried = false, saleCarried = false, netCarried = false, n = 1 },
     })
 end)
 
@@ -91,7 +91,7 @@ H.test("a missing day carries the last known price and says so", function()
     H.eq(#days, 3)
     H.eq(days[1].carried, false)
     H.eq(days[2], { day = NOW - 2 * DAY, materials = 290, sale = sale(1000), net = sale(1000) - 290,
-        carried = true, materialsCarried = "some", saleCarried = "all", n = 1 })
+        carried = true, materialsCarried = "some", saleCarried = "all", netCarried = "all", n = 1 })
     H.eq(days[3].carried, true)
     H.eq(days[3].materialsCarried, false)
     H.eq(days[3].sale, sale(1000))
@@ -243,7 +243,11 @@ H.test("a day measuring only the crafted item does not count as a materials pric
     H.eq(m.today, 205)
     H.eq(m.daysCovered, 10)
     H.eq(V.summary(days, "sale").daysCovered, 10)
-    H.eq(V.summary(days, "net").daysCovered, 11)
+    -- Profit: yesterday's row only repeats an older sale price, so it is skipped; today's
+    -- (sale measured, materials carried) counts.
+    H.eq(today.netCarried, "some")
+    H.eq(days[#days - 1].netCarried, "all")
+    H.eq(V.summary(days, "net").daysCovered, 10)
     local ind = V.indicators(RECIPE, seriesOf(map), NOW + 120, itemsOf, CUT)
     H.eq(ind.materials, { pct = -18, tone = "down", good = true })
     -- The sale was carried on yesterday's row (only reagents measured): skipped too.
@@ -282,4 +286,32 @@ H.test("profitCompare: a money gap for any sign of the usual profit, flat within
     H.eq(V.profitCompare({ today = 0 / 0, usual = 1, enough = true }), nil)
     H.eq(V.profitCompare({ usual = 1, enough = true }), nil)
     H.eq(V.profitCompare(nil), nil)
+end)
+
+H.test("a profit from a carried sale price is never today's profit", function()
+    local V = load().HistoryView
+    local map = { [1] = {}, [2] = {}, [100] = {} }
+    for age = 10, 2, -1 do
+        map[1][#map[1] + 1] = pt(age, 100)
+        map[2][#map[2] + 1] = pt(age, 50)
+        map[100][#map[100] + 1] = pt(age, 100)       -- 285 after the cut: a 35 profit
+    end
+    -- Today only the reagents are measured, much dearer: the sale is two days old.
+    map[1][#map[1] + 1] = pt(0, 500, 60)
+    map[2][#map[2] + 1] = pt(0, 500, 60)
+    local days = V.recipeDays(RECIPE, seriesOf(map), NOW + 120, 30, CUT, itemsOf)
+    local today = days[#days]
+    H.eq(today.saleCarried, "all")
+    H.eq(today.netCarried, "all")
+    H.eq(today.net, 285 - 1500)
+    -- The newest profit is the last day the sale was measured, never today's mix.
+    local net = V.summary(days, "net")
+    H.eq(net.today, 35)
+    H.eq(net.todayDay, NOW - 2 * DAY)
+    H.eq(V.indicators(RECIPE, seriesOf(map), NOW + 120, itemsOf, CUT).netToday, 35)
+    -- Sale carried and materials partly carried: "all" too.
+    local both = V.recipeDays(RECIPE, seriesOf({ [1] = { pt(3, 100) }, [2] = { pt(3, 50), pt(1, 50) },
+        [100] = { pt(3, 100) } }), NOW, 7, CUT, itemsOf)
+    H.eq(both[2].materialsCarried, "some")
+    H.eq(both[2].netCarried, "all")
 end)

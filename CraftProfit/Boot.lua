@@ -678,10 +678,10 @@ local function seriesReader()
     return function(itemID) return series[itemID] end
 end
 
--- Time of the newest valid measurement of any of the recipe's items, or nil.
-local function newestPoint(recipe, seriesOf, now)
+-- Time of the newest valid measurement of any of `ids`, or nil.
+local function newestPoint(ids, seriesOf, now)
     local newest
-    for _, id in ipairs((Controller.historyItems(recipe))) do
+    for _, id in ipairs(ids) do
         local series = seriesOf(id)
         if type(series) == "table" then
             for _, p in ipairs(series) do
@@ -693,22 +693,43 @@ local function newestPoint(recipe, seriesOf, now)
     return newest
 end
 
+-- Whether the recipe's figures are fresh: the newest measurement of a reagent or of the
+-- crafted item when sold (the items HistoryView.recipeDays reads; disenchant materials do
+-- not count) is at most Controller.HISTORY_FRESH old. Returns fresh, materialsFresh (a
+-- reagent is) and saleFresh (the crafted item is), so no figure is claimed from old prices.
+local function freshness(recipe, seriesOf, now)
+    local _, required = Controller.historyItems(recipe)
+    local reagents, sale = {}, {}
+    for _, id in ipairs(required) do
+        if id == recipe.outputItemID then sale[1] = id else reagents[#reagents + 1] = id end
+    end
+    local function isFresh(ids)
+        local newest = newestPoint(ids, seriesOf, now)
+        return newest ~= nil and now - newest <= Controller.HISTORY_FRESH
+    end
+    local materialsFresh, saleFresh = isFresh(reagents), isFresh(sale)
+    return materialsFresh or saleFresh, materialsFresh, saleFresh
+end
+
 -- The tracked recipes for the window's list, in saved order. `indicator` holds the arrows
 -- (HistoryView.indicators) only when there is enough data and the newest measurement is
--- under 24 hours old (`fresh`); older data never shows as today's. atLoss: with fresh data,
+-- under 24 hours old (`fresh`: a reagent or the sold crafted item, see freshness), each
+-- arrow only when its own items are (materials: a reagent, sale: the crafted item); older
+-- data never shows as today's. atLoss: when the crafted item's sale price is fresh too,
 -- whether crafting and selling at the auction house loses money (or earns 0) on the newest
--- day (indicators' netToday <= 0); nil when unknown (stale data, no sale).
+-- day (indicators' netToday <= 0); nil when unknown (stale data or sale price, no sale).
 function Controller.historyList()
     local now, seriesOf, cut = time(), seriesReader(), CraftProfitDB.settings.cut
     local out = {}
     for _, entry in ipairs(CraftProfitDB.tracked) do
-        local newest = newestPoint(entry.recipe, seriesOf, now)
-        local fresh = newest ~= nil and now - newest <= Controller.HISTORY_FRESH
+        local fresh, materialsFresh, saleFresh = freshness(entry.recipe, seriesOf, now)
         local indicator, atLoss
         if fresh then
             local ind = HistoryView.indicators(entry.recipe, seriesOf, now, Controller.historyItems, cut)
+            if not materialsFresh then ind.materials = nil end
+            if not saleFresh then ind.sale = nil end
             if ind.materials or ind.sale then indicator = ind end
-            if type(ind.netToday) == "number" then atLoss = ind.netToday <= 0 end
+            if saleFresh and type(ind.netToday) == "number" then atLoss = ind.netToday <= 0 end
         end
         out[#out + 1] = { recipe = entry.recipe, active = entry.active == true, indicator = indicator, fresh = fresh,
             atLoss = atLoss }

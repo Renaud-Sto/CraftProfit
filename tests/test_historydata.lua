@@ -483,3 +483,30 @@ H.test("historyList says which recipes are crafted at a loss today", function()
     fill(C, 10, function(id, age) if age < 2 then return nil end return flat(id) end)
     H.eq(C.historyList()[1].atLoss, nil)
 end)
+
+H.test("historyList claims no loss when the sale price is not fresh", function()
+    local T, C = boot()
+    track(T, raw(5))
+    -- Reagents measured today; the crafted item last sold three days ago (at a loss then).
+    fill(C, 10, function(id, age)
+        if id == 100 then return age >= 3 and 100 or nil end
+        return flat(id)
+    end)
+    local entry = C.historyList()[1]
+    H.eq(entry.fresh, true)
+    H.eq(entry.atLoss, nil)
+    H.eq(entry.indicator.sale, nil)                    -- no sale arrow from an old sale
+    H.eq(entry.indicator.materials.tone, "flat")
+end)
+
+H.test("historyList freshness reads the reagents and the crafted item, never a disenchant material", function()
+    local T, C = boot()
+    ITEMS[301] = { quality = 2, ilvl = 15, sellPrice = 1, classID = 2, bindType = 2 }
+    track(T, weaponRecipe(11, 301, 1))
+    fill(C, 10, function(_, age) return age >= 3 and 100 or nil end, { 1, 301 })
+    fill(C, 10, function() return 5 end, DUST)            -- disenchant materials: today
+    H.eq(C.historyList()[1].fresh, false)
+    fill(C, 10, function() return 100 end, { 1, 301 })
+    H.eq(C.historyList()[1].fresh, true)
+    ITEMS[301] = nil
+end)

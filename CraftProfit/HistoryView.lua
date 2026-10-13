@@ -2,7 +2,7 @@
 -- and the main window arrows show. Pure Lua, no WoW API, no widgets.
 --
 -- HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf)
---   -> { { day, materials, sale, net, carried, materialsCarried, saleCarried, n }, ... }
+--   -> { { day, materials, sale, net, carried, materialsCarried, saleCarried, netCarried, n }, ... }
 --   ascending, one entry per local day of the last `days` days on which at least one item
 --   of the recipe was measured. itemSeriesOf(itemID) returns that item's saved series (or
 --   nil); itemsOf is the same function History.record uses (Controller.historyItems): a
@@ -16,7 +16,9 @@
 --   are not covered. `carried` is true when any price used that day was carried;
 --   materialsCarried (when materials is known) is false when every reagent was measured
 --   that day, "some" or "all" when some or all of their prices were carried; saleCarried
---   (when sale is known) is false or "all". n = the most measures of one item that day.
+--   (when sale is known) is false or "all"; netCarried (when net is known) is "all" when
+--   the sale price was carried (the profit repeats an old sale), "some" when only reagent
+--   prices were, else false. n = the most measures of one item that day.
 --   Never mutates the saved series.
 -- HistoryView.summary(days, field) -> { today, usual, low, high, measures, daysCovered,
 --   enough, todayDay, lowDay, highDay } for one view: `field` names the value of recipeDays entries ("net",
@@ -125,6 +127,12 @@ function HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf)
         end
         if sale then
             row.saleCarried = isCarried[recipe.outputItemID] and "all" or false
+        end
+        -- A profit on a carried sale price repeats an old sale: never a profit of that day.
+        if net then
+            if row.saleCarried == "all" then row.netCarried = "all"
+            elseif row.materialsCarried then row.netCarried = "some"
+            else row.netCarried = false end
         end
         out[#out + 1] = row
     end

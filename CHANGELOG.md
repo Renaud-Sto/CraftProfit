@@ -17,6 +17,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - History window: the typical week always reads the last 30 days, so it no longer stays empty on the 7-day period.
 - History window: the typical week on the Profit tab shows the gap from the usual profit in money, so a recipe usually at a loss (or at 0) no longer shows an empty week that claims to need two weeks of data; percentages from a tiny usual price are bounded.
 - History window: a period with no measurement (newest prices older than 7 days, on the 7-day period) says so and asks to refresh, instead of a blank chart and dashes.
+- History window: with too little data the verdict panel is no longer blank ("Not enough measurements yet to judge this recipe.", or "No measurement in the last 7 days." for an empty period, and "Tracking is paused." when paused), and the message names the items that lack data: "Least measured: Copper Bar (8 measurements over 2 days)."
 - History window: "1 measurement over 1 day" instead of "1 measurements over 1 days" (French and Spanish too).
 - History window: the list's grey-row tooltip says "at a loss or break even", since a craft that earns exactly nothing is greyed too.
 - History window: its figures are cached until a price is recorded, a recipe is paused, resumed or deleted, the commission or the day changes, so the window no longer recomputes every tracked recipe at each refresh of the addon.

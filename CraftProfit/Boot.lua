@@ -809,6 +809,11 @@ end
 -- usual price), nil when it has one. commission: the auction house cut in percent (5 for 0.05). fresh: as
 -- historyList's (a reagent or the sold crafted item measured within HISTORY_FRESH); stale
 -- figures are still shown, dated, but never as good news.
+-- thin: the items that hold the recipe back, at most THIN_MAX in icon order (reagents, then
+-- the crafted item when sold; disenchant materials are not needed to judge it): each one
+-- with fewer than History.USUAL_MIN_DAYS days in its own 30 day series, { itemID, name,
+-- measures, days } (0 and 0 when never measured).
+local THIN_MAX = 3
 local function computeData(recipeID, view, period, now)
     local _, entry = History.find(CraftProfitDB, recipeID)
     if not entry then return nil end
@@ -876,6 +881,18 @@ local function computeData(recipeID, view, period, now)
     end
     if not filled then weekdayEmpty = enoughDays and "usual" or "days" end
     local fresh, _, _, expires = freshness(recipe, seriesOf, now)
+    local thin = {}
+    for _, group in ipairs({ "materials", "crafted" }) do
+        for _, item in ipairs(items) do
+            if item.group == group and #thin < THIN_MAX then
+                local own = HistoryView.summary(History.dailySeries(seriesOf(item.itemID), now, History.USUAL_DAYS))
+                if own.daysCovered < History.USUAL_MIN_DAYS then
+                    thin[#thin + 1] = { itemID = item.itemID, name = item.name, measures = own.measures,
+                        days = own.daysCovered }
+                end
+            end
+        end
+    end
     return {
         recipe = recipe, items = items, view = view, period = period,
         chart = { days = days, field = field, usual = summary.usual, period = period, newest = History.dayOf(now) },
@@ -886,7 +903,7 @@ local function computeData(recipeID, view, period, now)
         market = Controller.marketName(),
         goal = goal, profit = profit,
         compare = view == "net" and profit.compare or HistoryView.compare(summary, goal ~= "buy"),
-        fresh = fresh,
+        fresh = fresh, thin = thin,
         commission = Util.round((cut or 0) * 10000) / 100,
     }, expires
 end

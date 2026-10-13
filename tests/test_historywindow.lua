@@ -995,3 +995,122 @@ H.test("the loss tooltip also covers break even, which greys the row too", funct
         H.truthy(T.ns.L.HISTORY_ROW_TIP_LOSS:find(words, 1, true) or error(locale .. ": " .. T.ns.L.HISTORY_ROW_TIP_LOSS))
     end
 end)
+
+H.test("too little data: the verdict says why in one muted line and the least measured items are named", function()
+    local T, UI = boot()
+    local L = T.ns.L
+    track(T, raw(5))
+    fill(T, 2)
+    UI.show()
+    local colour
+    UI.parts.lines[1].SetTextColor = function(_, r, g, b, a) colour = { r, g, b, a } end
+    UI.select(5)
+    H.eq(UI.parts.lines[1].text, L.HISTORY_VERDICT_NODATA)
+    H.eq(colour, T.ns.Colors.text("muted"))
+    H.eq(UI.parts.lines[2].text, "")
+    H.eq(UI.parts.lines[3].text, "")
+    H.eq(UI.parts.verdict.title.text, "R5")
+    H.eq(UI.parts.emptyDetail.text, string.format(L.HISTORY_THIN,
+        "Item1 (2 over 2 days), Item2 (2 over 2 days), Item100 (2 over 2 days)"))
+    H.truthy(UI.parts.emptyDetail.shown)
+    -- An item view without enough data says the same.
+    click(UI.parts.itemButtons[1])
+    H.eq(UI.state().view, "item:1")
+    H.eq(UI.parts.lines[1].text, L.HISTORY_VERDICT_NODATA)
+    H.truthy(UI.parts.emptyDetail.shown)
+    -- Enough data: the detail goes, the verdict gives the figures again.
+    fill(T, 10)
+    UI.refresh()
+    H.eq(UI.parts.emptyDetail.shown, false)
+    H.truthy(UI.parts.lines[1].text ~= L.HISTORY_VERDICT_NODATA)
+end)
+
+H.test("a paused recipe with too little data says it is paused in the verdict too", function()
+    local T, UI = boot()
+    local L = T.ns.L
+    track(T, raw(5), false)
+    fill(T, 2)
+    UI.show()
+    UI.select(5)
+    H.eq(UI.parts.lines[1].text, L.HISTORY_VERDICT_NODATA)
+    H.eq(UI.parts.lines[2].text, L.HISTORY_VERDICT_PAUSED)
+    H.eq(UI.parts.status.text, L.HISTORY_PAUSED)
+end)
+
+H.test("a period without measurement says so in the verdict, with no item detail", function()
+    local T, UI = boot()
+    local L = T.ns.L
+    track(T, raw(5))
+    local series = T.ns.Controller.market().series
+    T.ns.Controller.historyChanged()               -- the test writes the saved series itself
+    for id, unit in pairs(PRICES) do
+        series[id] = {}
+        for age = 19, 10, -1 do series[id][#series[id] + 1] = { NOW - age * DAY, unit, 5, unit, unit, 1, true } end
+    end
+    UI.show()
+    UI.select(5)
+    click(UI.parts.periodButtons[1])
+    H.eq(UI.parts.lines[1].text, string.format(L.HISTORY_VERDICT_NO_PERIOD, 7))
+    H.eq(UI.parts.lines[2].text, "")
+    H.eq(UI.parts.emptyDetail.shown, false)
+end)
+
+H.test("thinText names the least measured items in English, French and Spanish", function()
+    local one = { { itemID = 2840, name = "Copper Bar", measures = 8, days = 2 } }
+    local two = { { itemID = 2840, name = "Copper Bar", measures = 8, days = 2 },
+        { itemID = 2835, name = "Rough Stone", measures = 0, days = 0 } }
+    local expected = {
+        enUS = { "Least measured: Copper Bar (8 measurements over 2 days).",
+            "Least measured: Copper Bar (8 over 2 days), Rough Stone (none).",
+            "Least measured: Rough Stone (none)." },
+        frFR = { "Objets les moins mesurés\194\160: Copper Bar (8 mesures sur 2 jours).",
+            "Objets les moins mesurés\194\160: Copper Bar (8 sur 2 jours), Rough Stone (aucune).",
+            "Objets les moins mesurés\194\160: Rough Stone (aucune)." },
+        esES = { "Objetos con menos mediciones: Copper Bar (8 mediciones en 2 días).",
+            "Objetos con menos mediciones: Copper Bar (8 en 2 días), Rough Stone (ninguna).",
+            "Objetos con menos mediciones: Rough Stone (ninguna)." },
+    }
+    for locale, texts in pairs(expected) do
+        local _, UI = boot({ locale = locale })
+        H.eq(UI.thinText(one), texts[1])
+        H.eq(UI.thinText(two), texts[2])
+        H.eq(UI.thinText({ two[2] }), texts[3])
+        H.eq(UI.thinText({}), "")
+        H.eq(UI.thinText(nil), "")
+    end
+end)
+
+H.test("thinText survives hostile entries: missing names fall back to #id, bad counts to none", function()
+    local _, UI = boot()
+    H.eq(UI.thinText({ { itemID = 7, name = nil, measures = "x", days = {} } }), "Least measured: #7 (none).")
+    H.eq(UI.thinText({ { itemID = 7, name = {}, measures = 1, days = 1 } }),
+        "Least measured: #7 (1 measurement over 1 day).")
+    H.eq(UI.thinText({ "junk", { name = "%s %d" } }), "Least measured: %s %d (none).")
+    H.eq(UI.thinText({ "junk" }), "")
+end)
+
+H.test("the empty-state texts fit: verdict lines on one line, the item detail on two", function()
+    local names = { "Elixir of the Mongoose Supreme", "Thick Spider's Silk Bandage", "Heavy Mithril Gauntlet" }
+    for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
+        local T, UI = boot({ locale = locale })
+        local Layout, L = T.ns.Layout, T.ns.L
+        local function fits(text, charW, room)
+            local need = Layout.textWidth(text, charW)
+            H.truthy(need <= room or error(locale .. ": " .. text .. " needs " .. need .. " px, has " .. room))
+        end
+        fits(L.HISTORY_VERDICT_NODATA, UI.CHAR_W, UI.USE_W)
+        fits(string.format(L.HISTORY_VERDICT_NO_PERIOD, 60), UI.CHAR_W, UI.USE_W)
+        fits(L.HISTORY_VERDICT_PAUSED, UI.CHAR_W, UI.USE_W)
+        local thin = {}
+        for i, name in ipairs(names) do thin[i] = { itemID = i, name = name, measures = 9999, days = 2 } end
+        local text = UI.thinText(thin, UI.EMPTY_W)
+        for _, name in ipairs(names) do H.truthy(text:find(name, 1, true) or error(locale .. ": " .. name .. " dropped")) end
+        local lines = Layout.wrapLines(text, UI.SMALL_CHAR_W, UI.EMPTY_W)
+        H.truthy(lines <= 2 or error(locale .. ": " .. text .. " takes " .. lines .. " lines"))
+        -- Absurd names: items are dropped from the end until it fits, the first one stays.
+        local long = string.rep("Verylongname ", 12)
+        local cut = UI.thinText({ thin[1], { itemID = 2, name = long }, { itemID = 3, name = long } }, UI.EMPTY_W)
+        H.truthy(cut:find(names[1], 1, true))
+        H.truthy(Layout.wrapLines(cut, UI.SMALL_CHAR_W, UI.EMPTY_W) <= 2)
+    end
+end)

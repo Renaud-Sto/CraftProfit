@@ -7,6 +7,8 @@
 --            good news, red bad, grey about usual). While crafting is at a loss the
 --            comparison is grey and gives no "good time to" advice (better is not good yet);
 --            so is it with stale data (not measured for a day), whose lines are dated.
+--            Too little data, or none in the period: one muted line says so (and paused);
+--            the chart panel then names the least measured items under its message.
 --   chart    tabs Materials cost | Sale price | Profit, period buttons, the recipe's items
 --            in groups (Materials, Crafted item, Disenchant), a caption saying what is drawn,
 --            then the chart (UI/Chart.lua) with its hover bubble
@@ -50,6 +52,8 @@ local RIGHT_W = INNER_WIDTH - LEFT_W - GAP
 local BODY_W = RIGHT_W - 2 * Native.PANEL_EDGE
 local INNER_PAD = 6
 local USE_W = BODY_W - 2 * INNER_PAD
+-- The empty states' centred messages.
+local EMPTY_W = RIGHT_W - 40
 local LINE_H = 16
 local VERDICT_LINES = 3
 local VERDICT_H = Layout.panelHeight(VERDICT_LINES, LINE_H)
@@ -116,6 +120,7 @@ HistoryWindow.parts = parts
 HistoryWindow.WIDTH = WIDTH
 HistoryWindow.LEFT_W, HistoryWindow.RIGHT_W = LEFT_W, RIGHT_W
 HistoryWindow.USE_W = USE_W
+HistoryWindow.EMPTY_W = EMPTY_W
 HistoryWindow.HINT_LINES = HINT_LINES
 HistoryWindow.CHAR_W, HistoryWindow.SMALL_CHAR_W = CHAR_W, SMALL_CHAR_W
 HistoryWindow.COL_HEAD_W = COL_HEAD_W
@@ -356,12 +361,47 @@ end
 
 -- "1 measurement over 1 day", "12 measurements over 5 days": each count agrees in number
 -- (ns.Locale.plural: French counts 0 as singular).
+local function count(n, key)
+    n = type(n) == "number" and n or 0
+    return string.format(L[key .. (ns.Locale.plural(n) == "one" and "_ONE" or "_OTHER")], n)
+end
+
 function HistoryWindow.coverageText(measures, days)
-    local function count(n, key)
-        n = type(n) == "number" and n or 0
-        return string.format(L[key .. (ns.Locale.plural(n) == "one" and "_ONE" or "_OTHER")], n)
-    end
     return string.format(L.HISTORY_COVERAGE, count(measures, "HISTORY_MEASURES"), count(days, "HISTORY_DAYS"))
+end
+
+-- One item of the least measured line: "Copper Bar (8 measurements over 2 days)" alone,
+-- "Copper Bar (8 over 2 days)" in a list, "Rough Stone (none)" when never measured.
+local function thinItem(item, alone)
+    local name = item.name
+    if type(name) ~= "string" or name == "" then name = "#" .. tostring(tonumber(item.itemID) or "?") end
+    local measures = type(item.measures) == "number" and item.measures or 0
+    local counts = L.HISTORY_THIN_NONE
+    if measures > 0 then
+        counts = alone and HistoryWindow.coverageText(measures, item.days)
+            or string.format(L.HISTORY_COVERAGE, tostring(measures), count(item.days, "HISTORY_DAYS"))
+    end
+    return string.format(L.HISTORY_THIN_ITEM, name, counts)
+end
+
+-- The muted line under the not-enough-data message naming the items that lack data
+-- (Controller.historyData's thin), "" without any. With `width`, items are dropped from the
+-- end until it wraps on two lines of small text in that width (the first one always stays).
+function HistoryWindow.thinText(thin, width)
+    local items = {}
+    if type(thin) == "table" then
+        for _, item in ipairs(thin) do
+            if type(item) == "table" then items[#items + 1] = item end
+        end
+    end
+    local text = ""
+    for n = #items, 1, -1 do
+        local pieces = {}
+        for i = 1, n do pieces[i] = thinItem(items[i], n == 1) end
+        text = string.format(L.HISTORY_THIN, table.concat(pieces, ", "))
+        if not width or Layout.wrapLines(text, SMALL_CHAR_W, width) <= 2 then break end
+    end
+    return text
 end
 
 -- The typical week's line when it has no bar, saying the real reason: too few days, or no
@@ -378,11 +418,20 @@ local function weekGap(v)
     return money(0)
 end
 
--- The verdict's lines in order, the empty ones left out: { { text, color }, ... }.
+-- The verdict's lines in order, the empty ones left out: { { text, color }, ... }. Without
+-- data to judge (too little, or none in the period: the chart says so) one muted line says
+-- why, then whether tracking is paused.
 function HistoryWindow.verdictLines(data)
     local out = {}
     local function add(text, color)
         if text ~= "" then out[#out + 1] = { text = text, color = color or Colors.text("main") } end
+    end
+    local noPeriod = type(data.chart) == "table" and type(data.chart.days) == "table" and #data.chart.days == 0
+    if data.status == "nodata" or noPeriod then
+        add(data.status == "nodata" and L.HISTORY_VERDICT_NODATA
+            or string.format(L.HISTORY_VERDICT_NO_PERIOD, tonumber(data.period) or 0), Colors.text("muted"))
+        if data.paused then add(L.HISTORY_VERDICT_PAUSED, Colors.text("muted")) end
+        return out
     end
     add(HistoryWindow.profitLine(data))
     add(HistoryWindow.verdictLine(data))
@@ -431,8 +480,10 @@ end
 
 -- Hides the chart and shows `message` instead: in the chart panel when a recipe is
 -- selected (withPanels), else alone on the right side.
-local function showEmpty(message, withPanels)
+local function showEmpty(message, withPanels, detail)
     parts.empty:SetText(message or "")
+    parts.emptyDetail:SetText(detail or "")
+    parts.emptyDetail:SetShown(detail ~= nil and detail ~= "")
     parts.empty:ClearAllPoints()
     if withPanels then
         parts.empty:SetPoint("TOP", parts.chartArea, "TOP", 0, -50)
@@ -512,7 +563,7 @@ end
 
 local function paintVerdict(data)
     parts.verdict:setTitle(ctl.recipeName(data.recipe))
-    local lines = data.status == "nodata" and {} or HistoryWindow.verdictLines(data)
+    local lines = HistoryWindow.verdictLines(data)
     for i, fs in ipairs(parts.lines) do
         local line = lines[i]
         fs:SetText(line and line.text or "")
@@ -571,8 +622,10 @@ local function paintRight()
     -- keeping the tabs and period buttons, rather than a blank chart full of dashes.
     local noPeriod = data.status ~= "nodata" and #data.chart.days == 0
     if data.status == "nodata" or noPeriod then
+        -- Too little data: under the message, which items lack it.
         showEmpty(noPeriod and string.format(L.HISTORY_PERIOD_EMPTY, data.period)
-            or string.format(L.HISTORY_NODATA, HistoryWindow.coverageText(data.measures, data.days)), true)
+            or string.format(L.HISTORY_NODATA, HistoryWindow.coverageText(data.measures, data.days)), true,
+            not noPeriod and HistoryWindow.thinText(data.thin, EMPTY_W) or nil)
         parts.caption:SetText(HistoryWindow.captionText(data))
         -- A paused recipe says so whatever its data.
         parts.status:SetText(data.paused and L.HISTORY_PAUSED or "")
@@ -581,6 +634,7 @@ local function paintRight()
     end
     showPanels(true, true, true)
     parts.empty:Hide()
+    parts.emptyDetail:Hide()
     parts.caption:SetText(HistoryWindow.captionText(data))
     parts.chart.frame:Show()
     local model = {}
@@ -928,9 +982,16 @@ local function buildRight(left0, top0)
         if type(level) == "number" then host:SetFrameLevel(level + 20) end
     end
     parts.empty = host:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-    parts.empty:SetWidth(RIGHT_W - 40)
+    parts.empty:SetWidth(EMPTY_W)
     parts.empty:SetJustifyH("CENTER")
     parts.empty:SetWordWrap(true)
+    -- The least measured items, muted and smaller, under the not-enough-data message.
+    parts.emptyDetail = host:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    parts.emptyDetail:SetWidth(EMPTY_W)
+    parts.emptyDetail:SetJustifyH("CENTER")
+    parts.emptyDetail:SetWordWrap(true)
+    parts.emptyDetail:SetPoint("TOP", parts.empty, "BOTTOM", 0, -8)
+    parts.emptyDetail:Hide()
 end
 
 local function build()

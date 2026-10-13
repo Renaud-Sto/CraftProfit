@@ -186,6 +186,42 @@ H.test("historyData says when there is not enough data, with the numbers", funct
     H.eq(#data.chart.days, 60)
 end)
 
+H.test("historyData names the items with fewer than 3 days of data, in icon order", function()
+    local T, C = boot()
+    track(T, raw(5))
+    -- Item 1: 2 days, item 2: 10 days, the crafted item 100: never measured.
+    fill(C, 10, function(id, age)
+        if id == 1 and age >= 2 then return nil end
+        if id == 100 then return nil end
+        return flat(id)
+    end)
+    local data = C.historyData(5, "net", 30)
+    H.eq(data.status, "nodata")
+    H.eq(data.thin, {
+        { itemID = 1, name = "Item1", measures = 2, days = 2 },
+        { itemID = 100, name = "Item100", measures = 0, days = 0 },
+    })
+    -- An item view reads the same list.
+    H.eq(C.historyData(5, "item:1", 30).thin, data.thin)
+    -- Enough data everywhere: nothing is thin.
+    fill(C, 5, flat)
+    H.eq(C.historyData(5, "net", 30).thin, {})
+end)
+
+H.test("historyData's thin list keeps 3 items, skips an unsold crafted item, falls back to #id", function()
+    local T, C = boot()
+    local recipe = raw(7, 200)                         -- 200 is bound: not sold
+    recipe.reagents = { { itemID = 1, qty = 1 }, { itemID = 2, qty = 1 }, { itemID = 3, qty = 1 },
+        { itemID = 4, qty = 1 } }
+    track(T, recipe)
+    local data = C.historyData(7, "net", 30)
+    H.eq(#data.thin, 3)
+    H.eq(data.thin[1].itemID, 1)
+    H.eq(data.thin[2].itemID, 2)
+    H.eq(data.thin[3], { itemID = 3, name = "#3", measures = 0, days = 0 })
+    for _, item in ipairs(data.thin) do H.truthy(item.itemID ~= 200) end
+end)
+
 H.test("a paused recipe says so, and a bound crafted item has no sale", function()
     local T, C = boot()
     track(T, raw(5), false)

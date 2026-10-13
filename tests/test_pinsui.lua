@@ -364,6 +364,9 @@ H.test("the three buttons read their text and keep their actions", function()
     H.eq(T.ns.PinsUI.state, "running")
     parts.level.scripts.OnClick(parts.level)
     H.truthy(T.ns.LevelingUI.isShown())
+    H.eq(parts.history.text, "History")
+    parts.history.scripts.OnClick(parts.history)
+    H.truthy(T.ns.HistoryWindow.isShown())
 end)
 
 H.test("clicking a pinned row selects that recipe", function()
@@ -733,7 +736,7 @@ H.test("the footer button labels fit their half-width buttons in English, French
         T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
         local parts = openList(T)
         local half = math.floor((T.ns.Window.INNER_WIDTH - T.ns.Window.GAP) / 2)
-        for _, b in ipairs({ parts.search, parts.scan, parts.level }) do
+        for _, b in ipairs({ parts.search, parts.scan, parts.level, parts.history }) do
             local need = T.ns.Layout.textWidth(b.text, T.ns.OptionsUI.CHAR_W)
             H.truthy(need <= half - 16 or error(locale .. ": " .. b.text .. " needs " .. need .. " px"))
         end

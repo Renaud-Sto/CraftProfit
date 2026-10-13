@@ -382,3 +382,16 @@ H.test("the pinned window position keeps finite x and y and drops anything else"
     H.eq(pos(5), nil)
     H.eq(pos(nil), nil)
 end)
+
+H.test("the history window position keeps finite x and y and drops anything else", function()
+    local DB = load()
+    local function pos(value)
+        return DB.initAccount({ settings = { historyWindow = value } }).settings.historyWindow
+    end
+    H.eq(pos({ x = 10, y = -20, junk = 1 }), { x = 10, y = -20 })
+    H.eq(pos({ x = 0 / 0, y = 1 }), nil)
+    H.eq(pos({ x = 1, y = math.huge }), nil)
+    H.eq(pos({ x = "1", y = 2 }), nil)
+    H.eq(pos("x"), nil)
+    H.eq(pos(nil), nil)
+end)

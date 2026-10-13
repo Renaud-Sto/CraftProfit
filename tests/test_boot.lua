@@ -618,6 +618,7 @@ end)
 local function track(T, recipe)
     local ok = T.ns.History.track(T.env.CraftProfitDB, T.ns.Recipes.normalize(recipe or RAW))
     H.truthy(ok)
+    T.ns.Controller.historyChanged()
 end
 
 H.test("the first market adopts the prices saved before markets existed", function()
@@ -775,10 +776,10 @@ H.test("the tracking box starts and pauses recording and refuses a thirty-first 
     H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Too many tracked recipes (30 max)")
 end)
 
-H.test("/cp history lists the tracked recipes and removes one with its history", function()
+H.test("/cp history list lists the tracked recipes and removes one with its history", function()
     local T = boot()
     local C = T.ns.Controller
-    C.historyCommand("")
+    C.historyCommand("list")
     H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r No tracked recipe")
     track(T)
     stock(T)
@@ -786,10 +787,10 @@ H.test("/cp history lists the tracked recipes and removes one with its history",
     agg.add(1, 100, 1)
     C.onSnapshot(agg)
     H.truthy(C.market().series[1])
-    C.historyCommand("")
+    C.historyCommand("list")
     H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r 1. Sword (tracking)")
     C.historyCommand("remove 9")
-    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r No such tracked recipe. Use /cp history to list them")
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r No such tracked recipe. Use /cp history list to list them")
     C.historyCommand("remove 1")
     H.eq(#T.env.CraftProfitDB.tracked, 0)
     H.eq(C.market().series[1], nil)
@@ -1481,7 +1482,7 @@ H.test("/cp history lists tracked recipes by their current-language name", funct
     local C = T.ns.Controller
     C.selectPin(frenchPin(T, items).recipeID)
     T.ns.Window.lastHandlers.onTrackToggle(true)
-    C.historyCommand("")
+    C.historyCommand("list")
     H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r 1. Item3727 (tracking)")
     C.historyCommand("remove 1")
     H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r Removed from history: Item3727")
@@ -1712,4 +1713,65 @@ H.test("itemInfo survives an erroring item API and drops secret fields", functio
     H.eq(C.itemInfo(101), nil)
     -- The window still renders with such an item.
     C.setRecipe(RAW, "profession")
+end)
+
+H.test("/cp history opens the window, /cp history <n> opens it on the n-th tracked recipe", function()
+    local T = boot()
+    T.env.UISpecialFrames = {}
+    local slash = T.env.SlashCmdList.CRAFTPROFIT
+    slash("history")
+    H.truthy(T.ns.HistoryWindow.isShown())
+    H.eq(T.ns.HistoryWindow.state().selected, nil)
+    -- Open already: stays open.
+    slash("history")
+    H.truthy(T.ns.HistoryWindow.isShown())
+    track(T)
+    T.ns.HistoryWindow.hide()
+    slash("history 1")
+    H.truthy(T.ns.HistoryWindow.isShown())
+    H.eq(T.ns.HistoryWindow.state().selected, 5)
+    slash("history 4")
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r No such tracked recipe. Use /cp history list to list them")
+    slash("history list")
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r 1. Sword (tracking)")
+end)
+
+H.test("the help names the history commands in every language", function()
+    for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
+        local T = boot({ locale = locale, items = ITEMS })
+        T.env.SlashCmdList.CRAFTPROFIT("nope")
+        H.truthy(T.chat[#T.chat]:find("history [<n> | list | remove <n>]", 1, true) or error(locale))
+    end
+end)
+
+H.test("/cp history arguments: trimmed, numbers checked, anything else gets the help", function()
+    local T = boot()
+    T.env.UISpecialFrames = {}
+    local C = T.ns.Controller
+    local NO_SUCH = "|cff66ccffCraftProfit|r No such tracked recipe. Use /cp history list to list them"
+    track(T)
+    for _, arg in ipairs({ "0", "-1", "2", "1e9", "1.5", "  7  " }) do
+        T.chat[#T.chat + 1] = "-"
+        C.historyCommand(arg)
+        H.eq(T.chat[#T.chat], NO_SUCH)
+        H.falsy(T.ns.HistoryWindow.isShown())
+    end
+    C.historyCommand("  1  ")
+    H.truthy(T.ns.HistoryWindow.isShown())
+    H.eq(T.ns.HistoryWindow.state().selected, 5)
+    C.historyCommand(" list ")
+    H.eq(T.chat[#T.chat], "|cff66ccffCraftProfit|r 1. Sword (tracking)")
+    for _, arg in ipairs({ "foo", "list 2", "remove", "remove x", "1 2" }) do
+        T.chat[#T.chat + 1] = "-"
+        C.historyCommand(arg)
+        H.truthy(T.chat[#T.chat]:find(T.ns.L.SLASH_HELP, 1, true) or error(arg))
+    end
+    for _, arg in ipairs({ "remove 0", "remove 1.5", "remove 1e9" }) do
+        T.chat[#T.chat + 1] = "-"
+        C.historyCommand(arg)
+        H.eq(T.chat[#T.chat], NO_SUCH)
+    end
+    H.eq(#T.env.CraftProfitDB.tracked, 1)
+    C.historyCommand("  remove   1 ")
+    H.eq(#T.env.CraftProfitDB.tracked, 0)
 end)

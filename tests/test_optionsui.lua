@@ -143,6 +143,12 @@ H.test("the window buttons toggle the main window, the leveling window and the p
     H.truthy(T.ns.PinnedWindow.isShown())
     click(parts.pinsButton)
     H.falsy(T.ns.PinnedWindow.isShown())
+    H.eq(parts.historyButton.text, "History")
+    H.falsy(T.ns.HistoryWindow.isShown())
+    click(parts.historyButton)
+    H.truthy(T.ns.HistoryWindow.isShown())
+    click(parts.historyButton)
+    H.falsy(T.ns.HistoryWindow.isShown())
 end)
 
 -- Boots in `locale`, opens the options window and records every button's size.
@@ -159,19 +165,21 @@ local function sized(locale)
     return T, sizes
 end
 
-H.test("the window buttons: main and leveling on a first row, pinned recipes centred under them", function()
+H.test("the window buttons: two rows of two, main and leveling, then pinned recipes and history", function()
     local T, sizes = sized("frFR")
     local O = T.ns.OptionsUI
     local parts = O.parts
-    local main, level, pins = parts.mainButton, parts.levelButton, parts.pinsButton
+    local main, level, pins, history = parts.mainButton, parts.levelButton, parts.pinsButton, parts.historyButton
     H.eq(main.text, "Fenêtre principale")
     H.eq(level.text, "Montée de métier")
     H.eq(pins.text, "Recettes épinglées")
+    H.eq(history.text, "Historique")
     local half = math.floor((O.ROOM - 4) / 2)
-    for _, b in ipairs({ main, level, pins }) do H.eq(sizes[b], { half, 22 }) end
+    for _, b in ipairs({ main, level, pins, history }) do H.eq(sizes[b], { half, 22 }) end
     H.eq(main.point, { "TOPLEFT", parts.panels.windows.body, "TOPLEFT", 8, -2 })
     H.eq(level.point, { "LEFT", main, "RIGHT", 4, 0 })
-    H.eq(pins.point, { "TOP", parts.panels.windows.body, "TOP", 0, -2 - 26 })
+    H.eq(pins.point, { "TOPLEFT", parts.panels.windows.body, "TOPLEFT", 8, -2 - 26 })
+    H.eq(history.point, { "LEFT", pins, "RIGHT", 4, 0 })
     -- Two rows of 26 px in the panel.
     H.eq(parts.panels.windows.frame.height, T.ns.Layout.panelHeight(2, 26))
 end)
@@ -181,7 +189,7 @@ H.test("every options button label fits its button in English, French and Spanis
         local T, sizes = sized(locale)
         local O, Layout = T.ns.OptionsUI, T.ns.Layout
         local parts = O.parts
-        local buttons = { parts.mainButton, parts.levelButton, parts.pinsButton }
+        local buttons = { parts.mainButton, parts.levelButton, parts.pinsButton, parts.historyButton }
         for _, b in pairs(parts.headerButtons) do buttons[#buttons + 1] = b end
         for _, b in pairs(parts.tileButtons) do buttons[#buttons + 1] = b end
         for _, b in pairs(parts.pinButtons) do buttons[#buttons + 1] = b end
@@ -209,7 +217,7 @@ local EXPECTED_LINES = {
     "/cp pins - pinned recipes",
     "/cp level - leveling window",
     "/cp minimap - show or hide the minimap button",
-    "/cp history - tracked recipes",
+    "/cp history [n | list | remove <n>] - price history window",
     "/cp scan - scan the auction house",
     "/cp market - which market is in use",
     "/cp locale <code> - change the language",
@@ -286,6 +294,7 @@ H.test("the command lines are translated and fit the panel in English, French an
         end
         if locale == "frFR" then
             H.eq(plain(O.parts.lines[7].text), "/cp pins - recettes épinglées")
+            H.eq(plain(O.parts.lines[10].text), "/cp history [n | list | remove <n>] - historique des prix")
         end
     end
 end)
@@ -469,4 +478,25 @@ H.test("the note is the small font across the panel, under the buttons, as tall 
     measured = 0 / 0
     O.refresh()
     H.eq(O.noteLines(), Layout.wrapLines(note.text, O.SMALL_CHAR_W, O.ROOM))
+end)
+
+H.test("the options window shrinks to fit a short screen, and stays at full size otherwise", function()
+    local T, _, slash = boot()
+    local scales = {}
+    local create = T.env.CreateFrame
+    T.env.CreateFrame = function(...)
+        local f = create(...)
+        f.SetScale = function(self, v) scales[#scales + 1] = v; self.scale = v end
+        return f
+    end
+    T.env.UIParent.GetHeight = function() return 400 end
+    slash("options")
+    local f = T.ns.OptionsUI.frame()
+    local h = f:GetHeight()
+    H.truthy(h > 380)
+    H.eq(f.scale, 380 / h)
+    T.env.UIParent.GetHeight = function() return 2000 end
+    slash("options")
+    slash("options")
+    H.eq(f.scale, 1)
 end)

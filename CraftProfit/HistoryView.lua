@@ -2,7 +2,7 @@
 -- and the main window arrows show. Pure Lua, no WoW API, no widgets.
 --
 -- HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf)
---   -> { { day, materials, sale, net, carried, materialsCarried, saleCarried, n }, ... }
+--   -> { { day, materials, sale, net, carried, materialsCarried, saleCarried, netCarried, n }, ... }
 --   ascending, one entry per local day of the last `days` days on which at least one item
 --   of the recipe was measured. itemSeriesOf(itemID) returns that item's saved series (or
 --   nil); itemsOf is the same function History.record uses (Controller.historyItems): a
@@ -16,18 +16,31 @@
 --   are not covered. `carried` is true when any price used that day was carried;
 --   materialsCarried (when materials is known) is false when every reagent was measured
 --   that day, "some" or "all" when some or all of their prices were carried; saleCarried
---   (when sale is known) is false or "all". n = the most measures of one item that day.
+--   (when sale is known) is false or "all"; netCarried (when net is known) is "all" when
+--   the sale price was carried (the profit repeats an old sale), "some" when only reagent
+--   prices were, else false. n = the most measures of one item that day.
 --   Never mutates the saved series.
 -- HistoryView.summary(days, field) -> { today, usual, low, high, measures, daysCovered,
---   enough } for one view: `field` names the value of recipeDays entries ("net",
+--   enough, todayDay, lowDay, highDay } for one view: `field` names the value of recipeDays entries ("net",
 --   "materials", "sale"); without it the entries are a History.dailySeries (avg, low,
 --   high). A day whose `<field>Carried` is "all" repeats older prices and is skipped, as
 --   are entries without a value. today = the value of the newest day kept, usual = median
 --   of the days of the 30 days up to it (nil under 3 days, then enough = false).
+--   todayDay is the day of `today`; lowDay / highDay the day of the row holding `low` /
+--   `high` (the newest such day on a tie).
+-- HistoryView.compare(summary, higherIsGood) -> { pct, tone, good } or nil: History.compare
+--   of summary.today against summary.usual, nil unless summary.enough. good is true when the
+--   move is good news (up with higherIsGood, down without), false when bad, nil when flat.
+-- HistoryView.profitCompare(summary) -> { gap, tone, good } or nil: the "net" summary's
+--   today against its usual profit in money, for any sign of either (History.compare needs
+--   a usual above 0). gap = today - usual; tone "flat" when |gap| <= FLAT_PERCENT % of
+--   |usual| (a usual of exactly 0: only a gap of 0), else "up" (good = true) or "down"
+--   (good = false). nil unless summary.enough and both are finite.
 -- HistoryView.indicators(recipe, itemSeriesOf, now, itemsOf, cut)
---   -> { materials = { pct, tone, good } or nil, sale = { pct, tone, good } or nil }:
---   today against the usual price over 30 days. Materials cheaper and a sale higher are
---   good (true), the opposite bad (false); within the flat band good is nil.
+--   -> { materials = { pct, tone, good } or nil, sale = { pct, tone, good } or nil,
+--   netToday }: today against the usual price over 30 days. Materials cheaper and a sale
+--   higher are good (true), the opposite bad (false); within the flat band good is nil.
+--   netToday: the auction house profit of the newest day (summary "net"), nil unknown.
 local _, ns = ...
 local Util, Core, History = ns.Util, ns.Core, ns.History
 
@@ -115,6 +128,12 @@ function HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf)
         if sale then
             row.saleCarried = isCarried[recipe.outputItemID] and "all" or false
         end
+        -- A profit on a carried sale price repeats an old sale: never a profit of that day.
+        if net then
+            if row.saleCarried == "all" then row.netCarried = "all"
+            elseif row.materialsCarried then row.netCarried = "some"
+            else row.netCarried = false end
+        end
         out[#out + 1] = row
     end
     return out
@@ -140,11 +159,15 @@ function HistoryView.summary(days, field)
     local newest = rows[1]
     for _, r in ipairs(rows) do
         if r.day >= newest.day then newest = r end
-        result.low = result.low and math.min(result.low, r.low) or r.low
-        result.high = result.high and math.max(result.high, r.high) or r.high
+        if result.low == nil or r.low < result.low or (r.low == result.low and r.day > result.lowDay) then
+            result.low, result.lowDay = r.low, r.day
+        end
+        if result.high == nil or r.high > result.high or (r.high == result.high and r.day > result.highDay) then
+            result.high, result.highDay = r.high, r.day
+        end
         result.measures = result.measures + r.n
     end
-    result.today = newest.value
+    result.today, result.todayDay = newest.value, newest.day
     result.daysCovered = #rows
     local from = History.dayOf(newest.day - (History.USUAL_DAYS - 1) * DAY + DAY / 2)
     local values = {}
@@ -165,10 +188,28 @@ local function indicator(summary, higherIsGood)
     return c
 end
 
+function HistoryView.compare(summary, higherIsGood)
+    if type(summary) ~= "table" or summary.enough ~= true then return nil end
+    return indicator(summary, higherIsGood == true)
+end
+
+function HistoryView.profitCompare(summary)
+    if type(summary) ~= "table" or summary.enough ~= true then return nil end
+    local today, usual = summary.today, summary.usual
+    if not Util.isFinite(today) or not Util.isFinite(usual) then return nil end
+    local gap = today - usual
+    local flat
+    if usual == 0 then flat = gap == 0 else flat = math.abs(gap) * 100 <= History.FLAT_PERCENT * math.abs(usual) end
+    if flat then return { gap = gap, tone = "flat" } end
+    if gap > 0 then return { gap = gap, tone = "up", good = true } end
+    return { gap = gap, tone = "down", good = false }
+end
+
 function HistoryView.indicators(recipe, itemSeriesOf, now, itemsOf, cut)
     local days = HistoryView.recipeDays(recipe, itemSeriesOf, now, History.USUAL_DAYS, cut, itemsOf)
     return {
         materials = indicator(HistoryView.summary(days, "materials"), false),
         sale = indicator(HistoryView.summary(days, "sale"), true),
+        netToday = HistoryView.summary(days, "net").today,
     }
 end

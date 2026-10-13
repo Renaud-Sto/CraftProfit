@@ -58,7 +58,7 @@ Pure modules under the fake environment with synthetic series (busy fortnight, g
 
 1. Retention and limit 30 (History, DB, docs, tests) plus pure computations (usual, compare, weekday, net result). **Done** (branch `feat/price-history`): `History.lua`, `HistoryView.lua`, docs.
 2. Chart widget and probe. **Done** (branch `feat/history-chart`): `ChartModel.lua`, `UI/Chart.lua`, probes `/cppn line` and `/cppn time` (F14). The in-game probe results are pending; `Chart.USE_LINES` stays off until the line probe passes.
-3. History window and entry points.
+3. History window and entry points. **Done** (branch `feat/history-window`): `UI/HistoryWindow.lua`, the data functions in `Boot.lua`, the footer and options buttons, `/cp history` routing; plus Pause/Resume and Delete history (two-click confirmation, pruning every market) and the line chart on (`Chart.USE_LINES`). In-game checks pending (checklist, History window).
 4. Quick indicators in the main window.
 5. Docs, checklist, changelog, skill and probe findings; one PR per step; in-game checks after 3 and 4.
 
@@ -67,3 +67,14 @@ Pure modules under the fake environment with synthetic series (busy fortnight, g
 - Whether the arrows also help in the pinned list (not now).
 - Whether the weekday strip should split weekend hours (not possible: points are daily after 7 days).
 - Possible later: export, alerts, graph per market.
+
+## Rework after the first in-game test (2026-10-12)
+
+The author's first test found the window cluttered: weekday labels read as the chart's x axis, an undefined "Result", "Lowest -9s40c" for a loss, two unlabelled percentages in the list, a chart 90 % empty with a few days on 60, no panels unlike the other windows, and a lagging list scroll (every step recomputed all data). Decided (plan `docs/superpowers/plans/2026-10-12-history-window-rework.md`):
+
+- **Panels.** Left: *Tracked recipes* with a muted column header (*Materials*, *Sale*) over two fixed columns, a row tooltip explaining them, the data hint under the panel (3 lines at most). Right: a verdict panel titled with the recipe ("<What> today: <amount>" and a coloured comparison with the usual price, with "good time to buy / sell / craft" on good news), the chart panel, a key figures panel, a typical week panel, then the status and actions. The window grows to 880 × about 660 px and still fits a 768 px screen at scale 1.
+- **Wording.** "Result" becomes **Profit**; tabs *Materials cost* | *Sale price* | *Profit* (default Profit); "Today" becomes **Now**; the lowest and highest day are named by view (Worst/Best day, Cheapest/Priciest day, Lowest/Highest) with their dates; a loss reads "loss 9s40" and never shows a minus sign outside the chart's axis.
+- **Item groups.** `historyData` tags each item `materials`, `crafted` (when sold) or `disenchant`; the window shows only the groups that exist, with a caption each and a separator between them. Good news follows the group: a cheaper reagent is good, a higher crafted item or disenchant material is good (`goal` buy / sell / craft).
+- **Chart.** The x range starts at the first day with data (7 slots at least, the period at most); dates under the plot instead of weekday names; net bars stand on a labelled zero line, green above and red below; semi-transparent bodies with a lighter edge, a dash and a dot at the value, a thicker line; the usual price as a gold dashed line with a chip; a hover bubble drawn by the chart from the window's wording, replacing the hover line. The weekday strip becomes its own widget in the typical week panel.
+- **Scroll.** The window caches the list; the wheel and the scroll bar repaint rows from the cache only.
+

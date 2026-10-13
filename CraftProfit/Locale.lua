@@ -21,6 +21,13 @@ function Locale.select(code)
     Locale.current = code
 end
 
+-- Plural category of a count: "one" or "other". French counts 0 as singular ("0 mesure").
+local ZERO_IS_ONE = { frFR = true }
+function Locale.plural(n)
+    if n == 1 or (n == 0 and ZERO_IS_ONE[Locale.current]) then return "one" end
+    return "other"
+end
+
 local function lookup(key)
     local selected = Locale.tables[Locale.current]
     local text = selected and selected[key]

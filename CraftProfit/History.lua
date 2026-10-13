@@ -106,6 +106,11 @@ local function localDate(t)
     return d
 end
 
+-- The local date fields of t (year, month, day, hour, min, sec, wday), or nil.
+function History.dateFields(t)
+    return localDate(t)
+end
+
 -- Start of the local calendar day holding t, or nil when the local date is unknown.
 function History.dayOf(t)
     local d = localDate(t)
@@ -332,16 +337,19 @@ end
 -- History.compare(today, usual) -> { pct, tone } or nil
 --   pct = rounded percent difference (today - usual) / usual; tone "flat" when |pct| <= 3,
 --   else "up" or "down". nil when either is not finite or usual <= 0.
--- History.weekdayProfile(days, usual) -> 7 entries, Monday to Sunday, { pct, n }
+-- History.weekdayProfile(days, usual, inMoney) -> 7 entries, Monday to Sunday, { pct, n }
 --   From dailySeries entries (or any entries with `day` and `avg` or `value`): the mean of
---   the daily values of that weekday against `usual`, as a rounded percentage; pct is nil
---   with fewer than 2 days or without a usable usual price.
+--   the daily values of that weekday against `usual`, as a rounded percentage within
+--   +-WEEKDAY_MAX_PCT; pct is nil with fewer than 2 days or without a usable usual price
+--   (above 0). With `inMoney` (the profit, whose usual may be 0 or a loss) the entries are
+--   { gap, n } instead: gap = the rounded mean minus `usual`, in copper, for any finite usual.
 -- History.dayOf(t), History.weekday(t) (1 Monday .. 7 Sunday): see Local days above.
 
 History.USUAL_DAYS = 30
 History.USUAL_MIN_DAYS = 3
 History.FLAT_PERCENT = 3
 History.WEEKDAY_MIN_DAYS = 2
+History.WEEKDAY_MAX_PCT = 999   -- a tiny usual price cannot give an absurd percentage
 
 -- Start of the local day `k` days before the local day starting at `day`. Local days are
 -- 23 to 25 hours long, and the shifts of 60 days add up to an hour at most, so the middle
@@ -413,7 +421,7 @@ function History.compare(today, usual)
     return { pct = pct, tone = tone }
 end
 
-function History.weekdayProfile(days, usual)
+function History.weekdayProfile(days, usual, inMoney)
     local sums, counts = {}, {}
     for i = 1, 7 do sums[i], counts[i] = 0, 0 end
     if type(days) == "table" then
@@ -426,14 +434,19 @@ function History.weekdayProfile(days, usual)
             end
         end
     end
-    local usable = Util.isFinite(usual) and usual > 0
+    local usable = Util.isFinite(usual) and (inMoney or usual > 0)
     local out = {}
     for i = 1, 7 do
-        local pct
+        local entry = { n = counts[i] }
         if usable and counts[i] >= History.WEEKDAY_MIN_DAYS then
-            pct = Util.round((sums[i] / counts[i] - usual) / usual * 100)
+            local gap = sums[i] / counts[i] - usual
+            if inMoney then
+                entry.gap = Util.round(gap)
+            else
+                entry.pct = Util.clamp(Util.round(gap / usual * 100), -History.WEEKDAY_MAX_PCT, History.WEEKDAY_MAX_PCT)
+            end
         end
-        out[i] = { pct = pct, n = counts[i] }
+        out[i] = entry
     end
     return out
 end

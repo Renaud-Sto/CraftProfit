@@ -56,9 +56,9 @@ H.test("recipeDays gives materials, sale after commission and net for each measu
     local days = V.recipeDays(RECIPE, seriesOf(map), NOW, 7, CUT, itemsOf)
     H.eq(days, {
         { day = NOW - 2 * DAY, materials = 250, sale = sale(1013), net = sale(1013) - 250, carried = false,
-            materialsCarried = false, saleCarried = false, n = 1 },
+            materialsCarried = false, saleCarried = false, netCarried = false, n = 1 },
         { day = NOW - DAY, materials = 260, sale = sale(1100), net = sale(1100) - 260, carried = false,
-            materialsCarried = false, saleCarried = false, n = 1 },
+            materialsCarried = false, saleCarried = false, netCarried = false, n = 1 },
     })
 end)
 
@@ -91,7 +91,7 @@ H.test("a missing day carries the last known price and says so", function()
     H.eq(#days, 3)
     H.eq(days[1].carried, false)
     H.eq(days[2], { day = NOW - 2 * DAY, materials = 290, sale = sale(1000), net = sale(1000) - 290,
-        carried = true, materialsCarried = "some", saleCarried = "all", n = 1 })
+        carried = true, materialsCarried = "some", saleCarried = "all", netCarried = "all", n = 1 })
     H.eq(days[3].carried, true)
     H.eq(days[3].materialsCarried, false)
     H.eq(days[3].sale, sale(1000))
@@ -151,13 +151,14 @@ H.test("summary gives today, usual, range, measures and days covered", function(
         days[k] = { day = NOW - (4 - k) * DAY, net = net, materials = 10, n = 2, carried = k == 2 }
     end
     H.eq(V.summary(days, "net"), { today = 250, usual = 225, low = 100, high = 300, measures = 8,
-        daysCovered = 4, enough = true })
-    -- All equal: a range of 0.
+        daysCovered = 4, enough = true, todayDay = NOW, lowDay = NOW - 3 * DAY, highDay = NOW - 2 * DAY })
+    -- All equal: a range of 0; a tie names the newest day.
     H.eq(V.summary(days, "materials"), { today = 10, usual = 10, low = 10, high = 10, measures = 8,
-        daysCovered = 4, enough = true })
+        daysCovered = 4, enough = true, todayDay = NOW, lowDay = NOW, highDay = NOW })
     -- Fewer than 3 days: no usual price.
     H.eq(V.summary({ days[1], days[2] }, "net"), { today = 300, low = 100, high = 300, measures = 4,
-        daysCovered = 2, enough = false })
+        daysCovered = 2, enough = false, todayDay = NOW - 2 * DAY, lowDay = NOW - 3 * DAY,
+        highDay = NOW - 2 * DAY })
     -- Days without a value are not counted; the usual covers the last 30 days only.
     local old = { { day = NOW - 40 * DAY, net = 9000, n = 1 }, { day = NOW - 3 * DAY, n = 1 } }
     for _, d in ipairs(days) do old[#old + 1] = d end
@@ -167,7 +168,7 @@ H.test("summary gives today, usual, range, measures and days covered", function(
     -- An item's daily series: avg, low and high come from the entries.
     local item = ns.History.dailySeries({ pt(3, 100), pt(2, 120), { NOW - DAY, 90, 1, 80, 95, 3 } }, NOW, 30)
     H.eq(V.summary(item), { today = 90, usual = 100, low = 80, high = 120, measures = 5,
-        daysCovered = 3, enough = true })
+        daysCovered = 3, enough = true, todayDay = NOW - DAY, lowDay = NOW - DAY, highDay = NOW - 2 * DAY })
     H.eq(V.summary({}), { measures = 0, daysCovered = 0, enough = false })
     H.eq(V.summary(nil, "net"), { measures = 0, daysCovered = 0, enough = false })
 end)
@@ -197,7 +198,26 @@ H.test("indicators say whether materials are cheaper and the sale higher than us
     -- A bound crafted item has no sale arrow; too little data has none at all.
     H.eq(V.indicators(RECIPE, seriesOf(map), NOW + 120, itemsOfBound, CUT).sale, nil)
     local few = { [1] = { pt(1, 100), pt(0, 90, 60) }, [2] = { pt(1, 50) }, [100] = { pt(1, 1000) } }
-    H.eq(V.indicators(RECIPE, seriesOf(few), NOW + 120, itemsOf, CUT), {})
+    local none = V.indicators(RECIPE, seriesOf(few), NOW + 120, itemsOf, CUT)
+    H.eq(none.materials, nil)
+    H.eq(none.sale, nil)
+end)
+
+H.test("indicators give the auction house profit of the newest day, a loss below zero", function()
+    local V = load().HistoryView
+    local map = { [1] = {}, [2] = {}, [100] = {} }
+    for age = 10, 0, -1 do
+        local extra = age == 0 and 60 or nil
+        map[1][#map[1] + 1] = pt(age, 100, extra)
+        map[2][#map[2] + 1] = pt(age, 50, extra)
+        map[100][#map[100] + 1] = pt(age, 100, extra)
+    end
+    -- 3 crafted items at 100 sell for 285 after the cut; materials cost 250: 35 profit.
+    H.eq(V.indicators(RECIPE, seriesOf(map), NOW + 120, itemsOf, CUT).netToday, 35)
+    map[100][#map[100]] = pt(0, 60, 60)
+    H.eq(V.indicators(RECIPE, seriesOf(map), NOW + 120, itemsOf, CUT).netToday, 171 - 250)
+    -- No sale (bound crafted item): no profit.
+    H.eq(V.indicators(RECIPE, seriesOf(map), NOW + 120, itemsOfBound, CUT).netToday, nil)
 end)
 
 H.test("a day measuring only the crafted item does not count as a materials price", function()
@@ -223,9 +243,75 @@ H.test("a day measuring only the crafted item does not count as a materials pric
     H.eq(m.today, 205)
     H.eq(m.daysCovered, 10)
     H.eq(V.summary(days, "sale").daysCovered, 10)
-    H.eq(V.summary(days, "net").daysCovered, 11)
+    -- Profit: yesterday's row only repeats an older sale price, so it is skipped; today's
+    -- (sale measured, materials carried) counts.
+    H.eq(today.netCarried, "some")
+    H.eq(days[#days - 1].netCarried, "all")
+    H.eq(V.summary(days, "net").daysCovered, 10)
     local ind = V.indicators(RECIPE, seriesOf(map), NOW + 120, itemsOf, CUT)
     H.eq(ind.materials, { pct = -18, tone = "down", good = true })
     -- The sale was carried on yesterday's row (only reagents measured): skipped too.
     H.eq(days[#days - 1].saleCarried, "all")
+end)
+
+H.test("compare: good or bad by view, nothing without enough data", function()
+    local V = load().HistoryView
+    local cheaper = { today = 88, usual = 100, enough = true }
+    -- Materials: lower is good. Sale, profit and one item: higher is good.
+    H.eq(V.compare(cheaper, false), { pct = -12, tone = "down", good = true })
+    H.eq(V.compare(cheaper, true), { pct = -12, tone = "down", good = false })
+    H.eq(V.compare({ today = 108, usual = 100, enough = true }, true), { pct = 8, tone = "up", good = true })
+    H.eq(V.compare({ today = 102, usual = 100, enough = true }, true), { pct = 2, tone = "flat" })
+    -- Under 3 days (enough = false), or without a usable usual price: nil.
+    H.eq(V.compare({ today = 88, usual = 100, enough = false }, false), nil)
+    H.eq(V.compare({ today = 88, enough = false }, false), nil)
+    H.eq(V.compare({ today = 88, usual = -5, enough = true }, true), nil)
+    H.eq(V.compare(nil, true), nil)
+end)
+
+H.test("profitCompare: a money gap for any sign of the usual profit, flat within 3 % of it", function()
+    local V = load().HistoryView
+    -- A loss shrinking from 3700 to 247: better, whatever the signs.
+    H.eq(V.profitCompare({ today = -247, usual = -3700, enough = true }), { gap = 3453, tone = "up", good = true })
+    H.eq(V.profitCompare({ today = -500, usual = 200, enough = true }), { gap = -700, tone = "down", good = false })
+    H.eq(V.profitCompare({ today = 1200, usual = 1000, enough = true }), { gap = 200, tone = "up", good = true })
+    -- Within 3 % of the usual amount (its size, not its sign): flat.
+    H.eq(V.profitCompare({ today = -1030, usual = -1000, enough = true }), { gap = -30, tone = "flat" })
+    H.eq(V.profitCompare({ today = -969, usual = -1000, enough = true }), { gap = 31, tone = "up", good = true })
+    -- A usual of exactly 0: any gap counts, none is flat.
+    H.eq(V.profitCompare({ today = 1, usual = 0, enough = true }), { gap = 1, tone = "up", good = true })
+    H.eq(V.profitCompare({ today = 0, usual = 0, enough = true }), { gap = 0, tone = "flat" })
+    -- Without enough data or a number: nil.
+    H.eq(V.profitCompare({ today = 5, usual = 1, enough = false }), nil)
+    H.eq(V.profitCompare({ today = 0 / 0, usual = 1, enough = true }), nil)
+    H.eq(V.profitCompare({ usual = 1, enough = true }), nil)
+    H.eq(V.profitCompare(nil), nil)
+end)
+
+H.test("a profit from a carried sale price is never today's profit", function()
+    local V = load().HistoryView
+    local map = { [1] = {}, [2] = {}, [100] = {} }
+    for age = 10, 2, -1 do
+        map[1][#map[1] + 1] = pt(age, 100)
+        map[2][#map[2] + 1] = pt(age, 50)
+        map[100][#map[100] + 1] = pt(age, 100)       -- 285 after the cut: a 35 profit
+    end
+    -- Today only the reagents are measured, much dearer: the sale is two days old.
+    map[1][#map[1] + 1] = pt(0, 500, 60)
+    map[2][#map[2] + 1] = pt(0, 500, 60)
+    local days = V.recipeDays(RECIPE, seriesOf(map), NOW + 120, 30, CUT, itemsOf)
+    local today = days[#days]
+    H.eq(today.saleCarried, "all")
+    H.eq(today.netCarried, "all")
+    H.eq(today.net, 285 - 1500)
+    -- The newest profit is the last day the sale was measured, never today's mix.
+    local net = V.summary(days, "net")
+    H.eq(net.today, 35)
+    H.eq(net.todayDay, NOW - 2 * DAY)
+    H.eq(V.indicators(RECIPE, seriesOf(map), NOW + 120, itemsOf, CUT).netToday, 35)
+    -- Sale carried and materials partly carried: "all" too.
+    local both = V.recipeDays(RECIPE, seriesOf({ [1] = { pt(3, 100) }, [2] = { pt(3, 50), pt(1, 50) },
+        [100] = { pt(3, 100) } }), NOW, 7, CUT, itemsOf)
+    H.eq(both[2].materialsCarried, "some")
+    H.eq(both[2].netCarried, "all")
 end)

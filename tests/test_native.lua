@@ -1570,3 +1570,37 @@ H.test("raising does not fail on a client without Raise or SetToplevel", functio
     win.scripts.OnMouseDown(win, "LeftButton")
     Native.raiseWindow(win)
 end)
+
+H.test("fitToScreen scales a window down to the screen height, never up, and ignores bad values", function()
+    local T, Native, env = boot()
+    local function win(h)
+        local w = { height = h, scale = nil }
+        w.GetHeight = function(self) return self.height end
+        w.SetScale = function(self, v) self.scale = v end
+        return w
+    end
+    env.UIParent.GetHeight = function() return 668 end
+    local tall = win(704)
+    H.eq(Native.fitToScreen(tall), 648 / 704)
+    H.eq(tall.scale, 648 / 704)
+    local short = win(500)
+    H.eq(Native.fitToScreen(short), 1)
+    H.eq(short.scale, 1)
+    -- Unusable sizes change nothing and never raise.
+    for _, screen in ipairs({ 0, 0 / 0, "x" }) do
+        env.UIParent.GetHeight = function() return screen end
+        local w = win(704)
+        H.eq(Native.fitToScreen(w), nil)
+        H.eq(w.scale, nil)
+    end
+    env.UIParent.GetHeight = function() error("boom") end
+    H.eq(Native.fitToScreen(win(704)), nil)
+    env.UIParent.GetHeight = function() return 668 end
+    H.eq(Native.fitToScreen(nil), nil)
+    local broken = win(0 / 0)
+    H.eq(Native.fitToScreen(broken), nil)
+    local raising = win(704)
+    raising.GetHeight = function() error("boom") end
+    H.eq(Native.fitToScreen(raising), nil)
+    H.truthy(T)
+end)

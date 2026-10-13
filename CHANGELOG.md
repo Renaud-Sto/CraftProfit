@@ -4,7 +4,23 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ## [Unreleased]
 
+### Added
+- History window: the tracked recipes with green or red percentages when their newest prices are better or worse than usual (fresh data only), and for the chosen recipe a chart of the profit, the materials cost, the sale price or one item over 7, 30 or 60 days (a bar per day, a line through the values, the usual price, lighter bars for prices carried from an earlier day), key figures and a typical week. Opened by the **History** button under the pinned list, the options window, or `/cp history`.
+- History window rework after the first in-game test: every part in its own panel (tracked recipes, a verdict that says today's price and how it compares with the usual one in a plain sentence, the chart, key figures, typical week); tabs *Materials cost*, *Sale price*, *Profit* ("Result" is gone); item icons grouped as materials, crafted item and disenchant; labelled list columns with a tooltip; a loss reads "loss 9s 40c", never with a minus sign; the chart starts at the first day of data (at least 7 days), shows dates under the plot, a zero line for the profit, the usual price as a dashed line, and a bubble on hover; the list scrolls smoothly (no data work per scroll step).
+- Pause or resume tracking, and delete a recipe's history, from the History window (delete asks for a second click within 4 seconds; items another tracked recipe uses keep their history; current prices are never deleted).
+
 ### Fixed
+- History window: the verdict now starts with what crafting and selling at the auction house earns today (profit in green, loss in red, break even in grey), whatever tab or item is shown, then the shown figure (left out on the Profit tab), then the comparison with the usual level. While the craft is at a loss, a cheaper material or a higher sale is no longer shown as green "good time to buy/sell": it is grey, and the list's percentage columns turn grey with a tooltip that says why. On the Profit tab the comparison is in money and no longer vanishes when the usual result is a loss ("34s less loss than usual (loss 37s)").
+- Deleting a tracked recipe's history while another tracked recipe's crafted item is not loaded yet no longer deletes a reagent that this item may disenchant into (an enchanting recipe's Lesser Magic Essence, say).
+- History window: a profit is never computed from a sale price carried from an earlier day, so the profit "today", the loss flag and the list's sale arrow no longer come from an old sale price; freshness reads only the recipe's reagents and crafted item (a disenchant material measured today no longer makes old figures look current).
+- History window: when nothing of the recipe was measured in the last 24 hours, the verdict keeps its dated figures but the comparison is grey and never says "good time to buy/sell/craft".
+- History window: the typical week always reads the last 30 days, so it no longer stays empty on the 7-day period.
+- History window: the typical week on the Profit tab shows the gap from the usual profit in money, so a recipe usually at a loss (or at 0) no longer shows an empty week that claims to need two weeks of data; percentages from a tiny usual price are bounded.
+- History window: a period with no measurement (newest prices older than 7 days, on the 7-day period) says so and asks to refresh, instead of a blank chart and dashes.
+- History window: with too little data the verdict panel is no longer blank ("Not enough measurements yet to judge this recipe.", or "No measurement in the last 7 days." for an empty period, and "Tracking is paused." when paused), and the message names the items that lack data: "Least measured: Copper Bar (8 measurements over 2 days)."
+- History window: "1 measurement over 1 day" instead of "1 measurements over 1 days" (French and Spanish too).
+- History window: the list's grey-row tooltip says "at a loss or break even", since a craft that earns exactly nothing is greyed too.
+- History window: its figures are cached until a price is recorded, a recipe is paused, resumed or deleted, the commission or the day changes, so the window no longer recomputes every tracked recipe at each refresh of the addon.
 - Price history: each tier now has its own cap, so a busy week can no longer erase the daily history. Points or prices dated more than a day in the future no longer freeze an item's series (a point is dropped only when a newer one is recorded, so a clock set back never erases history), and the count of recorded recipes is exact.
 - A recipe whose disenchant materials have no data in the tables (for example epic items above item level 60) shows *no data* instead of a permanent *PRICES MISSING* that no search could clear.
 - The leveling window reopens where it was dragged during the same session.
@@ -15,6 +31,8 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 ### Changed
 - Price history retention: every point is kept for 7 days, then one point a day for 60 days (at most 212 points, about 35 KB in the saved file, per item); the weekly tier is gone. Existing history is compacted at load: points between 7 and 60 days old become daily points, weekly points and anything older than 60 days are dropped.
 - Up to 30 recipes can be tracked (was 15).
+- `/cp history` opens the History window (`/cp history <n>` on the n-th tracked recipe); the chat list moved to `/cp history list`. `/cp history remove <n>` also cleans the history of the other rulesets and factions.
+- The options window's Windows panel has two rows of two buttons (History added).
 - Prices and history points record whether their volume counts every unit on offer (a full scan, or a search whose results were not cut at 100 rows), for a later estimate of sales per day; nothing visible changes.
 - The pinned list under the main window is no longer evaluated while it is hidden.
 

@@ -107,16 +107,43 @@ Leveling window (`/cp level`):
 - [ ] After a **Scan AH** and a **Refresh recipe**, `/reload` works with no Lua error and nothing visible changes (the price rows and history points of complete volumes end with `true` in `CraftProfit.lua`).
 
 ## History chart
-To check in step 3, once the history window shows the chart; take screenshots.
-- [ ] Bars: one per day with data, from the lowest to the highest price of that day, with a white tick at the average; a net result bar is green for a gain and red for a loss.
-- [ ] Gaps: a day without any measurement is an empty slot, not a bar at zero.
-- [ ] Carried days (a price taken from an earlier day) are drawn lighter.
-- [ ] The usual price is a thin line with its amount at the right; when it is off the scale, the line sits on the border and its label ends with `^` or `v`.
-- [ ] Axis labels are plain amounts (`12g 40s`, `1.2k g`), readable, not overlapping; a loss shows a brighter zero line.
-- [ ] Weekday strip: Monday first, green above and red below the zero line, a percentage under each bar, nothing for a weekday with fewer than 2 days.
-- [ ] Hovering a day reports that day (tooltip in step 3); hovering a gap reports nothing; switching 60 days then 7 then 60 leaves no stray bar.
-- [ ] Dragging from the chart moves the history window like a drag on its body, without a tooltip flickering while it moves; the window comes to the front on the press.
-- [ ] A refresh or a period change while a day is hovered hides its tooltip (no stale tooltip left behind).
+Take screenshots; check after the History window rework (2026-10-12).
+- [ ] The plot sits on its own darker inset, the gridlines are faint, the amounts at the left are readable and do not overlap.
+- [ ] Dates under the plot (first, middle and last day, in the language's order: 10/12 in English, 12/10 in French and Spanish), no weekday names under the chart.
+- [ ] Item view: each bar spans the lowest to the highest price of the day, semi-transparent, with a lighter top edge, a bright dash and a dot at the average, a 2 px line joining the days.
+- [ ] Profit view: a clear zero line labelled `0`; days above zero green, below zero red, each bar standing on the zero line.
+- [ ] Carried days (a price taken from an earlier day) are drawn lighter; a day without any measurement is an empty slot, not a bar at zero.
+- [ ] The usual price is a gold dashed line with a chip "Usual <amount>" at its right end; off the scale, it sits on the border and the chip ends with `^` or `v`.
+- [ ] A recipe with 4 days of data on **60 days** draws over 7 slots starting at its first day (not 90 % empty); with 20 days, 20 slots.
+- [ ] Hover: the column lights up and a bubble in normal-size font shows the date, the value, for Profit the sale value and materials cost, the measurements and the carried note; near the right edge the bubble opens on the left; hovering a gap shows no bubble; switching 60 days then 7 then 60 leaves no stray bar, dash or bubble.
+- [ ] Dragging from the chart moves the history window like a drag on its body, without a bubble flickering while it moves.
+- [ ] Lines on and off: with `Chart.USE_LINES = true` (default) the line stops at gaps. Edit `CraftProfit/UI/Chart.lua` to `false`, `/reload`, compare (screenshots of both), then restore `true`.
+
+## History window
+Take screenshots of each state in English, French and Spanish (`/cp locale frFR`, `/cp locale esES`).
+- [ ] Entry points: the **History** button right of **Leveling** under the pinned list, the **History** button in the options window's Windows panel, `/cp history` (opens), `/cp history 1` (opens on the first tracked recipe), `/cp history 9` with fewer recipes (message naming `/cp history list`), `/cp history list`, `/cp history remove <n>`.
+- [ ] Look: every part is in its own panel with the same header strip as the options window (Tracked recipes, the recipe's verdict, Over time, Key figures, Typical week); switching the header strip in the options window repaints them.
+- [ ] Size: at UI scale 1 on a 768 px high screen the window opens whole without shrinking; at the largest UI scale it shrinks to fit and stays readable.
+- [ ] States: no tracked recipe, "Tick Track history on a recipe to follow its prices."; none selected, "Select a recipe."; 1 or 2 days of data, the verdict and chart panels with "N measurements over D days..." in place of the chart and the grey verdict line "Not enough measurements yet to judge this recipe." (plus "Tracking is paused." when paused); a paused recipe still shows its chart with the paused line above the buttons.
+- [ ] List: the column headers *Materials* and *Sale* line up with the two columns of percentages on every row; hovering a row shows the tooltip explaining them; a paused row shows *paused*; the hint under the list is 3 lines at most.
+- [ ] Freshness: refresh only a recipe's reagents (not its crafted item, whose last price is a few days old): the *Sale* column shows nothing, *Materials* still compares, and the row is never greyed as "at a loss" from the old sale price. A recipe whose disenchant materials alone were searched today shows no percentages.
+- [ ] With the History window open and 30 tracked recipes, browse recipes in the profession window: no hitch (the history data is cached until a price is recorded); a **Refresh recipe** on a tracked recipe updates its row and chart at once; after midnight (or 24 hours without data) the percentages hide without reopening the window.
+- [ ] Scroll with 30 tracked recipes: the wheel and the scroll bar move smoothly (no lag, no hitch at each step); the selection and the right side do not flicker.
+- [ ] Verdict: line 1 is always the auction house profit, whatever tab or item: "Crafted and sold at the auction house today: profit 12g" green, "...: loss 2s47" red, "...: break even" grey (French "Fabriqué et vendu à l'hôtel des ventes aujourd'hui", Spanish "Fabricado y vendido en la casa de subastas hoy"). Line 2 "<What> today: <amount>" (or "on <date>" when the newest day is older), absent on the Profit tab. Last line green for good news ("12 % cheaper than usual (...): good time to buy" on Materials cost) only while the craft makes a profit, red for bad, grey "About the usual level"; no comparison with fewer than 3 days. The three lines fit the panel without clipping in all three languages.
+- [ ] Stale data: a recipe not refreshed for a few days shows its profit and figure lines with their date ("... on 09/21: ...") and a grey comparison with no "good time to ...", even when the old price was good news.
+- [ ] A recipe crafted at a loss (for example usual loss 37s, today loss 2s47): Materials cost or Sale price good news is grey and without "good time to buy/sell"; the Profit tab says "34s less loss than usual (loss 37s)" in grey (it no longer vanishes when the usual profit is a loss); a worse day says "... worse than usual (...)" in red. In the list, its two percentage columns are grey and the row tooltip adds "Crafting and selling at the auction house is at a loss or break even today, so the changes are not good news yet." (a recipe exactly at break even is greyed the same way) Once profitable again, the colours and advice come back. A loss reads "loss 9s 40c" (French "perte de", Spanish "pérdida de"), never "-9s40c", in the verdict, figures and bubble.
+- [ ] Tabs: *Materials cost*, *Sale price*, *Profit*, the active one lit; clicking an item icon lights none. The caption under the icons says what is drawn (Profit with the real commission). Choosing another recipe goes back to Profit and keeps the period.
+- [ ] Item groups: *Materials*, *Crafted item*, *Disenchant* captions above their icons, a thin separator between groups; a bound-on-pickup recipe shows no Crafted item group and no orphan separator; a recipe with many reagents wraps to a second line, clear of the chart caption.
+- [ ] Key figures: Now, Usual (30-day median), and Worst/Best day (Profit), Cheapest/Priciest day (Materials cost) or Lowest/Highest, each with its date under the amount; the "N measurements over D days" line.
+- [ ] A recipe whose newest prices are 8 to 29 days old, on 7 days: "No measurements in the last 7 days: refresh prices at the auction house." (French "Aucune mesure ces 7 derniers jours : ...", Spanish "Ninguna medición en los últimos 7 días: ...") in place of the chart, no figures or week; 30 days draws it again.
+- [ ] Least measured: a recipe whose one reagent is rarely priced (Rough Copper Chain Boots with Copper Bar measured on 2 days): under the not-enough-data message, "Least measured: Copper Bar (8 measurements over 2 days)."; with several, "Least measured: Copper Bar (8 over 2 days), Rough Stone (none)." (French "Objets les moins mesurés : ...", Spanish "Objetos con menos mediciones: ..."); at most two lines, centred under the message, clear of the chart panel's edges; clicking a reagent icon without data shows the same. The period-empty state says "No measurement in the last 7 days." in the verdict and names no item.
+- [ ] Prices never together: a recipe whose items each have 3+ days but on different days (price the reagents one day, the crafted item another) shows, under the message, "Every item has enough days, but never on the same days: only N days hold all the prices together. Refresh them all on the same visit." (French and Spanish equivalents); after one visit where every item is refreshed, the count grows.
+- [ ] Typical week on the 7-day period: the same bars as on 30 days (it always reads 30 days).
+- [ ] Typical week on the Profit tab: money gaps above the bars ("+2s10c", "-40c"), also for a recipe usually at a loss; the longest gaps (a few gold) stay inside their slot in all three languages.
+- [ ] Typical week: bars with the percentage above and the weekday under each; with less than about two weeks of data, one muted line "Shows after about two weeks of data." instead of seven empty labels.
+- [ ] Drag: the window moves from its title bar, its body, the list rows, the buttons and the chart; a drag ending on a button clicks nothing; Escape closes it; its place is kept after `/reload`.
+- [ ] Pause and resume, Delete (two clicks within 4 seconds, cancelled by waiting, by another recipe or by closing the window) behave as before.
+- [ ] French and Spanish: every label fits (tabs, periods, figures, captions, verdict, bubble). The French and Spanish strings were written without a native speaker: have them read by one.
 
 ## Click a reagent to search it (quality of life, never buys)
 - [ ] With the materials detail unfolded at the AH, hovering a reagent row highlights it. Clicking "20x Bronze Bar" opens the AH's Buy view, types the item name in the AH search box and starts the search.

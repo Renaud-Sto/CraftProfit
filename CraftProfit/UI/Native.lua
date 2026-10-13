@@ -190,6 +190,25 @@ function Native.forwardDrag(button, window)
     button:SetScript("OnDragStop", function() window.stopDrag(window) end)
 end
 
+-- Scales `window` down so it fits the screen's height with FIT_MARGIN px to spare
+-- (UIParent is 768 px high at UI scale 1.0, about 668 at 1.15), and back to 1 when it fits.
+-- Returns the scale set, or nil (nothing changed) when a height is unknown, not a positive
+-- number, or reading it raises.
+Native.FIT_MARGIN = 20
+function Native.fitToScreen(window)
+    if type(window) ~= "table" or type(UIParent) ~= "table" then return nil end
+    local okScreen, screen = pcall(UIParent.GetHeight, UIParent)
+    local okWindow, height = pcall(window.GetHeight, window)
+    if not okScreen or not okWindow or not ns.Util.isFinite(screen) or not ns.Util.isFinite(height)
+        or screen <= Native.FIT_MARGIN or height <= 0 then
+        return nil
+    end
+    local room = screen - Native.FIT_MARGIN
+    local scale = height > room and room / height or 1
+    if not pcall(window.SetScale, window, scale) then return nil end
+    return scale
+end
+
 -- Window --------------------------------------------------------------------------
 
 -- ButtonFrameTemplate's border is the NineSlice layout PortraitFrameTemplate

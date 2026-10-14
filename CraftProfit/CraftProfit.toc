@@ -46,4 +46,5 @@ UI/HistoryWindow.lua
 UI/OptionsUI.lua
 UI/MinimapButton.lua
 Controller/Facts.lua
+Controller/History.lua
 Boot.lua

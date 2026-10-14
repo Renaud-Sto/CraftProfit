@@ -79,7 +79,18 @@ Made for **World of Warcraft: Forever** (beta build 1.60.1, Interface 16001). No
 
 ## Gallery
 
-The screenshots are in [docs/screenshots](../screenshots/README.md) (English client, real game images): `01-main-window.png`, `02-pinned-window.png`, `03-leveling.png`, `04-options.png`, `05-all-windows.png` and `06-main-window-loss.png`. Upload them in the CurseForge gallery with these titles: the main window at the auction house, the pinned recipes window, the leveling window, the options window, all windows together, and a recipe that loses money (best option: disenchant).
+The screenshots are in [docs/screenshots](../screenshots/README.md) (English client, real game images). Upload them in the CurseForge gallery in this order, with these titles:
+
+1. `07-profession-window-profit.png`: *Profit on every recipe of the profession window*
+2. `08-history-profit.png`: *History window: today's verdict and 30-day profit chart*
+3. `09-history-material.png`: *History window: price of a single material over 30 days*
+4. `10-history-loss.png`: *History window: a recipe that loses money*
+5. `01-main-window.png`: *The main window at the auction house*
+6. `02-pinned-window.png`: *The pinned recipes window*
+7. `03-leveling.png`: *The leveling window*
+8. `04-options.png`: *The options window*
+9. `05-all-windows.png`: *All windows together*
+10. `06-main-window-loss.png`: *A recipe that loses money (best option: disenchant)*
 
 ## Project icon
 

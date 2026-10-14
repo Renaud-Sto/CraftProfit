@@ -1,6 +1,6 @@
 # Screenshots
 
-The screenshots of the project, used by the [README](../../README.md) and the [CurseForge page](../curseforge/project-page.md). They were taken on 2026-10-11 on the WoW: Forever beta (build 1.60.1), English client. `04-options.png` and `02-pinned-window.png` are crops of `05-all-windows.png`; `06-main-window-loss.png` shows a recipe that loses money. Retake them when the look changes.
+The screenshots of the project, used by the [README](../../README.md) and the [CurseForge page](../curseforge/project-page.md). They were taken on 2026-10-11 on the WoW: Forever beta (build 1.60.1), English client. `04-options.png` and `02-pinned-window.png` are crops of `05-all-windows.png`; `06-main-window-loss.png` shows a recipe that loses money. `07` to `10` were taken on 2026-10-14 for the 1.1.0 release. Retake them when the look changes.
 
 Take them on an **English client** (`/cp locale` back to the game language if you forced another one), with real prices (run **Scan AH** first), at your usual UI scale. Save them as PNG in this folder, with exactly these names. Crop out other players' names and the chat if it shows anything personal.
 
@@ -11,3 +11,8 @@ Take them on an **English client** (`/cp locale` back to the game language if yo
 | `03-leveling.png` | The leveling window (`/cp level`) for one profession: the NEXT POINT list with the crafts per point (`x1`, `x1.3`, `x4`) and the cost per point, sorted by cost per point. |
 | `04-options.png` | The options window (`/cp options`): Appearance, Pinned recipes limit (20 lit), Minimap, Windows and Controls, nothing cut. |
 | `05-all-windows.png` (optional) | At the auction house: the main window with the pinned list under it, the leveling and pinned recipes windows beside it, none overlapping. |
+| `06-main-window-loss.png` (optional) | A recipe that loses money, best option Vendor or Disenchant. |
+| `07-profession-window-profit.png` | The profession window with the profit tag at the right of each recipe row (green, red, grey), and the CraftProfit main window beside it. |
+| `08-history-profit.png` | The History window (`/cp history`) on a tracked recipe, Profit chart over 30 days: the verdict sentence, the usual price dashed, a green bar and a red one, key figures. |
+| `09-history-material.png` (optional) | The History window on one material (Bronze Bar): the icons row (materials, crafted item, disenchant), the single-item chart and its key figures. |
+| `10-history-loss.png` (optional) | The History window on a recipe that loses money: the verdict in red and the profit chart under the zero line. |

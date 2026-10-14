@@ -35,6 +35,8 @@ AHAdapter.lua
 TradeAdapter.lua
 UI/Layout.lua
 UI/Native.lua
+UI/NativeCards.lua
+UI/NativeLists.lua
 UI/Chart.lua
 UI/Window.lua
 UI/PinsUI.lua

@@ -28,7 +28,7 @@ local function recordFrames(env)
 end
 
 H.test("the native module loads beside the layout helpers without game globals", function()
-    local ns = H.newNS("Colors", "UI/Layout", "UI/Native")
+    local ns = H.newNS("Colors", "UI/Layout", "UI/Native", "UI/NativeCards", "UI/NativeLists")
     H.truthy(ns.Native)
     H.eq(ns.Native.CONTENT_PAD, 4)
 end)

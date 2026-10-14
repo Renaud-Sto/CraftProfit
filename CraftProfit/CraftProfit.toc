@@ -45,4 +45,10 @@ UI/PinnedWindow.lua
 UI/HistoryWindow.lua
 UI/OptionsUI.lua
 UI/MinimapButton.lua
+Controller/Facts.lua
+Controller/Main.lua
+Controller/Settings.lua
+Controller/Leveling.lua
+Controller/Pins.lua
+Controller/History.lua
 Boot.lua

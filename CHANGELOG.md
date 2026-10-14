@@ -43,6 +43,7 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 - One refresh looks up the market, Enchanting and each item once, and evaluates a recipe shown in two lists once.
 - During **Refresh pinned** the values update about once a second instead of after every item.
 - `UI/Native.lua` split into `UI/Native.lua` (window, button, check box, input and shared helpers), `UI/NativeCards.lua` (panel, tile, banner and the appearance variants) and `UI/NativeLists.lua` (list row, scroll bar); no behaviour change.
+- `Boot.lua` split into `Controller/Facts.lua` (item facts, market, refresh pass, evaluations), `Controller/Main.lua` (selection, refresh, placement, the main window), `Controller/Settings.lua`, `Controller/Leveling.lua`, `Controller/Pins.lua` (pinned recipes, stored prices) and `Controller/History.lua` (price history); `Boot.lua` keeps init, events, slash commands and the self-test; no behaviour change.
 
 ### Removed
 - The `/cp kitdemo` developer window (it prints the command list like any unknown command).

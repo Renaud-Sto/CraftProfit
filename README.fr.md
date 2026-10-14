@@ -18,6 +18,8 @@ CraftProfit est un addon pour **World of Warcraft: Forever**. Sélectionnez une 
 ![La fenêtre des recettes épinglées](docs/screenshots/02-pinned-window.png)
 ![La fenêtre de montée de métier](docs/screenshots/03-leveling.png)
 ![La fenêtre d'options](docs/screenshots/04-options.png)
+![Le gain de chaque recette dans la fenêtre de métier](docs/screenshots/07-profession-window-profit.png)
+![La fenêtre d'historique des prix : verdict et graphique du profit](docs/screenshots/08-history-profit.png)
 
 (Captures du client en anglais.)
 

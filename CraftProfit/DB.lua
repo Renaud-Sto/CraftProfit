@@ -29,6 +29,8 @@ DB.DEFAULTS = {
     -- The minimap button: hidden or not, and its place around the minimap in degrees.
     minimap = { hide = false, angle = 225 },
     maxPins = DB.PIN_LIMIT_DEFAULT,
+    -- The profit tag on each recipe row of the profession window (UI/RecipeRows.lua).
+    showRowTags = true,
 }
 
 -- The appearance keys a save may hold; the same as Native.HEADER_VARIANTS and
@@ -114,6 +116,7 @@ local function sanitizeSettings(s)
     number(s, "staleAfter", 60, 30 * 86400, DB.DEFAULTS.staleAfter)
     if type(s.showPerPoint) ~= "boolean" then s.showPerPoint = DB.DEFAULTS.showPerPoint end
     if type(s.costExpanded) ~= "boolean" then s.costExpanded = DB.DEFAULTS.costExpanded end
+    if type(s.showRowTags) ~= "boolean" then s.showRowTags = DB.DEFAULTS.showRowTags end
     s.maxPins = DB.pinLimit(s.maxPins)
     if type(s.levelShowGrey) ~= "boolean" then s.levelShowGrey = false end
     if s.levelSort ~= "speed" then s.levelSort = "cost" end
@@ -292,6 +295,15 @@ function DB.setKnown(db, key, name, recipes, now)
     entry.recipes = clean
     db.knownCurrent = key
     return true
+end
+
+-- The stored profession of `key` (a CraftProfitCharDB.known entry), or nil.
+function DB.findKnown(db, key)
+    if type(key) ~= "string" then return nil end
+    for _, prof in ipairs(db.known) do
+        if prof.key == key then return prof end
+    end
+    return nil
 end
 
 -- The profession shown by the leveling list: the current one, else the first.

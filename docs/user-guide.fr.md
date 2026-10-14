@@ -27,6 +27,10 @@ Le titre de la recette, en haut de la fenêtre, est cliquable lui aussi, avec le
 - *Incomplet : prix manquants* (ambre, sans valeur) : il manque un prix nécessaire au résultat, donc aucun résultat net n'est donné plutôt qu'un chiffre flatteur.
 - *Meilleur connu : Hôtel des ventes* (avec le résultat net, en ambre) : certains prix sont connus, donc une meilleure voie de vente et son résultat net sont affichés. L'avertissement « RÉSULTAT · PRIX MANQUANTS » est en ambre sur la ligne du libellé au-dessus, où il a la place de s'afficher : le chiffre peut changer quand les prix manquants seront connus. Avec un montant très grand, le libellé peut quand même être raccourci.
 
+### Le profit de chaque recette dans la fenêtre de métier
+
+La liste des recettes de la fenêtre de métier affiche, à droite de chaque ligne de recette, ce qu'un craft rapporte ou coûte : `+12` argent `23` cuivre (icônes de pièces) en vert, `-2` argent en rouge, gris à l'équilibre, ambre quand un prix manque (le chiffre est alors le meilleur connu). C'est le même chiffre que le bandeau de résultat et la liste des épingles. Une étiquette n'apparaît que sur les recettes que CraftProfit a lues pour ce métier (celles que vous avez apprises, lues à l'ouverture de la fenêtre) et qui ont des prix ; une recette sans prix, une recette non apprise et les lignes de catégorie n'affichent rien. Les étiquettes suivent la liste quand vous la faites défiler, la filtrez ou changez d'onglet de métier, et changent avec les prix. Désactivez-les dans la [fenêtre d'options](#fenêtre-doptions) (*Fenêtre de métier*). Un nom de recette long peut passer sous l'étiquette.
+
 ### Crafts
 
 La case **Crafts** multiplie la recette sélectionnée par un nombre de crafts (de 1 à 9999) : quantités de composants, total des composants, toutes les valeurs de revente et le résultat net du bandeau. Le coût ou gain **par point** et la ligne grise du désenchantement restent par point et par désenchantement. La liste des épingles montre toujours un seul craft, et sélectionner une autre recette remet la case à 1.
@@ -174,6 +178,7 @@ Où s'ouvrent les fenêtres : une fenêtre CraftProfit jamais déplacée s'ouvre
 - **Apparence** : choisissez le *Bandeau des sections* (Bois sculpté, Ombre ou Stries) et les *Cases de prix* (Carte de butin ou Encart). Les deux se combinent librement (6 apparences) ; le bouton allumé est votre choix. Il s'applique aussitôt à toutes les fenêtres, ouvertes ou non, et est enregistré pour le compte. Par défaut : Ombre et Encart.
 - **Recettes épinglées** : la *Limite par personnage*, 12, 20, 30 ou 40 (20 par défaut) ; le bouton allumé est votre choix, enregistré pour le compte et appliqué dès la prochaine épingle. Une limite plus haute rallonge **Actualiser épinglées**, car l'hôtel des ventes est interrogé un objet à la fois (environ une minute pour 20 recettes) ; avec beaucoup de recettes, **Scanner l'HV** va souvent plus vite. Baisser la limite ne supprime jamais d'épingle : celles au-delà de la nouvelle limite restent, et les nouvelles sont refusées tant que vous n'en avez pas retiré assez.
 - **Minicarte** : *Afficher le bouton de la minicarte*. Décochez pour masquer le bouton ; `/cp minimap` le masque ou le rétablit aussi.
+- **Fenêtre de métier** : *Afficher le profit de chaque recette de la liste* (cochée par défaut). Décochez pour retirer aussitôt les étiquettes de la liste des recettes de la fenêtre de métier (voir [Le profit de chaque recette dans la fenêtre de métier](#le-profit-de-chaque-recette-dans-la-fenêtre-de-métier)).
 - **Fenêtres** : ouvre ou ferme la fenêtre principale et la fenêtre de montée de métier (première ligne), la fenêtre des recettes épinglées et la fenêtre d'historique (deuxième ligne).
 - **Commandes** : les clics sur la minicarte et toutes les commandes, une par ligne : la commande en doré, ce qu'elle fait en blanc.
 
@@ -196,6 +201,7 @@ L'entrée CraftProfit du compartiment d'addons (si votre client l'affiche) march
 | Bandeau des sections et cases de prix | [Fenêtre d'options](#fenêtre-doptions) ; enregistré pour le compte | Ombre, Encart |
 | Bouton de la minicarte affiché, et sa place | Fenêtre d'options ou `/cp minimap` ; le faire glisser | Affiché, en bas à gauche |
 | Limite de recettes épinglées | [Fenêtre d'options](#fenêtre-doptions) ; enregistrée pour le compte | 20 par personnage |
+| Profit de chaque recette dans la fenêtre de métier | [Fenêtre d'options](#fenêtre-doptions) ; enregistré pour le compte | Affiché |
 | Ordre de la liste de montée de métier | Bouton de tri de la fenêtre de montée de métier | Coût par point |
 | Recettes grises de la montée de métier | *Afficher les recettes grises* dans la fenêtre de montée de métier | Masquées |
 | Position des fenêtres de montée de métier, des recettes épinglées et d'options | Les déplacer | À côté de la fenêtre CraftProfit la plus à droite à l'écran (voir [Fenêtre d'options](#fenêtre-doptions)) |

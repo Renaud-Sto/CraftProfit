@@ -110,6 +110,8 @@ function Controller.init()
         ns.OptionsUI.init(Controller)
         ns.OptionsUI.attach(CraftProfitDB.settings.optionsWindow)
     end
+    -- Nothing is built here: the tags attach to the profession window's list when it shows.
+    if ns.RecipeRows then ns.RecipeRows.init(Controller) end
     -- After the windows exist; makes nothing while the player keeps the button hidden.
     if ns.MinimapButton then ns.MinimapButton.apply() end
     ns.AH.setHandlers({

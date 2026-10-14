@@ -45,6 +45,7 @@ UI/PinnedWindow.lua
 UI/HistoryWindow.lua
 UI/OptionsUI.lua
 UI/MinimapButton.lua
+UI/RecipeRows.lua
 Controller/Facts.lua
 Controller/Main.lua
 Controller/Settings.lua

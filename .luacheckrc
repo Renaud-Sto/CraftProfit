@@ -48,7 +48,7 @@ read_globals = {
     "CreateFrame", "GetCursorPosition", "IsMouseButtonDown", "GetLocale", "GetTime", "time", "date",
     "issecretvalue", "C_Timer", "C_AuctionHouse", "C_TradeSkillUI", "C_Item",
     "Enum", "UIParent", "DEFAULT_CHAT_FRAME", "C_Texture",
-    "ProfessionsFrame", "TradeSkillFrame", "AuctionHouseFrame", "AuctionFrame",
+    "ProfessionsFrame", "TradeSkillFrame", "AuctionHouseFrame", "AuctionFrame", "ScrollBoxListMixin",
     "AuctionHouseFrameDisplayMode",
     "GetProfessions", "GetProfessionInfo", "IsPlayerSpell",
     "GetNormalizedRealmName", "GetRealmName", "GetRealmID", "UnitFactionGroup", "C_GameRules",

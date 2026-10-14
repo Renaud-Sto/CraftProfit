@@ -66,6 +66,23 @@ function Present.pointRow(L, fmt, perPoint, result)
     return text, tone
 end
 
+-- Text and tone of the tag on a recipe row of the profession window: the net of one craft,
+-- the figure of the main window's banner and the pinned list ("+12s 23c" profit, "-2s" loss,
+-- grey at break even), in the "incomplete" tone when a missing price leaves it partial.
+-- Nothing (no tag) without a figure. `fmt` formats copper (Format.short).
+function Present.rowTag(result, fmt)
+    if type(result) ~= "table" or not Util.isFinite(result.net) then return nil end
+    local net = Util.round(result.net)
+    local text, tone = fmt(net), "muted"
+    if net > 0 then
+        text, tone = "+" .. text, "profit"
+    elseif net < 0 then
+        tone = "loss"
+    end
+    if result.incomplete then tone = "incomplete" end
+    return text, tone
+end
+
 -- How many crafts a skill point takes on average ("x4", "x1.3"), nil when no point is
 -- possible or the chance is unknown.
 function Present.craftsPerPoint(chance)

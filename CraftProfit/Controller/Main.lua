@@ -86,6 +86,7 @@ local function refreshAll()
     if ns.PinnedWindow then ns.PinnedWindow.refresh() end
     if ns.HistoryWindow then ns.HistoryWindow.refresh() end
     if ns.OptionsUI then ns.OptionsUI.refresh() end
+    if ns.RecipeRows then ns.RecipeRows.refresh() end
 end
 
 -- Every view, in one refresh pass.

@@ -193,6 +193,8 @@ ns.Locale.register("esES", {
     OPTIONS_PIN_NOTE = "Un límite más alto ralentiza Actualizar fijadas, que consulta objeto por objeto (cerca de un minuto para 20 recetas). Con muchas recetas, Escanear CS suele ser más rápido.",
     OPTIONS_MINIMAP = "MINIMAPA",
     OPTIONS_SHOW_MINIMAP = "Mostrar el botón del minimapa",
+    OPTIONS_PROFESSION = "VENTANA DE PROFESIÓN",
+    OPTIONS_ROW_TAGS = "Mostrar el beneficio de cada receta de la lista",
     OPTIONS_WINDOWS = "VENTANAS",
     OPTIONS_MAIN_WINDOW = "Ventana principal",
     OPTIONS_CONTROLS = "CONTROLES",

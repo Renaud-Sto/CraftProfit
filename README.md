@@ -10,7 +10,7 @@ CraftProfit is an addon for **World of Warcraft: Forever**. Select a recipe you 
 
 *[Lisez-moi en français](README.fr.md)*
 
-> **Status: 1.0.0, for the WoW: Forever beta** (build 1.60.1, Interface 16001), where it was built and tested. Disenchant data still comes from the Classic tables and is marked *beta* in the window. See [Known limitations](docs/user-guide.md#known-limitations).
+> **Status: 1.1.0, for the WoW: Forever beta** (build 1.60.1, Interface 16001), where it was built and tested. Disenchant data still comes from the Classic tables and is marked *beta* in the window. See [Known limitations](docs/user-guide.md#known-limitations).
 
 ## Screenshots
 

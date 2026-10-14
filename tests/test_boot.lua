@@ -432,6 +432,141 @@ H.test("the profession recipe comes back after the AH closes", function()
     H.truthy(T.ns.Window.lastModel)
 end)
 
+-- The profession window reports its selection again after every list update (B2).
+local function poll(T) T.tickers[#T.tickers].fn() end
+
+local function selectInProfession(T, recipeID)
+    T.env.ProfessionsFrame.CraftingPage.SchematicForm.GetRecipeInfo = function() return { recipeID = recipeID } end
+end
+
+H.test("the shown recipe reported again is refreshed, never reopens a main window the player closed", function()
+    local T = boot()
+    stock(T)
+    mockProfession(T)
+    local C, Window = T.ns.Controller, T.ns.Window
+    poll(T)
+    H.eq(C.currentRecipeID(), 5)
+    C.setCrafts(3)
+    Window.hide()                                   -- the player's X
+    -- A craft: the list updates (the difficulty went down) and the watcher reports 5 again.
+    T.env.C_TradeSkillUI.GetRecipeInfo = function(id)
+        return { recipeID = id, name = "Sword", learned = true, relativeDifficulty = 2 }
+    end
+    Window.lastModel = nil
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    poll(T)
+    H.falsy(Window.isShown())
+    H.eq(C.currentRecipeID(), 5)
+    -- Its data were read again and drawn, the multiplier kept.
+    H.truthy(Window.lastModel)
+    H.eq(Window.lastModel.crafts, 3)
+    C.togglePin()
+    H.eq(T.env.CraftProfitCharDB.pins[1].difficulty, "easy")
+    -- A new recipe picked in the profession window opens it again.
+    selectInProfession(T, 6)
+    poll(T)
+    H.eq(C.currentRecipeID(), 6)
+    H.truthy(Window.isShown())
+end)
+
+H.test("a recipe picked from a list stays selected while the profession window reports the same recipe", function()
+    local T = boot()
+    stock(T)
+    mockProfession(T)
+    local C = T.ns.Controller
+    poll(T)
+    local pinned = T.ns.Recipes.normalize(RAW)
+    pinned.recipeID = 7
+    T.ns.DB.pinAdd(T.env.CraftProfitCharDB, pinned)
+    C.selectPin(7)
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    poll(T)
+    H.eq(C.currentRecipeID(), 7)
+    -- The same from the leveling list, and after a profession event.
+    local known = T.ns.Recipes.normalize(RAW)
+    known.recipeID = 8
+    C.selectKnown(known)
+    C.onEvent("TRADE_SKILL_LIST_UPDATE")
+    poll(T)
+    H.eq(C.currentRecipeID(), 8)
+    -- Another recipe in the profession window replaces it.
+    selectInProfession(T, 6)
+    poll(T)
+    H.eq(C.currentRecipeID(), 6)
+    -- Reopening the profession window is a new report too.
+    C.selectPin(7)
+    T.env.ProfessionsFrame.IsShown = function() return false end
+    poll(T)
+    H.eq(C.currentRecipeID(), 7)
+    T.env.ProfessionsFrame.IsShown = function() return true end
+    poll(T)
+    H.eq(C.currentRecipeID(), 6)
+end)
+
+-- One refresh pass: the market, the Enchanting lookup and each evaluation once (I1).
+H.test("one refresh with pins in two lists looks the market and Enchanting up once and evaluates each pin once", function()
+    local T = boot()
+    T.env.UISpecialFrames = {}
+    stock(T)
+    local C, ns = T.ns.Controller, T.ns
+    for i = 1, 5 do
+        local pin = ns.Recipes.normalize(RAW)
+        pin.recipeID = 100 + i
+        ns.DB.pinAdd(T.env.CraftProfitCharDB, pin)
+    end
+    ns.AH.isOpen = true
+    C.onAHOpen(true)                                -- the list under the main window
+    ns.PinnedWindow.show()                          -- and the pinned window
+    C.setRecipe(ns.Recipes.normalize(RAW), "profession")
+    local keys, enchanting, runs = 0, 0, 0
+    local marketKey, hasProfession, run = C.marketKey, ns.Trade.hasProfession, ns.Evaluate.run
+    C.marketKey = function() keys = keys + 1; return marketKey() end
+    ns.Trade.hasProfession = function(...) enchanting = enchanting + 1; return hasProfession(...) end
+    ns.Evaluate.run = function(...) runs = runs + 1; return run(...) end
+    C.refresh()
+    H.eq(keys, 1)
+    H.eq(enchanting, 1)
+    -- The recipe shown and the five pins, each evaluated once for both lists.
+    H.eq(runs, 6)
+    H.truthy(ns.PinnedWindow.parts.rows[5].recipeID)
+    -- Nothing is kept for the next pass: a new price shows at the next refresh.
+    ns.Prices.store(C.market(), 100, 5, 10, 1699999990)
+    C.refresh()
+    H.eq(ns.Window.lastModel.verdict.kind, "loss")
+    H.eq(runs, 12)
+end)
+
+-- While a price search runs, refreshes are coalesced to about a second (I2).
+H.test("refreshes asked during a search wait about a second; the one at the end comes at the usual pace", function()
+    local T = boot()
+    local C, PinsUI = T.ns.Controller, T.ns.PinsUI
+    local delays, timers = {}, {}
+    T.env.C_Timer.After = function(delay, fn) delays[#delays + 1] = delay; timers[#timers + 1] = fn end
+    local refreshes, refresh = 0, C.refresh
+    C.refresh = function() refreshes = refreshes + 1; return refresh() end
+    C.requestRefresh()
+    H.eq(delays, { 0.1 })
+    table.remove(timers, 1)()
+    H.eq(refreshes, 1)
+    PinsUI.state = "running"
+    C.requestRefresh()
+    C.requestRefresh()
+    H.eq(delays, { 0.1, 1 })
+    -- The search ends: its refresh does not wait for the slow one, which then does nothing.
+    PinsUI.state = "done"
+    C.requestRefresh()
+    H.eq(delays, { 0.1, 1, 0.1 })
+    C.requestRefresh()
+    H.eq(#delays, 3)
+    local slow, fast = timers[1], timers[2]
+    fast()
+    H.eq(refreshes, 2)
+    slow()
+    H.eq(refreshes, 2)
+    C.requestRefresh()
+    H.eq(#delays, 4)
+end)
+
 -- Pinned recipe survives closing the profession window (field report: it vanished at the AH)
 H.test("a pinned recipe stays available after the profession window closes, outside the AH", function()
     local T = boot()

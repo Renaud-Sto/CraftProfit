@@ -115,15 +115,53 @@ function PinsUI.rowValue(item, byPoint)
     return ns.Present.unknownText(L, result), Colors.text("muted")
 end
 
+-- The pins in display order from the last refresh and their sort: scrolling repaints the
+-- rows from them, no evaluation.
+local lastOrdered, lastByPoint = {}, false
+
+local function paintRows()
+    offset = math.max(0, math.min(offset, #lastOrdered - VISIBLE))
+    local currentID = ctl.currentRecipeID()
+    for i = 1, VISIBLE do
+        local row, item = rows[i], lastOrdered[offset + i]
+        if item then
+            local recipe = item.recipe
+            row.recipeID = recipe.recipeID
+            row.name:SetText(ctl.recipeName(recipe))
+            -- The difficulty stored with the pin, kept up to date while the profession
+            -- window is open; a pin without one keeps the plain text colour.
+            local nc = Colors.FIXED[recipe.difficulty] or Colors.text("main")
+            row.name:SetTextColor(nc[1], nc[2], nc[3], nc[4])
+            local text, c = PinsUI.rowValue(item, lastByPoint)
+            row.value:SetText(text)
+            row.value:SetTextColor(c[1], c[2], c[3], c[4])
+            row.selected:SetShown(recipe.recipeID == currentID)
+            row:Show()
+        else
+            row.recipeID = nil
+            row:Hide()
+        end
+    end
+    parts.bar:update(#lastOrdered, VISIBLE, offset)
+end
+
+-- A wheel step or the scroll bar: repaints the rows only, and nothing at all when the
+-- offset (clamped to the list) does not change.
+local function scrollTo(newOffset)
+    newOffset = math.max(0, math.min(newOffset, #lastOrdered - VISIBLE))
+    if newOffset == offset then return end
+    offset = newOffset
+    paintRows()
+end
+
 function PinsUI.refresh()
     -- Hidden (AH closed): nothing to draw, so no pin is evaluated. onAHOpen refreshes the
     -- list when it shows again.
     if not host or not host:IsShown() then return end
     local pins = CraftProfitCharDB.pins
     local byPoint = CraftProfitCharDB.sortMode == ns.DB.SORT_POINT
-    local ordered = PinsUI.orderedPins(pins, CraftProfitCharDB.sortMode, ctl.evaluate)
-    offset = math.max(0, math.min(offset, #pins - VISIBLE))
-    local currentID = ctl.currentRecipeID()
+    lastOrdered = PinsUI.orderedPins(pins, CraftProfitCharDB.sortMode, ctl.evaluate)
+    lastByPoint = byPoint
 
     -- The count follows every pin, unpin and limit change: each ends in Controller.refresh.
     panel:setTitle(ctl.pinsTitle())
@@ -134,32 +172,11 @@ function PinsUI.refresh()
     parts.history:setText(L.HISTORY_BUTTON)
     parts.empty:SetText(L.PINS_EMPTY)
     parts.empty:SetShown(#pins == 0)
-
-    for i = 1, VISIBLE do
-        local row, item = rows[i], ordered[offset + i]
-        if item then
-            local recipe = item.recipe
-            row.recipeID = recipe.recipeID
-            row.name:SetText(ctl.recipeName(recipe))
-            -- The difficulty stored with the pin, kept up to date while the profession
-            -- window is open; a pin without one keeps the plain text colour.
-            local nc = Colors.FIXED[recipe.difficulty] or Colors.text("main")
-            row.name:SetTextColor(nc[1], nc[2], nc[3], nc[4])
-            local text, c = PinsUI.rowValue(item, byPoint)
-            row.value:SetText(text)
-            row.value:SetTextColor(c[1], c[2], c[3], c[4])
-            row.selected:SetShown(recipe.recipeID == currentID)
-            row:Show()
-        else
-            row.recipeID = nil
-            row:Hide()
-        end
-    end
+    paintRows()
 
     local shownRows = math.max(1, math.min(#pins, VISIBLE))
     local panelH = Layout.panelHeight(shownRows, ROW_H)
     panel.frame:SetHeight(panelH)
-    parts.bar:update(#pins, VISIBLE, offset)
     local top = panelH + ns.Window.GAP
     parts.search:ClearAllPoints()
     parts.search:SetPoint("TOPLEFT", host, "TOPLEFT", 0, -top)
@@ -421,10 +438,7 @@ function PinsUI.init(controller)
 
     parts.bar = Native.scrollbar(body, VISIBLE * ROW_H)
     parts.bar.frame:SetPoint("TOPRIGHT", body, "TOPRIGHT", -2, 0)
-    parts.bar.onScroll = function(newOffset)
-        offset = newOffset
-        PinsUI.refresh()
-    end
+    parts.bar.onScroll = scrollTo
 
     -- UIPanelButtonTemplate is the game's red panel button: search keeps the primary
     -- place (first, top left), all three keep their half-width.
@@ -449,10 +463,7 @@ function PinsUI.init(controller)
     parts.status = statusText
 
     host:EnableMouseWheel(true)
-    host:SetScript("OnMouseWheel", function(_, delta)
-        offset = math.max(0, offset - delta)
-        PinsUI.refresh()
-    end)
+    host:SetScript("OnMouseWheel", function(_, delta) scrollTo(offset - delta) end)
     -- No refresh here: it evaluates every pin, which opens the market before the faction
     -- and hardcore state can be trusted (ADDON_LOADED). onAHOpen shows and refreshes it.
     host:Hide()

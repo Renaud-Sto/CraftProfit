@@ -336,6 +336,31 @@ H.test("forty pins scroll with the wheel and the native bar", function()
     H.eq(p.bar.offset, 0)
 end)
 
+H.test("scrolling the pinned window evaluates no pin, and does nothing when the offset stays", function()
+    local T, UI = boot({ pins = manyPins(20) })
+    local C = T.ns.Controller
+    local pinsData, fetched = C.pinsData, 0
+    C.pinsData = function() fetched = fetched + 1; return pinsData() end
+    UI.show()
+    H.eq(fetched, 1)
+    local evaluate, evaluated = C.evaluate, 0
+    C.evaluate = function(...) evaluated = evaluated + 1; return evaluate(...) end
+    local p = UI.parts
+    local first = p.rows[1].recipeID
+    UI.frame().scripts.OnMouseWheel(UI.frame(), -1)
+    H.truthy(p.rows[1].recipeID ~= first)
+    p.bar.onScroll(8)
+    H.eq(p.bar.offset, 8)
+    H.eq(fetched, 1)
+    H.eq(evaluated, 0)
+    local named, recipeName = 0, C.recipeName
+    C.recipeName = function(recipe) named = named + 1; return recipeName(recipe) end
+    p.bar.onScroll(999)
+    UI.frame().scripts.OnMouseWheel(UI.frame(), -1)
+    H.eq(named, 0)
+    H.eq(p.bar.offset, 8)
+end)
+
 H.test("forty pins saved before login load whole; the x of the bottom row unpins at the end of the list", function()
     local T, UI = boot({ saved = { settings = { maxPins = 40 } }, charSaved = { pins = manyPins(40) } })
     H.eq(#T.env.CraftProfitCharDB.pins, 40)

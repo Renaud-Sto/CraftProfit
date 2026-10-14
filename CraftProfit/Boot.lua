@@ -11,7 +11,13 @@ ns.Controller = Controller
 
 local state = { recipe = nil, source = nil, crafts = 1 }
 local requestedItems = {}
-local refreshQueued = false
+
+-- The refresh pass in progress (Controller.inPass), or nil. One refresh evaluates the
+-- recipe shown and every pin of each shown list (the leveling list: up to 400 recipes);
+-- what does not change during it is looked up once: the market, the price lookup, whether
+-- Enchanting is known, the item facts, and each evaluation. Filled on first use (nothing
+-- opens the market before something needs it), dropped at the end: nothing outlives a pass.
+local pass
 
 function Controller.say(text)
     DEFAULT_CHAT_FRAME:AddMessage("|cff66ccffCraftProfit|r " .. tostring(text))
@@ -58,7 +64,22 @@ function Controller.marketKey()
 end
 
 function Controller.market()
+    if pass then
+        pass.market = pass.market or DB.market(CraftProfitDB, Controller.marketKey())
+        return pass.market
+    end
     return DB.market(CraftProfitDB, Controller.marketKey())
+end
+
+-- Runs fn(...) inside a refresh pass, or inside the one already running (a list refreshed
+-- by Controller.refresh shares its pass). Returns fn's first result.
+function Controller.inPass(fn, ...)
+    if pass then return fn(...) end
+    pass = { info = {}, results = {} }
+    local ok, value = pcall(fn, ...)
+    pass = nil
+    if not ok then error(value, 0) end
+    return value
 end
 
 local isSecret = Util.isSecret
@@ -71,7 +92,7 @@ end
 
 -- Item facts, or nil while the game has not loaded the item yet. The request is
 -- made once per item; ITEM_DATA_LOAD_RESULT triggers the refresh.
-function Controller.itemInfo(itemID)
+local function readItemInfo(itemID)
     local ok, _, _, quality, ilvl, _, _, _, _, _, _, sellPrice, classID, _, bindType = pcall(C_Item.GetItemInfo, itemID)
     if not ok then return nil end
     -- A secret field is dropped (nil): each one is compared or multiplied later. A secret
@@ -86,6 +107,17 @@ function Controller.itemInfo(itemID)
         return nil
     end
     return { quality = quality, ilvl = ilvl, sellPrice = sellPrice, classID = classID, bindType = bindType }
+end
+
+-- readItemInfo, read once per refresh pass (callers must not modify the table).
+function Controller.itemInfo(itemID)
+    if not pass or not Util.id(itemID) then return readItemInfo(itemID) end
+    local known = pass.info[itemID]
+    if known == nil then
+        known = readItemInfo(itemID) or false
+        pass.info[itemID] = known
+    end
+    return known or nil
 end
 
 -- Item icon (file id or path) read secret-safely, or nil while the game has not loaded it.
@@ -138,8 +170,12 @@ function Controller.professionName(prof)
     return tostring(prof.key or "-")
 end
 
+-- Looked up once per refresh pass.
 function Controller.knowsEnchanting()
-    return ns.Trade.hasProfession(ns.Trade.ENCHANTING_SKILL_LINE)
+    if pass and pass.knowsEnchanting ~= nil then return pass.knowsEnchanting end
+    local known = ns.Trade.hasProfession(ns.Trade.ENCHANTING_SKILL_LINE)
+    if pass then pass.knowsEnchanting = known end
+    return known
 end
 
 -- A reagent was clicked in the window: search it at the AH, quantity preset.
@@ -181,19 +217,37 @@ function Controller.onOutputClick()
 end
 
 -- crafts is only given for the recipe shown in the window; the pinned list is always
--- one craft.
+-- one craft. Within a refresh pass a recipe (the same table: a pin is evaluated for the list
+-- under the main window and for the pinned window) is evaluated once per crafts and per-point
+-- choice; callers must not modify the result.
 function Controller.evaluate(recipe, crafts, forcePerPoint)
     local settings = CraftProfitDB.settings
-    return Evaluate.run({
+    local showPerPoint = settings.showPerPoint or forcePerPoint == true
+    local key, memo
+    if pass then
+        key = Evaluate.craftCount(crafts) .. (showPerPoint and ":point" or "")
+        memo = pass.results[recipe]
+        if memo and memo[key] then return memo[key] end
+        pass.priceOf = pass.priceOf or Prices.priceOf(Controller.market(), time())
+    end
+    local result = Evaluate.run({
         recipe = recipe,
         crafts = crafts,
-        priceOf = Prices.priceOf(Controller.market(), time()),
+        priceOf = pass and pass.priceOf or Prices.priceOf(Controller.market(), time()),
         itemInfo = Controller.itemInfo,
         cut = settings.cut,
-        showPerPoint = settings.showPerPoint or forcePerPoint == true,
+        showPerPoint = showPerPoint,
         lookupDisenchant = Disenchant.lookup,
         knowsEnchanting = Controller.knowsEnchanting(),
     })
+    if pass then
+        if not memo then
+            memo = {}
+            pass.results[recipe] = memo
+        end
+        memo[key] = result
+    end
+    return result
 end
 
 -- The multiplier belongs to one recipe: selecting another one starts again at 1.
@@ -211,7 +265,7 @@ function Controller.currentRecipeID()
     return state.recipe and state.recipe.recipeID or nil
 end
 
-function Controller.refresh()
+local function refreshAll()
     local settings = CraftProfitDB.settings
     local recipe = state.recipe
     if recipe then
@@ -235,12 +289,28 @@ function Controller.refresh()
     if ns.OptionsUI then ns.OptionsUI.refresh() end
 end
 
--- Coalesces bursts (many ITEM_DATA_LOAD_RESULT events, one per search result).
+-- Every view, in one refresh pass.
+function Controller.refresh()
+    Controller.inPass(refreshAll)
+end
+
+-- Coalesces bursts (many ITEM_DATA_LOAD_RESULT events, one per search result). While a
+-- price search runs, each answered item asks for a refresh: they are coalesced over about
+-- a second instead (the values still move, less often). A request at the usual pace does
+-- not wait for a slower one already queued (the search just ended): it replaces it.
+local REFRESH_DELAY, SEARCH_REFRESH_DELAY = 0.1, 1
+local refreshQueued, refreshToken = nil, 0
+
 function Controller.requestRefresh()
-    if refreshQueued then return end
-    refreshQueued = true
-    C_Timer.After(0.1, function()
-        refreshQueued = false
+    local searching = ns.PinsUI and ns.PinsUI.state == "running"
+    local delay = searching and SEARCH_REFRESH_DELAY or REFRESH_DELAY
+    if refreshQueued and refreshQueued <= delay then return end
+    refreshToken = refreshToken + 1
+    local token = refreshToken
+    refreshQueued = delay
+    C_Timer.After(delay, function()
+        if token ~= refreshToken then return end
+        refreshQueued = nil
         Controller.refresh()
     end)
 end
@@ -531,7 +601,7 @@ end
 
 -- What the leveling window shows: the current profession, its known recipes ranked
 -- by cost per point from the last scan's prices, and how old those prices are.
-function Controller.levelData()
+local function levelData()
     local settings = CraftProfitDB.settings
     local prof = DB.currentKnown(CraftProfitCharDB)
     local age = Prices.snapshotAge(Controller.market(), time())
@@ -547,6 +617,11 @@ function Controller.levelData()
         data.items, data.hiddenGrey = ranked.items, ranked.hiddenGrey
     end
     return data
+end
+
+-- In one refresh pass (the one running, when Controller.refresh asks).
+function Controller.levelData()
+    return Controller.inPass(levelData)
 end
 
 function Controller.setLevelShowGrey(value)
@@ -608,7 +683,7 @@ end
 -- evaluation, the sort, and how old their prices are (it never searches). The age is the
 -- main window's: the oldest price the evaluations used (result.oldestAge, whether it came
 -- from a full scan or a "Refresh pinned" or "Refresh recipe"), here over every pin; none -> never priced, stale.
-function Controller.pinsData()
+local function pinsData()
     local settings = CraftProfitDB.settings
     local sortMode = CraftProfitCharDB.sortMode
     local items = ns.PinsUI.orderedPins(CraftProfitCharDB.pins, sortMode, Controller.evaluate)
@@ -623,6 +698,10 @@ function Controller.pinsData()
         ageText = Present.ageText(L, age),
         stale = age == nil or age > settings.staleAfter,
     }
+end
+
+function Controller.pinsData()
+    return Controller.inPass(pinsData)
 end
 
 -- The items worth a history point for a tracked recipe, and the ones that must be
@@ -732,6 +811,32 @@ end
 
 local historyCache = { key = nil, entries = {} }
 
+-- A fresh flag expires by itself, with nothing else to refresh the windows: one timer asks
+-- for a refresh at the soonest expiry of the cached results (+1 s, so time() has passed
+-- it), so a percentage shown in the main window or the History list goes away once its
+-- data are a day old. Replaced (the old one does nothing) when the soonest expiry changes;
+-- none while nothing expires. A result already expired is left out: it is recomputed when
+-- next asked for.
+local expiry = { at = nil, token = 0 }
+
+local function scheduleExpiry(now)
+    local soonest
+    for _, entry in pairs(historyCache.entries) do
+        local at = entry.expires
+        if at and at > now and (not soonest or at < soonest) then soonest = at end
+    end
+    if soonest == expiry.at then return end
+    expiry.token = expiry.token + 1
+    expiry.at = soonest
+    if not soonest then return end
+    local token = expiry.token
+    C_Timer.After(soonest - now + 1, function()
+        if token ~= expiry.token then return end
+        expiry.at = nil
+        Controller.requestRefresh()
+    end)
+end
+
 local function cached(slot, now, compute)
     local key = table.concat({ Controller.historyVersion, Controller.marketKey(),
         tostring(CraftProfitDB.settings.cut), tostring(Controller.knowsEnchanting()),
@@ -741,6 +846,7 @@ local function cached(slot, now, compute)
     if hit and (not hit.expires or now < hit.expires) then return hit.value end
     local value, expires = compute()
     historyCache.entries[slot] = { value = value, expires = expires }
+    scheduleExpiry(now)
     return value
 end
 
@@ -995,12 +1101,27 @@ function Controller.onAHOpen(open)
     if window.updateRefreshButton then window.updateRefreshButton() end
 end
 
--- The profession window selection changed (or the window closed).
+-- The recipe id the profession window reported last; nil while it is closed.
+local lastProfessionID
+
+-- The profession window selection changed (or the window closed), or the watcher reports
+-- the same one again (Trade.invalidate: the list updated after a craft, a skill-up or a
+-- filter change). Only a new selection replaces the recipe shown and opens the main window:
+-- the same one again refreshes its data (difficulty, quantities) without reopening a window
+-- the player closed, and leaves a recipe picked from a list (source "pin") in place.
 local function onSelection(recipeID)
+    local previous = lastProfessionID
+    lastProfessionID = recipeID
     if recipeID then
+        if state.source == "pin" and recipeID == previous then return end
         local recipe = Recipes.normalize(ns.Trade.readSelected())
         if recipe then
-            Controller.setRecipe(recipe, "profession")
+            if state.source == "profession" and recipeID == Controller.currentRecipeID() then
+                choose(recipe, "profession")
+                Controller.refresh()
+            else
+                Controller.setRecipe(recipe, "profession")
+            end
             return
         end
     end

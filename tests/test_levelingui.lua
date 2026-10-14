@@ -70,6 +70,22 @@ H.test("showing it lists the recipes with their difficulty colours, crafts per p
     H.eq(colour, Colors.FIXED.optimal)
 end)
 
+H.test("a cost per point counted without a missing resale price shows in the incomplete colour", function()
+    local T, UI = boot()
+    local Colors = T.ns.Colors
+    local partial = item(3, "Iron Buckle", "medium", 0.75, 400)
+    partial.result.perPoint.incomplete = true
+    feed(T, data({ items = { item(1, "Bronze Sword", "optimal", 1, 100), partial } }))
+    local colours = {}
+    for i = 1, 2 do
+        UI.parts.rows[i].value.SetTextColor = function(_, r, g, b, a) colours[i] = { r, g, b, a } end
+    end
+    UI.show()
+    H.eq(colours[1], Colors.FIXED.loss)
+    H.eq(colours[2], Colors.FIXED.incomplete)
+    H.eq(UI.parts.rows[2].value.text, "4s/pt")
+end)
+
 H.test("the sort button reads the sort mode and the controls call the controller", function()
     local T, UI, calls = boot()
     feed(T, data({ sort = "speed" }))
@@ -131,6 +147,36 @@ H.test("the scroll bar appears with more than twelve recipes and the wheel and b
     UI.refresh()
     H.eq(p.rows[1].name.text, "A")
     H.falsy(p.bar.frame.shown)
+end)
+
+H.test("scrolling repaints the rows from the last data, and does nothing when the offset stays", function()
+    local T, UI = boot()
+    local C = T.ns.Controller
+    local items = {}
+    for i = 1, 20 do items[i] = item(i, "R" .. i, "medium", 0.75, i * 10) end
+    local d, fetched = data({ items = items }), 0
+    C.levelData = function() fetched = fetched + 1; return d end
+    UI.show()
+    H.eq(fetched, 1)
+    local p = UI.parts
+    UI.frame().scripts.OnMouseWheel(UI.frame(), -1)
+    H.eq(p.rows[1].name.text, "R2")
+    p.bar.onScroll(8)
+    H.eq(p.rows[1].name.text, "R9")
+    H.eq(p.bar.offset, 8)
+    -- No recipe evaluated again while scrolling.
+    H.eq(fetched, 1)
+    -- At the end of the list (8 of 20, twelve rows): no row is painted again.
+    local named, recipeName = 0, C.recipeName
+    C.recipeName = function(recipe) named = named + 1; return recipeName(recipe) end
+    p.bar.onScroll(8)
+    p.bar.onScroll(500)
+    UI.frame().scripts.OnMouseWheel(UI.frame(), -1)
+    H.eq(named, 0)
+    H.eq(p.bar.offset, 8)
+    -- A refresh still reads the data again.
+    UI.refresh()
+    H.eq(fetched, 2)
 end)
 
 H.test("the window has a fixed height whatever the number of recipes", function()

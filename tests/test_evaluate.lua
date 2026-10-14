@@ -171,6 +171,22 @@ H.test("cost per skill point uses the difficulty and recovers the best sale", fu
     H.eq(r.perPoint, { chance = 0.75, cost = -933, estimate = true })
 end)
 
+H.test("cost per skill point with an unknown resale price is flagged incomplete", function()
+    local E = load().Evaluate
+    -- The AH price of the crafted item is missing: only the vendor and disenchant are counted.
+    local partial = E.run(ctx({ showPerPoint = true, priceOf = prices({ [100] = false }) }))
+    H.eq(partial.incomplete, true)
+    H.truthy(partial.perPoint.cost ~= nil)
+    H.eq(partial.perPoint.incomplete, true)
+    -- No way to sell is known at all: the cost assumes nothing is recovered.
+    local none = E.run(ctx({ showPerPoint = true, priceOf = prices({ [100] = false, [200] = false }),
+        itemInfo = function() return nil end }))
+    H.eq(none.perPoint.cost, 333)                  -- (250 - 0) / 0.75
+    H.eq(none.perPoint.incomplete, true)
+    -- Every price known: no flag.
+    H.eq(E.run(ctx({ showPerPoint = true })).perPoint.incomplete, nil)
+end)
+
 H.test("cost per skill point handles trivial and unknown difficulty", function()
     local E = load().Evaluate
     local function with(difficulty)

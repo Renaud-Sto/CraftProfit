@@ -212,6 +212,18 @@ H.test("pointRow gives a short text and a tone for list rows", function()
     H.eq({ P.pointRow(L, fmt, {}) }, { "?", "muted" })
 end)
 
+H.test("pointRow gives a cost counted without a missing resale price the incomplete tone", function()
+    local ns = load()
+    local P, L, fmt = ns.Present, ns.L, ns.Format.money
+    H.eq({ P.pointRow(L, fmt, { chance = 0.25, cost = 6600, incomplete = true }) }, { "66s/pt", "incomplete" })
+    H.eq({ P.pointRow(L, fmt, { chance = 1, cost = -933, incomplete = true }) }, { "+9s 33c/pt", "incomplete" })
+    -- Nothing to mark when the cost itself is unknown or no point is possible.
+    H.eq({ P.pointRow(L, fmt, { chance = 0.75, incomplete = true }) }, { "?", "muted" })
+    H.eq({ P.pointRow(L, fmt, { chance = 0, incomplete = true }) }, { "n/a", "muted" })
+    -- The colour is the one the main window's warning uses.
+    H.eq(ns.Colors.tone("incomplete", "muted"), ns.Colors.FIXED.incomplete)
+end)
+
 H.test("craftsPerPoint says how many crafts a skill point takes", function()
     local P = load().Present
     H.eq(P.craftsPerPoint(1), "x1")

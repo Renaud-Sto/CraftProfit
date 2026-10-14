@@ -48,14 +48,22 @@ end
 
 -- Short text and tone for a list row: "21g 29s/pt" (loss), "+9s 33c/pt" (profit),
 -- n/a for a recipe that cannot give a point, ? (or "no data", see unknownText) when the
--- cost is unknown. `result` (optional) is the evaluation the per-point figures come from.
+-- cost is unknown. A cost counted without a missing resale price (perPoint.incomplete) keeps
+-- its text in the "incomplete" tone, as the main window's missing prices warning.
+-- `result` (optional) is the evaluation the per-point figures come from.
 function Present.pointRow(L, fmt, perPoint, result)
     if not perPoint or perPoint.chance == nil then return Present.unknownText(L, result), "muted" end
     if perPoint.chance == 0 then return L.NA, "muted" end
     local cost = perPoint.cost
     if cost == nil then return Present.unknownText(L, result), "muted" end
-    if cost > 0 then return fmt(cost) .. L.PER_POINT_SHORT, "loss" end
-    return "+" .. fmt(-cost) .. L.PER_POINT_SHORT, "profit"
+    local text, tone
+    if cost > 0 then
+        text, tone = fmt(cost) .. L.PER_POINT_SHORT, "loss"
+    else
+        text, tone = "+" .. fmt(-cost) .. L.PER_POINT_SHORT, "profit"
+    end
+    if perPoint.incomplete then tone = "incomplete" end
+    return text, tone
 end
 
 -- How many crafts a skill point takes on average ("x4", "x1.3"), nil when no point is

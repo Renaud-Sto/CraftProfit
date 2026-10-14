@@ -51,20 +51,12 @@ local function name(recipe)
     return ns.Recipes.label(recipe)
 end
 
--- Repaints the list from the controller; does nothing while the window is closed or not
--- built yet (evaluating the pins opens the market).
-function PinnedWindow.refresh()
-    if not frame or not frame:IsShown() then return end
-    local data = ctl.pinsData()
-    frame:setTitle(L.PINNED_TITLE)
-    parts.panel:setTitle(ctl.pinsTitle())
-    parts.sort:setText(data.byPoint and L.SORT_POINT or L.SORT_NET)
-    parts.age:SetText(data.ageText)
-    parts.ageStale = data.stale and true or false
-    parts.paintAge()
+-- The last data from the controller: scrolling repaints the rows from it, no evaluation.
+local lastData = { items = {} }
+
+local function paintRows()
+    local data = lastData
     local items = data.items
-    parts.empty:SetText(L.PINNED_EMPTY)
-    parts.empty:SetShown(#items == 0)
     -- Clamped here: an unpin at the bottom of a scrolled list pulls the rows down.
     offset = math.max(0, math.min(offset, #items - VISIBLE))
     local currentID = ctl.currentRecipeID()
@@ -88,6 +80,32 @@ function PinnedWindow.refresh()
         end
     end
     parts.bar:update(#items, VISIBLE, offset)
+end
+
+-- A wheel step or the scroll bar: repaints the rows only, and nothing at all when the
+-- offset (clamped to the list) does not change.
+local function scrollTo(newOffset)
+    newOffset = math.max(0, math.min(newOffset, #lastData.items - VISIBLE))
+    if newOffset == offset then return end
+    offset = newOffset
+    paintRows()
+end
+
+-- Repaints the list from the controller; does nothing while the window is closed or not
+-- built yet (evaluating the pins opens the market).
+function PinnedWindow.refresh()
+    if not frame or not frame:IsShown() then return end
+    local data = ctl.pinsData()
+    lastData = data
+    frame:setTitle(L.PINNED_TITLE)
+    parts.panel:setTitle(ctl.pinsTitle())
+    parts.sort:setText(data.byPoint and L.SORT_POINT or L.SORT_NET)
+    parts.age:SetText(data.ageText)
+    parts.ageStale = data.stale and true or false
+    parts.paintAge()
+    parts.empty:SetText(L.PINNED_EMPTY)
+    parts.empty:SetShown(#data.items == 0)
+    paintRows()
 end
 
 function PinnedWindow.frame() return frame end
@@ -194,10 +212,7 @@ local function build()
     -- Escape closes it, the game's way for a plain named frame (never UIPanelWindows).
     if type(UISpecialFrames) == "table" then table.insert(UISpecialFrames, NAME) end
     frame:EnableMouseWheel(true)
-    frame:SetScript("OnMouseWheel", function(_, delta)
-        offset = math.max(0, offset - delta)
-        PinnedWindow.refresh()
-    end)
+    frame:SetScript("OnMouseWheel", function(_, delta) scrollTo(offset - delta) end)
 
     -- Strip: the sort order, as in the list under the main window, across the window.
     local strip = section("strip", STRIP_H)
@@ -221,10 +236,7 @@ local function build()
     for i = 1, VISIBLE do parts.rows[i] = buildRow(parts.panel.body, i) end
     parts.bar = Native.scrollbar(parts.panel.body, VISIBLE * ROW_H)
     parts.bar.frame:SetPoint("TOPRIGHT", parts.panel.body, "TOPRIGHT", -2, 0)
-    parts.bar.onScroll = function(newOffset)
-        offset = newOffset
-        PinnedWindow.refresh()
-    end
+    parts.bar.onScroll = scrollTo
     -- At the top of the list, where no row shows while it is displayed.
     parts.empty = parts.panel.body:CreateFontString(nil, "OVERLAY", "GameFontDisable")
     parts.empty:SetPoint("TOP", parts.panel.body, "TOP", 0, -20)

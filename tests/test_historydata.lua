@@ -723,6 +723,68 @@ H.test("the main window model flags a recipe sold at a loss, and keeps only the 
     H.eq(history.atLoss, false)
 end)
 
+-- Timers with their delays (the fake game's C_Timer.After forgets the delay).
+local function timedTimers(T)
+    local timers = {}
+    T.env.C_Timer.After = function(delay, fn) timers[#timers + 1] = { delay = delay, fn = fn } end
+    return timers
+end
+
+-- Moves the newest point of items 1, 2 and 100 to `t`.
+local function newestAt(C, t)
+    for _, id in ipairs({ 1, 2, 100 }) do
+        local series = C.market().series[id]
+        series[#series][1] = t
+    end
+    C.historyChanged()
+end
+
+H.test("a percentage disappears by itself once its newest measurement is a day old", function()
+    local T, C = boot()
+    local timers = timedTimers(T)
+    track(T, raw(5))
+    fill(C, 10, flat)                                    -- newest point: NOW
+    H.truthy(show(T, C, raw(5)))
+    -- One timer, just after the data stop being fresh (NOW + DAY + 1).
+    H.eq(#timers, 1)
+    H.eq(timers[1].delay, DAY + 2)
+    -- Nothing else refreshes the window: a day later the timer asks for a refresh.
+    T.env.time = function() return NOW + DAY + 2 end
+    local expire = table.remove(timers, 1)
+    expire.fn()
+    H.eq(#timers, 1)
+    H.eq(timers[1].delay, 0.1)
+    table.remove(timers, 1).fn()
+    H.eq(T.ns.Window.lastModel.history, nil)
+    -- Nothing fresh is left: no new timer.
+    H.eq(#timers, 0)
+end)
+
+H.test("the expiry timer is replaced when the cache recomputes, and none is set when nothing expires", function()
+    local T, C = boot()
+    local timers = timedTimers(T)
+    track(T, raw(5))
+    fill(C, 10, function(id, age) if age >= 2 then return flat(id) end end)
+    H.eq(show(T, C, raw(5)), nil)                        -- stale: nothing expires
+    H.eq(#timers, 0)
+    fill(C, 10, flat)
+    newestAt(C, NOW - 3600)
+    C.refresh()
+    H.eq(#timers, 1)
+    H.eq(timers[1].delay, DAY - 3600 + 2)
+    -- A newer measurement: the expiry moves, a new timer replaces the first one.
+    newestAt(C, NOW)
+    C.refresh()
+    H.eq(#timers, 2)
+    H.eq(timers[2].delay, DAY + 2)
+    timers[1].fn()                                       -- replaced: asks for nothing
+    H.eq(#timers, 2)
+    -- The same expiry after another recompute: no second timer.
+    C.historyChanged()
+    C.refresh()
+    H.eq(#timers, 2)
+end)
+
 H.test("a new measurement, a pause and an untrack reach the main window model on the next refresh", function()
     local T, C = boot()
     track(T, raw(5))

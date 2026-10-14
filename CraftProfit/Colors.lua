@@ -52,11 +52,11 @@ function Colors.text(kind)
     return { f[1], f[2], f[3], f[4] }
 end
 
--- The colour of a value's tone (Present.pointRow, a per-point line): "profit" and "loss"
--- keep their meaning colours; anything else is the game's text colour `neutral` ("muted"
--- in the lists, "main" in the main window).
+-- The colour of a value's tone (Present.pointRow, a per-point line): "profit", "loss" and
+-- "incomplete" keep their meaning colours; anything else is the game's text colour `neutral`
+-- ("muted" in the lists, "main" in the main window).
 function Colors.tone(tone, neutral)
-    if tone == "profit" or tone == "loss" then return Colors.FIXED[tone] end
+    if tone == "profit" or tone == "loss" or tone == "incomplete" then return Colors.FIXED[tone] end
     return Colors.text(neutral)
 end
 

@@ -58,7 +58,7 @@ Status marks: ✅ measured in game · ⚠️ not measured · ❌ unusable.
 - Files served to addons: `Interface\FrameGeneral\UI-Background-Rock`, `Interface\FrameGeneral\UI-Background-Marble`, `Interface\QuestFrame\UI-QuestTitleHighlight`.
 - `NineSlicePanelTemplate` created without a parent raises in its `OnLoad`: it reads the parent's `layoutType`. Create it with a parent (a template that holds a `NineSlice` child, such as `ButtonFrameTemplate`, is fine with a nil parent). A templated frame that could sit under a Blizzard panel is created with a nil parent, then `SetParent` (gamepad navigation trap); the insets of our own panels and tiles are created with their own frame as parent.
 - From the client source (`Gethe/wow-ui-source`, branch `forever`): after `ButtonFrameTemplate_HideAttic`, `_HidePortrait` and `_HideButtonBar` (in that order) the inset runs from (9, -24) to (-6, 4); the title bar is 20 px; the close button is 24 px at TOPRIGHT (-2, 1) (Camelot override).
-- Used by `CraftProfit/UI/Native.lua`. To re-run: enable `probe/CraftProfitProbe`, `/cppn` toggles the showcase window, `/cppn list` prints every atlas, file and template above with `ok`, its size or `MISSING`; `/reload` writes the log to `CraftProfitProbe.lua` in the SavedVariables folder.
+- Used by the native kit (`CraftProfit/UI/Native.lua`, `NativeCards.lua`, `NativeLists.lua`). To re-run: enable `probe/CraftProfitProbe`, `/cppn` toggles the showcase window, `/cppn list` prints every atlas, file and template above with `ok`, its size or `MISSING`; `/reload` writes the log to `CraftProfitProbe.lua` in the SavedVariables folder.
 
 ## F11: Money strings (measured 2026-10-10, `/cppn money`)
 

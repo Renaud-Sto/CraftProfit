@@ -24,7 +24,7 @@ DB.DEFAULTS = {
     showPerPoint = false,
     costExpanded = true, -- material detail shown under the Materials line
     staleAfter = 3600,  -- seconds before prices are shown as old
-    -- The look chosen in the options window: header strip and tile card (UI/Native.lua).
+    -- The look chosen in the options window: header strip and tile card (UI/NativeCards.lua).
     appearance = { header = "b", tile = "b" },
     -- The minimap button: hidden or not, and its place around the minimap in degrees.
     minimap = { hide = false, angle = 225 },

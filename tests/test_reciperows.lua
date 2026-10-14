@@ -239,6 +239,41 @@ H.test("the tag sits left of Blizzard's lock icon when it is shown, never moving
     H.eq(tagOf(T, r).point, { "RIGHT", r, "RIGHT", -4, 0 })
 end)
 
+H.test("a name longer than the room left of the tag is cut short, a short one is left alone", function()
+    local T = boot({ raw(5) })
+    stock(T)
+    local r = row()
+    local label = W.frame()
+    local widths, need = {}, 350
+    label.SetWidth = function(_, w) widths[#widths + 1] = w end
+    label.GetLeft = function() return 20 end
+    label.GetStringWidth = function() return need end
+    r.Label = label
+    local box = list(T, { { r, node(5) } })
+    T.ns.RecipeRows.attach()
+    local tag = tagOf(T, r)
+    tag.GetRight = function() return 400 end
+    tag.GetStringWidth = function() return 70 end
+    box:init(r, node(5))
+    -- Room: 400 - 70 - 6 - 20 = 304 for a 350 wide name.
+    H.eq(widths, { 304 })
+    -- A name that fits is not touched.
+    need = 200
+    box:init(r, node(5))
+    H.eq(widths, { 304 })
+    -- Never below the minimum.
+    need, tag.GetRight = 350, function() return 100 end
+    box:init(r, node(5))
+    H.eq(widths, { 304, 40 })
+    -- Unmeasurable, or a throwing write: nothing happens, no error.
+    tag.GetStringWidth = function() return nil end
+    box:init(r, node(5))
+    label.SetWidth = function() error("boom") end
+    tag.GetStringWidth = function() return 70 end
+    box:init(r, node(5))
+    H.eq(widths, { 304, 40 })
+end)
+
 H.test("prices changed: the refresh repaints the rows on screen in one pass", function()
     local T = boot({ raw(5) })
     local r = row()

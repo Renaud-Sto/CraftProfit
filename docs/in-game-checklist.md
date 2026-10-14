@@ -29,6 +29,7 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 
 ## Profit on each recipe row
 - [ ] Open a profession whose recipes CraftProfit has read, with prices (after a scan or a Refresh pinned): each learned recipe with prices shows its net of one craft at the right of its row, `+12` silver `23` copper coin icons in green, `-2` silver in red, grey at break even, amber when a resale price is missing; the figure matches the result banner and the pinned list for that recipe.
+- [ ] A long recipe name (for example *Veteran's Silvered Chain Leggings*) ends with "..." before its tag instead of running under it; a short name is unchanged; scroll the list and filter it: names stay cut right on recycled rows; **Create** and **Create All** still work after scrolling (the name width is the one Blizzard region this feature writes).
 - [ ] A recipe you have not learned, a recipe without prices and the category lines show no tag.
 - [ ] The tag reads right (screenshot): game small font, right-justified, about 60 px wide, not cut; with a lock icon at the end of a row, the tag sits left of it. Note whether a long recipe name runs under the tag and how it reads (fallback in docs/technical.md, Recipe row tags).
 - [ ] Scroll the list up and down, collapse and expand a category, type in the search box, change the filter: every row keeps the tag of its own recipe (none moves to the wrong row, none stays on a row that should have none).

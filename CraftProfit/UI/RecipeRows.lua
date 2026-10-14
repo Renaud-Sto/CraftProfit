@@ -20,6 +20,8 @@ local TAG_W = 84
 -- From the row's right edge, or from Blizzard's lock icon when it is shown there.
 local EDGE_GAP = 4
 local ICON_GAP = 2
+local LABEL_GAP = 6      -- between the end of a recipe's name and its tag
+local LABEL_MIN = 40     -- a name is never cut below this width
 RecipeRows.TAG_W = TAG_W
 
 local ctl
@@ -102,6 +104,25 @@ local function place(tag, row)
     tag:SetPoint("RIGHT", row, "RIGHT", -EDGE_GAP, 0)
 end
 
+-- A recipe name longer than the room left of the tag is cut short (the game draws its "..."):
+-- the name's width is the only thing of Blizzard's that is written, and only when the name
+-- would otherwise run under the tag; the list sets it again each time it initialises the row.
+-- Anything unmeasurable leaves the name alone.
+local function fitLabel(row, tag)
+    local label = row.Label
+    if type(label) ~= "table" or type(label.SetWidth) ~= "function" then return end
+    local ok, room = pcall(function()
+        local right, used = tag:GetRight(), tag:GetStringWidth()
+        local left, need = label:GetLeft(), label:GetStringWidth()
+        if not (Util.isFinite(right) and Util.isFinite(used) and Util.isFinite(left)
+            and Util.isFinite(need)) then return nil end
+        local room = right - used - LABEL_GAP - left
+        if need > room then return math.max(room, LABEL_MIN) end
+        return nil
+    end)
+    if ok and room then pcall(label.SetWidth, label, room) end
+end
+
 -- Paints one row (inside a refresh pass); a row without a figure has no tag.
 local function paint(row, elementData)
     if type(row) ~= "table" then return end
@@ -122,6 +143,7 @@ local function paint(row, elementData)
     tag:SetText(text)
     tag:SetTextColor(color[1], color[2], color[3], color[4])
     tag:Show()
+    fitLabel(row, tag)
 end
 
 local function safePaint(row, elementData)

@@ -57,7 +57,7 @@ First public release, for the WoW: Forever beta, build 1.60.1, Interface 16001.
 - Disenchant tables are Classic data, tagged *beta*, with no table for epic items above item level 60.
 - Skill-up chances are estimates by recipe colour (100 / 75 / 25 / 0 %).
 - Known recipes only.
-- Price history is recorded but there is no history view or graph yet (added in 1.1.0).
+- Price history is recorded but there is no history view or graph yet.
 - No sales speed: the game gives no sales history.
 
 [Unreleased]: https://github.com/Renaud-Sto/CraftProfit/compare/v1.1.0...HEAD

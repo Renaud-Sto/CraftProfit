@@ -27,6 +27,17 @@ The probe (v0.2.0+) mirrors everything CraftProfit and the probe print (includin
 - [ ] The Pin button toggles to Unpin and back.
 - [ ] Clicking the Materials header folds the reagent detail in (`+`) and out (`-`); the choice survives `/reload`. With 5+ reagents the window grows and nothing overlaps.
 
+## Profit on each recipe row
+- [ ] Open a profession whose recipes CraftProfit has read, with prices (after a scan or a Refresh pinned): each learned recipe with prices shows its net of one craft at the right of its row, `+12s 23c` in green, `-2s` in red, grey at break even, amber when a resale price is missing; the figure matches the result banner and the pinned list for that recipe.
+- [ ] A recipe you have not learned, a recipe without prices and the category lines show no tag.
+- [ ] The tag reads right (screenshot): game small font, right-justified, about 60 px wide, not cut; with a lock icon at the end of a row, the tag sits left of it. Note whether a long recipe name runs under the tag and how it reads (fallback in docs/technical.md, Recipe row tags).
+- [ ] Scroll the list up and down, collapse and expand a category, type in the search box, change the filter: every row keeps the tag of its own recipe (none moves to the wrong row, none stays on a row that should have none).
+- [ ] Switch profession tab (Forever's tabs) and back: the tags follow the profession shown; a profession never opened before gets its tags once its recipes are read (a few seconds).
+- [ ] Run a Refresh recipe or a scan with the profession window open: the tags change with the new prices.
+- [ ] `/cp options`, untick "Show the profit on each recipe of the list": every tag disappears at once; scrolling shows none; tick it again: they come back at once. `/reload` keeps the choice.
+- [ ] With the other CraftProfit addon (by Vystery) disabled, open a profession and scroll: no Lua error (`/console scriptErrors 1`). With it enabled too: note how both tags look together.
+- [ ] Taint: craft a recipe with the Create button (and Create All) after scrolling the list: it works, no `ADDON_ACTION_BLOCKED` / `ADDON_ACTION_FORBIDDEN`, no "interface action failed" message; the same after a `/reload` with the profession window open.
+
 ## Pinned recipes by cost per point
 - [ ] At the AH, the Sort button in the header of the Pinned recipes panel reads "Sort: profit" ("Tri : gain"); clicking it switches to "Sort: cost/point" ("Tri : coût/point"), ticks "Cost per skill point" ("Coût par point") and reorders the list, cheapest first. Rows show `21g 29s 84c/pt` (red), a recipe that pays for itself shows `+9s 33c/pt` (green), a grey recipe `n/a` (`n/d`) and an unpriced one `?`, both at the bottom.
 - [ ] The value beside "Cost per skill point" is green with a `+` when each point pays for itself and red otherwise; the best tile is outlined in gold; "Sort: profit" lists the most profitable pin first.

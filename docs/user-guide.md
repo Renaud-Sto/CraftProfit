@@ -27,6 +27,10 @@ The recipe title at the top of the window is clickable too, with the same effect
 - *Incomplete: prices missing* (amber, no value): a price needed for the result is missing, so no net result can be given rather than a flattering number.
 - *Best known: Auction house* (with the net result, in amber): some prices are known, so a best way to sell and its net result are shown. The warning "RESULT · PRICES MISSING" sits in amber on the label line above, where it has room: the figure may change once the missing prices are known. With a very large amount the label can still be shortened.
 
+### Profit on each recipe of the profession window
+
+The recipe list of the profession window shows, at the right of each recipe row, what one craft earns or loses: `+12s 23c` in green, `-2s` in red, grey at break even, amber when a price is missing (the figure is the best known so far). It is the same figure as the result banner and the pinned list. A tag appears only on the recipes CraftProfit has read for this profession (the ones you have learned, read when the window opens) and that have prices; a recipe without prices, a recipe you have not learned and the category lines show nothing. The tags follow the list as you scroll, filter or switch profession tab, and change when prices change. Turn them off in the [options window](#options-window) (*Profession window*). A long recipe name can run under the tag.
+
 ### Crafts
 
 The **Crafts** box multiplies the selected recipe by a number of crafts (1 to 9999): reagent quantities, the materials total, every resale value and the net result in the result banner. The cost or gain **per point** and the grey disenchant line stay per point and per disenchant. The pinned list always shows one craft, and selecting another recipe puts the box back to 1.
@@ -174,6 +178,7 @@ Where windows open: a CraftProfit window that has never been dragged opens just 
 - **Appearance**: pick the *Header strip* of every section (Carved wood, Shade or Streaks) and the *Tile card* of the price tiles (Loot card or Inset). The two mix freely (6 looks); the lit button is your choice. It applies at once to every window, open or not, and is saved for your account. Default: Shade and Inset.
 - **Pinned recipes**: the *Limit per character*, 12, 20, 30 or 40 (default 20); the lit button is your choice, saved for your account and used from the next pin. A higher limit makes **Refresh pinned** slower, because the auction house is searched one item at a time (about a minute for 20 recipes); with many recipes, **Scan AH** is usually faster. Lowering the limit never deletes a pin: pins over the new limit stay, and new pins are refused until you unpin enough of them.
 - **Minimap**: *Show the minimap button*. Untick it to hide the button; `/cp minimap` hides it or brings it back too.
+- **Profession window**: *Show the profit on each recipe of the list* (on by default). Untick it to remove the tags from the profession window's recipe list at once (see [Profit on each recipe of the profession window](#profit-on-each-recipe-of-the-profession-window)).
 - **Windows**: open or close the main window and the leveling window (first row), the pinned recipes window and the History window (second row).
 - **Controls**: the minimap clicks and every command, one per line: the command in gold, what it does in white.
 
@@ -196,6 +201,7 @@ The CraftProfit entry of the addon compartment (when your client shows it) works
 | Header strip and tile card | [Options window](#options-window); saved for the account | Shade, Inset |
 | Minimap button shown, and its place | Options window or `/cp minimap`; drag it | Shown, bottom left |
 | Pinned recipes limit | [Options window](#options-window); saved for the account | 20 per character |
+| Profit on each recipe of the profession window | [Options window](#options-window); saved for the account | Shown |
 | Order of the leveling list | Sort button of the leveling window | Cost per point |
 | Grey recipes in the leveling list | *Show grey recipes* in the leveling window | Hidden |
 | Position of the leveling, pinned recipes and options windows | Drag them | Beside the rightmost CraftProfit window on screen (see [Options window](#options-window)) |

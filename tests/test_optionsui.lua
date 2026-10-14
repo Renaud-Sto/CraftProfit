@@ -122,6 +122,55 @@ H.test("the minimap check shows the saved state and saves the change through the
     H.eq(T.env.CraftProfitDB.settings.minimap.hide, false)
 end)
 
+H.test("the profession window check shows the saved row tags setting and saves the change at once", function()
+    local T, _, slash = boot({ settings = { showRowTags = false } })
+    local repaints = 0
+    T.ns.RecipeRows = { refresh = function() repaints = repaints + 1 end }
+    slash("options")
+    local parts = T.ns.OptionsUI.parts
+    local check = parts.rowTags
+    H.eq(parts.panels.profession.title.text, "PROFESSION WINDOW")
+    H.eq(check.checked, false)
+    H.eq(check.label.text, "Show the profit on each recipe of the list")
+    H.eq(check.point, { "TOPLEFT", parts.panels.profession.body, "TOPLEFT", 4, -1 })
+    H.eq(parts.panels.profession.frame.height, T.ns.Layout.panelHeight(1, 26))
+    check:SetChecked(true)
+    click(check)
+    H.eq(T.env.CraftProfitDB.settings.showRowTags, true)
+    H.truthy(T.ns.Controller.showRowTags())
+    H.truthy(repaints >= 1)
+    local before = repaints
+    check:SetChecked(false)
+    click(check)
+    H.eq(T.env.CraftProfitDB.settings.showRowTags, false)
+    H.falsy(T.ns.Controller.showRowTags())
+    H.truthy(repaints > before)
+    -- A change made elsewhere shows at the next refresh.
+    T.ns.Controller.setShowRowTags(true)
+    H.eq(check.checked, true)
+end)
+
+H.test("the check box labels fit the panel in English, French and Spanish", function()
+    local expected = {
+        enUS = { "PROFESSION WINDOW", "Show the profit on each recipe of the list" },
+        frFR = { "FENÊTRE DE MÉTIER", "Afficher le profit de chaque recette de la liste" },
+        esES = { "VENTANA DE PROFESIÓN", "Mostrar el beneficio de cada receta de la lista" },
+    }
+    for _, locale in ipairs({ "enUS", "frFR", "esES" }) do
+        local T, _, slash = boot(nil, locale)
+        slash("options")
+        local O, Layout, Native = T.ns.OptionsUI, T.ns.Layout, T.ns.Native
+        local parts = O.parts
+        H.eq(parts.panels.profession.title.text, expected[locale][1])
+        H.eq(parts.rowTags.label.text, expected[locale][2])
+        local room = O.ROOM - Native.CHECK_SIZE - Native.CHECK_LABEL_X
+        for _, check in ipairs({ parts.rowTags, parts.minimap }) do
+            local need = Layout.textWidth(check.label.text, O.SMALL_CHAR_W)
+            H.truthy(need <= room or error(locale .. ": " .. check.label.text .. " needs " .. need .. " px"))
+        end
+    end
+end)
+
 H.test("the window buttons toggle the main window, the leveling window and the pinned window", function()
     local T, _, slash = boot()
     slash("options")
@@ -277,8 +326,8 @@ H.test("the controls panel and the window heights follow the line count", functi
     H.eq(O.LIST_BOTTOM, 8)
     H.eq(p.controls.frame.height, Layout.panelHeight(O.LINE_COUNT, 14, 8))
     local heights = p.appearance.frame.height + p.pins.frame.height + p.minimap.frame.height
-        + p.windows.frame.height + p.controls.frame.height
-    H.eq(O.frame():GetHeight(), Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + heights + 8 * 4)
+        + p.profession.frame.height + p.windows.frame.height + p.controls.frame.height
+    H.eq(O.frame():GetHeight(), Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + heights + 8 * 5)
 end)
 
 H.test("the command lines are translated and fit the panel in English, French and Spanish", function()
@@ -456,8 +505,10 @@ H.test("the note is the small font across the panel, under the buttons, as tall 
     local function windowHeight()
         local p = O.parts.panels
         local sum = 0
-        for _, k in ipairs({ "appearance", "pins", "minimap", "windows", "controls" }) do sum = sum + p[k].frame.height end
-        return Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + sum + 8 * 4
+        for _, k in ipairs({ "appearance", "pins", "minimap", "profession", "windows", "controls" }) do
+            sum = sum + p[k].frame.height
+        end
+        return Native.INSET_TOP + Native.INSET_BOTTOM + Native.CONTENT_PAD * 2 + sum + 8 * 5
     end
     H.eq(O.frame():GetHeight(), windowHeight())
     local twoLines = O.frame():GetHeight()

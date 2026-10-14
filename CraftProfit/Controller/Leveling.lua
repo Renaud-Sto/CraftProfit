@@ -1,7 +1,8 @@
 -- Controller: the leveling window (the known recipes of the open profession, ranked by cost
--- per point).
+-- per point) and the profit tags of the profession window's recipe rows.
 local _, ns = ...
 local Prices, DB, Present, Leveling = ns.Prices, ns.DB, ns.Present, ns.Leveling
+local Util, Format, Colors = ns.Util, ns.Format, ns.Colors
 local L = ns.L
 
 local Controller = ns.Controller
@@ -33,6 +34,36 @@ function Controller.refreshKnown()
     end, function() knownBusy = false end)
     if not started then knownBusy = false end
     return started
+end
+
+-- recipeID -> recipe of a stored known list, built once per list (a new scan stores a new
+-- table, so its index is rebuilt; the old one goes with it).
+local knownIndex = setmetatable({}, { __mode = "k" })
+
+-- The stored recipe `recipeID` of the open profession, or nil: not learned, not scanned yet,
+-- or the client cannot say which profession is open.
+local function knownRecipe(recipeID)
+    if not Util.id(recipeID) then return nil end
+    local prof = DB.findKnown(CraftProfitCharDB, (ns.Trade.professionInfo()))
+    if not prof then return nil end
+    local index = knownIndex[prof.recipes]
+    if not index then
+        index = {}
+        for _, recipe in ipairs(prof.recipes) do index[recipe.recipeID] = recipe end
+        knownIndex[prof.recipes] = index
+    end
+    return index[recipeID]
+end
+
+-- The tag of a recipe row of the profession window: text and colour ({ r, g, b, a }) of the
+-- net of one craft (Present.rowTag), or nil when the recipe is not a stored known one or
+-- has no figure. The caller runs it in a refresh pass (Controller.inPass).
+function Controller.rowTag(recipeID)
+    local recipe = knownRecipe(recipeID)
+    if not recipe then return nil end
+    local text, tone = Present.rowTag(Controller.evaluate(recipe, 1), Format.short)
+    if not text then return nil end
+    return text, Colors.tone(tone, "muted")
 end
 
 -- The profession window opened or switched profession (Forever's profession tabs switch

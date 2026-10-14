@@ -1,5 +1,6 @@
 -- The options window: the look (header strip and tile card, applied at once to every
--- window), the pinned recipes limit, the minimap button, shortcuts to the other windows and
+-- window), the pinned recipes limit, the minimap button, the profit tags on the profession
+-- window's recipes, shortcuts to the other windows and
 -- the list of the controls. Built on first open, never at login. Opened by /cp options, the minimap button and the
 -- addon compartment. Escape closes it.
 --
@@ -74,7 +75,7 @@ local ctl
 local frame, content, savedPosition
 local origin = { left = 0, right = 0, top = 0 }
 -- The widgets, exposed for tests: panels, headerButtons / tileButtons (by key), minimap,
--- pinButtons (by limit), pinLabel, pinNote, mainButton, levelButton, pinsButton, historyButton, headerLabel,
+-- pinButtons (by limit), pinLabel, pinNote, rowTags, mainButton, levelButton, pinsButton, historyButton, headerLabel,
 -- tileLabel, lines (the controls list).
 local parts = { panels = {}, headerButtons = {}, tileButtons = {}, pinButtons = {}, lines = {} }
 OptionsUI.parts = parts
@@ -130,7 +131,7 @@ function OptionsUI.noteLines()
     return math.max(1, math.min(NOTE_MAX_LINES, math.floor(n)))
 end
 
--- Stacks the five panels and sizes the window from them (the controls list has a fixed line
+-- Stacks the six panels and sizes the window from them (the controls list has a fixed line
 -- count; the note's height is the lines it takes).
 local function layout()
     local p = parts.panels
@@ -139,9 +140,10 @@ local function layout()
     p.appearance:setRows(2, CHOICE_ROW_H)
     p.pins:setRows(1, CHOICE_ROW_H, noteLines * LINE_H + LIST_BOTTOM)
     p.minimap:setRows(1, LINE_ROW_H)
+    p.profession:setRows(1, LINE_ROW_H)
     p.windows:setRows(2, LINE_ROW_H)
     p.controls:setRows(#CONTROL_LINES, LINE_H, LIST_BOTTOM)
-    local order = { p.appearance, p.pins, p.minimap, p.windows, p.controls }
+    local order = { p.appearance, p.pins, p.minimap, p.profession, p.windows, p.controls }
     local heights = {}
     for i, panel in ipairs(order) do heights[i] = panel:height() end
     local offsets, total = Layout.stack(heights, GAP, PAD)
@@ -208,6 +210,12 @@ local function build()
     end, ROOM - Native.CHECK_SIZE - Native.CHECK_LABEL_X)
     parts.minimap:SetPoint("TOPLEFT", panels.minimap.body, "TOPLEFT", 4, -1)
 
+    panels.profession = Native.panel(content, L.OPTIONS_PROFESSION)
+    parts.rowTags = Native.check(panels.profession.body, "", function(checked)
+        ctl.setShowRowTags(checked)
+    end, ROOM - Native.CHECK_SIZE - Native.CHECK_LABEL_X)
+    parts.rowTags:SetPoint("TOPLEFT", panels.profession.body, "TOPLEFT", 4, -1)
+
     panels.windows = Native.panel(content, L.OPTIONS_WINDOWS)
     -- Two rows of two: main and leveling, then pinned recipes and history, all four half the
     -- room wide so a French label is never cut.
@@ -254,6 +262,7 @@ function OptionsUI.refresh()
     panels.appearance:setTitle(L.OPTIONS_APPEARANCE)
     panels.pins:setTitle(L.OPTIONS_PINS)
     panels.minimap:setTitle(L.OPTIONS_MINIMAP)
+    panels.profession:setTitle(L.OPTIONS_PROFESSION)
     panels.windows:setTitle(L.OPTIONS_WINDOWS)
     panels.controls:setTitle(L.OPTIONS_CONTROLS)
     parts.headerLabel:SetText(L.OPTIONS_HEADER)
@@ -276,6 +285,8 @@ function OptionsUI.refresh()
     parts.pinNote:SetText(L.OPTIONS_PIN_NOTE)
     parts.minimap:setText(L.OPTIONS_SHOW_MINIMAP)
     parts.minimap:SetChecked(not ctl.minimapHidden())
+    parts.rowTags:setText(L.OPTIONS_ROW_TAGS)
+    parts.rowTags:SetChecked(ctl.showRowTags())
     parts.mainButton:setText(L.OPTIONS_MAIN_WINDOW)
     parts.levelButton:setText(L.LEVEL_BUTTON)
     parts.pinsButton:setText(L.PINNED_TITLE)

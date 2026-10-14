@@ -380,3 +380,29 @@ H.test("goodColor: green for good news, red for bad, the game's grey otherwise",
     H.eq(P.goodColor(false), C.FIXED.loss)
     H.eq(P.goodColor(nil), C.text("muted"))
 end)
+
+H.test("rowTag: the net of one craft, signed, in its tone; nothing when it is unknown", function()
+    local ns = load()
+    local P, F = ns.Present, ns.Format
+    H.eq({ P.rowTag({ net = 1223 }, F.short) }, { "+12s 23c", "profit" })
+    H.eq({ P.rowTag({ net = -200 }, F.short) }, { "-2s", "loss" })
+    -- Break even (after rounding to the copper) is grey.
+    H.eq({ P.rowTag({ net = 0 }, F.short) }, { "0c", "muted" })
+    H.eq({ P.rowTag({ net = 0.3 }, F.short) }, { "0c", "muted" })
+    -- A figure counted without a missing price keeps its text in the incomplete tone.
+    H.eq({ P.rowTag({ net = 500, incomplete = true }, F.short) }, { "+5s", "incomplete" })
+    H.eq({ P.rowTag({ net = -500, incomplete = true }, F.short) }, { "-5s", "incomplete" })
+    -- No figure: no tag.
+    H.eq({ P.rowTag({ net = nil, incomplete = true }, F.short) }, {})
+    H.eq({ P.rowTag({ net = 0 / 0 }, F.short) }, {})
+    H.eq({ P.rowTag(nil, F.short) }, {})
+    H.eq({ P.rowTag("x", F.short) }, {})
+end)
+
+H.test("rowTag shows the same net as the main window's banner", function()
+    local ns = load()
+    local result = run(ns)
+    local text = ns.Present.rowTag(result, ns.Format.short)
+    H.eq(text, "+" .. ns.Format.short(result.net))
+    H.eq(ns.Present.build(result, ns.L, ns.Format.short).banner.value, text)
+end)

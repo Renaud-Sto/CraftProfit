@@ -1,5 +1,5 @@
--- Controller: saved settings (sort mode, appearance, pin limit, minimap button, window
--- positions).
+-- Controller: saved settings (sort mode, appearance, pin limit, minimap button, recipe row
+-- tags, window positions).
 local _, ns = ...
 local Util, DB = ns.Util, ns.DB
 local L = ns.L
@@ -99,6 +99,20 @@ function Controller.minimapCommand()
     local hidden = not Controller.minimapHidden()
     Controller.setMinimapHidden(hidden)
     say(hidden and L.MINIMAP_HIDDEN or L.MINIMAP_SHOWN)
+end
+
+-- The profit tags on the profession window's recipe rows -------------------------------
+
+function Controller.showRowTags()
+    return CraftProfitDB.settings.showRowTags == true
+end
+
+-- Saves the choice and repaints the rows at once (or hides their tags), and the options
+-- window's check box.
+function Controller.setShowRowTags(value)
+    CraftProfitDB.settings.showRowTags = value and true or false
+    if ns.RecipeRows then ns.RecipeRows.refresh() end
+    if ns.OptionsUI then ns.OptionsUI.refresh() end
 end
 
 function Controller.saveOptionsPosition(x, y)

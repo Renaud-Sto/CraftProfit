@@ -15,7 +15,8 @@ H.test("initAccount fills defaults and returns the same table", function()
     H.truthy(DB.initAccount(db) == db)
     H.eq(db.dbVersion, 1)
     H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost",
-        appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 }, maxPins = 20 })
+        appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 }, maxPins = 20,
+        showRowTags = true })
     H.eq(db.prices, {})
 end)
 
@@ -35,7 +36,8 @@ H.test("initAccount replaces invalid settings with defaults", function()
         window = { point = "NOPE", x = 1, y = 2 },
     } })
     H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost",
-        appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 }, maxPins = 20 })
+        appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 }, maxPins = 20,
+        showRowTags = true })
 end)
 
 H.test("initAccount keeps valid settings and floors medianN", function()
@@ -46,7 +48,7 @@ H.test("initAccount keeps valid settings and floors medianN", function()
     } })
     H.eq(db.settings, {
         cut = 0.5, medianN = 7, staleAfter = 120, showPerPoint = true, costExpanded = false, levelShowGrey = false, levelSort = "cost",
-        window = { point = "TOPLEFT", x = 100, y = -50 }, maxPins = 30,
+        window = { point = "TOPLEFT", x = 100, y = -50 }, maxPins = 30, showRowTags = true,
         appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 },
     })
     H.eq(DB.initAccount({ settings = { cut = 0.51 } }).settings.cut, 0.05)
@@ -394,4 +396,27 @@ H.test("the history window position keeps finite x and y and drops anything else
     H.eq(pos({ x = "1", y = 2 }), nil)
     H.eq(pos("x"), nil)
     H.eq(pos(nil), nil)
+end)
+
+H.test("the recipe row tags setting keeps a boolean; an old save or junk gets the default, on", function()
+    local DB = load()
+    H.eq(DB.DEFAULTS.showRowTags, true)
+    H.eq(DB.initAccount({ settings = {} }).settings.showRowTags, true)
+    H.eq(DB.initAccount({ settings = { showRowTags = false } }).settings.showRowTags, false)
+    H.eq(DB.initAccount({ settings = { showRowTags = true } }).settings.showRowTags, true)
+    for _, bad in ipairs({ "no", 0, {}, 0 / 0 }) do
+        H.eq(DB.initAccount({ settings = { showRowTags = bad } }).settings.showRowTags, true)
+    end
+end)
+
+H.test("findKnown answers the stored profession of a key, nil for an unknown or bad key", function()
+    local DB = load()
+    local db = DB.initChar({})
+    DB.setKnown(db, "164", "Forge", { raw(1) }, 100)
+    DB.setKnown(db, "197", "Couture", { raw(2) }, 100)
+    H.eq(DB.findKnown(db, "164").name, "Forge")
+    H.eq(DB.findKnown(db, "197").recipes[1].recipeID, 2)
+    H.eq(DB.findKnown(db, "333"), nil)
+    H.eq(DB.findKnown(db, nil), nil)
+    H.eq(DB.findKnown(db, 164), nil)
 end)

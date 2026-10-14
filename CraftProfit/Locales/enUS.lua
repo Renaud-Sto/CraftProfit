@@ -195,6 +195,8 @@ ns.Locale.register("enUS", {
     OPTIONS_PIN_NOTE = "A higher limit makes Refresh pinned slower: it searches the auction house one item at a time (about a minute for 20 recipes). With many recipes, Scan AH is usually faster.",
     OPTIONS_MINIMAP = "MINIMAP",
     OPTIONS_SHOW_MINIMAP = "Show the minimap button",
+    OPTIONS_PROFESSION = "PROFESSION WINDOW",
+    OPTIONS_ROW_TAGS = "Show the profit on each recipe of the list",
     OPTIONS_WINDOWS = "WINDOWS",
     OPTIONS_MAIN_WINDOW = "Main window",
     OPTIONS_CONTROLS = "CONTROLS",

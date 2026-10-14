@@ -31,6 +31,8 @@ function Controller.refreshKnown()
         end
         DB.setKnown(CraftProfitCharDB, key, name, raws, time())
         if ns.LevelingUI then ns.LevelingUI.refresh() end
+        -- The rows of the profession window show the recipes just read.
+        if ns.RecipeRows then ns.RecipeRows.refresh() end
     end, function() knownBusy = false end)
     if not started then knownBusy = false end
     return started
@@ -76,6 +78,8 @@ function Controller.onProfessionChanged()
     Controller.refreshPinDifficulties()
     Controller.refreshKnown()
     ns.Trade.invalidate()
+    -- The Professions UI exists now: the recipe rows' tags attach to its list (once).
+    if ns.RecipeRows then ns.RecipeRows.attach() end
 end
 
 -- What the leveling window shows: the current profession, its known recipes ranked

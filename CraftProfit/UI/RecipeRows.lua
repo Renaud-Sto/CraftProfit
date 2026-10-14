@@ -16,7 +16,7 @@ ns.RecipeRows = RecipeRows
 
 -- Fixed width, right-justified: the tag never grows over the row (a long recipe name may
 -- run under it; see docs/technical.md).
-local TAG_W = 60
+local TAG_W = 84
 -- From the row's right edge, or from Blizzard's lock icon when it is shown there.
 local EDGE_GAP = 4
 local ICON_GAP = 2

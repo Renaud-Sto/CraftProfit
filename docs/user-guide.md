@@ -29,7 +29,7 @@ The recipe title at the top of the window is clickable too, with the same effect
 
 ### Profit on each recipe of the profession window
 
-The recipe list of the profession window shows, at the right of each recipe row, what one craft earns or loses: `+12s 23c` in green, `-2s` in red, grey at break even, amber when a price is missing (the figure is the best known so far). It is the same figure as the result banner and the pinned list. A tag appears only on the recipes CraftProfit has read for this profession (the ones you have learned, read when the window opens) and that have prices; a recipe without prices, a recipe you have not learned and the category lines show nothing. The tags follow the list as you scroll, filter or switch profession tab, and change when prices change. Turn them off in the [options window](#options-window) (*Profession window*). A long recipe name can run under the tag.
+The recipe list of the profession window shows, at the right of each recipe row, what one craft earns or loses: `+12` silver and `23` copper (with the coin icons) in green, `-2` silver in red, grey at break even, amber when a price is missing (the figure is the best known so far). It is the same figure as the result banner and the pinned list. A tag appears only on the recipes CraftProfit has read for this profession (the ones you have learned, read when the window opens) and that have prices; a recipe without prices, a recipe you have not learned and the category lines show nothing. The tags follow the list as you scroll, filter or switch profession tab, and change when prices change. Turn them off in the [options window](#options-window) (*Profession window*). A long recipe name can run under the tag.
 
 ### Crafts
 

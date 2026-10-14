@@ -30,7 +30,7 @@ Select a recipe you know and a small window appears next to your profession wind
 
 - **Recipe cost** from live auction house prices, with the reagent detail one click away.
 - **Auction house, vendor and disenchant compared**, best option highlighted, net result of the craft.
-- **Profit on every recipe row** of the profession window's list: what one craft earns or loses (`+12s 23c` green, `-2s` red) for each learned recipe with prices; can be turned off in the options window.
+- **Profit on every recipe row** of the profession window's list: what one craft earns or loses (`+12` silver `23` copper coin icons green, `-2` silver red) for each learned recipe with prices; can be turned off in the options window.
 - **Cost per skill point** (optional): what each point really costs, from the recipe colour; shown as a gain when the crafts pay for themselves.
 - **Several crafts at once**: multiply a recipe by 1 to 9999.
 - **Leveling window**: every recipe you know in a profession, ranked by the cost of the next skill point (or by speed).

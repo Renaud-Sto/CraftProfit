@@ -39,13 +39,15 @@ function Format.money(copper, coinFn)
     return sign .. text
 end
 
--- Plain coins for a narrow column (the tags on the profession window's recipe rows), never
--- the coin icons: the copper is dropped from 1 gold up and the silver from 1000 gold up (both
--- rounded to the nearest), so a tag stays two units long at most. "?" as Format.money.
+-- Coins for a narrow column (the tags on the profession window's recipe rows): the copper is
+-- dropped from 1 gold up and the silver from 1000 gold up (both rounded to the nearest), so a
+-- tag stays two units long at most. Plain letters, or the coin icons through `coinFn` as
+-- Format.money does (a function answering no string falls back to the letters). "?" as
+-- Format.money.
 Format.SHORT_SILVER_FROM = 10000
 Format.SHORT_GOLD_FROM = 1000 * 10000
 
-function Format.short(copper)
+function Format.short(copper, coinFn)
     if not Util.isFinite(copper) then return "?" end
     local whole = Util.round(Util.clamp(math.abs(copper), 0, Format.MAX_COPPER))
     if whole >= Format.SHORT_GOLD_FROM then
@@ -54,7 +56,10 @@ function Format.short(copper)
         whole = Util.round(whole / 100) * 100
     end
     local sign = (copper < 0 and whole > 0) and "-" or ""
-    return sign .. plainCoins(whole)
+    local text
+    if coinFn then text = coinFn(whole) end
+    if type(text) ~= "string" then text = plainCoins(whole) end
+    return sign .. text
 end
 
 -- Splits an age in seconds into a number and a unit name; the caller localizes

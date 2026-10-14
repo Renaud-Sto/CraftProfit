@@ -77,6 +77,17 @@ H.test("short: plain coins for a narrow column, copper dropped from 1 gold, silv
     H.eq(F.short(-(1500 * 10000 + 4999)), "-1500g")
 end)
 
+H.test("short: the coin icons come through the coin function, after the same rounding", function()
+    local F = load().Format
+    local coin = function(c) return "<" .. c .. ">" end
+    H.eq(F.short(1223, coin), "<1223>")
+    H.eq(F.short(14049, coin), "<14000>")
+    H.eq(F.short(-200, coin), "-<200>")
+    H.eq(F.short(1234 * 10000 + 5678, coin), "<12350000>")
+    -- A coin function that answers nothing falls back to the letters.
+    H.eq(F.short(1223, function() return nil end), "12s 23c")
+end)
+
 H.test("short: 0c at zero, never -0, ? for anything that is not a finite number", function()
     local ns = load()
     local F = ns.Format

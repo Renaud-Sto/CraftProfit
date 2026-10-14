@@ -24,7 +24,7 @@ CraftProfit is an addon for **World of Warcraft: Forever**. Select a recipe you 
 - **Recipe cost** from live auction house prices, with the reagent detail unfolded under the total.
 - **Three exits compared**: auction house (after the 5 % commission), vendor price, and the expected disenchant value.
 - **Best option highlighted**, with the net result of the craft.
-- **Profit in the profession window**: each learned recipe with prices shows what one craft earns or loses at the right of its row in the recipe list (`+12s 23c` green, `-2s` red); it can be turned off in the options window.
+- **Profit in the profession window**: each learned recipe with prices shows what one craft earns or loses at the right of its row in the recipe list (`+12` silver `23` copper coin icons green, `-2` silver red); it can be turned off in the options window.
 - **Cost per skill point** (optional): what each point of skill really costs, from the colour of the recipe, shown as a gain when the crafts pay for themselves.
 - **Leveling window**: every recipe you know in a profession, ranked by the cost of a skill point, to see what to craft next.
 - **Several crafts at once**: multiply a recipe by 1 to 9999 crafts.

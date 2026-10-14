@@ -63,7 +63,9 @@ end
 function Controller.rowTag(recipeID)
     local recipe = knownRecipe(recipeID)
     if not recipe then return nil end
-    local text, tone = Present.rowTag(Controller.evaluate(recipe, 1), Format.short)
+    local text, tone = Present.rowTag(Controller.evaluate(recipe, 1), function(copper)
+        return Format.short(copper, Controller._coinString)
+    end)
     if not text then return nil end
     return text, Colors.tone(tone, "muted")
 end

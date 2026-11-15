@@ -11,7 +11,15 @@ function W.frame()
         SetText = function(self, t) self.text = t end,
         GetText = function(self) return self.text end,
         SetScript = function(self, name, fn) self.scripts[name] = fn end,
-        HookScript = function(self, name, fn) self.scripts[name] = fn end,
+        -- As in the game: a hook runs after the script already set (or alone).
+        HookScript = function(self, name, fn)
+            local old = self.scripts[name]
+            if old then
+                self.scripts[name] = function(...) old(...); fn(...) end
+            else
+                self.scripts[name] = fn
+            end
+        end,
         RegisterEvent = function(self, e) self.events[#self.events + 1] = e end,
         Show = function(self) self.shown = true end,
         Hide = function(self) self.shown = false end,

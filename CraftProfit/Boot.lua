@@ -48,6 +48,8 @@ function Controller.init()
     CraftProfitDB = CraftProfitDB or {}
     CraftProfitCharDB = CraftProfitCharDB or {}
     DB.initAccount(CraftProfitDB)
+    -- Vendor prices seen at merchants, account wide (Vendor.lua), repaired in place.
+    CraftProfitDB.vendor = ns.Vendor.sanitize(CraftProfitDB.vendor)
     History.sanitize(CraftProfitDB, time())
     DB.prune(CraftProfitDB, time())
     DB.initChar(CraftProfitCharDB)
@@ -124,6 +126,15 @@ function Controller.init()
     local ahFrame = AuctionHouseFrame or AuctionFrame
     if type(ahFrame) == "table" and type(ahFrame.IsShown) == "function" and ahFrame:IsShown() then
         ns.AH.onEvent("AUCTION_HOUSE_SHOW")
+    end
+    -- Vendor prices are learnt from every merchant opened; a new or changed one re-prices.
+    ns.Merchant.setHandlers({
+        onItems = function(entries)
+            if ns.Vendor.record(CraftProfitDB.vendor, entries, time()) > 0 then Controller.requestRefresh() end
+        end,
+    })
+    if type(MerchantFrame) == "table" and type(MerchantFrame.IsShown) == "function" and MerchantFrame:IsShown() then
+        ns.Merchant.onEvent("MERCHANT_SHOW")
     end
     ns.Trade.watch(onSelection)
     Controller.ready = true

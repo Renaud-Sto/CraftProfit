@@ -223,7 +223,7 @@ The window follows the game language: English, French and Spanish (Latin America
 - **Skill-up chances are estimates** based on recipe colour.
 - **Price history depends on your own searches.** A price is recorded only when you search or scan at the auction house; the chart and the percentages are only as regular as your refreshes.
 - **No sales history or frequency.** The game gives no such data, so CraftProfit cannot say how fast an item sells.
-- **Auction house only for prices.** Vendor prices come from the game.
+- **Vendor prices are learnt.** The game gives a vendor's price only while its window is open, so CraftProfit records it at every merchant you open (things sold for money in unlimited supply). Before that, about thirty common materials use a built-in usual price, marked *usual price* in the tooltip. A price seen with a reputation discount is kept as seen, for every character of the account. The sale tile **VENDOR** is what a vendor *pays* for the crafted item, from the game.
 
 ## FAQ and troubleshooting
 

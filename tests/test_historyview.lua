@@ -8,7 +8,7 @@ local CUT = 0.05
 local stubClock = dofile("tests/stubclock.lua")
 
 local function load()
-    local ns = H.newNS("Util", "Core", "Data/Skillup", "Data/Disenchant", "Recipes", "History", "Evaluate",
+    local ns = H.newNS("Util", "Core", "Data/Skillup", "Data/Disenchant", "Vendor", "Recipes", "History", "Evaluate",
         "HistoryView")
     ns.History.setDateFn(stubClock(0))
     return ns
@@ -314,4 +314,39 @@ H.test("a profit from a carried sale price is never today's profit", function()
         [100] = { pt(3, 100) } }), NOW, 7, CUT, itemsOf)
     H.eq(both[2].materialsCarried, "some")
     H.eq(both[2].netCarried, "all")
+end)
+
+H.test("recipeDays counts a reagent at the vendor price when a vendor sells it for less", function()
+    local V = load().HistoryView
+    local map = {
+        [1] = { pt(2, 488), pt(1, 500) },
+        [2] = { pt(2, 50) },
+        [100] = { pt(2, 1013), pt(1, 1100) },
+    }
+    local function vendorOf(id) if id == 1 then return 40, "seen", 0 end end
+    local days = V.recipeDays(RECIPE, seriesOf(map), NOW, 7, CUT, itemsOf, vendorOf)
+    H.eq(days[1].materials, 40 * 2 + 50)
+    -- Item 2 is carried on day 2, item 1 is not: the vendor price is today's.
+    H.eq(days[2].materials, 40 * 2 + 50)
+    H.eq(days[2].materialsCarried, "some")
+end)
+
+H.test("recipeDays prices a vendor reagent that the auction house never listed", function()
+    local V = load().HistoryView
+    local map = { [2] = { pt(1, 50) }, [100] = { pt(1, 1100) } }
+    local function vendorOf(id) if id == 1 then return 40, "listed" end end
+    local days = V.recipeDays(RECIPE, seriesOf(map), NOW, 7, CUT, itemsOf, vendorOf)
+    H.eq(#days, 1)
+    H.eq(days[1].materials, 130)
+    H.eq(days[1].materialsCarried, false)
+    H.eq(days[1].net, sale(1100) - 130)
+    -- Without the vendor the materials stay unknown.
+    H.eq(V.recipeDays(RECIPE, seriesOf(map), NOW, 7, CUT, itemsOf)[1].materials, nil)
+end)
+
+H.test("recipeDays keeps a cheaper auction house price over the vendor", function()
+    local V = load().HistoryView
+    local map = { [1] = { pt(1, 30) }, [2] = { pt(1, 50) }, [100] = { pt(1, 1100) } }
+    local function vendorOf(id) if id == 1 then return 40, "seen", 0 end end
+    H.eq(V.recipeDays(RECIPE, seriesOf(map), NOW, 7, CUT, itemsOf, vendorOf)[1].materials, 110)
 end)

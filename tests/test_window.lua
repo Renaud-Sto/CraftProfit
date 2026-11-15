@@ -1019,3 +1019,35 @@ H.test("indicators: the controller hands the window its history figures and mone
     H.truthy(Window.lastHandlers.historyData == T.ns.Controller.historyData)
     H.truthy(Window.lastHandlers.fmt == T.ns.Controller.fmt)
 end)
+
+H.test("a vendor-priced reagent row shows its tag and a tooltip with both prices", function()
+    local T, Window = boot()
+    local tip = { { "Counted at the vendor price (cheaper)", "main" }, { "Vendor: 40c each", "muted" } }
+    local shown = {}
+    T.env.GameTooltip = {
+        SetOwner = function() end,
+        SetText = function(_, text) shown[#shown + 1] = text end,
+        AddLine = function(_, text) shown[#shown + 1] = text end,
+        Show = function() shown.visible = true end,
+        Hide = function() shown.visible = false end,
+    }
+    Window.render(model({ costLines = {
+        { itemID = 11, qty = 3, unitText = "40c", subtotalText = "1s 20c", source = "vendor", sourceText = "vendor", tip = tip },
+        { itemID = 12, qty = 1, unitText = "1s", subtotalText = "1s" },
+    } }))
+    local rows = Window.parts.rows
+    H.eq(rows[1].tag.text, "vendor")
+    H.eq(rows[2].tag.text, "")
+    rows[1].hit.scripts.OnEnter(rows[1].hit)
+    H.truthy(shown.visible)
+    H.eq(shown[2], "Counted at the vendor price (cheaper)")
+    H.eq(shown[3], "Vendor: 40c each")
+    -- The hover highlight still works beside the tooltip.
+    H.truthy(rows[1].hit.hover.shown)
+    rows[1].hit.scripts.OnLeave(rows[1].hit)
+    H.falsy(shown.visible)
+    -- An auction house row opens no tooltip.
+    local before = #shown
+    rows[2].hit.scripts.OnEnter(rows[2].hit)
+    H.eq(#shown, before)
+end)

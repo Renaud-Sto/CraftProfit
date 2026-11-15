@@ -1,7 +1,7 @@
 local H = ...
 
 local function load()
-    return H.newNS("Util", "Core", "Data/Skillup", "Data/Disenchant", "Evaluate")
+    return H.newNS("Util", "Core", "Data/Skillup", "Data/Disenchant", "Vendor", "Evaluate")
 end
 
 local RECIPE = {
@@ -43,7 +43,7 @@ H.test("a fully priced recipe gives cost, every option, the best one and the net
     local r = E.run(ctx())
     H.eq(r.cost.total, 250)
     H.eq(r.cost.missing, {})
-    H.eq(r.cost.lines[1], { itemID = 1, qty = 2, unit = 100, subtotal = 200 })
+    H.eq(r.cost.lines[1], { itemID = 1, qty = 2, unit = 100, subtotal = 200, source = "ah", ahUnit = 100 })
     H.eq(r.options.ah, { status = "ok", value = 950 })
     H.eq(r.options.vendor, { status = "ok", value = 200 })
     H.eq(r.options.disenchant.status, "ok")
@@ -238,7 +238,7 @@ H.test("several crafts scale quantities, cost, resale values and the net, not th
     local five = E.run(ctx({ showPerPoint = true, crafts = 5 }))
     H.eq(five.crafts, 5)
     H.eq(five.cost.total, one.cost.total * 5)
-    H.eq(five.cost.lines[1], { itemID = 1, qty = 10, unit = 100, subtotal = 1000 })
+    H.eq(five.cost.lines[1], { itemID = 1, qty = 10, unit = 100, subtotal = 1000, source = "ah", ahUnit = 100 })
     H.eq(five.options.ah.value, one.options.ah.value * 5)
     H.eq(five.options.vendor.value, one.options.vendor.value * 5)
     H.eq(five.options.disenchant.value, one.options.disenchant.value * 5)
@@ -299,4 +299,86 @@ H.test("isBindOnPickup is the one bind-on-pickup rule", function()
     H.falsy(E.isBindOnPickup({}))
     H.falsy(E.isBindOnPickup(nil))
     H.falsy(E.isBindOnPickup("x"))
+end)
+
+-- Vendor prices: unit, kind, age per item.
+local function vendors(map)
+    return function(id)
+        local row = map[id]
+        if not row then return nil end
+        return row[1], row[2], row[3]
+    end
+end
+
+H.test("a material sold by a vendor counts at the vendor price when the AH asks more", function()
+    local E = load().Evaluate
+    -- Leaded Vial: 4s 88c at the auction house, 40c at a vendor (CurseForge report).
+    local r = E.run(ctx({
+        priceOf = prices({ [1] = { 488, 60 } }),
+        vendorOf = vendors({ [1] = { 40, "seen", 3600 } }),
+    }))
+    H.eq(r.cost.lines[1], {
+        itemID = 1, qty = 2, unit = 40, subtotal = 80, source = "vendor", ahUnit = 488,
+        vendorUnit = 40, vendorKind = "seen", vendorAge = 3600,
+    })
+    H.eq(r.cost.total, 80 + 50)
+    H.eq(r.net, 950 - 130)
+end)
+
+H.test("the auction house price stays when it is cheaper than the vendor", function()
+    local E = load().Evaluate
+    local r = E.run(ctx({ vendorOf = vendors({ [1] = { 150, "listed" } }) }))
+    H.eq(r.cost.lines[1].unit, 100)
+    H.eq(r.cost.lines[1].source, "ah")
+    H.eq(r.cost.lines[1].vendorUnit, 150)
+    H.eq(r.cost.total, 250)
+end)
+
+H.test("a tie goes to the vendor", function()
+    local E = load().Evaluate
+    local r = E.run(ctx({ vendorOf = vendors({ [1] = { 100, "seen", 0 } }) }))
+    H.eq(r.cost.lines[1].source, "vendor")
+end)
+
+H.test("a vendor material with no AH price is priced, not missing", function()
+    local E = load().Evaluate
+    local r = E.run(ctx({
+        priceOf = prices({ [2] = false }),
+        vendorOf = vendors({ [2] = { 40, "listed" } }),
+    }))
+    H.eq(r.cost.missing, {})
+    H.eq(r.cost.total, 200 + 40)
+    H.eq(r.incomplete, false)
+    H.eq(r.cost.lines[2].ahUnit, nil)
+end)
+
+H.test("the age of an AH price beaten by a vendor does not make the result old", function()
+    local E = load().Evaluate
+    -- Item 2's AH price is the oldest (120 s); a vendor beats it, so item 1's 60 s is next
+    -- after the output's 30 s and the disenchant result's 10 s.
+    local r = E.run(ctx({ vendorOf = vendors({ [2] = { 10, "seen", 999999 } }) }))
+    H.eq(r.oldestAge, 60)
+end)
+
+H.test("the crafted item and disenchant results are never priced at a vendor", function()
+    local E = load().Evaluate
+    local r = E.run(ctx({ vendorOf = vendors({ [100] = { 1, "seen", 0 }, [200] = { 1, "seen", 0 } }) }))
+    H.eq(r.options.ah.value, 950)
+    H.eq(r.options.disenchant.value, 380)
+end)
+
+H.test("an invalid vendor price is ignored", function()
+    local E = load().Evaluate
+    for _, bad in ipairs({ 0, -5, 0 / 0, 1 / 0, "40" }) do
+        local r = E.run(ctx({ vendorOf = vendors({ [1] = { bad, "seen" } }) }))
+        H.eq(r.cost.lines[1].source, "ah")
+        H.eq(r.cost.total, 250)
+    end
+end)
+
+H.test("several crafts scale a vendor-priced line", function()
+    local E = load().Evaluate
+    local r = E.run(ctx({ crafts = 3, vendorOf = vendors({ [1] = { 40, "seen", 0 } }) }))
+    H.eq(r.cost.lines[1].subtotal, 40 * 2 * 3)
+    H.eq(r.cost.total, (80 + 50) * 3)
 end)

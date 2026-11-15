@@ -4,6 +4,13 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ## [Unreleased]
 
+### Fixed
+- **Materials sold by vendors are counted at the vendor price.** A material a vendor sells (vials, threads, dyes, flux, salt, spices...) now costs the cheaper of its auction house price and its vendor price: a Leaded Vial at 4s 88c on the auction house but 40c at a vendor counts 40c. A vendor material with no auction house listing no longer leaves the cost unknown. This applies to the main window, the profit tags of the profession window, the pinned list, the leveling list and the History window's materials and profit. Reported on CurseForge.
+
+### Added
+- **Vendor prices learnt at merchants.** Every merchant you open records the price of what it sells for money in unlimited supply (account wide, reputation discount included). Until then a built-in list gives the usual price of about thirty common materials.
+- **Price source in the Materials detail.** A material counted at the vendor price shows *vendor* beside its price; hovering it gives both prices (vendor, seen how long ago or usual price, and auction house) and which one is counted.
+
 ## [1.1.0] - 2026-10-14
 
 ### Added

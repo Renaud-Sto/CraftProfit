@@ -176,6 +176,11 @@ function Controller.knowsEnchanting()
     return known
 end
 
+-- The vendor price lookup (Vendor.priceOf) over the prices seen at merchants, account wide.
+function Controller.vendorOf()
+    return ns.Vendor.priceOf(CraftProfitDB.vendor, time())
+end
+
 -- crafts is only given for the recipe shown in the window; the pinned list is always
 -- one craft. Within a refresh pass a recipe (the same table: a pin is evaluated for the list
 -- under the main window and for the pinned window) is evaluated once per crafts and per-point
@@ -189,11 +194,13 @@ function Controller.evaluate(recipe, crafts, forcePerPoint)
         memo = pass.results[recipe]
         if memo and memo[key] then return memo[key] end
         pass.priceOf = pass.priceOf or Prices.priceOf(Controller.market(), time())
+        pass.vendorOf = pass.vendorOf or Controller.vendorOf()
     end
     local result = Evaluate.run({
         recipe = recipe,
         crafts = crafts,
         priceOf = pass and pass.priceOf or Prices.priceOf(Controller.market(), time()),
+        vendorOf = pass and pass.vendorOf or Controller.vendorOf(),
         itemInfo = Controller.itemInfo,
         cut = settings.cut,
         showPerPoint = showPerPoint,

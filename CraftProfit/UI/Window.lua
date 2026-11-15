@@ -270,17 +270,39 @@ local function buildMaterials()
     for i = 1, MAX_DETAIL do
         -- A reagent row is never selected: its selected tint stays hidden.
         local hit = Native.listRow(panel.body, i, ROW_H, 0)
-        local name = hit:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        name:SetPoint("LEFT", hit, "LEFT", 8, 0)
-        name:SetPoint("RIGHT", hit, "RIGHT", -80, 0)
-        name:SetJustifyH("LEFT")
-        name:SetWordWrap(false)
-        paint(name, main)
         local value = hit:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         value:SetPoint("RIGHT", hit, "RIGHT", -8, 0)
         value:SetJustifyH("RIGHT")
         paint(value, muted)
-        local row = { hit = hit, name = name, value = value }
+        -- Where the price comes from, left of it: "vendor" for a vendor price, empty (no
+        -- width) for the auction house. The name is cut before it.
+        local tag = hit:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        tag:SetPoint("RIGHT", value, "LEFT", -6, 0)
+        tag:SetWordWrap(false)
+        paint(tag, muted)
+        local name = hit:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        name:SetPoint("LEFT", hit, "LEFT", 8, 0)
+        name:SetPoint("RIGHT", tag, "LEFT", -6, 0)
+        name:SetJustifyH("LEFT")
+        name:SetWordWrap(false)
+        paint(name, main)
+        local row = { hit = hit, name = name, value = value, tag = tag }
+        -- A material a vendor sells: both prices and the one counted (Present.reagentTip).
+        -- Hooked: Native.listRow's hover highlight uses the same scripts.
+        hit:HookScript("OnEnter", function(self)
+            if type(row.tip) ~= "table" or type(GameTooltip) ~= "table" then return end
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            local gold = Colors.text("gold")
+            GameTooltip:SetText(reagentName(row.itemID), gold[1], gold[2], gold[3], 1, true)
+            for _, line in ipairs(row.tip) do
+                local c = line[2] == "main" and main or muted
+                GameTooltip:AddLine(line[1], c[1], c[2], c[3], true)
+            end
+            GameTooltip:Show()
+        end)
+        hit:HookScript("OnLeave", function()
+            if row.tip then hideTip() end
+        end)
         hit:SetScript("OnClick", function()
             if hit.dragged == true then return end
             if row.itemID and handlers.onReagentClick then handlers.onReagentClick(row.itemID, row.qty) end
@@ -558,9 +580,11 @@ function Window.render(model)
             row.itemID, row.qty = cost.itemID, cost.qty
             row.name:SetText(cost.qty .. "x " .. reagentName(cost.itemID))
             row.value:SetText(cost.subtotalText)
+            row.tag:SetText(cost.sourceText or "")
+            row.tip = cost.tip
             row.hit:Show()
         else
-            row.itemID = nil
+            row.itemID, row.tip = nil, nil
             row.hit:Hide()
         end
     end

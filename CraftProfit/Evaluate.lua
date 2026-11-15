@@ -1,7 +1,7 @@
 -- Combines a recipe, prices and item facts into one profit result.
 -- Pure Lua, no WoW API: the caller passes lookups as functions.
 local _, ns = ...
-local Util, Core = ns.Util, ns.Core
+local Util, Core, Vendor = ns.Util, ns.Core, ns.Vendor
 local Skillup, Disenchant = ns.Data.Skillup, ns.Data.Disenchant
 
 local Evaluate = {}
@@ -62,14 +62,40 @@ function Evaluate.run(ctx)
         return unit
     end
 
+    -- A material is bought, so it costs the cheaper of the auction house and a vendor
+    -- (ctx.vendorOf, optional: unit, kind, age). The crafted item and the disenchant
+    -- results are sold: they keep the auction house price. The AH age only counts when the
+    -- AH price is the one used.
+    local vendorOf = type(ctx.vendorOf) == "function" and ctx.vendorOf or function() return nil end
+    local reagents = {}
+    local function reagentPrice(itemID)
+        local known = reagents[itemID]
+        if known then return known end
+        local ahUnit, age = ctx.priceOf(itemID)
+        if not Util.isCopper(ahUnit) then ahUnit, age = nil, nil end
+        local vendorUnit, vendorKind, vendorAge = vendorOf(itemID)
+        if not Util.isCopper(vendorUnit) or vendorUnit <= 0 then vendorUnit, vendorKind, vendorAge = nil, nil, nil end
+        local unit, source = Vendor.cheapest(ahUnit, vendorUnit)
+        if source == "ah" and Util.isFinite(age) and (oldest == nil or age > oldest) then oldest = age end
+        known = {
+            unit = unit, source = source, ahUnit = ahUnit,
+            vendorUnit = vendorUnit, vendorKind = vendorKind, vendorAge = vendorAge,
+        }
+        reagents[itemID] = known
+        return known
+    end
+
     local lines = {}
     for _, r in ipairs(recipe.reagents) do
-        local unit = priceOf(r.itemID)
+        local p = reagentPrice(r.itemID)
+        local unit = p.unit
         lines[#lines + 1] = {
             itemID = r.itemID, qty = r.qty, unit = unit, subtotal = unit and unit * r.qty or nil,
+            source = p.source, ahUnit = p.ahUnit,
+            vendorUnit = p.vendorUnit, vendorKind = p.vendorKind, vendorAge = p.vendorAge,
         }
     end
-    local total, missing = Core.sumCost(recipe.reagents, priceOf)
+    local total, missing = Core.sumCost(recipe.reagents, function(id) return reagentPrice(id).unit end)
 
     local info = withID(ctx.itemInfo(recipe.outputItemID), recipe.outputItemID)
     local qty = recipe.outputQty

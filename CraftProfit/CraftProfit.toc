@@ -16,6 +16,8 @@ Colors.lua
 Core.lua
 Data/Skillup.lua
 Data/Disenchant.lua
+Data/VendorPrices.lua
+Vendor.lua
 Locale.lua
 Locales/enUS.lua
 Locales/frFR.lua
@@ -32,6 +34,7 @@ Evaluate.lua
 Present.lua
 Leveling.lua
 AHAdapter.lua
+MerchantAdapter.lua
 TradeAdapter.lua
 UI/Layout.lua
 UI/Native.lua

@@ -163,13 +163,14 @@ end
 -- day (indicators' netToday <= 0); nil when unknown (stale data or sale price, no sale).
 local function computeList(now)
     local seriesOf, cut = seriesReader(), CraftProfitDB.settings.cut
+    local vendorOf = Controller.vendorOf()
     local out, expires = {}, nil
     for _, entry in ipairs(CraftProfitDB.tracked) do
         local fresh, materialsFresh, saleFresh, flip = freshness(entry.recipe, seriesOf, now)
         if flip and (not expires or flip < expires) then expires = flip end
         local indicator, atLoss
         if fresh then
-            local ind = HistoryView.indicators(entry.recipe, seriesOf, now, Controller.historyItems, cut)
+            local ind = HistoryView.indicators(entry.recipe, seriesOf, now, Controller.historyItems, cut, vendorOf)
             if not materialsFresh then ind.materials = nil end
             if not saleFresh then ind.sale = nil end
             if ind.materials or ind.sale then indicator = ind end
@@ -270,8 +271,9 @@ local function computeData(recipeID, view, period, now)
     local days, field, summary, usual30, weekdayDays
     local itemID = tonumber(view:match("^item:(%d+)$"))
     -- The recipe's rows over the period and over 30 days: the profit whatever the view.
-    local rows = HistoryView.recipeDays(recipe, seriesOf, now, period, cut, Controller.historyItems)
-    local month = HistoryView.recipeDays(recipe, seriesOf, now, History.USUAL_DAYS, cut, Controller.historyItems)
+    local vendorOf = Controller.vendorOf()
+    local rows = HistoryView.recipeDays(recipe, seriesOf, now, period, cut, Controller.historyItems, vendorOf)
+    local month = HistoryView.recipeDays(recipe, seriesOf, now, History.USUAL_DAYS, cut, Controller.historyItems, vendorOf)
     local profit = HistoryView.summary(rows, "net")
     local profit30 = HistoryView.summary(month, "net")
     profit = { today = profit.today, todayDay = profit.todayDay, usual = profit30.usual, enough = profit30.enough }

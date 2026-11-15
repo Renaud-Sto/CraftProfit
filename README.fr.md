@@ -25,7 +25,7 @@ CraftProfit est un addon pour **World of Warcraft: Forever**. Sélectionnez une 
 
 ## Fonctionnalités
 
-- **Coût d'une recette** aux prix réels de l'hôtel des ventes, avec le détail des composants sous le total.
+- **Coût d'une recette** aux prix réels de l'hôtel des ventes, avec le détail des composants sous le total. Les composants vendus par un marchand (fioles, fils, teintures...) comptent au prix du marchand quand il est moins cher, appris à chaque marchand que vous ouvrez.
 - **Trois débouchés comparés** : hôtel des ventes (après la commission de 5 %), prix marchand et valeur espérée du désenchantement.
 - **Meilleure option mise en évidence**, avec le résultat net du craft.
 - **Profit dans la fenêtre de métier** : chaque recette apprise qui a des prix affiche ce qu'un craft rapporte ou coûte à droite de sa ligne dans la liste des recettes (`+12` argent `23` cuivre (icônes de pièces) en vert, `-2` argent en rouge) ; désactivable dans la fenêtre d'options.

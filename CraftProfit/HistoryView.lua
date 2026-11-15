@@ -1,7 +1,7 @@
 -- Turns a tracked recipe and its items' price series into the figures the history window
 -- and the main window indicators show. Pure Lua, no WoW API, no widgets.
 --
--- HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf)
+-- HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf, vendorOf)
 --   -> { { day, materials, sale, net, carried, materialsCarried, saleCarried, netCarried, n }, ... }
 --   ascending, one entry per local day of the last `days` days on which at least one item
 --   of the recipe was measured. itemSeriesOf(itemID) returns that item's saved series (or
@@ -19,6 +19,9 @@
 --   (when sale is known) is false or "all"; netCarried (when net is known) is "all" when
 --   the sale price was carried (the profit repeats an old sale), "some" when only reagent
 --   prices were, else false. n = the most measures of one item that day.
+--   vendorOf (optional, Vendor.priceOf): a reagent a vendor sells counts at the cheaper of
+--   its day price and the vendor price, as in Evaluate; a reagent the vendor wins is never
+--   carried (the vendor price is today's) and has a price even on a day it was not measured.
 --   Never mutates the saved series.
 -- HistoryView.summary(days, field) -> { today, usual, low, high, measures, daysCovered,
 --   enough, todayDay, lowDay, highDay } for one view: `field` names the value of recipeDays entries ("net",
@@ -36,13 +39,13 @@
 --   a usual above 0). gap = today - usual; tone "flat" when |gap| <= FLAT_PERCENT % of
 --   |usual| (a usual of exactly 0: only a gap of 0), else "up" (good = true) or "down"
 --   (good = false). nil unless summary.enough and both are finite.
--- HistoryView.indicators(recipe, itemSeriesOf, now, itemsOf, cut)
+-- HistoryView.indicators(recipe, itemSeriesOf, now, itemsOf, cut, vendorOf)
 --   -> { materials = { pct, tone, good } or nil, sale = { pct, tone, good } or nil,
 --   netToday }: today against the usual price over 30 days. Materials cheaper and a sale
 --   higher are good (true), the opposite bad (false); within the flat band good is nil.
 --   netToday: the auction house profit of the newest day (summary "net"), nil unknown.
 local _, ns = ...
-local Util, Core, History = ns.Util, ns.Core, ns.History
+local Util, Core, History, Vendor = ns.Util, ns.Core, ns.History, ns.Vendor
 
 local HistoryView = {}
 ns.HistoryView = HistoryView
@@ -61,7 +64,7 @@ local function sellsOutput(recipe, itemsOf)
     return false
 end
 
-function HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf)
+function HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf, vendorOf)
     local out = {}
     days = Util.count(days)
     if type(recipe) ~= "table" or type(recipe.reagents) ~= "table" or type(itemSeriesOf) ~= "function"
@@ -78,6 +81,17 @@ function HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf)
     end
     for _, r in ipairs(recipe.reagents) do want(type(r) == "table" and r.itemID or nil) end
     if sells then want(recipe.outputItemID) end
+    -- The vendor price of each reagent a vendor sells (read once: it does not move by day).
+    local vendorUnit = {}
+    if type(vendorOf) == "function" then
+        for _, r in ipairs(recipe.reagents) do
+            local id = type(r) == "table" and Util.id(r.itemID) or nil
+            if id and vendorUnit[id] == nil then
+                local unit = vendorOf(id)
+                vendorUnit[id] = Util.isCopper(unit) and unit > 0 and unit or false
+            end
+        end
+    end
 
     -- Daily points of each item, over the period and the lookback a carried price may need.
     local first = History.dayOf(History.dayOf(now) - (days - 1) * DAY + DAY / 2)
@@ -113,7 +127,18 @@ function HistoryView.recipeDays(recipe, itemSeriesOf, now, days, cut, itemsOf)
                 end
             end
         end
-        local function priceOf(id) return prices[id] end
+        -- A reagent the vendor sells for less (or that has no day price) is not carried.
+        local bought = {}
+        for id, unit in pairs(vendorUnit) do
+            if unit then
+                local best, source = Vendor.cheapest(prices[id], unit)
+                if source == "vendor" then
+                    bought[id] = best
+                    if id ~= recipe.outputItemID then isCarried[id] = nil end
+                end
+            end
+        end
+        local function priceOf(id) return bought[id] or prices[id] end
         local materials = Core.sumCost(recipe.reagents, priceOf)
         local sale = sells and Core.netSale(prices[recipe.outputItemID], recipe.outputQty, cut) or nil
         local net = (materials and sale) and sale - materials or nil
@@ -205,8 +230,8 @@ function HistoryView.profitCompare(summary)
     return { gap = gap, tone = "down", good = false }
 end
 
-function HistoryView.indicators(recipe, itemSeriesOf, now, itemsOf, cut)
-    local days = HistoryView.recipeDays(recipe, itemSeriesOf, now, History.USUAL_DAYS, cut, itemsOf)
+function HistoryView.indicators(recipe, itemSeriesOf, now, itemsOf, cut, vendorOf)
+    local days = HistoryView.recipeDays(recipe, itemSeriesOf, now, History.USUAL_DAYS, cut, itemsOf, vendorOf)
     return {
         materials = indicator(HistoryView.summary(days, "materials"), false),
         sale = indicator(HistoryView.summary(days, "sale"), true),

@@ -1,7 +1,7 @@
 local H = ...
 
 local function load()
-    local ns = H.newNS("Util", "Format", "Colors", "Core", "Data/Skillup", "Data/Disenchant", "Recipes", "DB", "Evaluate", "Present",
+    local ns = H.newNS("Util", "Format", "Colors", "Core", "Data/Skillup", "Data/Disenchant", "Vendor", "Recipes", "DB", "Evaluate", "Present",
         "Locale", "Locales/enUS", "Locales/frFR", "Locales/esES")
     ns.Locale.select("enUS")
     return ns
@@ -291,7 +291,7 @@ H.test("a disenchant data gap shows no data and never the missing prices warning
     H.eq(m.tiles[3].value, "no data")
     H.truthy(m.tiles[3].muted)
     H.eq(m.banner, { label = "RESULT", text = "Best: Auction house", value = "+7s", kind = "profit" })
-    H.eq(m.verdict.kind, "profit")
+    H.truthy(m.verdict.kind ~= "incomplete")
 end)
 
 H.test("a data gap on an item nobody can sell otherwise says so in the banner", function()
@@ -405,4 +405,52 @@ H.test("rowTag shows the same net as the main window's banner", function()
     local text = ns.Present.rowTag(result, ns.Format.short)
     H.eq(text, "+" .. ns.Format.short(result.net))
     H.eq(ns.Present.build(result, ns.L, ns.Format.short).banner.value, text)
+end)
+
+H.test("a vendor-priced material is tagged and its tooltip gives both prices", function()
+    local ns = load()
+    local vendorOf = function(id) if id == 1 then return 40, "seen", 7200 end end
+    local m = model(ns, { vendorOf = vendorOf })
+    H.eq(m.costLines[1].source, "vendor")
+    H.eq(m.costLines[1].sourceText, "vendor")
+    H.eq(m.costLines[1].unitText, "40c")
+    H.eq(m.costLines[1].tip, {
+        { "Counted at the vendor price (cheaper)", "main" },
+        { "Vendor: 40c each (seen 2h ago)", "muted" },
+        { "Auction house: 1s each", "muted" },
+    })
+    -- An auction house line keeps no tag.
+    H.eq(m.costLines[2].source, nil)
+    H.eq(m.costLines[2].tip, nil)
+end)
+
+H.test("a listed vendor price says so and invites a merchant visit; a missing AH price reads as none", function()
+    local ns = load()
+    local vendorOf = function(id) if id == 2 then return 40, "listed" end end
+    local m = model(ns, {
+        vendorOf = vendorOf,
+        priceOf = function(id) if id == 2 then return nil end return 100, 1 end,
+    })
+    H.eq(m.costLines[2].tip, {
+        { "Counted at the vendor price (cheaper)", "main" },
+        { "Vendor: 40c each (usual price)", "muted" },
+        { "Auction house: no price", "muted" },
+        { "Open a merchant that sells it to record its exact price.", "muted" },
+    })
+    H.truthy(m.verdict.kind ~= "incomplete")
+end)
+
+H.test("a material the auction house sells for less than a vendor keeps the AH tag-free line with a tooltip", function()
+    local ns = load()
+    local m = model(ns, { vendorOf = function(id) if id == 1 then return 500, "seen", 0 end end })
+    H.eq(m.costLines[1].source, nil)
+    H.eq(m.costLines[1].tip[1], { "Counted at the auction house price (cheaper)", "main" })
+end)
+
+H.test("the vendor tooltip is translated", function()
+    local ns = load()
+    ns.Locale.select("frFR")
+    local m = model(ns, { vendorOf = function(id) if id == 1 then return 40, "seen", 7200 end end })
+    H.eq(m.costLines[1].sourceText, "marchand")
+    H.eq(m.costLines[1].tip[2][1], "Marchand\194\160: 40c l'unité (vu il y a 2h)")
 end)

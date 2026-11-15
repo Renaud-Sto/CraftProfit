@@ -295,6 +295,14 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Open the main, leveling, pinned and options windows overlapping: click the body, a row, a button or the title of each in turn: the clicked window comes fully to the front, its border and content above the others, never mixed with another window's border.
 - [ ] A window opened last shows in front of the ones already open.
 
+## Vendor prices
+- [ ] Open a trade goods or alchemy supplies vendor, then `/reload`: `CraftProfitDB.vendor` in the SavedVariables file holds its items as `{ unit, time }`, the unit being the price of one (a pack of 5 threads divided by 5). Items with a limited stock or a token cost are absent.
+- [ ] A recipe with Leaded Vial (or another vendor material): the Materials detail shows *vendor* beside its price, the cost uses the vendor price, the hover tooltip shows both prices; with no merchant seen yet, the tooltip says *usual price*.
+- [ ] A material cheaper at the auction house than at a vendor keeps no *vendor* tag; its tooltip says the auction house price is counted.
+- [ ] The profession window's row tags, the pinned list and the leveling list change with the vendor price, like the main window.
+- [ ] `/reload` with a merchant window open raises no error and records the merchant.
+- [ ] A French client: the tag reads *marchand*, the tooltip is French.
+
 ## Numbers
 - [ ] For one recipe, compare each reagent price with the AH listing prices: the stored price is the median of the 5 cheapest units (not the minimum).
 - [ ] Sell one crafted item (or use `docs/probe-findings.md` F5): the mailed amount matches `price × (1 − cut)`. If not, change `DB.DEFAULTS.cut` and the test expectations.

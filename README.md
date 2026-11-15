@@ -23,7 +23,7 @@ CraftProfit is an addon for **World of Warcraft: Forever**. Select a recipe you 
 
 ## Features
 
-- **Recipe cost** from live auction house prices, with the reagent detail unfolded under the total.
+- **Recipe cost** from live auction house prices, with the reagent detail unfolded under the total. Materials a vendor sells (vials, threads, dyes...) count at the vendor price when it is cheaper, learnt at every merchant you open.
 - **Three exits compared**: auction house (after the 5 % commission), vendor price, and the expected disenchant value.
 - **Best option highlighted**, with the net result of the craft.
 - **Profit in the profession window**: each learned recipe with prices shows what one craft earns or loses at the right of its row in the recipe list (`+12` silver `23` copper coin icons green, `-2` silver red); it can be turned off in the options window.

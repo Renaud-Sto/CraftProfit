@@ -208,6 +208,26 @@ local function optionText(option, L, fmt)
     return L.UNKNOWN
 end
 
+-- Tooltip lines of a material a vendor sells (an Evaluate cost line): both unit prices and
+-- which one the cost uses. { { text, tone } }, tone "main" or "muted".
+function Present.reagentTip(L, fmt, line)
+    local tip = {}
+    local ah = line.ahUnit and string.format(L.TIP_AH_UNIT, fmt(line.ahUnit)) or L.TIP_AH_NONE
+    local vendor
+    if line.vendorKind == "seen" then
+        local when = Present.durationText(L, line.vendorAge)
+        vendor = when and string.format(L.TIP_VENDOR_SEEN, fmt(line.vendorUnit), when)
+            or string.format(L.TIP_VENDOR_SEEN_NOW, fmt(line.vendorUnit))
+    else
+        vendor = string.format(L.TIP_VENDOR_LISTED, fmt(line.vendorUnit))
+    end
+    tip[1] = { line.source == "vendor" and L.TIP_USES_VENDOR or L.TIP_USES_AH, "main" }
+    tip[2] = { vendor, "muted" }
+    tip[3] = { ah, "muted" }
+    if line.vendorKind ~= "seen" then tip[4] = { L.TIP_VENDOR_LEARN, "muted" } end
+    return tip
+end
+
 function Present.build(result, L, fmt, opts)
     local staleAfter = opts and opts.staleAfter or DEFAULT_STALE
     local lines = {}
@@ -229,6 +249,12 @@ function Present.build(result, L, fmt, opts)
             itemID = line.itemID, qty = line.qty,
             unitText = fmt(line.unit), subtotalText = fmt(line.subtotal),
         }
+        -- Only a vendor price is tagged: the auction house is the default source.
+        if line.source == "vendor" then
+            costLines[i].source = "vendor"
+            costLines[i].sourceText = L.SOURCE_VENDOR
+        end
+        if line.vendorUnit then costLines[i].tip = Present.reagentTip(L, fmt, line) end
     end
     local verdict = verdictFor(result, L, fmt)
     local tiles = {}

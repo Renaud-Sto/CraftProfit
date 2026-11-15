@@ -1910,3 +1910,34 @@ H.test("/cp history arguments: trimmed, numbers checked, anything else gets the 
     C.historyCommand("  remove   1 ")
     H.eq(#T.env.CraftProfitDB.tracked, 0)
 end)
+
+-- Vendor prices
+H.test("a merchant visit records its prices and re-prices the recipe at the cheaper vendor", function()
+    local T = boot()
+    stock(T)
+    local C = T.ns.Controller
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    H.eq(T.ns.Window.lastModel.costLines[1].source, nil)
+    local before = T.ns.Window.lastModel.materials.total
+    -- The merchant sells item 1 (AH: 1s) for 40c, five at a time for 2s.
+    T.env.GetMerchantNumItems = function() return 1 end
+    T.env.GetMerchantItemID = function() return 1 end
+    T.env.C_MerchantFrame = { GetItemInfo = function()
+        return { price = 200, stackCount = 5, numAvailable = -1, isPurchasable = true, hasExtendedCost = false }
+    end }
+    T.ns.Merchant.onEvent("MERCHANT_SHOW")
+    T.run()
+    H.eq(T.env.CraftProfitDB.vendor[1], { 40, 1700000000 })
+    local m = T.ns.Window.lastModel
+    H.eq(m.costLines[1].source, "vendor")
+    H.eq(m.materials.total, "<130>")
+    H.truthy(m.materials.total ~= before)
+end)
+
+H.test("a broken vendor table in the save is repaired at load", function()
+    local T = W.boot(H, { items = ITEMS })
+    T.env.CraftProfitDB = { vendor = { [1] = { 40, 5 }, [2] = "junk", x = { 1, 1 } } }
+    T.env.GetMoneyString = function(c) return "<" .. c .. ">" end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(T.env.CraftProfitDB.vendor, { [1] = { 40, 5 } })
+end)

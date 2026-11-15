@@ -223,7 +223,7 @@ La fenêtre suit la langue du jeu : anglais, français et espagnol (l'espagnol d
 - **Les chances de point sont des estimations** fondées sur la couleur de la recette.
 - **L'historique des prix dépend de vos propres recherches.** Un prix n'est enregistré que lorsque vous lancez une recherche ou un scan à l'hôtel des ventes ; le graphique et les pourcentages ne sont aussi réguliers que vos actualisations.
 - **Aucun historique ni fréquence de vente.** Le jeu ne fournit pas ces données : CraftProfit ne peut pas dire à quelle vitesse un objet se vend.
-- **L'hôtel des ventes seul pour les prix.** Les prix marchand viennent du jeu.
+- **Les prix d'achat marchand sont appris.** Le jeu ne donne le prix d'un marchand que pendant que sa fenêtre est ouverte : CraftProfit le note à chaque marchand que vous ouvrez (ce qui se paie en argent, en stock illimité). Avant cela, une trentaine de composants courants utilisent un prix habituel intégré, signalé *prix habituel* dans l'infobulle. Un prix vu avec une remise de réputation est gardé tel quel, pour tous les personnages du compte. La tuile **MARCHAND** reste ce qu'un marchand *paie* pour l'objet fabriqué, donné par le jeu.
 
 ## FAQ et dépannage
 

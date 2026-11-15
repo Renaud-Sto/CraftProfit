@@ -112,3 +112,15 @@ H.test("broken saved lists are repaired at load and an old per-character list is
     H.eq(T.env.CraftProfitDB.shopping.x, nil)
     H.eq(T.env.CraftProfitCharDB.shopping, nil)
 end)
+
+H.test("the materials table has striped rows and a gold rule between each column", function()
+    local T = boot()
+    T.ns.ShoppingWindow.show()
+    local parts = T.ns.ShoppingWindow.parts
+    H.eq(#parts.rules, 3)
+    H.truthy(parts.headerRule)
+    -- One separator in the middle of each gap between columns, right to left.
+    local gaps = T.ns.ShoppingWindow.columnGaps()
+    H.eq(#gaps, 3)
+    H.truthy(gaps[1] < gaps[2] and gaps[2] < gaps[3])
+end)

@@ -116,6 +116,7 @@ local function applyAtlas(tex, name)
     if mark == "!" and type(tex.SetVertTile) == "function" then tex:SetVertTile(true) end
     return info
 end
+Native.applyAtlas = applyAtlas
 
 -- Magnifier ---------------------------------------------------------------------
 

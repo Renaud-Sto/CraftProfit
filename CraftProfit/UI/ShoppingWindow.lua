@@ -220,6 +220,51 @@ local function buildRow(body, i)
     return row
 end
 
+-- Table look, as the auction house lists and FishDex's ranking: every other row striped
+-- (the AH's light stripe atlas, else a faint white; a darker band between), so the eye
+-- follows a row across. Drawn on the body under the rows, for every visible slot.
+local function stripes(body, count)
+    for i = 1, count do
+        local t = body:CreateTexture(nil, "BORDER")
+        t:SetPoint("TOPLEFT", body, "TOPLEFT", 0, -(i - 1) * ROW_H)
+        t:SetPoint("TOPRIGHT", body, "TOPRIGHT", -ROW_RIGHT, -(i - 1) * ROW_H)
+        t:SetHeight(ROW_H)
+        if i % 2 == 1 then
+            if Native.applyAtlas(t, "auctionhouse-rowstripe-1") then
+                t:SetAlpha(0.6)
+            else
+                t:SetColorTexture(1, 1, 1, 0.05)
+            end
+        else
+            t:SetColorTexture(0, 0, 0, 0.25)
+        end
+    end
+end
+
+-- Distance from a row's right edge to the gap left of each material column: cost, needed,
+-- in bags (the separator sits in the middle of the gap).
+local function columnGaps()
+    local cost = 8 + COST_W + COL_GAP / 2
+    local need = cost + COUNT_W + COL_GAP
+    local have = need + COUNT_W + COL_GAP
+    return { cost, need, have }
+end
+ShoppingWindow.columnGaps = columnGaps
+
+-- Thin gold rules between the material columns, down the whole list.
+local function columnRules(body)
+    local gold = Colors.text("gold")
+    parts.rules = {}
+    for _, x in ipairs(columnGaps()) do
+        local line = body:CreateTexture(nil, "ARTWORK")
+        line:SetPoint("TOPRIGHT", body, "TOPRIGHT", -(ROW_RIGHT + x), 0)
+        line:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", -(ROW_RIGHT + x), 0)
+        line:SetWidth(1)
+        line:SetColorTexture(gold[1], gold[2], gold[3], 0.15)
+        parts.rules[#parts.rules + 1] = line
+    end
+end
+
 -- The column labels, right-aligned over the material columns (same widths and gaps).
 local function buildLabels()
     local f = section("labels", LABELS_H)
@@ -238,6 +283,14 @@ local function buildLabels()
     parts.labelName = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     parts.labelName:SetPoint("LEFT", f, "LEFT", Native.PANEL_EDGE + 8, 0)
     parts.labelName:SetJustifyH("LEFT")
+    -- A gold rule under the labels, as a table header.
+    local gold = Colors.text("gold")
+    local rule = f:CreateTexture(nil, "ARTWORK")
+    rule:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", Native.PANEL_EDGE, -2)
+    rule:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -Native.PANEL_EDGE, -2)
+    rule:SetHeight(1)
+    rule:SetColorTexture(gold[1], gold[2], gold[3], 0.35)
+    parts.headerRule = rule
 end
 
 local function build()
@@ -271,6 +324,7 @@ local function build()
     parts.recipesPanel = Native.panel(content, "")
     parts.frames.recipes = parts.recipesPanel.frame
     parts.recipesPanel.frame:SetHeight(recipesH)
+    stripes(parts.recipesPanel.body, RECIPES_VISIBLE)
     for i = 1, RECIPES_VISIBLE do parts.recipes[i] = buildRecipeRow(parts.recipesPanel.body, i) end
     parts.recipeBar = Native.scrollbar(parts.recipesPanel.body, RECIPES_VISIBLE * ROW_H)
     parts.recipeBar.frame:SetPoint("TOPRIGHT", parts.recipesPanel.body, "TOPRIGHT", -2, 0)
@@ -288,6 +342,8 @@ local function build()
     parts.panel = Native.panel(content, "")
     parts.frames.panel = parts.panel.frame
     parts.panel.frame:SetHeight(panelH)
+    stripes(parts.panel.body, VISIBLE)
+    columnRules(parts.panel.body)
     for i = 1, VISIBLE do parts.rows[i] = buildRow(parts.panel.body, i) end
     parts.bar = Native.scrollbar(parts.panel.body, VISIBLE * ROW_H)
     parts.bar.frame:SetPoint("TOPRIGHT", parts.panel.body, "TOPRIGHT", -2, 0)

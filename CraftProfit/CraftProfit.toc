@@ -19,6 +19,7 @@ Data/Skillup.lua
 Data/Disenchant.lua
 Data/VendorPrices.lua
 Vendor.lua
+Shopping.lua
 Locale.lua
 Locales/enUS.lua
 Locales/frFR.lua
@@ -47,6 +48,7 @@ UI/PinsUI.lua
 UI/LevelingUI.lua
 UI/PinnedWindow.lua
 UI/HistoryWindow.lua
+UI/ShoppingWindow.lua
 UI/OptionsUI.lua
 UI/MinimapButton.lua
 UI/RecipeRows.lua
@@ -56,4 +58,5 @@ Controller/Settings.lua
 Controller/Leveling.lua
 Controller/Pins.lua
 Controller/History.lua
+Controller/Shopping.lua
 Boot.lua

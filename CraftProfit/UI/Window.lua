@@ -380,12 +380,19 @@ local function buildOptions()
         paint(parts.perPointValue, Colors.tone(parts.perPointTone, "main"))
     end
 
-    -- "Use bags": the materials already in the bags are not counted as bought.
+    -- "Use bags": the materials already in the bags are not counted as bought. Its label
+    -- stops before "Add to shopping list", which takes the right half of the row.
+    local half3 = math.floor((bodyWidth - 16 - BUTTON_GAP) / 2)
     local useBags = Native.check(body, "", function(checked)
         if handlers.onUseBagsToggle then handlers.onUseBagsToggle(checked) end
-    end, bodyWidth - PER_POINT_X - Native.CHECK_SIZE - 8)
+    end, half3 - Native.CHECK_SIZE - 4)
     useBags:SetPoint("TOPLEFT", body, "TOPLEFT", PER_POINT_X, rowY(3, Native.CHECK_SIZE))
     parts.useBags = useBags
+    local shop = Native.button(body, "", { width = half3, onClick = function()
+        if handlers.onAddToShopping then handlers.onAddToShopping() end
+    end })
+    shop:SetPoint("TOPLEFT", body, "TOPLEFT", 8 + half3 + BUTTON_GAP, rowY(3, Native.BUTTON_H))
+    parts.addShop = shop
 
     -- The two buttons share the row equally: the body less 8 px on each side and a gap.
     local half = math.floor((bodyWidth - 16 - BUTTON_GAP) / 2)
@@ -610,6 +617,7 @@ function Window.render(model)
     parts.perPoint:SetChecked(model.showPerPoint)
     parts.useBags:setText(L.OPT_USE_BAGS)
     parts.useBags:SetChecked(model.useBags == true)
+    parts.addShop:setText(L.SHOP_ADD)
     setPerPoint(findLine(model.lines, "perpoint"))
     parts.pin:setText(model.pinned and L.UNPIN or L.PIN)
     parts.refresh:setText(L.REFRESH_RECIPE)

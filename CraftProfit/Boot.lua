@@ -53,6 +53,8 @@ function Controller.init()
     History.sanitize(CraftProfitDB, time())
     DB.prune(CraftProfitDB, time())
     DB.initChar(CraftProfitCharDB)
+    -- The shopping list (per character), rebuilt clean.
+    CraftProfitCharDB.shopping = ns.Shopping.sanitize(CraftProfitCharDB.shopping)
     ns.Locale.select(GetLocale())
     -- The saved look, before any window is built (sanitised by DB.initAccount).
     local appearance = CraftProfitDB.settings.appearance
@@ -78,6 +80,7 @@ function Controller.init()
             end
             Controller.refresh()
         end,
+        onAddToShopping = Controller.addCurrentToShopping,
         onUseBagsToggle = function(checked)
             CraftProfitDB.settings.useBags = checked and true or false
             Controller.refresh()
@@ -110,6 +113,13 @@ function Controller.init()
             onMoved = function(_, x, y) Controller.saveHistoryPosition(x, y) end,
         })
         ns.HistoryWindow.attach(CraftProfitDB.settings.historyWindow)
+    end
+    -- Nor the shopping list window.
+    if ns.ShoppingWindow then
+        ns.ShoppingWindow.init(Controller, {
+            onMoved = function(_, x, y) Controller.saveShoppingPosition(x, y) end,
+        })
+        ns.ShoppingWindow.attach(CraftProfitDB.settings.shoppingWindow)
     end
     -- Nothing is built here: the options window is made on first open.
     if ns.OptionsUI then
@@ -165,7 +175,9 @@ function Controller.onEvent(event, arg1, arg2)
         end
     elseif event == "BAG_UPDATE_DELAYED" then
         -- Bag contents only matter to the main window's "Use bags" cost.
-        if CraftProfitDB.settings.useBags then Controller.requestRefresh() end
+        -- and to the shopping list's "in bags" column.
+        local shopping = ns.ShoppingWindow and ns.ShoppingWindow.isShown()
+        if CraftProfitDB.settings.useBags or shopping then Controller.requestRefresh() end
     elseif event == "TRADE_SKILL_LIST_UPDATE" then
         Controller.refreshPinDifficulties()
         Controller.refreshKnown()
@@ -199,6 +211,8 @@ local function slash(msg)
         Controller.refresh()
     elseif cmd == "selftest" then
         Controller.selftest()
+    elseif cmd == "shop" or cmd == "shopping" then
+        if ns.ShoppingWindow then ns.ShoppingWindow.toggle() end
     elseif cmd == "history" then
         Controller.historyCommand(arg)
     elseif cmd == "level" then

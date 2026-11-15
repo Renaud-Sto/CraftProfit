@@ -356,9 +356,9 @@ end)
 H.test("the host is the panel, a gap and a footer with two lines of status, and the window grows by it", function()
     local T = boot()
     local Layout, P, Window = T.ns.Layout, T.ns.PinsUI, T.ns.Window
-    -- Two native buttons with their 6 px gaps, then two lines of the small font.
+    -- Three rows of native buttons with their 6 px gaps, then two lines of the small font.
     H.eq(T.ns.Native.BUTTON_H, 22)
-    H.eq(P.FOOTER_H, 22 * 2 + 6 * 2 + 28)
+    H.eq(P.FOOTER_H, 22 * 3 + 6 * 3 + 28)
     openList(T)
     local host = T.ns.Window.pinsHost()
     H.eq(host.height, Layout.panelHeight(2, 18) + Window.GAP + P.FOOTER_H)
@@ -855,7 +855,7 @@ H.test("the status is a fixed two-line box under the buttons: a long one is cut,
     H.eq(status.maxLines, 2)
     H.eq(status.wrap, true)
     -- The footer keeps room for exactly that box.
-    H.eq(T.ns.PinsUI.FOOTER_H, 22 + 6 + 22 + 6 + 28)
+    H.eq(T.ns.PinsUI.FOOTER_H, (22 + 6) * 3 + 28)
 end)
 
 -- Records commitSearch calls (one history batch per search).

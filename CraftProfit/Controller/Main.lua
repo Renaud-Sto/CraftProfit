@@ -60,6 +60,12 @@ function Controller.setCrafts(value)
     Controller.refresh()
 end
 
+-- The main window's "Add to shopping list": its recipe x its crafts.
+function Controller.addCurrentToShopping()
+    if not state.recipe then return false end
+    return Controller.addToShopping(state.recipe, state.crafts)
+end
+
 function Controller.currentRecipeID()
     return state.recipe and state.recipe.recipeID or nil
 end
@@ -86,6 +92,7 @@ local function refreshAll()
     if ns.LevelingUI then ns.LevelingUI.refresh() end
     if ns.PinnedWindow then ns.PinnedWindow.refresh() end
     if ns.HistoryWindow then ns.HistoryWindow.refresh() end
+    if ns.ShoppingWindow then ns.ShoppingWindow.refresh() end
     if ns.OptionsUI then ns.OptionsUI.refresh() end
     if ns.RecipeRows then ns.RecipeRows.refresh() end
 end

@@ -127,7 +127,7 @@ local function sanitizeSettings(s)
     s.theme = nil
     sanitizeAppearance(s)
     -- Saved positions of the leveling, options, pinned and history windows: { x, y } or nothing.
-    for _, key in ipairs({ "levelWindow", "optionsWindow", "pinsWindow", "historyWindow" }) do
+    for _, key in ipairs({ "levelWindow", "optionsWindow", "pinsWindow", "historyWindow", "shoppingWindow" }) do
         local pos = s[key]
         if type(pos) == "table" and Util.isFinite(pos.x) and Util.isFinite(pos.y) then
             s[key] = { x = pos.x, y = pos.y }

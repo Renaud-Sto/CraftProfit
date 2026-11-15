@@ -1979,3 +1979,50 @@ H.test("use bags: a broken or secret count reads as nothing in the bags", functi
     T.env.C_Item.GetItemCount = nil
     H.eq(T.ns.Controller.bagCount(1), nil)
 end)
+
+-- Shopping list
+H.test("shopping: the main window adds its recipe x crafts; the list window shows bags, needs and costs", function()
+    local T = boot()
+    stock(T)
+    local C = T.ns.Controller
+    local counts = { [1] = 5 }
+    T.env.C_Item.GetItemCount = function(id) return counts[id] or 0 end
+    C.setRecipe(T.ns.Recipes.normalize(RAW), "profession")
+    C.setCrafts(4)
+    T.ns.Window.lastHandlers.onAddToShopping()
+    H.eq(T.env.CraftProfitCharDB.shopping, { { itemID = 1, qty = 8 }, { itemID = 2, qty = 4 } })
+    H.truthy(T.chat[#T.chat]:find("Added 4x", 1, true))
+    local data = C.shoppingData()
+    H.eq(#data.rows, 2)
+    H.eq({ data.rows[1].haveText, data.rows[1].needText, data.rows[1].costText }, { "5", "8", "<300>" })
+    H.eq(data.rows[2].costText, "<200>")
+    H.eq(data.totalText, "Left to buy: <500>")
+    H.eq(data.title, "MATERIALS (2)")
+    -- The window opens, shows the rows, and a click searches the missing quantity.
+    T.ns.ShoppingWindow.show()
+    H.truthy(T.ns.ShoppingWindow.isShown())
+    local row = T.ns.ShoppingWindow.parts.rows[1]
+    H.eq(row.qty, 3)
+    T.ns.AH.isOpen = true
+    T.env.C_Item.GetItemInfo = function() return "Bronze Bar" end
+    local searched
+    T.ns.AH.browse = function(name, id, qty) searched = { name, id, qty }; return true end
+    row.scripts.OnClick(row)
+    H.eq(searched, { "Bronze Bar", 1, 3 })
+    -- Gathered: the row is done and costs nothing.
+    counts[1] = 8
+    H.eq(C.shoppingData().rows[1].costText, "done")
+    -- Remove, then clear.
+    C.shoppingRemove(1)
+    H.eq(#T.env.CraftProfitCharDB.shopping, 1)
+    C.shoppingClear()
+    H.eq(T.env.CraftProfitCharDB.shopping, {})
+end)
+
+H.test("shopping: a broken saved list is repaired at load", function()
+    local T = W.boot(H, { items = ITEMS })
+    T.env.CraftProfitCharDB = { shopping = { { itemID = 1, qty = 2 }, "junk", { itemID = 1, qty = 1 } } }
+    T.env.GetMoneyString = function(c) return "<" .. c .. ">" end
+    T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
+    H.eq(T.env.CraftProfitCharDB.shopping, { { itemID = 1, qty = 3 } })
+end)

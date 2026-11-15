@@ -22,7 +22,7 @@ local SORT_LIFT = 1.5
 local SORT_W = 120
 -- Two lines of the small font: a long translated status wraps rather than being cut.
 local STATUS_H = 28
-local FOOTER_H = BUTTON_H + BUTTON_GAP + BUTTON_H + BUTTON_GAP + STATUS_H
+local FOOTER_H = (BUTTON_H + BUTTON_GAP) * 3 + STATUS_H
 local SEARCH_TIMEOUT = 6
 local TICK_SECONDS = 0.2
 local SCAN_REPLY_TIMEOUT = 15
@@ -170,6 +170,7 @@ function PinsUI.refresh()
     parts.scan:setText(L.SCAN)
     parts.level:setText(L.LEVEL_BUTTON)
     parts.history:setText(L.HISTORY_BUTTON)
+    parts.shopping:setText(L.SHOP_BUTTON)
     parts.empty:SetText(L.PINS_EMPTY)
     parts.empty:SetShown(#pins == 0)
     paintRows()
@@ -186,8 +187,10 @@ function PinsUI.refresh()
     parts.level:SetPoint("TOPLEFT", host, "TOPLEFT", 0, -top - BUTTON_H - BUTTON_GAP)
     parts.history:ClearAllPoints()
     parts.history:SetPoint("TOPRIGHT", host, "TOPRIGHT", 0, -top - BUTTON_H - BUTTON_GAP)
+    parts.shopping:ClearAllPoints()
+    parts.shopping:SetPoint("TOPLEFT", host, "TOPLEFT", 0, -top - (BUTTON_H + BUTTON_GAP) * 2)
     statusText:ClearAllPoints()
-    statusText:SetPoint("TOPLEFT", host, "TOPLEFT", 0, -top - (BUTTON_H + BUTTON_GAP) * 2)
+    statusText:SetPoint("TOPLEFT", host, "TOPLEFT", 0, -top - (BUTTON_H + BUTTON_GAP) * 3)
     host:SetHeight(top + FOOTER_H)
     ns.Window.relayout()
 end
@@ -450,6 +453,10 @@ function PinsUI.init(controller)
     -- Right of Leveling, on the same row: the footer keeps its height.
     parts.history = Native.button(host, "", { width = half, onClick = function()
         if ns.HistoryWindow then ns.HistoryWindow.toggle() end
+    end })
+    -- Third row: the shopping list, across the window.
+    parts.shopping = Native.button(host, "", { width = inner, onClick = function()
+        if ns.ShoppingWindow then ns.ShoppingWindow.toggle() end
     end })
     statusText = host:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     statusText:SetWidth(inner)

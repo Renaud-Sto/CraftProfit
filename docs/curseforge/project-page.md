@@ -24,11 +24,11 @@ Alternatives, if the first is too long: *Compare a recipe's cost with what the c
 
 **CraftProfit tells you what a profession recipe really costs at the auction house, and what to do with the result.**
 
-Select a recipe you know and a small window appears next to your profession window. It adds up the reagents at auction house prices, then compares the three ways to get rid of the crafted item: **auction house** (after the 5 % commission), **vendor** and **disenchant**. It marks the best one and shows the net result, so you can level a profession at the smallest loss, or look for a profit.
+Select a recipe you know and a small window appears next to your profession window. It adds up the reagents at auction house prices (or at the vendor price when a vendor sells them for less), then compares the three ways to get rid of the crafted item: **auction house** (after the 5 % commission), **vendor** and **disenchant**. It marks the best one and shows the net result, so you can level a profession at the smallest loss, or look for a profit.
 
 ### Features
 
-- **Recipe cost** from live auction house prices, with the reagent detail one click away.
+- **Recipe cost** from live auction house prices, with the reagent detail one click away. **New in 1.2.0:** materials a vendor sells (vials, threads, dyes, flux...) count at the vendor price when it is cheaper, learnt at every merchant you open (about thirty common ones are known from the start); the detail marks them *vendor*.
 - **Auction house, vendor and disenchant compared**, best option highlighted, net result of the craft.
 - **Profit on every recipe row** of the profession window's list: what one craft earns or loses (`+12` silver `23` copper coin icons green, `-2` silver red) for each learned recipe with prices; can be turned off in the options window.
 - **Cost per skill point** (optional): what each point really costs, from the recipe colour; shown as a gain when the crafts pay for themselves.

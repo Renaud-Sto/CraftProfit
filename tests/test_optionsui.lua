@@ -214,7 +214,7 @@ local function sized(locale)
     return T, sizes
 end
 
-H.test("the window buttons: two rows of two, main and leveling, then pinned recipes and history", function()
+H.test("the window buttons: rows of two, main and leveling, pinned recipes and history, then the shopping list", function()
     local T, sizes = sized("frFR")
     local O = T.ns.OptionsUI
     local parts = O.parts
@@ -229,8 +229,11 @@ H.test("the window buttons: two rows of two, main and leveling, then pinned reci
     H.eq(level.point, { "LEFT", main, "RIGHT", 4, 0 })
     H.eq(pins.point, { "TOPLEFT", parts.panels.windows.body, "TOPLEFT", 8, -2 - 26 })
     H.eq(history.point, { "LEFT", pins, "RIGHT", 4, 0 })
-    -- Two rows of 26 px in the panel.
-    H.eq(parts.panels.windows.frame.height, T.ns.Layout.panelHeight(2, 26))
+    H.eq(parts.shopButton.text, "Liste de courses")
+    H.eq(sizes[parts.shopButton], { half, 22 })
+    H.eq(parts.shopButton.point, { "TOPLEFT", parts.panels.windows.body, "TOPLEFT", 8, -2 - 52 })
+    -- Three rows of 26 px in the panel.
+    H.eq(parts.panels.windows.frame.height, T.ns.Layout.panelHeight(3, 26))
 end)
 
 H.test("every options button label fits its button in English, French and Spanish", function()
@@ -267,6 +270,7 @@ local EXPECTED_LINES = {
     "/cp level - leveling window",
     "/cp minimap - show or hide the minimap button",
     "/cp history [n | list | remove <n>] - price history window",
+    "/cp shop - shopping list (anywhere)",
     "/cp scan - scan the auction house",
     "/cp market - which market is in use",
     "/cp locale <code> - change the language",

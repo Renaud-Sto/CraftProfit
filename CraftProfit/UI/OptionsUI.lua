@@ -55,6 +55,7 @@ local CONTROL_LINES = {
     { "/cp level", "CMD_LEVEL" },
     { "/cp minimap", "CMD_MINIMAP" },
     { "/cp history [n | list | remove <n>]", "CMD_HISTORY" },
+    { "/cp shop", "CMD_SHOP" },
     { "/cp scan", "CMD_SCAN" },
     { "/cp market", "CMD_MARKET" },
     { "/cp locale <code>", "CMD_LOCALE" },
@@ -141,7 +142,7 @@ local function layout()
     p.pins:setRows(1, CHOICE_ROW_H, noteLines * LINE_H + LIST_BOTTOM)
     p.minimap:setRows(1, LINE_ROW_H)
     p.profession:setRows(1, LINE_ROW_H)
-    p.windows:setRows(2, LINE_ROW_H)
+    p.windows:setRows(3, LINE_ROW_H)
     p.controls:setRows(#CONTROL_LINES, LINE_H, LIST_BOTTOM)
     local order = { p.appearance, p.pins, p.minimap, p.profession, p.windows, p.controls }
     local heights = {}
@@ -217,8 +218,8 @@ local function build()
     parts.rowTags:SetPoint("TOPLEFT", panels.profession.body, "TOPLEFT", 4, -1)
 
     panels.windows = Native.panel(content, L.OPTIONS_WINDOWS)
-    -- Two rows of two: main and leveling, then pinned recipes and history, all four half the
-    -- room wide so a French label is never cut.
+    -- Rows of two: main and leveling, then pinned recipes and history, then the shopping
+    -- list, all half the room wide so a French label is never cut.
     local half = math.floor((ROOM - SEG_GAP) / 2)
     local winBody = panels.windows.body
     parts.mainButton = Native.button(winBody, "", { width = half,
@@ -233,7 +234,12 @@ local function build()
     parts.historyButton = Native.button(winBody, "", { width = half,
         onClick = function() if ns.HistoryWindow then ns.HistoryWindow.toggle() end end })
     parts.historyButton:SetPoint("LEFT", parts.pinsButton, "RIGHT", SEG_GAP, 0)
-    for _, button in ipairs({ parts.mainButton, parts.levelButton, parts.pinsButton, parts.historyButton }) do
+    -- Third row: the shopping list, to check it away from the auction house.
+    parts.shopButton = Native.button(winBody, "", { width = half,
+        onClick = function() if ns.ShoppingWindow then ns.ShoppingWindow.toggle() end end })
+    parts.shopButton:SetPoint("TOPLEFT", winBody, "TOPLEFT", 8, -2 - LINE_ROW_H * 2)
+    for _, button in ipairs({ parts.mainButton, parts.levelButton, parts.pinsButton, parts.historyButton,
+        parts.shopButton }) do
         Native.forwardDrag(button, frame)
     end
 
@@ -291,6 +297,7 @@ function OptionsUI.refresh()
     parts.levelButton:setText(L.LEVEL_BUTTON)
     parts.pinsButton:setText(L.PINNED_TITLE)
     parts.historyButton:setText(L.HISTORY_BUTTON)
+    parts.shopButton:setText(L.SHOP_BUTTON)
     local gold, white = Colors.escape(Colors.text("gold")), Colors.escape(Colors.text("main"))
     for i, entry in ipairs(CONTROL_LINES) do
         local head = entry[1]:sub(1, 1) == "/" and entry[1] or L[entry[1]]

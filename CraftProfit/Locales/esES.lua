@@ -54,11 +54,11 @@ ns.Locale.register("esES", {
     SHOP_DONE = "hecho",
     SHOP_TOTAL = "Falta comprar: %s",
     SHOP_TOTAL_PARTIAL = "Falta comprar: %s + %d sin precio",
-    SHOP_CLEAR = "Vaciar lista",
+    SHOP_CLEAR = "Vaciar lista",
     SHOP_EMPTY = "Ninguna receta. Elige una y pulsa «Añadir a la compra».",
     SHOP_REMOVE = "Quitar esta receta y sus materiales",
     SHOP_ADDED = "%dx %s añadido a la lista de la compra (%d previstos).",
-    SHOP_FULL = "La lista de la compra está llena.",
+    SHOP_FULL = "La lista de la compra está llena.",
     SHOP_OTHER_NOTE = "En bolsas: las bolsas de %s en su última conexión, más las tuyas.",
     SHOP_OWNER = "Lista: %s",
     SHOP_RECIPES = "RECETAS (%d)",
@@ -238,6 +238,7 @@ ns.Locale.register("esES", {
     CMD_LEVEL = "subida de profesión",
     CMD_MINIMAP = "mostrar u ocultar el botón del minimapa",
     CMD_HISTORY = "historial de precios",
+    CMD_SHOP = "lista de la compra (en cualquier lugar)",
     HISTORY_BUTTON = "Historial",
     CMD_SCAN = "escanear la casa de subastas",
     CMD_MARKET = "mercado en uso",

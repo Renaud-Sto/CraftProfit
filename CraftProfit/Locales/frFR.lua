@@ -54,11 +54,11 @@ ns.Locale.register("frFR", {
     SHOP_DONE = "fait",
     SHOP_TOTAL = "Reste à acheter\194\160: %s",
     SHOP_TOTAL_PARTIAL = "Reste à acheter\194\160: %s + %d sans prix",
-    SHOP_CLEAR = "Vider la liste",
+    SHOP_CLEAR = "Vider la liste",
     SHOP_EMPTY = "Aucune recette. Choisissez-en une et cliquez sur « Ajouter aux courses ».",
     SHOP_REMOVE = "Retirer cette recette et ses composants",
     SHOP_ADDED = "%dx %s ajouté à la liste de courses (%d prévus).",
-    SHOP_FULL = "La liste de courses est pleine.",
+    SHOP_FULL = "La liste de courses est pleine.",
     SHOP_OTHER_NOTE = "En sac\194\160: les sacs de %s à sa dernière connexion, plus les vôtres.",
     SHOP_OWNER = "Liste\194\160: %s",
     SHOP_RECIPES = "RECETTES (%d)",
@@ -238,6 +238,7 @@ ns.Locale.register("frFR", {
     CMD_LEVEL = "montée de métier",
     CMD_MINIMAP = "afficher ou masquer le bouton de la minicarte",
     CMD_HISTORY = "historique des prix",
+    CMD_SHOP = "liste de courses (partout)",
     HISTORY_BUTTON = "Historique",
     CMD_SCAN = "scanner l'hôtel des ventes",
     CMD_MARKET = "marché utilisé",

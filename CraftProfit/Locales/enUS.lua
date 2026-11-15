@@ -56,11 +56,11 @@ ns.Locale.register("enUS", {
     SHOP_DONE = "done",
     SHOP_TOTAL = "Left to buy: %s",
     SHOP_TOTAL_PARTIAL = "Left to buy: %s + %d without price",
-    SHOP_CLEAR = "Clear list",
+    SHOP_CLEAR = "Clear list",
     SHOP_EMPTY = "No recipe yet. Choose one and press \"Add to shopping list\".",
     SHOP_REMOVE = "Remove this recipe and its materials",
     SHOP_ADDED = "Added %dx %s to the shopping list (%d planned).",
-    SHOP_FULL = "The shopping list is full.",
+    SHOP_FULL = "The shopping list is full.",
     SHOP_OTHER_NOTE = "In bags: %s's bags when last seen, plus yours.",
     SHOP_OWNER = "List: %s",
     SHOP_RECIPES = "RECIPES (%d)",
@@ -241,6 +241,7 @@ ns.Locale.register("enUS", {
     CMD_LEVEL = "leveling window",
     CMD_MINIMAP = "show or hide the minimap button",
     CMD_HISTORY = "price history window",
+    CMD_SHOP = "shopping list (anywhere)",
     HISTORY_BUTTON = "History",
     CMD_SCAN = "scan the auction house",
     CMD_MARKET = "which market is in use",

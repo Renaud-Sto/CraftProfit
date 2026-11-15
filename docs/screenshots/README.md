@@ -16,3 +16,5 @@ Take them on an **English client** (`/cp locale` back to the game language if yo
 | `08-history-profit.png` | The History window (`/cp history`) on a tracked recipe, Profit chart over 30 days: the verdict sentence, the usual price dashed, a green bar and a red one, key figures. |
 | `09-history-material.png` (optional) | The History window on one material (Bronze Bar): the icons row (materials, crafted item, disenchant), the single-item chart and its key figures. |
 | `10-history-loss.png` (optional) | The History window on a recipe that loses money: the verdict in red and the profit chart under the zero line. |
+| `11-shopping-list.png` | The shopping list window (`/cp shop`) on your own list: three recipes, the materials with In bags / Needed / To buy, one line done (grey), a vendor material, the total. |
+| `12-shopping-list-other-character.png` | The shopping list of another character opened with the top button: the note under the total about whose bags are counted. |

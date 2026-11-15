@@ -50,7 +50,7 @@ read_globals = {
     "Enum", "UIParent", "DEFAULT_CHAT_FRAME", "C_Texture",
     "ProfessionsFrame", "TradeSkillFrame", "AuctionHouseFrame", "AuctionFrame", "ScrollBoxListMixin",
     "AuctionHouseFrameDisplayMode",
-    "MerchantFrame", "C_MerchantFrame", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemInfo",
+    "UnitName", "MerchantFrame", "C_MerchantFrame", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemInfo",
     "GetProfessions", "GetProfessionInfo", "IsPlayerSpell",
     "GetNormalizedRealmName", "GetRealmName", "GetRealmID", "UnitFactionGroup", "C_GameRules",
     "GetTradeSkillSelectionIndex", "GetTradeSkillRecipeLink",

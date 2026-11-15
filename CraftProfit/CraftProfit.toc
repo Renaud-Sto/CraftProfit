@@ -19,7 +19,6 @@ Data/Skillup.lua
 Data/Disenchant.lua
 Data/VendorPrices.lua
 Vendor.lua
-Shopping.lua
 Locale.lua
 Locales/enUS.lua
 Locales/frFR.lua
@@ -28,6 +27,7 @@ Locales/esMX.lua
 Recipes.lua
 DB.lua
 Prices.lua
+Shopping.lua
 History.lua
 HistoryView.lua
 ChartModel.lua

@@ -299,7 +299,8 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Select Woolen Bag, Crafts 4, *Add to shopping list*: the chat confirms; open the list (AH button *Shopping list* or `/cp shop`): each material with In bags / Needed (x4) / To buy and the total.
 - [ ] Add a second recipe sharing a material: that line's Needed grows, new materials are appended.
 - [ ] Loot or buy a material with the window open: In bags and the cost update; a covered line turns grey "done".
-- [ ] At the AH, click a line: the search quantity is the missing amount. The *x* removes a line, *Clear list* empties it.
+- [ ] At the AH, click a material: the search quantity is the missing amount. A recipe's *x* removes it and its materials, *Clear list* empties the list.
+- [ ] Add a recipe on character A, log on character B at the AH: the top button switches to A's list, *In bags* counts A's last bags plus B's, buying on B lowers *To buy*; adding on B goes to B's own list.
 - [ ] The window opens over the main window, can be dragged, reopens where it was dragged; Escape closes it.
 - [ ] The AH panel under the main window shows the third button row without overlapping the status text.
 

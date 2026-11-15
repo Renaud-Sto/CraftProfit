@@ -53,8 +53,10 @@ function Controller.init()
     History.sanitize(CraftProfitDB, time())
     DB.prune(CraftProfitDB, time())
     DB.initChar(CraftProfitCharDB)
-    -- The shopping list (per character), rebuilt clean.
-    CraftProfitCharDB.shopping = ns.Shopping.sanitize(CraftProfitCharDB.shopping)
+    -- The shopping lists (one per character, account wide), rebuilt clean. A per-character
+    -- list from a development build is dropped.
+    CraftProfitDB.shopping = ns.Shopping.sanitize(CraftProfitDB.shopping)
+    CraftProfitCharDB.shopping = nil
     ns.Locale.select(GetLocale())
     -- The saved look, before any window is built (sanitised by DB.initAccount).
     local appearance = CraftProfitDB.settings.appearance
@@ -176,6 +178,7 @@ function Controller.onEvent(event, arg1, arg2)
     elseif event == "BAG_UPDATE_DELAYED" then
         -- Bag contents only matter to the main window's "Use bags" cost.
         -- and to the shopping list's "in bags" column.
+        Controller.shoppingBagsChanged()
         local shopping = ns.ShoppingWindow and ns.ShoppingWindow.isShown()
         if CraftProfitDB.settings.useBags or shopping then Controller.requestRefresh() end
     elseif event == "TRADE_SKILL_LIST_UPDATE" then

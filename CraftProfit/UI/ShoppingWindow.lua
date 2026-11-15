@@ -1,8 +1,11 @@
--- The shopping list window: every material of the planned crafts with how many the bags
--- hold, how many are needed and what the missing ones cost (Shopping.rows), the total to
--- pay, a "x" per row and a "Clear list" button. A click on a row searches the missing
--- quantity at the auction house (the main window's reagent click). Built on first open,
--- never at login; Escape closes it. Opens over the main window until it is dragged.
+-- The shopping list window, top to bottom: the owner button (whose list is shown: the
+-- character's own, or another character's, to buy for it), the recipes of the list with
+-- their crafts and a "x" each (a recipe added by mistake is taken away with its materials),
+-- the column labels, the materials with how many are held, how many are needed and what
+-- the missing ones cost, the total left to pay, a note for another character's list, and
+-- "Clear list". A click on a material searches the missing quantity at the auction house.
+-- Built on first open, never at login; Escape closes it. Opens over the main window until
+-- it is dragged.
 local _, ns = ...
 local L = ns.L
 local Native, Colors = ns.Native, ns.Colors
@@ -14,34 +17,36 @@ ns.ShoppingWindow = ShoppingWindow
 local NAME = "CraftProfitShoppingWindow"
 local WIDTH = 396
 local ROW_H = 18
-local VISIBLE = 12
+local RECIPES_VISIBLE = 4
+local VISIBLE = 10
 local LABELS_H = 14
 local TOTAL_H = 16
+local NOTE_H = 14
 local STRIP_H = Native.BUTTON_H
 local GAP = 8
 local PAD = Native.CONTENT_PAD
 local CHROME_H = Native.INSET_TOP + Native.INSET_BOTTOM
 local INNER_WIDTH = WIDTH - Native.INSET_LEFT - Native.INSET_RIGHT - PAD * 2
 local EMPTY_WIDTH = INNER_WIDTH - Native.PANEL_EDGE * 2 - 16
--- Columns from the right of a row: the "x", the cost, the needed and in-bags counts.
 local X_SIZE = 16
 local X_RIGHT = 2
 local COST_W = 104
 local COUNT_W = 46
 local COL_GAP = 6
--- The column labels sit over the row columns: the panel's edge plus the scroll bar room.
+-- Every row leaves room for the scroll bar at its right.
 local ROW_RIGHT = Native.SCROLL_W + 6
 
 local ctl, handlers
 local frame, content, savedPosition
 local origin = { left = 0, right = 0, top = 0 }
-local offset = 0
-local parts = { rows = {}, frames = {} }
-local lastData = { rows = {} }
+local offset, recipeOffset = 0, 0
+local parts = { rows = {}, recipes = {}, frames = {} }
+local lastData = { rows = {}, recipes = {} }
 
 ShoppingWindow.parts = parts
 ShoppingWindow.WIDTH = WIDTH
 ShoppingWindow.VISIBLE = VISIBLE
+ShoppingWindow.RECIPES_VISIBLE = RECIPES_VISIBLE
 
 local function paint(fs, c)
     fs:SetTextColor(c[1], c[2], c[3], c[4])
@@ -54,24 +59,39 @@ local function paintRows()
     for i = 1, VISIBLE do
         local row, data = parts.rows[i], rows[offset + i]
         if data then
-            row.itemID, row.remove.itemID = data.itemID, data.itemID
+            row.itemID = data.itemID
             row.qty = data.buy > 0 and data.buy or data.need
             row.name:SetText(data.nameText)
             row.have:SetText(data.haveText)
             row.need:SetText(data.needText)
             row.cost:SetText(data.costText)
-            -- Gathered: the whole row greys out. Still to buy: white, the bag count grey.
+            -- Gathered: the whole row greys out. Still to buy: white, the held count grey.
             paint(row.name, data.done and muted or main)
             paint(row.have, muted)
             paint(row.need, data.done and muted or main)
             paint(row.cost, data.done and muted or main)
             row:Show()
         else
-            row.itemID, row.remove.itemID, row.qty = nil, nil, nil
+            row.itemID, row.qty = nil, nil
             row:Hide()
         end
     end
     parts.bar:update(#rows, VISIBLE, offset)
+
+    local recipes = lastData.recipes
+    recipeOffset = math.max(0, math.min(recipeOffset, #recipes - RECIPES_VISIBLE))
+    for i = 1, RECIPES_VISIBLE do
+        local row, data = parts.recipes[i], recipes[recipeOffset + i]
+        if data then
+            row.remove.recipeID = data.recipeID
+            row.name:SetText(data.text)
+            row:Show()
+        else
+            row.remove.recipeID = nil
+            row:Hide()
+        end
+    end
+    parts.recipeBar:update(#recipes, RECIPES_VISIBLE, recipeOffset)
 end
 
 local function scrollTo(newOffset)
@@ -81,12 +101,22 @@ local function scrollTo(newOffset)
     paintRows()
 end
 
+local function scrollRecipesTo(newOffset)
+    newOffset = math.max(0, math.min(newOffset, #lastData.recipes - RECIPES_VISIBLE))
+    if newOffset == recipeOffset then return end
+    recipeOffset = newOffset
+    paintRows()
+end
+
 -- Repaints from the controller (ctl.shoppingData); nothing while closed or not built.
 function ShoppingWindow.refresh()
     if not frame or not frame:IsShown() then return end
     local data = ctl.shoppingData()
     lastData = data
     frame:setTitle(L.SHOP_TITLE)
+    parts.owner:setText(data.ownerText)
+    parts.owner:SetEnabled(data.canSwitch == true)
+    parts.recipesPanel:setTitle(data.recipesTitle)
     parts.panel:setTitle(data.title)
     parts.labelName:SetText(L.SHOP_COL_ITEM)
     parts.labelHave:SetText(L.SHOP_COL_HAVE)
@@ -94,10 +124,11 @@ function ShoppingWindow.refresh()
     parts.labelCost:SetText(L.SHOP_COL_COST)
     parts.total:SetText(data.totalText)
     paint(parts.total, data.incomplete and Colors.FIXED.incomplete or Colors.text("main"))
+    parts.note:SetText(data.note or "")
     parts.clear:setText(L.SHOP_CLEAR)
-    parts.clear:SetEnabled(#data.rows > 0)
+    parts.clear:SetEnabled(#data.recipes > 0)
     parts.empty:SetText(L.SHOP_EMPTY)
-    parts.empty:SetShown(#data.rows == 0)
+    parts.empty:SetShown(#data.recipes == 0)
     paintRows()
 end
 
@@ -122,7 +153,7 @@ local function hideTip()
     if type(GameTooltip) == "table" then GameTooltip:Hide() end
 end
 
--- The "x" removing a row, as the pinned window's unpin: a plain button, grey lit white.
+-- The "x" removing a recipe, as the pinned window's unpin: a plain button, grey lit white.
 local function buildRemove(row)
     local x = CreateFrame("Button", nil, row)
     x:SetSize(X_SIZE, X_SIZE)
@@ -133,7 +164,7 @@ local function buildRemove(row)
     Native.forwardDrag(x, frame)
     x:SetScript("OnClick", function(self)
         if self.dragged == true then return end
-        if self.itemID then ctl.shoppingRemove(self.itemID) end
+        if self.recipeID then ctl.shoppingRemoveRecipe(self.recipeID) end
     end)
     x:SetScript("OnEnter", function(self)
         row.hover:Show()
@@ -149,6 +180,18 @@ local function buildRemove(row)
     return x
 end
 
+local function buildRecipeRow(body, i)
+    local row = Native.listRow(body, i, ROW_H, ROW_RIGHT)
+    row.remove = buildRemove(row)
+    row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.name:SetPoint("LEFT", row, "LEFT", 8, 0)
+    row.name:SetPoint("RIGHT", row.remove, "LEFT", -COL_GAP, 0)
+    row.name:SetJustifyH("LEFT")
+    row.name:SetWordWrap(false)
+    Native.forwardDrag(row, frame)
+    return row
+end
+
 local function column(row, width, anchor, anchorPoint, x)
     local fs = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     fs:SetPoint("RIGHT", anchor, anchorPoint, x, 0)
@@ -160,8 +203,7 @@ end
 
 local function buildRow(body, i)
     local row = Native.listRow(body, i, ROW_H, ROW_RIGHT)
-    row.remove = buildRemove(row)
-    row.cost = column(row, COST_W, row.remove, "LEFT", -COL_GAP)
+    row.cost = column(row, COST_W, row, "RIGHT", -8)
     row.need = column(row, COUNT_W, row.cost, "LEFT", -COL_GAP)
     row.have = column(row, COUNT_W, row.need, "LEFT", -COL_GAP)
     row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -178,10 +220,10 @@ local function buildRow(body, i)
     return row
 end
 
--- The column labels, right-aligned over the row columns (same widths and gaps).
+-- The column labels, right-aligned over the material columns (same widths and gaps).
 local function buildLabels()
     local f = section("labels", LABELS_H)
-    local right = ROW_RIGHT + Native.PANEL_EDGE + X_RIGHT + X_SIZE + COL_GAP
+    local right = Native.PANEL_EDGE + ROW_RIGHT + 8
     local function label(width, x)
         local fs = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
         fs:SetPoint("RIGHT", f, "RIGHT", -x, 0)
@@ -199,8 +241,10 @@ local function buildLabels()
 end
 
 local function build()
+    local recipesH = Layout.panelHeight(RECIPES_VISIBLE, ROW_H)
     local panelH = Layout.panelHeight(VISIBLE, ROW_H)
-    local offsets, total = Layout.stack({ LABELS_H, panelH, TOTAL_H, STRIP_H }, GAP, PAD)
+    local keys = { "owner", "recipes", "labels", "panel", "total", "note", "strip" }
+    local offsets, total = Layout.stack({ STRIP_H, recipesH, LABELS_H, panelH, TOTAL_H, NOTE_H, STRIP_H }, GAP, PAD)
 
     frame = Native.window(NAME, L.SHOP_TITLE, {
         width = WIDTH,
@@ -218,6 +262,27 @@ local function build()
     frame:EnableMouseWheel(true)
     frame:SetScript("OnMouseWheel", function(_, delta) scrollTo(offset - delta) end)
 
+    -- Whose list: a click shows the next character's (own first).
+    local ownerRow = section("owner", STRIP_H)
+    parts.owner = Native.button(ownerRow, "", { width = INNER_WIDTH, onClick = function() ctl.shoppingNextOwner() end })
+    parts.owner:SetPoint("TOPLEFT", ownerRow, "TOPLEFT", 0, 0)
+    parts.owner:SetPoint("TOPRIGHT", ownerRow, "TOPRIGHT", 0, 0)
+
+    parts.recipesPanel = Native.panel(content, "")
+    parts.frames.recipes = parts.recipesPanel.frame
+    parts.recipesPanel.frame:SetHeight(recipesH)
+    for i = 1, RECIPES_VISIBLE do parts.recipes[i] = buildRecipeRow(parts.recipesPanel.body, i) end
+    parts.recipeBar = Native.scrollbar(parts.recipesPanel.body, RECIPES_VISIBLE * ROW_H)
+    parts.recipeBar.frame:SetPoint("TOPRIGHT", parts.recipesPanel.body, "TOPRIGHT", -2, 0)
+    parts.recipeBar.onScroll = scrollRecipesTo
+    parts.recipesPanel.body:EnableMouseWheel(true)
+    parts.recipesPanel.body:SetScript("OnMouseWheel", function(_, delta) scrollRecipesTo(recipeOffset - delta) end)
+    parts.empty = parts.recipesPanel.body:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+    parts.empty:SetPoint("TOP", parts.recipesPanel.body, "TOP", 0, -8)
+    parts.empty:SetWidth(EMPTY_WIDTH)
+    parts.empty:SetJustifyH("CENTER")
+    parts.empty:SetWordWrap(true)
+
     buildLabels()
 
     parts.panel = Native.panel(content, "")
@@ -227,16 +292,18 @@ local function build()
     parts.bar = Native.scrollbar(parts.panel.body, VISIBLE * ROW_H)
     parts.bar.frame:SetPoint("TOPRIGHT", parts.panel.body, "TOPRIGHT", -2, 0)
     parts.bar.onScroll = scrollTo
-    parts.empty = parts.panel.body:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-    parts.empty:SetPoint("TOP", parts.panel.body, "TOP", 0, -20)
-    parts.empty:SetWidth(EMPTY_WIDTH)
-    parts.empty:SetJustifyH("CENTER")
-    parts.empty:SetWordWrap(true)
 
     local totalRow = section("total", TOTAL_H)
     parts.total = totalRow:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    parts.total:SetPoint("RIGHT", totalRow, "RIGHT", -(ROW_RIGHT + Native.PANEL_EDGE + X_RIGHT + X_SIZE + COL_GAP), 0)
+    parts.total:SetPoint("RIGHT", totalRow, "RIGHT", -(Native.PANEL_EDGE + ROW_RIGHT + 8), 0)
     parts.total:SetJustifyH("RIGHT")
+
+    local noteRow = section("note", NOTE_H)
+    parts.note = noteRow:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    parts.note:SetPoint("LEFT", noteRow, "LEFT", 4, 0)
+    parts.note:SetPoint("RIGHT", noteRow, "RIGHT", -4, 0)
+    parts.note:SetJustifyH("LEFT")
+    parts.note:SetWordWrap(false)
 
     local strip = section("strip", STRIP_H)
     parts.clear = Native.button(strip, "", { width = math.floor(INNER_WIDTH / 2), onClick = function()
@@ -244,7 +311,7 @@ local function build()
     end })
     parts.clear:SetPoint("TOPRIGHT", strip, "TOPRIGHT", 0, 0)
 
-    for i, key in ipairs({ "labels", "panel", "total", "strip" }) do
+    for i, key in ipairs(keys) do
         local f = parts.frames[key]
         f:SetPoint("TOPLEFT", content, "TOPLEFT", origin.left + PAD, offsets[i] - origin.top)
         f:SetPoint("TOPRIGHT", content, "TOPRIGHT", -origin.right - PAD, offsets[i] - origin.top)

@@ -1,98 +1,164 @@
--- The shopping list: materials to gather for crafts the player plans. Pure Lua, no WoW API.
+-- Shopping lists: the crafts each character plans and the materials they need. Pure Lua,
+-- no WoW API.
 --
--- Saved per character (the bags counted are the character's) as CraftProfitCharDB.shopping
--- = { { itemID, qty }, ... } in the order the items were first added. Adding a recipe adds
--- each reagent x the crafts wanted, merging into an item already listed. A crafted
--- reagent (a bolt of cloth) is listed as it is, never broken down into its own materials.
+-- Saved account wide, one list per character, so another character (one standing at the
+-- auction house) can open it, buy and mail the materials:
+-- CraftProfitDB.shopping = { [key] = { name, realm, updated, recipes, bags } }, key
+-- "Name-Realm"; recipes = { { recipe = normalised recipe, crafts = n }, ... } in the order
+-- added (the same recipe twice adds up its crafts); bags = { [itemID] = count }, what the
+-- owner carried of its list's materials when last seen. The materials are always derived
+-- from the recipes: removing a recipe added by mistake takes its materials away. A crafted
+-- material (a bolt of cloth) is listed as it is, never broken down.
 local _, ns = ...
-local Util, Vendor = ns.Util, ns.Vendor
+local Util, Vendor, Recipes = ns.Util, ns.Vendor, ns.Recipes
 
 local Shopping = {}
 ns.Shopping = Shopping
 
--- Bounds for a save edited by hand or corrupted: 100 different items, a million of one.
-Shopping.MAX_ITEMS = 100
-Shopping.MAX_QTY = 1000000
+Shopping.MAX_LISTS = 50
+Shopping.MAX_RECIPES = 30
+Shopping.MAX_CRAFTS = 9999
 
--- A clean list from anything: valid rows kept in order, duplicates merged, quantities
--- bounded. Always a new table of new rows.
-function Shopping.sanitize(list)
-    local clean, index = {}, {}
-    if type(list) ~= "table" then return clean end
-    for _, row in ipairs(list) do
-        local id = type(row) == "table" and Util.id(row.itemID) or nil
-        local qty = type(row) == "table" and Util.count(row.qty) or nil
-        if id and qty then
-            local at = index[id]
+local function cleanRecipes(raw)
+    local out, index = {}, {}
+    for _, e in ipairs(type(raw) == "table" and raw or {}) do
+        local recipe = type(e) == "table" and Recipes.normalize(e.recipe) or nil
+        local crafts = type(e) == "table" and Util.count(e.crafts) or nil
+        if recipe and crafts then
+            local at = index[recipe.recipeID]
             if at then
-                clean[at].qty = math.min(clean[at].qty + qty, Shopping.MAX_QTY)
-            elseif #clean < Shopping.MAX_ITEMS then
-                clean[#clean + 1] = { itemID = id, qty = math.min(qty, Shopping.MAX_QTY) }
-                index[id] = #clean
+                out[at].crafts = math.min(out[at].crafts + crafts, Shopping.MAX_CRAFTS)
+            elseif #out < Shopping.MAX_RECIPES then
+                out[#out + 1] = { recipe = recipe, crafts = math.min(crafts, Shopping.MAX_CRAFTS) }
+                index[recipe.recipeID] = #out
             end
         end
     end
-    return clean
+    return out
 end
 
-local function find(list, itemID)
-    for i, row in ipairs(list) do
-        if row.itemID == itemID then return i end
+local function cleanBags(raw)
+    local out = {}
+    for id, n in pairs(type(raw) == "table" and raw or {}) do
+        if Util.id(id) == id and Util.count(n) then out[id] = Util.count(n) end
     end
-    return nil
+    return out
 end
 
--- Adds qty of an item (merged with the row already there). Returns true, or false when the
--- input is invalid or the list is full of other items.
-function Shopping.add(list, itemID, qty)
-    itemID, qty = Util.id(itemID), Util.count(qty)
-    if type(list) ~= "table" or not itemID or not qty then return false end
-    local i = find(list, itemID)
-    if i then
-        list[i].qty = math.min(list[i].qty + qty, Shopping.MAX_QTY)
-        return true
+-- A clean account table: valid lists only, each rebuilt. Returns a new table.
+function Shopping.sanitize(db)
+    local out, n = {}, 0
+    for key, list in pairs(type(db) == "table" and db or {}) do
+        if type(key) == "string" and key ~= "" and type(list) == "table" and n < Shopping.MAX_LISTS then
+            n = n + 1
+            out[key] = {
+                name = type(list.name) == "string" and list.name ~= "" and list.name or key,
+                realm = type(list.realm) == "string" and list.realm or "",
+                updated = Util.isCopper(list.updated) and list.updated or 0,
+                recipes = cleanRecipes(list.recipes),
+                bags = cleanBags(list.bags),
+            }
+        end
     end
-    if #list >= Shopping.MAX_ITEMS then return false end
-    list[#list + 1] = { itemID = itemID, qty = math.min(qty, Shopping.MAX_QTY) }
-    return true
+    return out
 end
 
--- Adds every reagent of a recipe x crafts (a whole number, 1 at least). Returns how many
--- reagents were added (0 when nothing could be).
-function Shopping.addRecipe(list, recipe, crafts)
+-- The list of `key`, created when missing (name and realm refreshed). nil when the table
+-- already holds MAX_LISTS other lists.
+function Shopping.list(db, key, name, realm)
+    if type(db) ~= "table" or type(key) ~= "string" or key == "" then return nil end
+    local list = db[key]
+    if not list then
+        local n = 0
+        for _ in pairs(db) do n = n + 1 end
+        if n >= Shopping.MAX_LISTS then return nil end
+        list = { name = key, realm = "", updated = 0, recipes = {}, bags = {} }
+        db[key] = list
+    end
+    if type(name) == "string" and name ~= "" then list.name = name end
+    if type(realm) == "string" then list.realm = realm end
+    return list
+end
+
+-- Adds a recipe x crafts (merged with the same recipe already there). Returns the crafts
+-- now planned for it, or nil when the recipe is invalid or the list is full.
+function Shopping.addRecipe(list, recipe, crafts, now)
     crafts = Util.count(crafts) or 1
-    if type(recipe) ~= "table" or type(recipe.reagents) ~= "table" then return 0 end
-    local added = 0
-    for _, r in ipairs(recipe.reagents) do
-        local qty = type(r) == "table" and Util.count(r.qty) or nil
-        if qty and Shopping.add(list, r.itemID, qty * crafts) then added = added + 1 end
+    local clean = Recipes.normalize(recipe)
+    if type(list) ~= "table" or not clean then return nil end
+    if Util.isCopper(now) then list.updated = now end
+    for _, e in ipairs(list.recipes) do
+        if e.recipe.recipeID == clean.recipeID then
+            e.crafts = math.min(e.crafts + crafts, Shopping.MAX_CRAFTS)
+            return e.crafts
+        end
     end
-    return added
+    if #list.recipes >= Shopping.MAX_RECIPES then return nil end
+    list.recipes[#list.recipes + 1] = { recipe = clean, crafts = math.min(crafts, Shopping.MAX_CRAFTS) }
+    return list.recipes[#list.recipes].crafts
 end
 
-function Shopping.remove(list, itemID)
-    local i = type(list) == "table" and find(list, itemID) or nil
-    if not i then return false end
-    table.remove(list, i)
-    return true
+function Shopping.removeRecipe(list, recipeID)
+    if type(list) ~= "table" then return false end
+    for i, e in ipairs(list.recipes) do
+        if e.recipe.recipeID == recipeID then
+            table.remove(list.recipes, i)
+            return true
+        end
+    end
+    return false
 end
 
 function Shopping.clear(list)
     if type(list) ~= "table" then return end
-    for i = #list, 1, -1 do list[i] = nil end
+    list.recipes = {}
+    list.bags = {}
 end
 
--- The rows to show and what is left to pay. ctx: ownedOf(itemID) -> count in the bags or
--- nil; priceOf(itemID) -> AH unit price or nil; vendorOf(itemID) -> vendor unit or nil
--- (both optional). Each row: { itemID, need, have, buy, unit, source, cost, done }:
--- have = what the bags hold (may exceed need), buy = what is missing, cost = buy x the
--- cheaper of the AH and vendor price (0 when nothing is missing, nil when a missing item
--- has no price). Returns rows, total (nil when any missing item has no price), and the
--- ids of those unpriced items.
+-- The materials of the list: { { itemID, qty }, ... } in the order first met.
+function Shopping.items(list)
+    local out, index = {}, {}
+    for _, e in ipairs(type(list) == "table" and list.recipes or {}) do
+        for _, r in ipairs(e.recipe.reagents) do
+            local qty = r.qty * e.crafts
+            local at = index[r.itemID]
+            if at then
+                out[at].qty = out[at].qty + qty
+            else
+                out[#out + 1] = { itemID = r.itemID, qty = qty }
+                index[r.itemID] = #out
+            end
+        end
+    end
+    return out
+end
+
+-- Remembers what the owner carries of its list's materials (countOf(itemID) -> count or
+-- nil), so another character sees it. Returns true when anything changed.
+function Shopping.snapshotBags(list, countOf)
+    if type(list) ~= "table" or type(countOf) ~= "function" then return false end
+    local bags, changed = {}, false
+    for _, item in ipairs(Shopping.items(list)) do
+        local n = Util.count(countOf(item.itemID))
+        if n then bags[item.itemID] = n end
+        if bags[item.itemID] ~= list.bags[item.itemID] then changed = true end
+    end
+    for id in pairs(list.bags) do
+        if bags[id] == nil then changed = true end
+    end
+    list.bags = bags
+    return changed
+end
+
+-- The material rows and what is left to pay. ctx: ownedOf(itemID) -> count held (nil =
+-- none), priceOf(itemID) -> AH unit or nil, vendorOf(itemID) -> vendor unit or nil. Each
+-- row: { itemID, need, have, buy, unit, source, cost, done }; cost = buy x the cheaper of
+-- the AH and vendor price (0 when nothing is missing, nil when a missing item has no
+-- price). Returns rows, total (nil when a missing item has no price), unpriced ids.
 function Shopping.rows(list, ctx)
     ctx = ctx or {}
     local rows, total, unpriced = {}, 0, {}
-    for _, entry in ipairs(type(list) == "table" and list or {}) do
+    for _, entry in ipairs(Shopping.items(list)) do
         local have = type(ctx.ownedOf) == "function" and Util.count(ctx.ownedOf(entry.itemID)) or 0
         have = have or 0
         local buy = math.max(0, entry.qty - have)
@@ -114,4 +180,22 @@ function Shopping.rows(list, ctx)
         }
     end
     return rows, total, unpriced
+end
+
+-- The keys of the lists worth choosing: `current` first, then every other list that holds
+-- a recipe, by name.
+function Shopping.owners(db, current)
+    local others = {}
+    for key, list in pairs(type(db) == "table" and db or {}) do
+        if key ~= current and #list.recipes > 0 then others[#others + 1] = key end
+    end
+    table.sort(others, function(a, b)
+        local na, nb = db[a].name, db[b].name
+        if na ~= nb then return na < nb end
+        return a < b
+    end)
+    local out = {}
+    if current then out[1] = current end
+    for _, key in ipairs(others) do out[#out + 1] = key end
+    return out
 end

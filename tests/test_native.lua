@@ -1604,3 +1604,18 @@ H.test("fitToScreen scales a window down to the screen height, never up, and ign
     H.eq(Native.fitToScreen(raising), nil)
     H.truthy(T)
 end)
+
+H.test("a value with coin icons keeps room for their offset before stepping down", function()
+    local _, Native = boot()
+    H.eq(Native.valueSlack("1g"), Native.EDGE_SLACK)
+    H.eq(Native.valueSlack(nil), Native.EDGE_SLACK)
+    local coins = "43|TInterface/MoneyFrame/UI-SilverIcon:0:0:2:0|t 70|TInterface/MoneyFrame/UI-CopperIcon:0:0:2:0|t"
+    H.eq(Native.valueSlack(coins), Native.EDGE_SLACK + 2 * Native.ICON_SLACK)
+    -- Measured exactly as wide as the room: it no longer counts as fitting.
+    local tile = Native.tile(nil, 110, 52)
+    local fonts = {}
+    tile.value.SetFontObject = function(_, name) fonts[#fonts + 1] = name end
+    tile.value.GetUnboundedStringWidth = function() return 110 - Native.TILE_PAD * 2 end
+    tile:set({ label = "AH", value = coins })
+    H.truthy(fonts[#fonts] ~= Native.TILE_FONTS[1][1])
+end)

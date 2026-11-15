@@ -191,6 +191,21 @@ local function sizesOf(fonts)
     return sizes
 end
 local TILE_SIZES = sizesOf(Native.TILE_FONTS)
+
+-- Pixels the measured width of a value misses. Forever's GetMoneyString draws each coin as
+-- a texture escape offset 2 px to the right (`|T...:0:0:2:0|t`, docs/probe-findings.md);
+-- the unbounded width leaves that offset (and some rounding) out, so a value measured as
+-- fitting was cut with "..." in game ("43 70..." for 43s 70c, seen 2026-11-15). Each icon
+-- is counted ICON_SLACK px more, plus EDGE_SLACK for rounding.
+Native.ICON_SLACK = 3
+Native.EDGE_SLACK = 2
+function Native.valueSlack(text)
+    local icons = 0
+    if type(text) == "string" then
+        for _ in text:gmatch("|T") do icons = icons + 1 end
+    end
+    return Native.EDGE_SLACK + icons * Native.ICON_SLACK
+end
 local TILE_OUTLINE = 2
 local HOVER_FILE = "Interface\\QuestFrame\\UI-QuestTitleHighlight"
 
@@ -325,7 +340,7 @@ function Native.tile(parent, width, height)
         local fonts, sizes = Native.TILE_FONTS, TILE_SIZES
         self.value:SetFontObject(fonts[1][1])
         self.value:SetText(spec.value or "")
-        local room = (f:GetWidth() or width or 110) - Native.TILE_PAD * 2
+        local room = (f:GetWidth() or width or 110) - Native.TILE_PAD * 2 - Native.valueSlack(spec.value)
         local size = Layout.fitSize(naturalWidth(self.value), sizes[1], room, sizes)
         if size ~= sizes[1] then
             for _, font in ipairs(fonts) do
@@ -479,7 +494,8 @@ function Native.banner(parent, height, width)
         local fonts, sizes = Native.BANNER_FONTS, BANNER_SIZES
         self.value:SetFontObject(fonts[1][1])
         self.value:SetText(spec.value or "")
-        local size = Layout.fitSize(naturalWidth(self.value), sizes[1], Native.BANNER_VALUE_ROOM, sizes)
+        local room = Native.BANNER_VALUE_ROOM - Native.valueSlack(spec.value)
+        local size = Layout.fitSize(naturalWidth(self.value), sizes[1], room, sizes)
         if size ~= sizes[1] then
             for _, font in ipairs(fonts) do
                 if font[2] == size then self.value:SetFontObject(font[1]) end

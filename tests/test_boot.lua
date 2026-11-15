@@ -1941,3 +1941,41 @@ H.test("a broken vendor table in the save is repaired at load", function()
     T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
     H.eq(T.env.CraftProfitDB.vendor, { [1] = { 40, 5 } })
 end)
+
+-- Use bags
+H.test("use bags: the main window pays only what the bags lack; lists keep the market cost", function()
+    local T = boot()
+    stock(T)
+    local C = T.ns.Controller
+    local counts = { [1] = 2 }
+    T.env.C_Item.GetItemCount = function(id) return counts[id] or 0 end
+    local recipe = T.ns.Recipes.normalize(RAW)
+    C.setRecipe(recipe, "profession")
+    H.eq(T.ns.Window.lastModel.materials.total, "<250>")
+    H.eq(T.ns.Window.lastModel.useBags, false)
+    T.ns.Window.lastHandlers.onUseBagsToggle(true)
+    H.eq(T.env.CraftProfitDB.settings.useBags, true)
+    local m = T.ns.Window.lastModel
+    H.eq(m.useBags, true)
+    H.eq(m.materials.total, "<50>")
+    H.eq(m.costLines[1].sourceText, "2 in bags")
+    -- A pinned or listed recipe is never priced with the bags.
+    H.eq(C.evaluate(recipe, 1).cost.total, 250)
+    -- The bags change: one refresh after the burst.
+    counts[1] = 0
+    C.onEvent("BAG_UPDATE_DELAYED")
+    T.run()
+    H.eq(T.ns.Window.lastModel.materials.total, "<250>")
+    T.ns.Window.lastHandlers.onUseBagsToggle(false)
+    H.eq(T.env.CraftProfitDB.settings.useBags, false)
+end)
+
+H.test("use bags: a broken or secret count reads as nothing in the bags", function()
+    local T = boot()
+    T.env.C_Item.GetItemCount = function() error("boom") end
+    H.eq(T.ns.Controller.bagCount(1), nil)
+    T.env.C_Item.GetItemCount = function() return 0 / 0 end
+    H.eq(T.ns.Controller.bagCount(1), nil)
+    T.env.C_Item.GetItemCount = nil
+    H.eq(T.ns.Controller.bagCount(1), nil)
+end)

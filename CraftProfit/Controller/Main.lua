@@ -68,7 +68,7 @@ local function refreshAll()
     local settings = CraftProfitDB.settings
     local recipe = state.recipe
     if recipe then
-        local model = Present.build(Controller.evaluate(recipe, state.crafts), L, Controller.fmt,
+        local model = Present.build(Controller.evaluate(recipe, state.crafts, false, settings.useBags), L, Controller.fmt,
             { staleAfter = settings.staleAfter, itemName = Controller.itemName })
         model.title = Controller.recipeName(recipe)
         for _, reagent in ipairs(recipe.reagents or {}) do Controller.itemInfo(reagent.itemID) end
@@ -76,6 +76,7 @@ local function refreshAll()
         model.tracked = History.isActive(CraftProfitDB, recipe.recipeID)
         model.history = model.tracked and Controller.windowHistory(recipe.recipeID) or nil
         model.showPerPoint = settings.showPerPoint
+        model.useBags = settings.useBags
         model.costExpanded = settings.costExpanded
         ns.Window.render(model)
     else

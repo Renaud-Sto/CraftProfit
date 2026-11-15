@@ -185,12 +185,26 @@ end
 -- one craft. Within a refresh pass a recipe (the same table: a pin is evaluated for the list
 -- under the main window and for the pinned window) is evaluated once per crafts and per-point
 -- choice; callers must not modify the result.
-function Controller.evaluate(recipe, crafts, forcePerPoint)
+-- How many of an item the character carries in its bags (not the bank), or nil when the
+-- game does not say. C_Item.GetItemCount (Forever 1.60.1 source, ItemDocumentation).
+function Controller.bagCount(itemID)
+    local api = C_Item
+    if type(api) ~= "table" or type(api.GetItemCount) ~= "function" then return nil end
+    local ok, n = pcall(api.GetItemCount, itemID)
+    if not ok or isSecret(n) then return nil end
+    return Util.count(n)
+end
+
+-- useBags: only for the recipe of the main window ("Use bags" option): the units in the
+-- bags are not paid for. The lists (pins, leveling, row tags) never use it: the same bag
+-- would be counted once per recipe.
+function Controller.evaluate(recipe, crafts, forcePerPoint, useBags)
     local settings = CraftProfitDB.settings
     local showPerPoint = settings.showPerPoint or forcePerPoint == true
+    useBags = useBags == true
     local key, memo
     if pass then
-        key = Evaluate.craftCount(crafts) .. (showPerPoint and ":point" or "")
+        key = Evaluate.craftCount(crafts) .. (showPerPoint and ":point" or "") .. (useBags and ":bags" or "")
         memo = pass.results[recipe]
         if memo and memo[key] then return memo[key] end
         pass.priceOf = pass.priceOf or Prices.priceOf(Controller.market(), time())
@@ -206,6 +220,7 @@ function Controller.evaluate(recipe, crafts, forcePerPoint)
         showPerPoint = showPerPoint,
         lookupDisenchant = Disenchant.lookup,
         knowsEnchanting = Controller.knowsEnchanting(),
+        ownedOf = useBags and Controller.bagCount or nil,
     })
     if pass then
         if not memo then

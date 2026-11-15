@@ -165,10 +165,42 @@ function Evaluate.run(ctx)
         if net then net = net * crafts end
     end
 
+    -- "Use bags" (ctx.ownedOf: item id -> count in the bags, optional): the units already
+    -- owned, up to what the crafts need, are not paid for; only the missing ones are. A
+    -- reagent fully covered needs no price. The resale options keep their market value.
+    local missingList = missing or {}
+    if type(ctx.ownedOf) == "function" then
+        total, missingList = 0, {}
+        local owned = {}
+        for _, line in ipairs(lines) do
+            local id = line.itemID
+            if owned[id] == nil then owned[id] = Util.count(ctx.ownedOf(id)) or 0 end
+            local have = math.min(owned[id], line.qty)
+            owned[id] = owned[id] - have
+            line.have, line.buy = have, line.qty - have
+            if line.buy == 0 then
+                line.subtotal = 0
+            elseif line.unit then
+                line.subtotal = line.unit * line.buy
+            else
+                line.subtotal = nil
+                missingList[#missingList + 1] = id
+            end
+            if total and line.subtotal then total = total + line.subtotal else total = nil end
+        end
+        if total == nil then
+            net = nil
+        else
+            net = bestValue and bestValue - total or nil
+        end
+        incomplete = optionsIncomplete or total == nil
+    end
+
     return {
         recipe = recipe,
         crafts = crafts,
-        cost = { total = total, missing = missing or {}, lines = lines },
+        cost = { total = total, missing = missingList, lines = lines },
+        usesBags = type(ctx.ownedOf) == "function",
         options = options,
         best = best,
         bestValue = bestValue,

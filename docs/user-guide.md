@@ -19,7 +19,7 @@ From top to bottom:
 | *grey line* | Under the tiles: the most probable disenchant outcome, for example `75%: 1-2x Soul Dust = 7s 30c`. Only shown when the disenchant has several possible results. |
 | **Materials** panel | The cost of all reagents at auction house prices. Click the header to fold or unfold the detail (`-` unfolded, `+` folded); the choice is saved. Click a reagent to search it at the auction house (see [Searching a reagent](#searching-a-reagent)). For a tracked recipe, a small percentage may sit left of the total (see [History in the main window](#history-in-the-main-window)). |
 | **Prices: 5m ago** | How old the oldest price used is. It turns orange when prices are more than an hour old. |
-| **Options** panel | **Crafts**, **Track history**, **Cost per skill point** with its value on the right (see [Cost per skill point](#cost-per-skill-point)), then the **Pin** / **Unpin** and **Refresh recipe** buttons. |
+| **Options** panel | **Crafts**, **Track history**, **Cost per skill point** with its value on the right (see [Cost per skill point](#cost-per-skill-point)), **Use bags** (the materials already in your bags, up to what the crafts need, are not counted as bought: only the missing ones are paid, each row says how many are in your bags, and a click on a row searches only the missing quantity; the bank is not counted, and the pinned, leveling and profession lists keep the full cost), then the **Pin** / **Unpin** and **Refresh recipe** buttons. |
 
 The recipe title at the top of the window is clickable too, with the same effect, and still drags the window. A price that is not known is shown as `?`, never as zero. The banner has three special cases:
 

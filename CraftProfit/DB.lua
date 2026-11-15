@@ -31,6 +31,8 @@ DB.DEFAULTS = {
     maxPins = DB.PIN_LIMIT_DEFAULT,
     -- The profit tag on each recipe row of the profession window (UI/RecipeRows.lua).
     showRowTags = true,
+    -- "Use bags" (main window): the materials already in the bags are not counted as bought.
+    useBags = false,
 }
 
 -- The appearance keys a save may hold; the same as Native.HEADER_VARIANTS and
@@ -117,6 +119,7 @@ local function sanitizeSettings(s)
     if type(s.showPerPoint) ~= "boolean" then s.showPerPoint = DB.DEFAULTS.showPerPoint end
     if type(s.costExpanded) ~= "boolean" then s.costExpanded = DB.DEFAULTS.costExpanded end
     if type(s.showRowTags) ~= "boolean" then s.showRowTags = DB.DEFAULTS.showRowTags end
+    if type(s.useBags) ~= "boolean" then s.useBags = DB.DEFAULTS.useBags end
     s.maxPins = DB.pinLimit(s.maxPins)
     if type(s.levelShowGrey) ~= "boolean" then s.levelShowGrey = false end
     if s.levelSort ~= "speed" then s.levelSort = "cost" end

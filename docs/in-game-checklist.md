@@ -295,6 +295,13 @@ Probe 0.7.0 or later. Open the AH once first (the magnifier is copied from its s
 - [ ] Open the main, leveling, pinned and options windows overlapping: click the body, a row, a button or the title of each in turn: the clicked window comes fully to the front, its border and content above the others, never mixed with another window's border.
 - [ ] A window opened last shows in front of the ones already open.
 
+## Use bags
+- [ ] Tick *Use bags* in the main window's options: each material row with some in the bags says "N in bags", the Materials total and the result count only the missing units (10 crafts, 6 herbs in the bags: 4 paid). Untick: back to the full cost.
+- [ ] Buy or loot one of the materials with the window open and the box ticked: the row and the total update by themselves within a second.
+- [ ] With the AH open and the box ticked, click a material row: the search quantity is the missing amount.
+- [ ] The pinned list, the leveling list and the profession window's row tags do not change when the box is ticked.
+- [ ] French client: the box reads *Utiliser les sacs*, the rows *N en sac*; the label is not cut.
+
 ## Vendor prices
 - [ ] Open a trade goods or alchemy supplies vendor, then `/reload`: `CraftProfitDB.vendor` in the SavedVariables file holds its items as `{ unit, time }`, the unit being the price of one (a pack of 5 threads divided by 5). Items with a limited stock or a token cost are absent.
 - [ ] A recipe with Leaded Vial (or another vendor material): the Materials detail shows *vendor* beside its price, the cost uses the vendor price, the hover tooltip shows both prices; with no merchant seen yet, the tooltip says *usual price*.

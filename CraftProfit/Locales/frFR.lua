@@ -41,6 +41,8 @@ ns.Locale.register("frFR", {
     AGE_HOUR = "%dh",
     AGE_DAY = "%dj",
     SOURCE_VENDOR = "marchand",
+    OPT_USE_BAGS = "Utiliser les sacs",
+    IN_BAGS = "%d en sac",
     TIP_USES_VENDOR = "Compté au prix du marchand (moins cher)",
     TIP_USES_AH = "Compté au prix de l'hôtel des ventes (moins cher)",
     TIP_VENDOR_SEEN = "Marchand\194\160: %s l'unité (vu il y a %s)",

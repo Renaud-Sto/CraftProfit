@@ -20,7 +20,7 @@ local BANNER_H = 52
 local TILE_H = 52
 local LIKELY_H = 16
 local AGE_H = 14
-local OPTION_ROWS = 3
+local OPTION_ROWS = 4
 -- The tallest native widget of an option row (the 24 px check box; the button and the
 -- input are 22) plus 2 px, so two rows never touch. The options body is exactly
 -- OPTION_ROWS of these.
@@ -380,6 +380,13 @@ local function buildOptions()
         paint(parts.perPointValue, Colors.tone(parts.perPointTone, "main"))
     end
 
+    -- "Use bags": the materials already in the bags are not counted as bought.
+    local useBags = Native.check(body, "", function(checked)
+        if handlers.onUseBagsToggle then handlers.onUseBagsToggle(checked) end
+    end, bodyWidth - PER_POINT_X - Native.CHECK_SIZE - 8)
+    useBags:SetPoint("TOPLEFT", body, "TOPLEFT", PER_POINT_X, rowY(3, Native.CHECK_SIZE))
+    parts.useBags = useBags
+
     -- The two buttons share the row equally: the body less 8 px on each side and a gap.
     local half = math.floor((bodyWidth - 16 - BUTTON_GAP) / 2)
     local pin = Native.button(body, "", {
@@ -388,7 +395,7 @@ local function buildOptions()
             if handlers.onPinClick then handlers.onPinClick() end
         end,
     })
-    pin:SetPoint("TOPLEFT", body, "TOPLEFT", 8, rowY(3, Native.BUTTON_H))
+    pin:SetPoint("TOPLEFT", body, "TOPLEFT", 8, rowY(4, Native.BUTTON_H))
     parts.pin = pin
     -- Searches the prices of this recipe only. Disabled (greyed by the template, no click)
     -- unless the AH is open and a recipe is shown; `enabled` mirrors it and is checked here
@@ -399,7 +406,7 @@ local function buildOptions()
             if self.enabled and handlers.onRefreshRecipe then handlers.onRefreshRecipe() end
         end,
     })
-    refresh:SetPoint("TOPLEFT", body, "TOPLEFT", 8 + half + BUTTON_GAP, rowY(3, Native.BUTTON_H))
+    refresh:SetPoint("TOPLEFT", body, "TOPLEFT", 8 + half + BUTTON_GAP, rowY(4, Native.BUTTON_H))
     refresh.enabled = false
     parts.refresh = refresh
 end
@@ -577,7 +584,8 @@ function Window.render(model)
     for i = 1, MAX_DETAIL do
         local row, cost = parts.rows[i], expanded and costLines[i] or nil
         if cost then
-            row.itemID, row.qty = cost.itemID, cost.qty
+            -- A click searches what is missing when the bags already hold part of it.
+            row.itemID, row.qty = cost.itemID, cost.searchQty or cost.qty
             row.name:SetText(cost.qty .. "x " .. reagentName(cost.itemID))
             row.value:SetText(cost.subtotalText)
             row.tag:SetText(cost.sourceText or "")
@@ -600,6 +608,8 @@ function Window.render(model)
     parts.track:SetChecked(model.tracked)
     parts.perPoint:setText(L.OPT_PER_POINT)
     parts.perPoint:SetChecked(model.showPerPoint)
+    parts.useBags:setText(L.OPT_USE_BAGS)
+    parts.useBags:SetChecked(model.useBags == true)
     setPerPoint(findLine(model.lines, "perpoint"))
     parts.pin:setText(model.pinned and L.UNPIN or L.PIN)
     parts.refresh:setText(L.REFRESH_RECIPE)

@@ -41,6 +41,8 @@ ns.Locale.register("esES", {
     AGE_HOUR = "%dh",
     AGE_DAY = "%dd",
     SOURCE_VENDOR = "vendedor",
+    OPT_USE_BAGS = "Usar las bolsas",
+    IN_BAGS = "%d en bolsas",
     TIP_USES_VENDOR = "Contado al precio del vendedor (más barato)",
     TIP_USES_AH = "Contado al precio de la casa de subastas (más barato)",
     TIP_VENDOR_SEEN = "Vendedor: %s la unidad (visto hace %s)",

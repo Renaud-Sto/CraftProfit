@@ -16,7 +16,7 @@ H.test("initAccount fills defaults and returns the same table", function()
     H.eq(db.dbVersion, 1)
     H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost",
         appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 }, maxPins = 20,
-        showRowTags = true })
+        showRowTags = true, useBags = false })
     H.eq(db.prices, {})
 end)
 
@@ -37,7 +37,7 @@ H.test("initAccount replaces invalid settings with defaults", function()
     } })
     H.eq(db.settings, { cut = 0.05, medianN = 5, showPerPoint = false, costExpanded = true, staleAfter = 3600, levelShowGrey = false, levelSort = "cost",
         appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 }, maxPins = 20,
-        showRowTags = true })
+        showRowTags = true, useBags = false })
 end)
 
 H.test("initAccount keeps valid settings and floors medianN", function()
@@ -48,7 +48,7 @@ H.test("initAccount keeps valid settings and floors medianN", function()
     } })
     H.eq(db.settings, {
         cut = 0.5, medianN = 7, staleAfter = 120, showPerPoint = true, costExpanded = false, levelShowGrey = false, levelSort = "cost",
-        window = { point = "TOPLEFT", x = 100, y = -50 }, maxPins = 30, showRowTags = true,
+        window = { point = "TOPLEFT", x = 100, y = -50 }, maxPins = 30, showRowTags = true, useBags = false,
         appearance = { header = "b", tile = "b" }, minimap = { hide = false, angle = 225 },
     })
     H.eq(DB.initAccount({ settings = { cut = 0.51 } }).settings.cut, 0.05)

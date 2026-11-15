@@ -249,11 +249,19 @@ function Present.build(result, L, fmt, opts)
             itemID = line.itemID, qty = line.qty,
             unitText = fmt(line.unit), subtotalText = fmt(line.subtotal),
         }
-        -- Only a vendor price is tagged: the auction house is the default source.
+        -- Only a vendor price is tagged: the auction house is the default source. With
+        -- "Use bags", what the bags hold is said too, and a click searches only what is missing.
+        local tags = {}
         if line.source == "vendor" then
             costLines[i].source = "vendor"
-            costLines[i].sourceText = L.SOURCE_VENDOR
+            tags[#tags + 1] = L.SOURCE_VENDOR
         end
+        if result.usesBags and line.have then
+            costLines[i].have, costLines[i].buy = line.have, line.buy
+            if line.have > 0 then tags[#tags + 1] = string.format(L.IN_BAGS, line.have) end
+            if line.buy > 0 then costLines[i].searchQty = line.buy end
+        end
+        if #tags > 0 then costLines[i].sourceText = table.concat(tags, ", ") end
         if line.vendorUnit then costLines[i].tip = Present.reagentTip(L, fmt, line) end
     end
     local verdict = verdictFor(result, L, fmt)

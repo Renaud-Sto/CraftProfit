@@ -55,7 +55,7 @@ local function boot(opts)
     T.ns.Controller.onEvent("ADDON_LOADED", "CraftProfit")
     local calls = {}
     for _, name in ipairs({ "onPinClick", "onReagentClick", "onCraftsChange", "onTrackToggle",
-        "onPerPointToggle", "onCostToggle", "onMoved", "onOutputClick", "onRefreshRecipe" }) do
+        "onPerPointToggle", "onCostToggle", "onMoved", "onOutputClick", "onRefreshRecipe", "onUseBagsToggle" }) do
         T.ns.Window.lastHandlers[name] = function(...) calls[#calls + 1] = { name, ... } end
     end
     return T, T.ns.Window, calls
@@ -282,17 +282,17 @@ H.test("sections lists the visible blocks top to bottom with their heights", fun
     H.eq(list[3].height, Layout.panelHeight(2, 18))
     -- An option row holds the 24 px check box (button and input are 22) and 2 px of air.
     H.eq(Native.CHECK_SIZE + 2, 26)
-    H.eq(list[5].height, Layout.panelHeight(3, 26))
+    H.eq(list[5].height, Layout.panelHeight(4, 26))
     H.eq(keys(Window.sections({ hasLikely = true, expanded = true, reagents = 0 })),
         { "banner", "tiles", "likely", "materials", "age", "options" })
     H.eq(Window.sections({ hasLikely = false, expanded = false, reagents = 9 })[3].height, Window.FOLDED_H)
 end)
 
-H.test("the options body is exactly three option rows", function()
+H.test("the options body is exactly four option rows", function()
     local T, Window = boot()
     local list = Window.sections({ hasLikely = false, expanded = true, reagents = 0 })
     -- Height of the panel minus its header, body pads and edges (Layout.panelHeight(0, x)).
-    H.eq(list[5].height - T.ns.Layout.panelHeight(0, 26), 3 * 26)
+    H.eq(list[5].height - T.ns.Layout.panelHeight(0, 26), 4 * 26)
 end)
 
 H.test("the frame height is the sum of the visible sections plus the insets, and the pinned list adds its own", function()
@@ -710,14 +710,14 @@ local function bootAnchored()
     return T, T.ns.Window, calls
 end
 
-H.test("the refresh button sits right of the pin button on the third option row", function()
+H.test("the refresh button sits right of the pin button on the fourth option row", function()
     local T, Window = bootAnchored()
     local Native = T.ns.Native
     local body = Window.parts.options.body
     local bodyWidth = Window.INNER_WIDTH - Native.PANEL_EDGE * 2
     local half = math.floor((bodyWidth - 16 - 6) / 2)
     local rowH = math.max(Native.CHECK_SIZE, Native.BUTTON_H, Native.INPUT_H) + 2
-    local y = -(2 * rowH + math.floor((rowH - Native.BUTTON_H) / 2))
+    local y = -(3 * rowH + math.floor((rowH - Native.BUTTON_H) / 2))
     H.eq(Window.parts.pin.point, { "TOPLEFT", body, "TOPLEFT", 8, y })
     H.eq(Window.parts.refresh.point, { "TOPLEFT", body, "TOPLEFT", 8 + half + 6, y })
     -- Both end within the body's 8 px margin.
@@ -1050,4 +1050,25 @@ H.test("a vendor-priced reagent row shows its tag and a tooltip with both prices
     local before = #shown
     rows[2].hit.scripts.OnEnter(rows[2].hit)
     H.eq(#shown, before)
+end)
+
+H.test("the use bags check box shows the setting, reports clicks, and a row searches what is missing", function()
+    local _, Window, calls = boot()
+    Window.render(model({ useBags = true, costLines = {
+        { itemID = 11, qty = 20, unitText = "1s", subtotalText = "14s", sourceText = "6 in bags", searchQty = 14 },
+        { itemID = 12, qty = 10, unitText = "50c", subtotalText = "0c", sourceText = "10 in bags" },
+    } }))
+    local p = Window.parts
+    H.eq(p.useBags.label.text, "Use bags")
+    H.truthy(p.useBags:GetChecked())
+    p.useBags:SetChecked(false)
+    p.useBags.scripts.OnClick(p.useBags)
+    H.eq(calls[#calls], { "onUseBagsToggle", false })
+    H.eq(p.rows[1].tag.text, "6 in bags")
+    p.rows[1].hit.scripts.OnClick(p.rows[1].hit)
+    H.eq(calls[#calls], { "onReagentClick", 11, 14 })
+    p.rows[2].hit.scripts.OnClick(p.rows[2].hit)
+    H.eq(calls[#calls], { "onReagentClick", 12, 10 })
+    Window.render(model({ useBags = false }))
+    H.falsy(p.useBags:GetChecked())
 end)

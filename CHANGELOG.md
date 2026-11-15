@@ -4,6 +4,9 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ## [Unreleased]
 
+### Added
+- **Use bags** option in the main window (off by default): the materials already in your bags, up to what the crafts need, are not counted as bought, so the cost and the result count only the missing ones. For example, 10 crafts needing 10 herbs with 6 in your bags pay for 4. Each material row says how many are in your bags, and clicking it searches only the missing quantity. Bags only (not the bank); the pinned list, the leveling list and the profession window's tags keep the full market cost. Suggested on CurseForge.
+
 ## [1.2.0] - 2026-11-15
 
 Tested on WoW Forever 1.60.1.

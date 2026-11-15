@@ -43,6 +43,8 @@ ns.Locale.register("enUS", {
     AGE_DAY = "%dd",
     -- Source of a material's price (main window, Materials detail).
     SOURCE_VENDOR = "vendor",
+    OPT_USE_BAGS = "Use bags",
+    IN_BAGS = "%d in bags",
     TIP_USES_VENDOR = "Counted at the vendor price (cheaper)",
     TIP_USES_AH = "Counted at the auction house price (cheaper)",
     TIP_VENDOR_SEEN = "Vendor: %s each (seen %s ago)",

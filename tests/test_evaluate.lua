@@ -382,3 +382,63 @@ H.test("several crafts scale a vendor-priced line", function()
     H.eq(r.cost.lines[1].subtotal, 40 * 2 * 3)
     H.eq(r.cost.total, (80 + 50) * 3)
 end)
+
+-- Use bags: count in the bags per item.
+local function bags(map) return function(id) return map[id] end end
+
+H.test("use bags: owned units are not paid for, only the missing ones", function()
+    local E = load().Evaluate
+    -- 10 crafts need 20 of item 1 (1s each) and 10 of item 2 (50c); 6 and 10 in the bags.
+    local r = E.run(ctx({ crafts = 10, ownedOf = bags({ [1] = 6, [2] = 10 }) }))
+    H.eq(r.usesBags, true)
+    H.eq({ r.cost.lines[1].have, r.cost.lines[1].buy, r.cost.lines[1].subtotal }, { 6, 14, 1400 })
+    H.eq({ r.cost.lines[2].have, r.cost.lines[2].buy, r.cost.lines[2].subtotal }, { 10, 0, 0 })
+    H.eq(r.cost.total, 1400)
+    H.eq(r.net, r.bestValue - 1400)
+    H.eq(r.incomplete, false)
+end)
+
+H.test("use bags: more in the bags than needed costs nothing and never goes negative", function()
+    local E = load().Evaluate
+    local r = E.run(ctx({ ownedOf = bags({ [1] = 500, [2] = 500 }) }))
+    H.eq(r.cost.total, 0)
+    H.eq(r.cost.lines[1].have, 2)
+    H.eq(r.net, r.bestValue)
+end)
+
+H.test("use bags: a reagent fully in the bags needs no price", function()
+    local E = load().Evaluate
+    local r = E.run(ctx({ priceOf = prices({ [2] = false }), ownedOf = bags({ [2] = 1 }) }))
+    H.eq(r.cost.missing, {})
+    H.eq(r.cost.total, 200)
+    H.eq(r.incomplete, false)
+    -- Not fully owned: still missing.
+    local r2 = E.run(ctx({ crafts = 2, priceOf = prices({ [2] = false }), ownedOf = bags({ [2] = 1 }) }))
+    H.eq(r2.cost.missing, { 2 })
+    H.eq(r2.cost.total, nil)
+    H.eq(r2.net, nil)
+    H.eq(r2.incomplete, true)
+end)
+
+H.test("use bags: unknown or broken counts are none, and resale values do not change", function()
+    local E = load().Evaluate
+    local plain = E.run(ctx())
+    local r = E.run(ctx({ ownedOf = bags({ [1] = 0 / 0, [2] = -3 }) }))
+    H.eq(r.cost.total, plain.cost.total)
+    H.eq(r.options, plain.options)
+    H.eq(r.cost.lines[1].have, 0)
+    H.eq(plain.usesBags, false)
+    H.eq(plain.cost.lines[1].have, nil)
+end)
+
+H.test("use bags: one item listed twice shares the bag count", function()
+    local E = load().Evaluate
+    local recipe = {
+        recipeID = 2, name = "X", difficulty = "medium", outputItemID = 100, outputQty = 1,
+        reagents = { { itemID = 1, qty = 2 }, { itemID = 1, qty = 3 } },
+    }
+    local r = E.run(ctx({ recipe = recipe, ownedOf = bags({ [1] = 4 }) }))
+    H.eq(r.cost.lines[1].have, 2)
+    H.eq(r.cost.lines[2].have, 2)
+    H.eq(r.cost.total, 100)
+end)

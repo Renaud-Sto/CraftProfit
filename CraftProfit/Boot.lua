@@ -78,6 +78,10 @@ function Controller.init()
             end
             Controller.refresh()
         end,
+        onUseBagsToggle = function(checked)
+            CraftProfitDB.settings.useBags = checked and true or false
+            Controller.refresh()
+        end,
         onCostToggle = function(isExpanded)
             CraftProfitDB.settings.costExpanded = isExpanded and true or false
             Controller.refresh()
@@ -159,6 +163,9 @@ function Controller.onEvent(event, arg1, arg2)
             Controller.historyChanged()
             Controller.requestRefresh()
         end
+    elseif event == "BAG_UPDATE_DELAYED" then
+        -- Bag contents only matter to the main window's "Use bags" cost.
+        if CraftProfitDB.settings.useBags then Controller.requestRefresh() end
     elseif event == "TRADE_SKILL_LIST_UPDATE" then
         Controller.refreshPinDifficulties()
         Controller.refreshKnown()
@@ -225,7 +232,7 @@ local frame = CreateFrame("Frame")
 for _, event in ipairs({
     "ADDON_LOADED", "ITEM_DATA_LOAD_RESULT", "TRADE_SKILL_LIST_UPDATE",
     "TRADE_SKILL_SHOW", "TRADE_SKILL_DATA_SOURCE_CHANGED",
-    "ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN",
+    "ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN", "BAG_UPDATE_DELAYED",
 }) do
     pcall(frame.RegisterEvent, frame, event)
 end

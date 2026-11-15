@@ -4,6 +4,10 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-15
+
+Tested on WoW Forever 1.60.1.
+
 ### Added
 - **Shopping lists.** *Add to shopping list* in the main window adds the recipe x the number of crafts to your character's list (the same recipe again adds up its crafts). The **Shopping list** button under the pinned list at the auction house (or `/cp shop`) opens its window: the recipes of the list with their crafts and a *x* to take one back (its materials go with it), then each material with how many are in your bags, how many are needed and what the missing ones cost (the cheaper of the auction house and the vendor), the total left to buy, and *Clear list*. It also opens away from the auction house, to check it: a *Shopping list* button in the options window, or `/cp shop`. A material your bags already cover turns grey (*done*). Click a material at the auction house to search the missing quantity. Each character has its own list, and any character can open another's with the button at the top, for example to buy a warrior's blacksmithing materials from an alt standing at the auction house: *In bags* then counts the owner's bags as last seen plus yours. A crafted material (a bolt of cloth) is listed as it is, not broken down.
 - **Use bags** option in the main window (off by default): the materials already in your bags, up to what the crafts need, are not counted as bought, so the cost and the result count only the missing ones. For example, 10 crafts needing 10 herbs with 6 in your bags pay for 4. Each material row says how many are in your bags, and clicking it searches only the missing quantity. Bags only (not the bank); the pinned list, the leveling list and the profession window's tags keep the full market cost. Suggested on CurseForge.

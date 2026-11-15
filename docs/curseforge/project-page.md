@@ -33,6 +33,8 @@ Select a recipe you know and a small window appears next to your profession wind
 - **Profit on every recipe row** of the profession window's list: what one craft earns or loses (`+12` silver `23` copper coin icons green, `-2` silver red) for each learned recipe with prices; can be turned off in the options window.
 - **Cost per skill point** (optional): what each point really costs, from the recipe colour; shown as a gain when the crafts pay for themselves.
 - **Several crafts at once**: multiply a recipe by 1 to 9999.
+- **Shopping lists** (new in 1.3.0): add a recipe x its crafts to your list, then see each material with how many are in your bags, how many are needed and what the missing ones cost; click one at the auction house to search the missing amount. One list per character, and any character can open another's, to buy a main's materials from an alt at the auction house.
+- **Use bags** (new in 1.3.0, optional): count only the materials you still have to buy.
 - **Leveling window**: every recipe you know in a profession, ranked by the cost of the next skill point (or by speed).
 - **Pinned recipes** (20 per character by default; 12, 20, 30 or 40 in the options window), sorted by profit or by cost per point, to decide what to craft next (with many pinned, **Scan AH** is usually faster than **Refresh pinned**); at the auction house and anywhere in their own window, with the last known prices.
 - **Auction house tools**: *Refresh recipe* prices the recipe on screen in a few seconds; *Refresh pinned* prices every pinned recipe; *Scan AH* reads the whole auction house; click a reagent to search it with the quantity already filled in, or the crafted item to see how many are for sale. CraftProfit never buys anything for you.

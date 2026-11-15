@@ -25,6 +25,8 @@ CraftProfit est un addon pour **World of Warcraft: Forever**. Sélectionnez une 
 
 ## Fonctionnalités
 
+- **Listes de courses** : ajoutez une recette x ses crafts à votre liste ; voyez chaque composant avec ce que vous avez en sac, ce qu'il faut et ce que coûte le manque, et cliquez dessus à l'hôtel des ventes pour rechercher la quantité manquante. Une liste par personnage, et chaque personnage peut ouvrir celle d'un autre pour acheter à sa place.
+- **Utiliser les sacs** (optionnel) : ne compter que les composants qu'il reste à acheter.
 - **Coût d'une recette** aux prix réels de l'hôtel des ventes, avec le détail des composants sous le total. Les composants vendus par un marchand (fioles, fils, teintures...) comptent au prix du marchand quand il est moins cher, appris à chaque marchand que vous ouvrez.
 - **Trois débouchés comparés** : hôtel des ventes (après la commission de 5 %), prix marchand et valeur espérée du désenchantement.
 - **Meilleure option mise en évidence**, avec le résultat net du craft.

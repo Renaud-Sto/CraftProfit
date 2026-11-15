@@ -2,13 +2,14 @@
 ## Title: CraftProfit
 ## Notes: Prices profession recipes with auction house data and shows the most profitable way to sell the result.
 ## Author: Sto
-## Version: 1.1.0
+## Version: 1.2.0
 ## IconTexture: Interface\Icons\INV_Misc_Coin_01
 ## AddonCompartmentFunc: CraftProfit_OnCompartmentClick
 ## SavedVariables: CraftProfitDB
 ## SavedVariablesPerCharacter: CraftProfitCharDB
 ## X-Website: https://github.com/Renaud-Sto/CraftProfit
 ## X-License: MIT
+## X-Curse-Project-ID: 1739348
 
 Util.lua
 Format.lua

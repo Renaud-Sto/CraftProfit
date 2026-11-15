@@ -4,8 +4,13 @@ All notable changes to CraftProfit are listed here. The format follows [Keep a C
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-15
+
+Tested on WoW Forever 1.60.1.
+
 ### Fixed
 - **Materials sold by vendors are counted at the vendor price.** A material a vendor sells (vials, threads, dyes, flux, salt, spices...) now costs the cheaper of its auction house price and its vendor price: a Leaded Vial at 4s 88c on the auction house but 40c at a vendor counts 40c. A vendor material with no auction house listing no longer leaves the cost unknown. This applies to the main window, the profit tags of the profession window, the pinned list, the leveling list and the History window's materials and profit. Reported on CurseForge.
+- An amount with coin icons that only just fitted a tile (for example 43s 70c on AH (NET)) was cut to "43 70...": the tile and the result banner now keep room for the icons and step down to a smaller font.
 
 ### Added
 - **Vendor prices learnt at merchants.** Every merchant you open records the price of what it sells for money in unlimited supply (account wide, reputation discount included). Until then a built-in list gives the usual price of about thirty common materials.

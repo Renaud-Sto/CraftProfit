@@ -3,3 +3,4 @@
 *.zip
 elyes_SO6/
 .cache/
+dist/

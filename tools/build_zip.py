@@ -34,6 +34,9 @@ def main():
     on_disk = set()
     for root, _, names in os.walk(ADDON):
         for name in names:
+            # Dotfiles (.pkgmeta: packager settings) are repo files, never shipped.
+            if name.startswith("."):
+                continue
             on_disk.add(os.path.relpath(os.path.join(root, name)).replace(os.sep, "/"))
     with zipfile.ZipFile(out) as z:
         packed = z.namelist()
